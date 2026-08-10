@@ -157,7 +157,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   parseIssues: [],
   lastLoadError: null,
   mode: 'map-only',
-  iframeScale: 0.5,
+  iframeScale: 0.75,
   maxLiveIframes: DEFAULT_MAX_LIVE,
   searchQuery: '',
   selectedPageId: null,

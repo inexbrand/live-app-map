@@ -12,5 +12,6 @@ maps/*.generated.json
 maps/*.appmap
 apps/visualizer-spa/test-results
 apps/visualizer-spa/playwright-report
+.lam-feedback
 .scratch
 *.tsbuildinfo

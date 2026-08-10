@@ -6,7 +6,8 @@
  * (не silent skip). reuseExistingServer: true локально, чтобы не дублировать
  * уже запущенный `bun run dev`.
  *
- * Пропуск только при явном env: PLAYWRIGHT_SKIP_WEBSERVER=1 + готовый baseURL.
+ * Пропуск только при явном env: PLAYWRIGHT_SKIP_WEBSERVER=1 + готовый baseURL
+ * (сервер уже поднят вручную). Без сервера и без webServer — fail, не skip.
  */
 import { defineConfig, devices } from '@playwright/test';
 
@@ -18,7 +19,7 @@ const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1';
 
 export default defineConfig({
   testDir: './e2e',
-  testMatch: '**/*.e2e.ts',
+  testMatch: '**/*.spec.ts',
   fullyParallel: true,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,

@@ -1,10 +1,5 @@
 /**
- * Кастомная нода React Flow: chrome + live iframe slot + стейты.
- * URL — селектор `resolveLiveUrl(id)`, чтобы role/state триггерили src.
- *
- * Security: sandbox-preset `strict` (без allow-same-origin) vs `trusted`
- * (allowlist localhost / *.localhost dogfood). Комбинация
- * allow-scripts + allow-same-origin снимает изоляцию iframe.
+ * Кастомная нода React Flow: chrome + live iframe + стейты (UI kit + Lucide).
  */
 import type { AppMapNode, AppMapPageState } from '@live-app-map/schema';
 import {
@@ -13,13 +8,9 @@ import {
   type Node,
   type NodeProps,
 } from '@xyflow/react';
-import {
-  memo,
-  useEffect,
-  useRef,
-  useState,
-  type CSSProperties,
-} from 'react';
+import { ExternalLink, Pin, PinOff } from 'lucide-react';
+import { memo, useEffect, useRef, useState } from 'react';
+import { Badge, Chip } from '../ui';
 import { useAppStore } from '../store/app-store';
 import { NODE_H, NODE_W } from './layout';
 
@@ -27,40 +18,18 @@ export type PageNodeData = {
   readonly node: AppMapNode;
 };
 
-/** Тип ноды React Flow для строгой типизации `data` без cast. */
 export type PageFlowNode = Node<PageNodeData, 'page'>;
 
-/** Preset sandbox iframe: trusted = dogfood same-origin, strict = без same-origin. */
 export type IframeSandboxPreset = 'strict' | 'trusted';
 
-/** Trusted dogfood: scripts + same-origin (нужно многим SPA). */
 export const SANDBOX_TRUSTED =
-  'allow-scripts allow-same-origin allow-forms allow-popups allow-modals';
+  'allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads';
 
-/**
- * Strict: без `allow-same-origin` — escape-класс scripts+same-origin закрыт.
- * Часть приложений ломается (cookies/localStorage origin).
- */
 export const SANDBOX_STRICT =
   'allow-scripts allow-forms allow-popups allow-modals';
 
-const ICON_HIT: CSSProperties = {
-  minWidth: 44,
-  minHeight: 44,
-  width: 44,
-  height: 44,
-  padding: 0,
-  display: 'grid',
-  placeItems: 'center',
-  boxSizing: 'border-box',
-};
-
 /**
- * Хост baseUrl считается trusted dogfood (localhost / loopback / *.localhost).
- * Вне allowlist — strict sandbox.
- *
- * @param baseUrl - document.baseUrl или override
- * @returns true, если origin в allowlist
+ * Trusted dogfood host (localhost / loopback / *.localhost).
  */
 export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): boolean {
   if (baseUrl === null || baseUrl === undefined) {
@@ -72,24 +41,22 @@ export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): bool
   }
   try {
     const host = new URL(trimmed).hostname.toLowerCase();
-    if (host === 'localhost' || host === '127.0.0.1' || host === '[::1]' || host === '::1') {
+    if (
+      host === 'localhost' ||
+      host === '127.0.0.1' ||
+      host === '[::1]' ||
+      host === '::1'
+    ) {
       return true;
     }
-    if (host.endsWith('.localhost')) {
-      return true;
-    }
-    return false;
+    return host.endsWith('.localhost');
   } catch {
     return false;
   }
 }
 
 /**
- * Выбирает sandbox preset: явный override или allowlist baseUrl.
- *
- * @param baseUrl - эффективный baseUrl карты
- * @param override - принудительный preset (из prop/store, если передан)
- * @returns preset strict | trusted
+ * Preset sandbox по baseUrl.
  */
 export function resolveIframeSandboxPreset(
   baseUrl: string | null | undefined,
@@ -102,20 +69,14 @@ export function resolveIframeSandboxPreset(
 }
 
 /**
- * Атрибут `sandbox` для iframe по preset.
- *
- * @param preset - strict | trusted
- * @returns строка sandbox
+ * Атрибут sandbox.
  */
 export function sandboxAttrForPreset(preset: IframeSandboxPreset): string {
   return preset === 'trusted' ? SANDBOX_TRUSTED : SANDBOX_STRICT;
 }
 
 /**
- * Текст плейсхолдера слота (RU, кроме mode-имени Map-only).
- *
- * @param args - mode, url, iframeError
- * @returns строка для empty/freeze/error
+ * Плейсхолдер слота.
  */
 export function resolvePagePlaceholder(args: {
   readonly mode: 'live' | 'map-only' | 'compact';
@@ -123,10 +84,10 @@ export function resolvePagePlaceholder(args: {
   readonly iframeError: boolean;
 }): string {
   if (args.iframeError) {
-    return 'Ошибка загрузки';
+    return 'Ошибка загрузки iframe';
   }
   if (args.mode === 'live') {
-    return args.hasUrl ? 'Заморожено' : 'Нет URL';
+    return args.hasUrl ? 'Заморожено (вне viewport / бюджета)' : 'Нет URL';
   }
   if (args.mode === 'compact') {
     return 'Compact';
@@ -135,16 +96,13 @@ export function resolvePagePlaceholder(args: {
 }
 
 /**
- * Короткая подпись sandbox в UI (allowlist note).
- *
- * @param preset - активный preset
- * @returns RU-метка
+ * Короткая подпись sandbox (tooltip).
  */
 export function sandboxPresetLabel(preset: IframeSandboxPreset): string {
   if (preset === 'trusted') {
-    return 'sandbox: trusted (allowlist baseUrl · same-origin)';
+    return 'Sandbox trusted: same-origin для dogfood localhost';
   }
-  return 'sandbox: strict (вне allowlist · без same-origin)';
+  return 'Sandbox strict: без same-origin (вне allowlist)';
 }
 
 function PageNodeInner(props: NodeProps<PageFlowNode>) {
@@ -166,7 +124,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const visiblePageIds = useAppStore((s) => s.visiblePageIds);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
-  /** Подписка на строку URL, не на метод — иначе globalRole/activeStates не двигают iframe */
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
@@ -176,6 +133,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     highlighted.size > 0 && !highlighted.has(node.id) && !isSelected;
   const isLive = live.has(node.id) && mode === 'live';
   const activeStateName = activeStates.get(node.id);
+  const isPinned = pinned.has(node.id);
 
   const effectiveBaseUrl =
     baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl;
@@ -214,7 +172,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   }, [node.id, setVisible, visiblePageIds.size]);
 
   const iframeW = (NODE_W - 16) / scale;
-  const iframeH = (NODE_H - 96) / scale;
+  const iframeH = (NODE_H - 112) / scale;
 
   const onState = (st: AppMapPageState) => {
     if (activeStateName === st.name) {
@@ -236,34 +194,32 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     <div
       className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}`}
       style={{ width: NODE_W, height: NODE_H }}
+      data-page-id={node.id}
+      data-lam-node={node.id}
       onClick={() => selectPage(node.id)}
       onDoubleClick={() => setInteract(node.id)}
     >
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
-        {node.groupIds?.[0] ? (
-          <span className="page-node__badge">{node.groupIds[0]}</span>
-        ) : null}
+        {node.groupIds?.[0] ? <Badge>{node.groupIds[0]}</Badge> : null}
         <div className="page-node__title">{node.title}</div>
         <div className="page-node__actions">
           <button
             type="button"
-            className={`icon-btn${pinned.has(node.id) ? ' icon-btn--on' : ''}`}
-            style={ICON_HIT}
-            title="Закрепить (держать iframe живым)"
-            aria-label="Закрепить страницу"
-            aria-pressed={pinned.has(node.id)}
+            className={`icon-btn${isPinned ? ' icon-btn--on' : ''}`}
+            title="Закрепить live iframe"
+            aria-label={isPinned ? 'Открепить' : 'Закрепить'}
+            aria-pressed={isPinned}
             onClick={(e) => {
               e.stopPropagation();
               togglePin(node.id);
             }}
           >
-            📌
+            {isPinned ? <PinOff size={16} strokeWidth={1.75} /> : <Pin size={16} strokeWidth={1.75} />}
           </button>
           <button
             type="button"
             className="icon-btn"
-            style={ICON_HIT}
             title="Открыть в новой вкладке"
             aria-label="Открыть в новой вкладке"
             onClick={(e) => {
@@ -271,19 +227,23 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               openPageInNewTab(node.id);
             }}
           >
-            ↗
+            <ExternalLink size={16} strokeWidth={1.75} />
           </button>
         </div>
       </div>
       <div className="page-node__path" title={url ?? node.pathPattern}>
         {node.pathExample ?? node.pathPattern}
       </div>
-      <div className="page-node__body" ref={bodyRef} data-page-id={node.id}>
+      <div
+        className="page-node__body"
+        ref={bodyRef}
+        data-page-id={node.id}
+        title={sandboxNote}
+      >
         {showIframe ? (
           <div
             className="page-node__iframe-shell"
             data-sandbox-preset={sandboxPreset}
-            title={sandboxNote}
           >
             <iframe
               key={`${url}:${sandboxPreset}`}
@@ -291,6 +251,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               src={url}
               width={iframeW}
               height={iframeH}
+              referrerPolicy="strict-origin-when-cross-origin"
+              allow="clipboard-read; clipboard-write"
               style={{
                 transform: `scale(${scale})`,
                 pointerEvents:
@@ -299,26 +261,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               sandbox={sandboxValue}
               onError={() => setIframeError(true)}
             />
-            <span
-              className="page-node__sandbox-note"
-              style={{
-                position: 'absolute',
-                left: 4,
-                bottom: 4,
-                zIndex: 2,
-                fontSize: 9,
-                lineHeight: 1.2,
-                maxWidth: '92%',
-                padding: '2px 4px',
-                borderRadius: 4,
-                color: 'var(--text-muted, #9aa3b5)',
-                background: 'rgba(8, 10, 15, 0.72)',
-                pointerEvents: 'none',
-              }}
-              aria-hidden={true}
-            >
-              {sandboxNote}
-            </span>
           </div>
         ) : (
           <div className="page-node__placeholder" role="status">
@@ -329,10 +271,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       {node.states && node.states.length > 0 ? (
         <div className="page-node__states">
           {node.states.map((st) => (
-            <button
+            <Chip
               key={st.name}
-              type="button"
-              className={`state-chip${activeStateName === st.name ? ' state-chip--active' : ''}`}
+              active={activeStateName === st.name}
               title={st.note ?? st.name}
               onClick={(e) => {
                 e.stopPropagation();
@@ -340,7 +281,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               }}
             >
               {st.name}
-            </button>
+            </Chip>
           ))}
         </div>
       ) : null}

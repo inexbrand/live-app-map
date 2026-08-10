@@ -13,12 +13,14 @@ Usage:
   live-app-map diff <left.json> <right.json>
   live-app-map doctor [--dir <path>]
   live-app-map export <appmap.json> -o map.appmap
+  live-app-map feedback --file feedback.json [--print-prompt]
   live-app-map dev --target-url <url> [--port 4310] [--map <file.json>]
 
 Examples:
   live-app-map scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/miniapp.json
   live-app-map doctor --dir ../korbor/apps/site
   live-app-map export maps/korbor-miniapp.json -o maps/korbor-miniapp.appmap
+  live-app-map feedback --file lam-feedback-route_feed.json --print-prompt
 `);
   process.exit(1);
 }
@@ -124,15 +126,96 @@ async function main(argv: string[]): Promise<void> {
     return;
   }
 
+  if (cmd === 'feedback') {
+    const file = flag(argv, '--file') ?? flag(argv, '-f');
+    const printPrompt = argv.includes('--print-prompt');
+    if (!file) {
+      usage();
+    }
+    const { readFileSync, writeFileSync, mkdirSync } = await import('node:fs');
+    const path = await import('node:path');
+    let raw: unknown;
+    try {
+      raw = JSON.parse(readFileSync(file, 'utf8')) as unknown;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      console.error(`feedback: невалидный JSON (${message})`);
+      process.exit(1);
+    }
+    if (raw === null || typeof raw !== 'object') {
+      console.error('feedback: ожидается объект Live App Map feedback v1');
+      process.exit(1);
+    }
+    const body = raw as {
+      kind?: string;
+      version?: number;
+      note?: string;
+      promptMarkdown?: string;
+      page?: { id?: string; title?: string; path?: string; url?: string };
+      severity?: string;
+    };
+    if (body.kind !== 'live-app-map-feedback' || body.version !== 1) {
+      console.error('feedback: kind должен быть live-app-map-feedback, version 1');
+      process.exit(1);
+    }
+    if (!body.note || body.note.trim() === '') {
+      console.error('feedback: пустой note');
+      process.exit(1);
+    }
+    const outDir = path.join(process.cwd(), '.lam-feedback');
+    mkdirSync(outDir, { recursive: true });
+    const stamp = new Date().toISOString().replace(/[:.]/g, '-');
+    const pageId = body.page?.id ?? 'unknown';
+    const safeId = pageId.replace(/[^a-zA-Z0-9_-]+/g, '_');
+    const outJson = path.join(outDir, `${stamp}-${safeId}.json`);
+    const outMd = path.join(outDir, `${stamp}-${safeId}.md`);
+    writeFileSync(outJson, `${JSON.stringify(raw, null, 2)}\n`, 'utf8');
+    const md =
+      typeof body.promptMarkdown === 'string' && body.promptMarkdown.length > 0
+        ? body.promptMarkdown
+        : [
+            '# Live App Map feedback',
+            '',
+            `Severity: ${body.severity ?? 'medium'}`,
+            `Page: ${body.page?.title ?? pageId} (\`${pageId}\`)`,
+            body.page?.path ? `Path: \`${body.page.path}\`` : '',
+            body.page?.url ? `URL: ${body.page.url}` : '',
+            '',
+            '## Note',
+            body.note,
+            '',
+          ]
+            .filter((l) => l !== undefined)
+            .join('\n');
+    writeFileSync(outMd, md.endsWith('\n') ? md : `${md}\n`, 'utf8');
+    if (printPrompt) {
+      console.log(md);
+    }
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          pageId,
+          severity: body.severity ?? 'medium',
+          outJson,
+          outMd,
+          next: 'Передайте .md промпт агенту или откройте visualizer feedback panel',
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
   if (cmd === 'dev') {
     const target = flag(argv, '--target-url') ?? 'http://localhost:3000';
     const port = Number(flag(argv, '--port') ?? '4310');
     const mapFile = flag(argv, '--map');
     const visualizerUrl = `http://localhost:${port}/?baseUrl=${encodeURIComponent(target)}`;
-    // Один явный next step: команда + порт (без «угадывания» usage).
     const message =
-      `Следующий шаг: bun run dev:visualizer (порт ${port}). ` +
-      `Откройте ${visualizerUrl} и укажите baseUrl целевого приложения` +
+      `Следующий шаг: bun run dev (порт ${port}). ` +
+      `Откройте ${visualizerUrl}` +
       (mapFile !== null ? ` (карта: ${mapFile})` : '');
     console.error(message);
     console.log(
@@ -141,7 +224,7 @@ async function main(argv: string[]): Promise<void> {
           ok: true,
           mode: 'dev-sidecar-hint',
           message,
-          command: 'bun run dev:visualizer',
+          command: 'bun run dev',
           targetUrl: target,
           port,
           mapFile,

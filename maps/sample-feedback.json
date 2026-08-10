@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "kind": "live-app-map-feedback",
+  "generatedAt": "2026-08-10T02:08:13.033Z",
+  "page": {
+    "id": "route:/feed",
+    "title": "Feed",
+    "path": "/feed",
+    "url": "https://vite.localhost:5175/feed?lam_role=recruiter"
+  },
+  "context": {
+    "role": "recruiter"
+  },
+  "severity": "high",
+  "note": "Кнопка отклика обрезана на 375px",
+  "promptMarkdown": "# Live App Map — feedback / fix request\n\nСгенерировано: 2026-08-10T02:08:13.033Z\nSeverity: **high**\n\n## Экран\n- **id:** `route:/feed`\n- **title:** Feed\n- **path:** `/feed`\n- **live URL:** https://vite.localhost:5175/feed?lam_role=recruiter\n- **role inject:** `recruiter`\n\n## Что не так\nКнопка отклика обрезана на 375px\n\n## Ожидаемое поведение\nИсправь root cause так, чтобы экран в Live App Map / target app вёл себя корректно при live-preview и user path. Сохрани monochrome UI kit, Manrope, без emoji — только иконки Lucide.\n\n## Acceptance\n- [ ] Проблема воспроизводится/закрыта на live URL\n- [ ] `bun run test` зелёный\n- [ ] `bun run smoke` / visualizer `:4310` ok\n\n## Команда CLI\n```bash\nbun run packages/cli/src/bin.ts feedback --file feedback.json\n```\n"
+}

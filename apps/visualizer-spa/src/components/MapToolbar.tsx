@@ -1,6 +1,13 @@
 /**
- * Тулбар: загрузка (primary), mode, scale, роль, baseUrl, пресеты Korbor (secondary), бюджет.
+ * Тулбар на UI-kit (monochrome + Lucide).
  */
+import {
+  Eraser,
+  FolderOpen,
+  LayoutGrid,
+  Map as MapIcon,
+  Radio,
+} from 'lucide-react';
 import { useState } from 'react';
 import {
   fetchKorborPreset,
@@ -9,7 +16,11 @@ import {
 } from '../korbor-presets';
 import { importMapFile } from '../lib/import-map';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
+import { Button, Field, Input, Select } from '../ui';
 
+/**
+ * Главный тулбар visualizer.
+ */
 export function MapToolbar() {
   const mode = useAppStore((s) => s.mode);
   const setMode = useAppStore((s) => s.setMode);
@@ -61,7 +72,7 @@ export function MapToolbar() {
       setBaseUrlOverride(preset.baseUrl);
       loadUnknownJson(res.json);
       setMode('live');
-      setToast(`${preset.label} · baseUrl ${preset.baseUrl}`);
+      setToast(`${preset.label} · ${preset.baseUrl}`);
     } finally {
       setLoadingPresetId(null);
     }
@@ -69,10 +80,14 @@ export function MapToolbar() {
 
   return (
     <header className="toolbar">
-      <div className="toolbar__brand">Live App Map</div>
+      <div className="toolbar__brand">
+        <LayoutGrid size={18} strokeWidth={1.75} aria-hidden={true} />
+        Live App Map
+      </div>
 
-      <label className="btn btn--primary" title="Открыть JSON / .appmap">
-        Открыть…
+      <label className="ui-btn ui-btn--primary" title="Открыть JSON / .appmap">
+        <FolderOpen size={16} strokeWidth={1.75} aria-hidden={true} />
+        Открыть
         <input
           type="file"
           accept=".json,.appmap,.zip,application/json"
@@ -81,67 +96,81 @@ export function MapToolbar() {
         />
       </label>
 
-      <button type="button" className="btn" onClick={() => clearMap()} disabled={!document}>
+      <Button
+        type="button"
+        variant="outline"
+        disabled={!document}
+        onClick={() => clearMap()}
+        title="Очистить карту"
+      >
+        <Eraser size={16} strokeWidth={1.75} />
         Очистить
-      </button>
+      </Button>
 
       <div className="toolbar__group" role="group" aria-label="Пресеты Korbor">
         {KORBOR_PRESETS.map((p) => {
           const busy = loadingPresetId === p.id;
           return (
-            <button
+            <Button
               key={p.id}
               type="button"
-              className="btn"
+              variant="outline"
               disabled={loadingPresetId !== null}
               aria-busy={busy}
               onClick={() => void loadPreset(p)}
             >
               {busy ? 'Загрузка…' : p.label}
-            </button>
+            </Button>
           );
         })}
       </div>
 
-      <div className="toolbar__group">
-        <button
+      <div className="toolbar__group" role="group" aria-label="Режим карты">
+        <Button
           type="button"
-          className={`btn${mode === 'map-only' ? ' btn--active' : ''}`}
+          variant="ghost"
+          active={mode === 'map-only'}
           onClick={() => setMode('map-only')}
         >
+          <MapIcon size={16} strokeWidth={1.75} />
           Map
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={`btn${mode === 'live' ? ' btn--active' : ''}`}
+          variant="ghost"
+          active={mode === 'live'}
           onClick={() => setMode('live')}
         >
+          <Radio size={16} strokeWidth={1.75} />
           Live
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
-          className={`btn${mode === 'compact' ? ' btn--active' : ''}`}
+          variant="ghost"
+          active={mode === 'compact'}
           onClick={() => setMode('compact')}
         >
           Compact
-        </button>
+        </Button>
       </div>
 
-      <label className="field">
-        Scale
-        <select
+      <Field label="Scale" htmlFor="tb-scale" inline>
+        <Select
+          id="tb-scale"
           value={iframeScale}
-          onChange={(e) => setIframeScale(Number(e.target.value) as 0.5 | 0.75 | 1)}
+          onChange={(e) =>
+            setIframeScale(Number(e.target.value) as 0.5 | 0.75 | 1)
+          }
         >
           <option value={0.5}>50%</option>
           <option value={0.75}>75%</option>
           <option value={1}>100%</option>
-        </select>
-      </label>
+        </Select>
+      </Field>
 
-      <label className="field" title="Максимум одновременных live iframe (1–16)">
-        Max live
-        <select
+      <Field label="Max live" htmlFor="tb-max" inline>
+        <Select
+          id="tb-max"
           value={maxLiveIframes}
           onChange={(e) => setMaxLiveIframes(Number(e.target.value))}
         >
@@ -150,38 +179,41 @@ export function MapToolbar() {
               {n}
             </option>
           ))}
-        </select>
-      </label>
+        </Select>
+      </Field>
 
-      <label className="field" title="Инжект роли в iframe URL (?lam_role=)">
-        Роль
-        <select value={globalRole} onChange={(e) => setGlobalRole(e.target.value)}>
-          <option value="">— нет —</option>
+      <Field label="Роль" htmlFor="tb-role" inline>
+        <Select
+          id="tb-role"
+          value={globalRole}
+          onChange={(e) => setGlobalRole(e.target.value)}
+        >
+          <option value="">—</option>
           <option value="recruiter">Рекрутер</option>
-          <option value="employer">Клиент (employer)</option>
-        </select>
-      </label>
+          <option value="employer">Клиент</option>
+        </Select>
+      </Field>
 
-      <label className="field">
-        Base URL
-        <input
+      <Field label="Base URL" htmlFor="tb-base" inline>
+        <Input
+          id="tb-base"
           value={baseUrlOverride}
-          placeholder="http://localhost:…"
+          placeholder="https://vite.localhost:5175"
           onChange={(e) => setBaseUrlOverride(e.target.value)}
           onBlur={(e) => setBaseUrlOverride(e.target.value)}
           style={{ minWidth: 200 }}
         />
-      </label>
+      </Field>
 
-      <label className="field">
-        Поиск
-        <input
+      <Field label="Поиск" htmlFor="tb-search" inline>
+        <Input
+          id="tb-search"
           data-lam-search
           value={searchQuery}
           placeholder="title / path"
           onChange={(e) => setSearchQuery(e.target.value)}
         />
-      </label>
+      </Field>
 
       <span className="budget-pill" title="Бюджет live iframe и pin">
         live {liveCount}/{maxLiveIframes} · pin {pinCount}/{DEFAULT_MAX_PINNED}

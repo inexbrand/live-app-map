@@ -13,7 +13,11 @@ test.describe('visualizer smoke', () => {
       page.getByRole('heading', { name: 'Live App Map' }),
     ).toBeVisible();
 
-    await page.getByRole('button', { name: 'Korbor Miniapp' }).click();
+    // Primary CTA empty-state (не тулбар — там дубль кнопки пресета)
+    await page
+      .locator('.empty-state')
+      .getByRole('button', { name: 'Korbor Miniapp' })
+      .click();
 
     const statusBar = page.locator('footer.status-bar');
     await expect(statusBar).toBeVisible();
@@ -30,9 +34,9 @@ test.describe('visualizer smoke', () => {
     await expect(statusBar).toContainText(/mode:\s*live/);
 
     // Роль recruiter: select в тулбаре → status-bar role: recruiter
-    const roleSelect = page.locator('header.toolbar label.field', {
-      hasText: 'Роль',
-    }).locator('select');
+    const roleSelect = page
+      .locator('header.toolbar label.field', { hasText: 'Роль' })
+      .locator('select');
     await roleSelect.selectOption('recruiter');
     await expect(statusBar).toContainText(/role:\s*recruiter/);
 

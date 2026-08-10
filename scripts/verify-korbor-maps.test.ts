@@ -1,14 +1,27 @@
 /**
- * Структурная проверка shipped Korbor maps (не mock): реальные файлы public/maps.
+ * Структурная проверка shipped Korbor maps (не mock): реальные файлы.
+ *
+ * Single-writer policy (см. scripts/scan-korbor.ts):
+ * - канон: `maps/*.liveappmap.json`
+ * - зеркало: `apps/visualizer-spa/public/maps/*.liveappmap.json` — content-equal с каноном
  */
 import { describe, expect, test } from 'bun:test';
-import { readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 import { parseLiveAppMapJson } from '../packages/schema/src/index';
 import { applyStateToUrl } from '../packages/graph/src/index';
 
 const root = path.resolve(import.meta.dir, '..');
+/** Канон (source of truth) — пишет только scan-korbor. */
+const mapsDir = path.join(root, 'maps');
+/** Зеркало для Vite static serve. */
 const pub = path.join(root, 'apps/visualizer-spa/public/maps');
+
+const LIVEAPPMAP_NAMES = [
+  'korbor-miniapp.liveappmap.json',
+  'korbor-admin.liveappmap.json',
+  'korbor-site.liveappmap.json',
+] as const;
 
 function load(name: string) {
   const file = path.join(pub, name);
@@ -21,6 +34,30 @@ function load(name: string) {
   }
   return result.document;
 }
+
+describe('korbor maps single-writer (maps/ ↔ public/maps)', () => {
+  test('liveappmap pairs: content equality maps vs public', () => {
+    for (const name of LIVEAPPMAP_NAMES) {
+      const canonPath = path.join(mapsDir, name);
+      const mirrorPath = path.join(pub, name);
+      expect(existsSync(canonPath)).toBe(true);
+      expect(existsSync(mirrorPath)).toBe(true);
+      const canon = readFileSync(canonPath, 'utf8');
+      const mirror = readFileSync(mirrorPath, 'utf8');
+      expect(mirror).toBe(canon);
+    }
+  });
+
+  test('public/maps has no liveappmap without matching maps/ canon', () => {
+    if (!existsSync(pub)) {
+      return;
+    }
+    const pubLives = readdirSync(pub).filter((f) => f.endsWith('.liveappmap.json'));
+    for (const name of pubLives) {
+      expect(existsSync(path.join(mapsDir, name))).toBe(true);
+    }
+  });
+});
 
 describe('korbor maps (shipped artifacts)', () => {
   test('miniapp has recruiter and employer states', () => {

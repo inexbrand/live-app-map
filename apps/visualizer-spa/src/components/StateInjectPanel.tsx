@@ -1,10 +1,14 @@
 /**
- * Панель инжекта стейтов для выбранной ноды + глобальная роль.
- * Live URL пересчитывается селектором store (globalRole / activeStates).
+ * Панель стейтов / ролей / interact (UI kit).
  */
+import { Copy, MousePointer2, ExternalLink } from 'lucide-react';
 import { useMemo } from 'react';
+import { Button, Chip, Field, PanelBody, PanelHeader, Select } from '../ui';
 import { useAppStore } from '../store/app-store';
 
+/**
+ * Правый drawer: роль, стейты, live URL.
+ */
 export function StateInjectPanel() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
   const index = useAppStore((s) => s.index);
@@ -24,27 +28,16 @@ export function StateInjectPanel() {
   const activeStateName = selectedPageId
     ? activeStates.get(selectedPageId)
     : undefined;
-  const activeStateMeta = node?.states?.find((s) => s.name === activeStateName);
 
   const allRoleStates = useMemo(() => {
     if (!index) {
       return [];
     }
-    const out: Array<{ pageId: string; title: string; name: string; note?: string }> =
-      [];
+    const out: Array<{ pageId: string; title: string; name: string }> = [];
     for (const n of index.nodesById.values()) {
       for (const st of n.states ?? []) {
-        if (
-          st.inject?.role ||
-          st.name.includes('recruiter') ||
-          st.name.includes('employer')
-        ) {
-          out.push({
-            pageId: n.id,
-            title: n.title,
-            name: st.name,
-            note: st.note,
-          });
+        if (st.inject?.role) {
+          out.push({ pageId: n.id, title: n.title, name: st.name });
         }
       }
     }
@@ -53,7 +46,7 @@ export function StateInjectPanel() {
 
   const copyUrl = async () => {
     if (!liveUrl) {
-      setToast('Нет URL для копирования');
+      setToast('Нет URL');
       return;
     }
     try {
@@ -66,120 +59,118 @@ export function StateInjectPanel() {
 
   if (!selectedPageId || !node) {
     return (
-      <aside className="drawer">
-        <h2>Стейты и роли</h2>
-        <p>
-          Выберите ноду на карте. Глобальная роль ниже попадает в каждый live URL
-          как query <code>lam_role</code>. Для Korbor Miniapp:{' '}
-          <strong>recruiter</strong> и <strong>employer</strong> (клиент, создающий
-          вакансии). Per-page chip перекрывает роль для конкретной страницы.
-        </p>
-        <div className="drawer__row">
-          <label htmlFor="global-role">Глобальная роль (query lam_role)</label>
-          <select
-            id="global-role"
+      <aside className="drawer ui-panel">
+        <PanelHeader
+          title="Стейты и роли"
+          description="Выберите ноду. Глобальная роль → query lam_role на live URL."
+        />
+        <PanelBody>
+          <Field label="Глобальная роль" htmlFor="global-role">
+            <Select
+              id="global-role"
+              value={globalRole}
+              onChange={(e) => setGlobalRole(e.target.value)}
+            >
+              <option value="">— нет —</option>
+              <option value="recruiter">Рекрутер</option>
+              <option value="employer">Клиент (employer)</option>
+            </Select>
+          </Field>
+          {allRoleStates.length > 0 ? (
+            <p className="drawer__hint">
+              Стейты с ролями: {allRoleStates.length} (см. chips на нодах).
+            </p>
+          ) : null}
+        </PanelBody>
+      </aside>
+    );
+  }
+
+  return (
+    <aside className="drawer ui-panel">
+      <PanelHeader
+        title={node.title}
+        description={node.pathExample ?? node.pathPattern}
+      />
+      <PanelBody>
+        <Field label="Live URL" htmlFor="live-url-view">
+          <textarea
+            id="live-url-view"
+            className="ui-textarea font-mono"
+            readOnly
+            rows={3}
+            value={liveUrl ?? '—'}
+          />
+        </Field>
+
+        <Field label="Глобальная роль" htmlFor="node-global-role">
+          <Select
+            id="node-global-role"
             value={globalRole}
             onChange={(e) => setGlobalRole(e.target.value)}
           >
             <option value="">— нет —</option>
             <option value="recruiter">Рекрутер</option>
             <option value="employer">Клиент (employer)</option>
-          </select>
-        </div>
-        {allRoleStates.length > 0 ? (
-          <>
-            <p>Стейты с ролями в карте:</p>
-            <ul className="drawer__list">
-              {allRoleStates.slice(0, 12).map((s) => (
-                <li key={`${s.pageId}:${s.name}`}>
-                  {s.title}: <code>{s.name}</code>
-                  {s.note ? ` — ${s.note}` : ''}
-                </li>
-              ))}
-            </ul>
-          </>
-        ) : (
-          <p className="drawer__hint">
-            В текущей карте нет стейтов с role inject — достаточно глобальной роли.
-          </p>
-        )}
-      </aside>
-    );
-  }
+          </Select>
+        </Field>
 
-  return (
-    <aside className="drawer">
-      <h2>{node.title}</h2>
-      <p>
-        <code>{node.pathPattern}</code>
-      </p>
-
-      <div className="drawer__row">
-        <label htmlFor="live-url">Live URL</label>
-        <textarea id="live-url" readOnly rows={3} value={liveUrl ?? 'Нет URL'} />
-      </div>
-
-      <div className="drawer__row">
-        <label htmlFor="node-global-role">Роль (global inject)</label>
-        <select
-          id="node-global-role"
-          value={globalRole}
-          onChange={(e) => setGlobalRole(e.target.value)}
-        >
-          <option value="">— нет —</option>
-          <option value="recruiter">Рекрутер</option>
-          <option value="employer">Клиент (employer)</option>
-        </select>
-      </div>
-
-      {(node.states ?? []).length > 0 ? (
-        <div className="drawer__row">
-          <label>Стейты страницы</label>
-          <div className="drawer__chips">
-            {(node.states ?? []).map((st) => {
-              const active = activeStates.get(node.id) === st.name;
-              return (
-                <button
+        {(node.states ?? []).length > 0 ? (
+          <div className="drawer__row">
+            <span className="ui-field__label">Стейты страницы</span>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+              {(node.states ?? []).map((st) => (
+                <Chip
                   key={st.name}
-                  type="button"
-                  className={`state-chip state-chip--hit${active ? ' state-chip--active' : ''}`}
-                  title={st.note ?? st.name}
-                  onClick={() => applyPageState(node.id, active ? null : st)}
+                  active={activeStateName === st.name}
+                  title={st.note}
+                  onClick={() =>
+                    applyPageState(
+                      node.id,
+                      activeStateName === st.name ? null : st,
+                    )
+                  }
                 >
                   {st.name}
-                  {st.inject?.role ? ` (${st.inject.role})` : ''}
-                </button>
-              );
-            })}
+                  {st.inject?.role ? ` · ${st.inject.role}` : ''}
+                </Chip>
+              ))}
+            </div>
           </div>
-          {activeStateMeta?.note ? (
-            <p className="drawer__hint">{activeStateMeta.note}</p>
-          ) : null}
-        </div>
-      ) : (
-        <p>У этой страницы нет именованных states в карте — используйте глобальную роль.</p>
-      )}
+        ) : (
+          <p className="drawer__hint">
+            Именованных states нет — используйте глобальную роль.
+          </p>
+        )}
 
-      <div className="drawer__actions">
-        <button
-          type="button"
-          className="btn btn--primary"
-          disabled={!liveUrl}
-          onClick={() => openPageInNewTab(node.id)}
-        >
-          Открыть вкладку
-        </button>
-        <button type="button" className="btn" disabled={!liveUrl} onClick={() => void copyUrl()}>
-          Копировать URL
-        </button>
-        <button
-          type="button"
-          className={`btn${interactPageId === node.id ? ' btn--active' : ''}`}
-          onClick={() => setInteract(interactPageId === node.id ? null : node.id)}
-        >
-          Interact iframe
-        </button>
-      </div>
+        <div className="drawer__actions">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            onClick={() => openPageInNewTab(node.id)}
+          >
+            <ExternalLink size={16} strokeWidth={1.75} />
+            Вкладка
+          </Button>
+          <Button type="button" variant="outline" size="sm" onClick={() => void copyUrl()}>
+            <Copy size={16} strokeWidth={1.75} />
+            URL
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            active={interactPageId === node.id}
+            onClick={() =>
+              setInteract(interactPageId === node.id ? null : node.id)
+            }
+          >
+            <MousePointer2 size={16} strokeWidth={1.75} />
+            Interact
+          </Button>
+        </div>
+      </PanelBody>
     </aside>
   );
 }

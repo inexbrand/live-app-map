@@ -2,15 +2,30 @@
 /**
  * Сканирует Korbor admin / miniapp / site и пишет maps/*.json + liveappmap.
  * Обогащает miniapp стейтами recruiter / employer.
+ *
+ * ## Single-writer policy (maps consistency)
+ *
+ * - **Канон (source of truth):** `maps/` — enterprise AppMap (`*.json`) и
+ *   LiveAppMap (`*.liveappmap.json`). Пишет только этот скрипт (`scan:korbor`).
+ * - **Зеркало (static serve):** `apps/visualizer-spa/public/maps/*.liveappmap.json`
+ *   — побайтовая копия соответствующего файла из `maps/` после записи канона.
+ * - Не править `public/maps` вручную и не генерировать туда отдельно:
+ *   только sync из канона через {@link writeMapsAndSyncPublic}.
+ * - Проверка равенства пар: `scripts/verify-korbor-maps.test.ts`.
  */
-import { mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import { copyFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { appMapToLiveAppMap } from '../packages/schema/src/index';
 import { runScan } from '../packages/cli/src/index';
 import type { AppMapDocument, AppMapNode, AppMapPageState } from '../packages/schema/src/types';
 
 const KORBOR = path.resolve(import.meta.dir, '../../korbor');
+/** Канонический каталог артефактов scan (single-writer source of truth). */
 const OUT = path.resolve(import.meta.dir, '../maps');
+/**
+ * Зеркало liveappmap для Vite static serve visualizer.
+ * Содержимое только через copy из `OUT` — не независимый writer.
+ */
 const PUBLIC_MAPS = path.resolve(import.meta.dir, '../apps/visualizer-spa/public/maps');
 
 const ROLE_STATES: AppMapPageState[] = [
@@ -153,7 +168,13 @@ function enrichMiniapp(doc: AppMapDocument): AppMapDocument {
   };
 }
 
-function writeBoth(name: string, doc: AppMapDocument): void {
+/**
+ * Single-writer: пишет канон в `maps/`, затем синхронизирует liveappmap в public/maps.
+ *
+ * @param name — базовое имя артефакта (например `korbor-miniapp`)
+ * @param doc — enterprise AppMap после enrich
+ */
+function writeMapsAndSyncPublic(name: string, doc: AppMapDocument): void {
   mkdirSync(OUT, { recursive: true });
   mkdirSync(PUBLIC_MAPS, { recursive: true });
   const enterprisePath = path.join(OUT, `${name}.json`);
@@ -162,9 +183,10 @@ function writeBoth(name: string, doc: AppMapDocument): void {
   writeFileSync(enterprisePath, `${JSON.stringify(doc, null, 2)}\n`);
   const live = appMapToLiveAppMap(doc);
   writeFileSync(livePath, `${JSON.stringify(live, null, 2)}\n`);
-  writeFileSync(pubLive, `${JSON.stringify(live, null, 2)}\n`);
+  // Зеркало: только copy канона — не второй независимый JSON.stringify
+  copyFileSync(livePath, pubLive);
   console.log(
-    `wrote ${name}: pages=${doc.nodes.filter((n) => n.kind === 'page').length} edges=${doc.edges.length}`,
+    `wrote ${name} (canon maps/ + sync public/maps): pages=${doc.nodes.filter((n) => n.kind === 'page').length} edges=${doc.edges.length}`,
   );
 }
 
@@ -230,7 +252,7 @@ async function main(): Promise<void> {
     if (t.name === 'korbor-site') {
       doc = enrichSite(doc, t.baseUrl);
     }
-    writeBoth(t.name, doc);
+    writeMapsAndSyncPublic(t.name, doc);
   }
 }
 

@@ -1,7 +1,9 @@
 /**
- * Shell Live App Map Visualizer.
+ * Shell Live App Map Visualizer (UI kit + feedback).
  */
+import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { FeedbackPanel } from './components/FeedbackPanel';
 import { MapToolbar } from './components/MapToolbar';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
@@ -11,11 +13,12 @@ import {
   type KorborPreset,
 } from './korbor-presets';
 import { importMapFile } from './lib/import-map';
-import {
-  DEFAULT_MAX_PINNED,
-  useAppStore,
-} from './store/app-store';
+import { DEFAULT_MAX_PINNED, useAppStore } from './store/app-store';
+import { Button } from './ui';
 
+/**
+ * Корневой shell.
+ */
 export function App() {
   const mapDocument = useAppStore((s) => s.document);
   const toast = useAppStore((s) => s.toast);
@@ -48,7 +51,7 @@ export function App() {
         setBaseUrlOverride(preset.baseUrl);
         loadUnknownJson(res.json);
         setMode('live');
-        setToast(`${preset.label} · baseUrl ${preset.baseUrl}`);
+        setToast(`${preset.label} · ${preset.baseUrl}`);
       } finally {
         setLoadingPresetId(null);
       }
@@ -96,7 +99,6 @@ export function App() {
     return () => window.clearTimeout(t);
   }, [toast, setToast]);
 
-  // Клавиатура: / — фокус поиска, Esc — снять selection
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
@@ -109,10 +111,7 @@ export function App() {
         !(e.target instanceof HTMLTextAreaElement)
       ) {
         e.preventDefault();
-        const input = window.document.querySelector<HTMLInputElement>(
-          'input[data-lam-search]',
-        );
-        input?.focus();
+        window.document.querySelector<HTMLInputElement>('input[data-lam-search]')?.focus();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -153,24 +152,32 @@ export function App() {
     >
       <MapToolbar />
       <div className="canvas-wrap">
-        {dragging ? <div className="drop-overlay">Отпустите .json / .appmap</div> : null}
+        {dragging ? (
+          <div className="drop-overlay">Отпустите .json / .appmap</div>
+        ) : null}
 
         {lastLoadError ? (
           <div className="error-banner" role="alert">
             <div className="error-banner__body">
-              <strong>Ошибка загрузки</strong>
+              <strong>
+                <AlertTriangle
+                  size={14}
+                  style={{ verticalAlign: 'text-bottom', marginRight: 6 }}
+                />
+                Ошибка загрузки
+              </strong>
               <span>{lastLoadError}</span>
             </div>
-            <button type="button" className="btn" onClick={() => clearLoadError()}>
-              Закрыть
-            </button>
+            <Button type="button" variant="ghost" size="icon-sm" onClick={() => clearLoadError()}>
+              <X size={16} />
+            </Button>
           </div>
         ) : null}
 
         {mapDocument && parseIssues.length > 0 ? (
           <div className="warnings-banner" role="status">
             <strong>Предупреждения parse ({parseIssues.length})</strong>
-            <ul>
+            <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
               {parseIssues.slice(0, 6).map((d, i) => (
                 <li key={`${d.code}-${i}`}>
                   {d.message}
@@ -178,9 +185,6 @@ export function App() {
                 </li>
               ))}
             </ul>
-            {parseIssues.length > 6 ? (
-              <span className="drawer__hint">…и ещё {parseIssues.length - 6}</span>
-            ) : null}
           </div>
         ) : null}
 
@@ -189,59 +193,72 @@ export function App() {
             <div className="empty-state__card">
               <h1>Live App Map</h1>
               <p>
-                Загрузите <code>liveappmap</code> / enterprise JSON / <code>.appmap</code> или
-                откройте пресет Korbor.
+                Загрузите карту или откройте пресет Korbor. Live iframe на dogfood
+                (localhost / *.localhost) — trusted sandbox. Роли miniapp: recruiter /
+                employer.
               </p>
               <p>
-                Для miniapp переключайте роль <strong>рекрутер</strong> /{' '}
-                <strong>клиент (employer)</strong> — query <code>lam_role</code> попадёт в iframe
-                URL.
+                Feedback: выберите экран → опишите дефект слева → скопируйте промпт или
+                JSON для CLI.
               </p>
               <div className="empty-state__actions">
                 {KORBOR_PRESETS.map((p) => {
                   const busy = loadingPresetId === p.id;
                   return (
-                    <button
+                    <Button
                       key={p.id}
                       type="button"
-                      className="btn btn--primary empty-state__cta"
+                      variant="primary"
                       disabled={loadingPresetId !== null}
                       aria-busy={busy}
                       onClick={() => void loadPreset(p)}
                     >
                       {busy ? 'Загрузка…' : p.label}
-                    </button>
+                    </Button>
                   );
                 })}
               </div>
               <p className="drawer__hint">
-                Либо перетащите файл на холст / «Открыть…» в тулбаре.
+                <code>bun run dev</code> → http://localhost:4310
               </p>
             </div>
           </div>
         ) : (
           <>
             <AppMapCanvas />
+            <FeedbackPanel />
             <StateInjectPanel />
           </>
         )}
       </div>
       <footer className="status-bar">
-        <span>mode: {mode}</span>
-        <span className="budget-pill budget-pill--inline">
-          live {liveCount}/{maxLiveIframes}
+        <span>
+          mode: <strong>{mode}</strong>
         </span>
-        <span className="budget-pill budget-pill--inline">
-          pin {pinCount}/{DEFAULT_MAX_PINNED}
+        <span>
+          live <strong>{liveCount}/{maxLiveIframes}</strong>
         </span>
-        <span>role: {globalRole || '—'}</span>
+        <span>
+          pin <strong>{pinCount}/{DEFAULT_MAX_PINNED}</strong>
+        </span>
+        <span>
+          role: <strong>{globalRole || '—'}</strong>
+        </span>
         <span>
           nodes:{' '}
-          {mapDocument?.nodes.filter((n) => n.kind === 'page').length ?? 0}
+          <strong>
+            {mapDocument?.nodes.filter((n) => n.kind === 'page').length ?? 0}
+          </strong>
         </span>
-        <span>warnings: {parseIssues.length}</span>
+        <span>
+          warnings: <strong>{parseIssues.length}</strong>
+        </span>
       </footer>
-      {toast ? <div className="toast">{toast}</div> : null}
+      {toast ? (
+        <div className="toast" role="status">
+          {toast}
+        </div>
+      ) : null}
     </div>
   );
 }

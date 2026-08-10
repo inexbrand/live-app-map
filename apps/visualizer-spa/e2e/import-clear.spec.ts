@@ -20,7 +20,9 @@ test.describe('import and clear', () => {
     await expect(page.locator('.empty-state')).toBeVisible();
 
     // Import через скрытый file input («Открыть…»)
-    await page.locator('header.toolbar input[type="file"]').setInputFiles(miniappMap);
+    await page
+      .locator('header.toolbar input[type="file"]')
+      .setInputFiles(miniappMap);
 
     const statusBar = page.locator('footer.status-bar');
     await expect

@@ -14,12 +14,15 @@
     "test": "bun test --max-concurrency=1 packages apps/visualizer-spa/src scripts",
     "test:unit": "bun test --max-concurrency=1 packages apps/visualizer-spa/src scripts",
     "test:e2e": "bun run --filter '@live-app-map/visualizer-spa' test:e2e",
+    "dev": "bun run --filter '@live-app-map/visualizer-spa' dev",
     "dev:visualizer": "bun run --filter '@live-app-map/visualizer-spa' dev",
     "scan": "bun run packages/cli/src/bin.ts scan",
     "dev:map": "bun run packages/cli/src/bin.ts dev",
     "scan:korbor": "bun run scripts/scan-korbor.ts",
     "smoke": "bun run scripts/runtime-smoke.ts",
-    "doctor": "bun run packages/cli/src/bin.ts doctor"
+    "doctor": "bun run packages/cli/src/bin.ts doctor",
+    "feedback": "bun run packages/cli/src/bin.ts feedback",
+    "mcp": "bun run packages/mcp-server/src/server.ts"
   },
   "devDependencies": {
     "@types/bun": "latest",

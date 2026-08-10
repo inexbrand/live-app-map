@@ -1,0 +1,20 @@
+{
+  "name": "@live-app-map/mcp-server",
+  "version": "0.1.0",
+  "type": "module",
+  "private": true,
+  "bin": {
+    "live-app-map-mcp": "./src/server.ts"
+  },
+  "scripts": {
+    "start": "bun run src/server.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@live-app-map/schema": "workspace:*"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2"
+  }
+}

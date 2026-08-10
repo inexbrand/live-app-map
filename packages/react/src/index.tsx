@@ -17,7 +17,7 @@ export const LIVE_APP_MAP_COPY = {
   devtoolsOpen: 'Карта приложения',
   devtoolsClose: 'Закрыть',
   devtoolsHint:
-    'Live App Map Devtools — откройте standalone SPA на :4310 или передайте graphUrl в <LiveAppMap />.',
+    'Live App Map Devtools — откройте standalone SPA на :4310 или передайте graphUrl в компонент LiveAppMap.',
 } as const;
 
 export type LiveAppMapProps = {
@@ -155,14 +155,16 @@ export type DevtoolsProps = {
   readonly position?: 'bottom-right' | 'bottom-left';
 };
 
+export type DevtoolsPanelProps = {
+  readonly open: boolean;
+  readonly onToggle: () => void;
+  readonly position?: DevtoolsProps['position'];
+};
+
 /**
- * Плавающая кнопка Devtools (открыть SPA или in-app panel). Только non-production.
+ * Презентация Devtools без hooks (для unit и для LiveAppMapDevtools).
  */
-export function LiveAppMapDevtools(props: DevtoolsProps) {
-  const [open, setOpen] = useState(props.initialIsOpen ?? false);
-  if (process.env.NODE_ENV === 'production') {
-    return null;
-  }
+export function LiveAppMapDevtoolsPanel(props: DevtoolsPanelProps) {
   const style: CSSProperties = {
     position: 'fixed',
     bottom: 16,
@@ -177,10 +179,10 @@ export function LiveAppMapDevtools(props: DevtoolsProps) {
   };
   return (
     <div style={style}>
-      <button type="button" style={buttonStyle} onClick={() => setOpen((v) => !v)}>
-        {open ? LIVE_APP_MAP_COPY.devtoolsClose : LIVE_APP_MAP_COPY.devtoolsOpen}
+      <button type="button" style={buttonStyle} onClick={props.onToggle}>
+        {props.open ? LIVE_APP_MAP_COPY.devtoolsClose : LIVE_APP_MAP_COPY.devtoolsOpen}
       </button>
-      {open ? (
+      {props.open ? (
         <div
           style={{
             marginTop: 8,
@@ -196,5 +198,24 @@ export function LiveAppMapDevtools(props: DevtoolsProps) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Плавающая кнопка Devtools (открыть SPA или in-app panel). Только non-production.
+ */
+export function LiveAppMapDevtools(props: DevtoolsProps) {
+  const [open, setOpen] = useState(props.initialIsOpen ?? false);
+  if (process.env.NODE_ENV === 'production') {
+    return null;
+  }
+  return (
+    <LiveAppMapDevtoolsPanel
+      open={open}
+      position={props.position}
+      onToggle={() => {
+        setOpen((v) => !v);
+      }}
+    />
   );
 }
