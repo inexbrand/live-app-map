@@ -12,11 +12,13 @@ Usage:
   live-app-map scan --dir <path> [-o out.json] [--base-url url] [--framework next|react-router|auto]
   live-app-map diff <left.json> <right.json>
   live-app-map doctor [--dir <path>]
+  live-app-map export <appmap.json> -o map.appmap
   live-app-map dev --target-url <url> [--port 4310] [--map <file.json>]
 
 Examples:
-  live-app-map scan --dir ../korbor/apps/miniapp --base-url http://localhost:5175 -o maps/miniapp.json
+  live-app-map scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/miniapp.json
   live-app-map doctor --dir ../korbor/apps/site
+  live-app-map export maps/korbor-miniapp.json -o maps/korbor-miniapp.appmap
 `);
   process.exit(1);
 }
@@ -88,6 +90,27 @@ async function main(argv: string[]): Promise<void> {
   if (cmd === 'doctor') {
     const dir = flag(argv, '--dir') ?? '.';
     console.log(JSON.stringify(runDoctor(dir), null, 2));
+    return;
+  }
+
+  if (cmd === 'export') {
+    const input = argv[1];
+    const out = flag(argv, '-o') ?? flag(argv, '--out') ?? 'map.appmap';
+    if (!input) {
+      usage();
+    }
+    const { readFileSync, writeFileSync } = await import('node:fs');
+    const { parseAppMapDocument } = await import('@live-app-map/schema');
+    const { exportAppMapZip } = await import('@live-app-map/export-appmap');
+    const raw = JSON.parse(readFileSync(input, 'utf8')) as unknown;
+    const parsed = parseAppMapDocument(raw);
+    if (!parsed.ok) {
+      console.error(parsed.errors.map((e) => e.message).join('\n'));
+      process.exit(1);
+    }
+    const zip = await exportAppMapZip(parsed.document);
+    writeFileSync(out, zip);
+    console.log(JSON.stringify({ ok: true, out, bytes: zip.byteLength }, null, 2));
     return;
   }
 
