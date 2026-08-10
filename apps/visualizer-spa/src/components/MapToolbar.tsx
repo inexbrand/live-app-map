@@ -18,6 +18,14 @@ import {
   KORBOR_PRESETS,
   type KorborPreset,
 } from '../korbor-presets';
+import {
+  fetchDogfoodActors,
+  formatDogfoodActorOption,
+  isDogfoodClientEnabled,
+  mapSessionToInject,
+  mintDogfoodSession,
+  type DogfoodActor,
+} from '../lib/dogfood-api';
 import { importMapFile } from '../lib/import-map';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 import { Button, Field, Input, Select, Textarea } from '../ui';
@@ -58,6 +66,49 @@ export function MapToolbar() {
 
   const [sheet, setSheet] = useState<SheetId>(null);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
+  const [dogfoodActors, setDogfoodActors] = useState<readonly DogfoodActor[]>(
+    [],
+  );
+  const [dogfoodActorsError, setDogfoodActorsError] = useState<string | null>(
+    null,
+  );
+  const [selectedActorKey, setSelectedActorKey] = useState('');
+  const [dogfoodBusy, setDogfoodBusy] = useState(false);
+
+  useEffect(() => {
+    if (sheet !== 'settings') {
+      return;
+    }
+    if (!isDogfoodClientEnabled(import.meta.env)) {
+      setDogfoodActors([]);
+      setDogfoodActorsError('Авто-вход отключён в production-сборке');
+      return;
+    }
+    let cancelled = false;
+    void (async () => {
+      const res = await fetchDogfoodActors();
+      if (cancelled) {
+        return;
+      }
+      if (!res.ok) {
+        setDogfoodActors([]);
+        setDogfoodActorsError(res.error);
+        return;
+      }
+      setDogfoodActors(res.data);
+      setDogfoodActorsError(null);
+      // auto-select first actor for one-click login
+      if (res.data.length > 0 && selectedActorKey === '') {
+        const first = res.data[0];
+        if (first) {
+          setSelectedActorKey(`${first.kind}:${first.id}`);
+        }
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [sheet, selectedActorKey]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -401,42 +452,128 @@ export function MapToolbar() {
         </div>
 
         <div className="sheet-block">
-          <div className="ui-field__label">Dogfood-сессии</div>
+          <div className="ui-field__label">Авто-вход (dev)</div>
           <p className="drawer__hint">
-            Админка: один раз войдите во вкладке или вставьте access token — все
-            iframe подхватят. Мини-приложение: вставьте raw Telegram initData.
+            Выберите пользователя из БД Korbor — live-карта откроет экраны уже
+            авторизованными. Нужен API :16000 (DOGFOOD_DEV).
           </p>
         </div>
 
-        <Field
-          label="Admin access token"
-          htmlFor="set-admin-tok"
-          hint="Подставится как ?lam_access_token= (sessionStorage admin)."
-        >
-          <Textarea
-            id="set-admin-tok"
-            rows={2}
-            value={dogfoodAdminAccessToken}
-            placeholder="Bearer-токен из login / DevTools"
-            onChange={(e) => setDogfoodAdminAccessToken(e.target.value)}
-          />
-        </Field>
+        {dogfoodActorsError ? (
+          <p className="drawer__hint" role="status">
+            {dogfoodActorsError}
+          </p>
+        ) : null}
 
         <Field
-          label="Miniapp initData"
-          htmlFor="set-init"
-          hint="Сырая строка initData; ?lam_init_data= + Telegram.WebApp stub."
+          label="Пользователь из БД"
+          htmlFor="dogfood-actor"
+          hint="При выборе — сразу mint сессии для live-iframe."
         >
-          <Textarea
-            id="set-init"
-            rows={4}
-            value={dogfoodMiniappInitData}
-            placeholder="query_id=…&user=…&auth_date=…&hash=…"
-            onChange={(e) => setDogfoodMiniappInitData(e.target.value)}
-          />
+          <Select
+            id="dogfood-actor"
+            value={selectedActorKey}
+            disabled={dogfoodActors.length === 0 || dogfoodBusy}
+            onChange={(e) => {
+              const key = e.target.value;
+              setSelectedActorKey(key);
+              if (!key) {
+                return;
+              }
+              const actor = dogfoodActors.find(
+                (a) => `${a.kind}:${a.id}` === key,
+              );
+              if (!actor) {
+                return;
+              }
+              void (async () => {
+                setDogfoodBusy(true);
+                try {
+                  const minted = await mintDogfoodSession(actor);
+                  if (!minted.ok) {
+                    setToast(minted.error);
+                    pushLog({
+                      level: 'error',
+                      source: 'system',
+                      message: `dogfood mint: ${minted.error}`,
+                    });
+                    return;
+                  }
+                  const inj = mapSessionToInject(minted.data);
+                  setDogfoodAdminAccessToken(inj.adminAccessToken);
+                  setDogfoodMiniappInitData(inj.miniappInitData);
+                  if (inj.globalRole) {
+                    setGlobalRole(inj.globalRole);
+                  } else if (actor.kind === 'admin') {
+                    setGlobalRole('');
+                  }
+                  setToast(inj.toast);
+                  pushLog({
+                    level: 'info',
+                    source: 'system',
+                    message: inj.toast,
+                  });
+                } finally {
+                  setDogfoodBusy(false);
+                }
+              })();
+            }}
+          >
+            <option value="">— выберите —</option>
+            {dogfoodActors.map((a) => (
+              <option key={`${a.kind}:${a.id}`} value={`${a.kind}:${a.id}`}>
+                {formatDogfoodActorOption(a)}
+              </option>
+            ))}
+          </Select>
         </Field>
 
         <div className="drawer__actions">
+          <Button
+            type="button"
+            variant="primary"
+            size="sm"
+            disabled={!selectedActorKey || dogfoodBusy}
+            onClick={() => {
+              void (async () => {
+                const actor = dogfoodActors.find(
+                  (a) => `${a.kind}:${a.id}` === selectedActorKey,
+                );
+                if (!actor) {
+                  return;
+                }
+                setDogfoodBusy(true);
+                try {
+                  const minted = await mintDogfoodSession(actor);
+                  if (!minted.ok) {
+                    setToast(minted.error);
+                    pushLog({
+                      level: 'error',
+                      source: 'system',
+                      message: `dogfood mint: ${minted.error}`,
+                    });
+                    return;
+                  }
+                  const inj = mapSessionToInject(minted.data);
+                  setDogfoodAdminAccessToken(inj.adminAccessToken);
+                  setDogfoodMiniappInitData(inj.miniappInitData);
+                  if (inj.globalRole) {
+                    setGlobalRole(inj.globalRole);
+                  }
+                  setToast(inj.toast);
+                  pushLog({
+                    level: 'info',
+                    source: 'system',
+                    message: inj.toast,
+                  });
+                } finally {
+                  setDogfoodBusy(false);
+                }
+              })();
+            }}
+          >
+            {dogfoodBusy ? 'Вход…' : 'Войти в карту'}
+          </Button>
           <Button
             type="button"
             variant="outline"
@@ -444,12 +581,41 @@ export function MapToolbar() {
             onClick={() => {
               setDogfoodAdminAccessToken('');
               setDogfoodMiniappInitData('');
+              setSelectedActorKey('');
               setToast('Dogfood-сессии очищены');
             }}
           >
-            Очистить dogfood
+            Сбросить вход
           </Button>
         </div>
+
+        <details className="sheet-block">
+          <summary className="drawer__hint" style={{ cursor: 'pointer' }}>
+            Вручную (токен / initData)
+          </summary>
+          <Field
+            label="Admin access token"
+            htmlFor="set-admin-tok"
+            hint="?lam_access_token="
+          >
+            <Textarea
+              id="set-admin-tok"
+              rows={2}
+              value={dogfoodAdminAccessToken}
+              placeholder="Bearer-токен"
+              onChange={(e) => setDogfoodAdminAccessToken(e.target.value)}
+            />
+          </Field>
+          <Field label="Miniapp initData" htmlFor="set-init" hint="?lam_init_data=">
+            <Textarea
+              id="set-init"
+              rows={3}
+              value={dogfoodMiniappInitData}
+              placeholder="query_id=…&user=…&hash=…"
+              onChange={(e) => setDogfoodMiniappInitData(e.target.value)}
+            />
+          </Field>
+        </details>
       </EdgeSheet>
 
       <EdgeSheet
