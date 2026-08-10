@@ -2,7 +2,6 @@
  * React Flow canvas для AppMapDocument.
  */
 import {
-  Background,
   Controls,
   MiniMap,
   ReactFlow,
@@ -171,20 +170,23 @@ export function AppMapCanvas() {
   }
 
   return (
-    <ReactFlow
-      nodes={nodes}
-      edges={edges}
-      nodeTypes={nodeTypes}
-      fitView
-      minZoom={0.15}
-      maxZoom={1.5}
-      proOptions={{ hideAttribution: true }}
-      onPaneClick={() => selectPage(null)}
-      onNodeClick={(_, n) => selectPage(n.id)}
-    >
-      <Background gap={18} color="#2a3140" />
-      <MiniMap pannable zoomable />
-      <Controls />
-    </ReactFlow>
+    <div className="flow-host">
+      {/* Сетка фиксирована к viewport, не едет с pan/zoom React Flow */}
+      <div className="flow-host__grid" aria-hidden={true} />
+      <ReactFlow
+        nodes={nodes}
+        edges={edges}
+        nodeTypes={nodeTypes}
+        fitView
+        minZoom={0.15}
+        maxZoom={1.5}
+        proOptions={{ hideAttribution: true }}
+        onPaneClick={() => selectPage(null)}
+        onNodeClick={(_, n) => selectPage(n.id)}
+      >
+        <MiniMap pannable zoomable />
+        <Controls />
+      </ReactFlow>
+    </div>
   );
 }

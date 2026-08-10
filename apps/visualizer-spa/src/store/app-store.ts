@@ -30,6 +30,7 @@ import {
   type LiveAppMapDocument,
 } from '@live-app-map/schema';
 import { create } from 'zustand';
+import { applyDogfoodToUrl } from '../lib/dogfood-url';
 import { clampViewport } from '../lib/viewport';
 
 export type IframeScale = 0.5 | 0.75 | 1;
@@ -82,6 +83,13 @@ type AppStore = {
   /** Глобальная роль (Korbor): employer | recruiter | '' */
   globalRole: string;
   baseUrlOverride: string;
+  /**
+   * Dogfood: raw Telegram initData для miniapp (?lam_init_data=).
+   * Сохраняется в localStorage visualizer origin.
+   */
+  dogfoodMiniappInitData: string;
+  /** Dogfood: admin access token (?lam_access_token=) */
+  dogfoodAdminAccessToken: string;
   toast: string | null;
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
   loadUnknownJson: (raw: unknown) => void;
@@ -96,6 +104,8 @@ type AppStore = {
   setVisible: (ids: ReadonlySet<string>) => void;
   setBaseUrlOverride: (url: string) => void;
   setGlobalRole: (role: string) => void;
+  setDogfoodMiniappInitData: (raw: string) => void;
+  setDogfoodAdminAccessToken: (token: string) => void;
   applyPageState: (pageId: string, state: AppMapPageState | null) => void;
   setInteract: (id: string | null) => void;
   openPageInNewTab: (id: string) => void;
@@ -119,6 +129,35 @@ type AppStore = {
 
 function rebuildIndex(doc: AppMapDocument | null): GraphIndex | null {
   return doc ? indexDocument(doc) : null;
+}
+
+const LS_INIT = 'lam.dogfood.miniappInitData';
+const LS_ADMIN = 'lam.dogfood.adminAccessToken';
+
+function readLs(key: string): string {
+  if (typeof localStorage === 'undefined') {
+    return '';
+  }
+  try {
+    return localStorage.getItem(key) ?? '';
+  } catch {
+    return '';
+  }
+}
+
+function writeLs(key: string, value: string): void {
+  if (typeof localStorage === 'undefined') {
+    return;
+  }
+  try {
+    if (value.trim() === '') {
+      localStorage.removeItem(key);
+    } else {
+      localStorage.setItem(key, value);
+    }
+  } catch {
+    // ignore
+  }
 }
 
 /** Результат переписывания node.url относительно baseUrl. */
@@ -202,6 +241,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   logFilterPageId: null,
   globalRole: '',
   baseUrlOverride: '',
+  dogfoodMiniappInitData: readLs(LS_INIT),
+  dogfoodAdminAccessToken: readLs(LS_ADMIN),
   toast: null,
 
   loadDocument: (doc, warnings = []) => {
@@ -401,6 +442,32 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().recomputeLive();
   },
 
+  setDogfoodMiniappInitData: (raw) => {
+    writeLs(LS_INIT, raw);
+    set({ dogfoodMiniappInitData: raw });
+    get().pushLog({
+      level: 'info',
+      source: 'system',
+      message: raw.trim()
+        ? 'Dogfood: initData miniapp сохранён (подставится в live URL)'
+        : 'Dogfood: initData miniapp очищен',
+    });
+    get().recomputeLive();
+  },
+
+  setDogfoodAdminAccessToken: (token) => {
+    writeLs(LS_ADMIN, token);
+    set({ dogfoodAdminAccessToken: token });
+    get().pushLog({
+      level: 'info',
+      source: 'system',
+      message: token.trim()
+        ? 'Dogfood: admin access token сохранён'
+        : 'Dogfood: admin token очищен',
+    });
+    get().recomputeLive();
+  },
+
   applyPageState: (pageId, state) => {
     const next = new Map(get().activeStates);
     if (!state) {
@@ -459,7 +526,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setLogFilterPageId: (logFilterPageId) => set({ logFilterPageId }),
 
   resolveLiveUrl: (id) => {
-    const { document, index, activeStates, globalRole, baseUrlOverride } = get();
+    const {
+      document,
+      index,
+      activeStates,
+      globalRole,
+      baseUrlOverride,
+      dogfoodMiniappInitData,
+      dogfoodAdminAccessToken,
+    } = get();
     if (!document || !index) {
       return null;
     }
@@ -487,24 +562,28 @@ export const useAppStore = create<AppStore>((set, get) => ({
           ? globalRole
           : undefined;
 
-    if (pageState?.url) {
-      return applyStateToUrl(pageState.url, {
-        role,
-        query: {
-          ...(globalRole !== '' ? { lam_role: globalRole } : {}),
-          ...pageState.inject?.query,
-        },
-        hash: pageState.inject?.hash,
-      });
-    }
+    const withState = pageState?.url
+      ? applyStateToUrl(pageState.url, {
+          role,
+          query: {
+            ...(globalRole !== '' ? { lam_role: globalRole } : {}),
+            ...pageState.inject?.query,
+          },
+          hash: pageState.inject?.hash,
+        })
+      : applyStateToUrl(base, {
+          role,
+          query: {
+            ...(globalRole !== '' ? { lam_role: globalRole } : {}),
+            ...pageState?.inject?.query,
+          },
+          hash: pageState?.inject?.hash,
+        });
 
-    return applyStateToUrl(base, {
-      role,
-      query: {
-        ...(globalRole !== '' ? { lam_role: globalRole } : {}),
-        ...pageState?.inject?.query,
-      },
-      hash: pageState?.inject?.hash,
+    // Dogfood inject: miniapp initData + admin token (Korbor читает query)
+    return applyDogfoodToUrl(withState, {
+      miniappInitData: dogfoodMiniappInitData,
+      adminAccessToken: dogfoodAdminAccessToken,
     });
   },
 

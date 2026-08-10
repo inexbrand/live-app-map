@@ -20,7 +20,7 @@ import {
 } from '../korbor-presets';
 import { importMapFile } from '../lib/import-map';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
-import { Button, Field, Input, Select } from '../ui';
+import { Button, Field, Input, Select, Textarea } from '../ui';
 import { EdgeSheet } from './EdgeSheet';
 
 type SheetId = 'sources' | 'settings' | 'search' | null;
@@ -41,6 +41,10 @@ export function MapToolbar() {
   const setBaseUrlOverride = useAppStore((s) => s.setBaseUrlOverride);
   const globalRole = useAppStore((s) => s.globalRole);
   const setGlobalRole = useAppStore((s) => s.setGlobalRole);
+  const dogfoodMiniappInitData = useAppStore((s) => s.dogfoodMiniappInitData);
+  const setDogfoodMiniappInitData = useAppStore((s) => s.setDogfoodMiniappInitData);
+  const dogfoodAdminAccessToken = useAppStore((s) => s.dogfoodAdminAccessToken);
+  const setDogfoodAdminAccessToken = useAppStore((s) => s.setDogfoodAdminAccessToken);
   const loadUnknownJson = useAppStore((s) => s.loadUnknownJson);
   const clearMap = useAppStore((s) => s.clearMap);
   const setToast = useAppStore((s) => s.setToast);
@@ -322,6 +326,57 @@ export function MapToolbar() {
             onBlur={(e) => setBaseUrlOverride(e.target.value)}
           />
         </Field>
+
+        <div className="sheet-block">
+          <div className="ui-field__label">Dogfood-сессии</div>
+          <p className="drawer__hint">
+            Админка: один раз войдите во вкладке или вставьте access token — все
+            iframe подхватят. Мини-приложение: вставьте raw Telegram initData.
+          </p>
+        </div>
+
+        <Field
+          label="Admin access token"
+          htmlFor="set-admin-tok"
+          hint="Подставится как ?lam_access_token= (sessionStorage admin)."
+        >
+          <Textarea
+            id="set-admin-tok"
+            rows={2}
+            value={dogfoodAdminAccessToken}
+            placeholder="Bearer-токен из login / DevTools"
+            onChange={(e) => setDogfoodAdminAccessToken(e.target.value)}
+          />
+        </Field>
+
+        <Field
+          label="Miniapp initData"
+          htmlFor="set-init"
+          hint="Сырая строка initData; ?lam_init_data= + Telegram.WebApp stub."
+        >
+          <Textarea
+            id="set-init"
+            rows={4}
+            value={dogfoodMiniappInitData}
+            placeholder="query_id=…&user=…&auth_date=…&hash=…"
+            onChange={(e) => setDogfoodMiniappInitData(e.target.value)}
+          />
+        </Field>
+
+        <div className="drawer__actions">
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              setDogfoodAdminAccessToken('');
+              setDogfoodMiniappInitData('');
+              setToast('Dogfood-сессии очищены');
+            }}
+          >
+            Очистить dogfood
+          </Button>
+        </div>
       </EdgeSheet>
 
       <EdgeSheet

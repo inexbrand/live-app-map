@@ -99,8 +99,28 @@ code,
 .canvas-wrap {
   position: relative;
   min-height: 0;
-  background:
-    radial-gradient(circle at 1px 1px, #1a1a1a 1px, transparent 0) 0 0 / 18px 18px;
+  background: var(--background);
+}
+
+/* React Flow host: точки не двигаются при pan/zoom */
+.flow-host {
+  position: absolute;
+  inset: 0;
+}
+
+.flow-host__grid {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  background-color: var(--background);
+  background-image: radial-gradient(circle at 1px 1px, #2a2a2a 1px, transparent 0);
+  background-size: 18px 18px;
+  background-attachment: fixed;
+}
+
+.flow-host .react-flow {
+  z-index: 1;
 }
 
 /* Diagnostics FAB + log panel */
