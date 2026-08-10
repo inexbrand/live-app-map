@@ -62,6 +62,7 @@ describe('app-store pin / load / base', () => {
     s.setLastLoadError(null);
     s.setToast(null);
     s.setBaseUrlOverride('');
+    s.setUseTlsProxy(false);
   });
 
   test('loadUnknownJson invalid → lastLoadError + toast, document null', () => {

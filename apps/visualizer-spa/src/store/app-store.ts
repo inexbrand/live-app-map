@@ -31,6 +31,10 @@ import {
 } from '@live-app-map/schema';
 import { create } from 'zustand';
 import { applyDogfoodToUrl } from '../lib/dogfood-url';
+import {
+  rewriteUrlThroughTlsProxy,
+  shouldUseTlsProxyForUrl,
+} from '../lib/tls-proxy';
 import { clampViewport } from '../lib/viewport';
 
 export type IframeScale = 0.5 | 0.75 | 1;
@@ -90,6 +94,11 @@ type AppStore = {
   dogfoodMiniappInitData: string;
   /** Dogfood: admin access token (?lam_access_token=) */
   dogfoodAdminAccessToken: string;
+  /**
+   * Self-signed HTTPS → same-origin proxy visualizer (/__lam_proxy/…).
+   * По умолчанию включено для dogfood miniapp.
+   */
+  useTlsProxy: boolean;
   toast: string | null;
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
   loadUnknownJson: (raw: unknown) => void;
@@ -106,6 +115,7 @@ type AppStore = {
   setGlobalRole: (role: string) => void;
   setDogfoodMiniappInitData: (raw: string) => void;
   setDogfoodAdminAccessToken: (token: string) => void;
+  setUseTlsProxy: (enabled: boolean) => void;
   applyPageState: (pageId: string, state: AppMapPageState | null) => void;
   setInteract: (id: string | null) => void;
   openPageInNewTab: (id: string) => void;
@@ -133,6 +143,7 @@ function rebuildIndex(doc: AppMapDocument | null): GraphIndex | null {
 
 const LS_INIT = 'lam.dogfood.miniappInitData';
 const LS_ADMIN = 'lam.dogfood.adminAccessToken';
+const LS_TLS_PROXY = 'lam.dogfood.useTlsProxy';
 
 function readLs(key: string): string {
   if (typeof localStorage === 'undefined') {
@@ -243,6 +254,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   baseUrlOverride: '',
   dogfoodMiniappInitData: readLs(LS_INIT),
   dogfoodAdminAccessToken: readLs(LS_ADMIN),
+  useTlsProxy: readLs(LS_TLS_PROXY) !== '0',
   toast: null,
 
   loadDocument: (doc, warnings = []) => {
@@ -468,6 +480,19 @@ export const useAppStore = create<AppStore>((set, get) => ({
     get().recomputeLive();
   },
 
+  setUseTlsProxy: (enabled) => {
+    writeLs(LS_TLS_PROXY, enabled ? '1' : '0');
+    set({ useTlsProxy: enabled });
+    get().pushLog({
+      level: 'info',
+      source: 'system',
+      message: enabled
+        ? 'TLS-proxy: вкл (self-signed → /__lam_proxy/…)'
+        : 'TLS-proxy: выкл (прямой HTTPS origin)',
+    });
+    get().recomputeLive();
+  },
+
   applyPageState: (pageId, state) => {
     const next = new Map(get().activeStates);
     if (!state) {
@@ -581,10 +606,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
         });
 
     // Dogfood inject: miniapp initData + admin token (Korbor читает query)
-    return applyDogfoodToUrl(withState, {
+    let url = applyDogfoodToUrl(withState, {
       miniappInitData: dogfoodMiniappInitData,
       adminAccessToken: dogfoodAdminAccessToken,
     });
+
+    // Self-signed HTTPS miniapp: same-origin proxy (secure:false на Vite)
+    if (get().useTlsProxy && shouldUseTlsProxyForUrl(url)) {
+      const origin =
+        typeof globalThis.location !== 'undefined' && globalThis.location?.origin
+          ? globalThis.location.origin
+          : 'http://localhost:4310';
+      url = rewriteUrlThroughTlsProxy(url, origin);
+    }
+
+    return url;
   },
 
   openPageInNewTab: (id) => {

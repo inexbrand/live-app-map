@@ -45,7 +45,10 @@ export function MapToolbar() {
   const setDogfoodMiniappInitData = useAppStore((s) => s.setDogfoodMiniappInitData);
   const dogfoodAdminAccessToken = useAppStore((s) => s.dogfoodAdminAccessToken);
   const setDogfoodAdminAccessToken = useAppStore((s) => s.setDogfoodAdminAccessToken);
+  const useTlsProxy = useAppStore((s) => s.useTlsProxy);
+  const setUseTlsProxy = useAppStore((s) => s.setUseTlsProxy);
   const loadUnknownJson = useAppStore((s) => s.loadUnknownJson);
+  const pushLog = useAppStore((s) => s.pushLog);
   const clearMap = useAppStore((s) => s.clearMap);
   const setToast = useAppStore((s) => s.setToast);
   const setLastLoadError = useAppStore((s) => s.setLastLoadError);
@@ -326,6 +329,76 @@ export function MapToolbar() {
             onBlur={(e) => setBaseUrlOverride(e.target.value)}
           />
         </Field>
+
+        <div className="sheet-block">
+          <div className="ui-field__label">Self-signed TLS</div>
+          <p className="drawer__hint">
+            Miniapp на https://vite.localhost:5175. Proxy принимает self-signed
+            на стороне Vite (secure: false), iframe ходит same-origin.
+          </p>
+          <label className="ui-chip" style={{ cursor: 'pointer', width: 'fit-content' }}>
+            <input
+              type="checkbox"
+              checked={useTlsProxy}
+              onChange={(e) => setUseTlsProxy(e.target.checked)}
+              style={{ marginRight: 8 }}
+            />
+            TLS-proxy для HTTPS dogfood
+          </label>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => {
+              void (async () => {
+                const target =
+                  baseUrlOverride.trim() || 'https://vite.localhost:5175/';
+                try {
+                  const r = await fetch(
+                    `/__lam_tls_check?url=${encodeURIComponent(target)}`,
+                  );
+                  const j = (await r.json()) as {
+                    ok?: boolean;
+                    message?: string;
+                    error?: string;
+                    status?: number;
+                  };
+                  const msg = j.ok
+                    ? `TLS OK · HTTP ${j.status ?? '—'} · ${j.message ?? ''}`
+                    : `TLS fail · ${j.error ?? 'unknown'}`;
+                  setToast(msg);
+                  pushLog({
+                    level: j.ok ? 'info' : 'warn',
+                    source: 'system',
+                    message: msg,
+                  });
+                } catch (err) {
+                  const m = err instanceof Error ? err.message : String(err);
+                  setToast(`TLS check: ${m}`);
+                }
+              })();
+            }}
+          >
+            Проверить TLS origin
+          </Button>
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            onClick={() => {
+              window.open(
+                baseUrlOverride.trim() || 'https://vite.localhost:5175/',
+                '_blank',
+                'noopener,noreferrer',
+              );
+              setToast(
+                'Откройте origin и примите сертификат в браузере (если proxy выкл)',
+              );
+            }}
+          >
+            Открыть origin (доверие cert)
+          </Button>
+        </div>
 
         <div className="sheet-block">
           <div className="ui-field__label">Dogfood-сессии</div>

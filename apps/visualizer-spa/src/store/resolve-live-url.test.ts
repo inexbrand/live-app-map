@@ -61,6 +61,8 @@ describe('resolveLiveUrl', () => {
     useAppStore.getState().setBaseUrlOverride('');
     useAppStore.getState().setLastLoadError(null);
     useAppStore.getState().setToast(null);
+    // unit: без proxy — проверяем «сырой» https origin
+    useAppStore.getState().setUseTlsProxy(false);
   });
 
   test('null document → null URL', () => {
@@ -135,6 +137,14 @@ describe('resolveLiveUrl', () => {
     expect(useAppStore.getState().maxLiveIframes).toBe(16);
     useAppStore.getState().setMaxLiveIframes(4);
     expect(useAppStore.getState().maxLiveIframes).toBe(4);
+  });
+
+  test('TLS proxy переписывает vite.localhost на /__lam_proxy/miniapp', () => {
+    useAppStore.getState().loadDocument(miniDoc);
+    useAppStore.getState().setUseTlsProxy(true);
+    const url = useAppStore.getState().resolveLiveUrl('route:/feed');
+    expect(url).toContain('/__lam_proxy/miniapp/feed');
+    expect(url).not.toContain('https://vite.localhost:5175');
   });
 
   test('role + extra query стейта в resolveLiveUrl', () => {

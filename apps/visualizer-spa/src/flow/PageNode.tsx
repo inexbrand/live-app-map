@@ -46,8 +46,18 @@ export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): bool
   if (trimmed === '') {
     return false;
   }
+  // Same-origin Vite TLS proxy (self-signed target, secure:false)
+  if (
+    trimmed.includes('/__lam_proxy/miniapp') ||
+    trimmed.includes('/__lam_proxy/https/')
+  ) {
+    return true;
+  }
   try {
-    const host = new URL(trimmed).hostname.toLowerCase();
+    const host = new URL(
+      trimmed,
+      typeof location !== 'undefined' ? location.href : 'http://localhost',
+    ).hostname.toLowerCase();
     if (
       host === 'localhost' ||
       host === '127.0.0.1' ||
@@ -139,9 +149,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const viewport = resolveNodeViewport(node.viewport, override);
   const outer = nodeOuterSize(viewport, scale);
 
-  const effectiveBaseUrl =
-    baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl;
-  const sandboxPreset = resolveIframeSandboxPreset(effectiveBaseUrl);
+  // Sandbox trust: proxy URL same-origin, иначе dogfood host / baseUrl
+  const sandboxHintUrl = url ?? (baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl);
+  const sandboxPreset = resolveIframeSandboxPreset(sandboxHintUrl);
   const sandboxValue = sandboxAttrForPreset(sandboxPreset);
   const sandboxNote = sandboxPresetLabel(sandboxPreset);
 
