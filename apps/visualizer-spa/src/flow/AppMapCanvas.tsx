@@ -2,6 +2,8 @@
  * React Flow canvas для AppMapDocument.
  */
 import {
+  Background,
+  BackgroundVariant,
   Controls,
   MiniMap,
   ReactFlow,
@@ -171,8 +173,6 @@ export function AppMapCanvas() {
 
   return (
     <div className="flow-host">
-      {/* Сетка фиксирована к viewport, не едет с pan/zoom React Flow */}
-      <div className="flow-host__grid" aria-hidden={true} />
       <ReactFlow
         nodes={nodes}
         edges={edges}
@@ -184,6 +184,14 @@ export function AppMapCanvas() {
         onPaneClick={() => selectPage(null)}
         onNodeClick={(_, n) => selectPage(n.id)}
       >
+        {/* Точки в мировых координатах сцены: pan/zoom двигает их вместе с нодами */}
+        <Background
+          id="lam-scene-dots"
+          variant={BackgroundVariant.Dots}
+          gap={18}
+          size={1.25}
+          color="#2a2a2a"
+        />
         <MiniMap pannable zoomable />
         <Controls />
       </ReactFlow>
