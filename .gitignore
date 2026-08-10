@@ -15,3 +15,7 @@ apps/visualizer-spa/playwright-report
 .lam-feedback
 .scratch
 *.tsbuildinfo
+
+# accidental scratch paths
+UsersConcept*
+

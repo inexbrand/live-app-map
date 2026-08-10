@@ -1,5 +1,0 @@
-miniapp pages=16 equal=true hosts={"vite.localhost:5175":16} dualWithin=0
-admin pages=29 equal=true hosts={"localhost:16002":29} dualWithin=0
-site pages=4 equal=true hosts={"localhost:16001":4} dualWithin=0
-all pages=49 equal=true hosts={"vite.localhost:5175":16,"localhost:16002":29,"localhost:16001":4} dualWithin=n/a multi-surface
-staleAppmap=false
