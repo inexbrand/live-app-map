@@ -38,7 +38,7 @@ bun run dev:visualizer
 | API | http://localhost:16000 |
 | Site | http://localhost:16001 |
 | Admin | http://localhost:16002 |
-| Miniapp | http://localhost:5175 |
+| Miniapp | https://vite.localhost:5175 (Vite TLS host) |
 | Visualizer | http://localhost:4310 |
 
 ### State injection (роли miniapp)
