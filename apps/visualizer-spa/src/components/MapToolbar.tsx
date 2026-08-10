@@ -187,6 +187,7 @@ export function MapToolbar() {
       <label className="field">
         Поиск
         <input
+          data-lam-search
           value={searchQuery}
           placeholder="title / path"
           onChange={(e) => setSearchQuery(e.target.value)}

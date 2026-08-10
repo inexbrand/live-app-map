@@ -16,7 +16,7 @@ import {
 } from './store/app-store';
 
 export function App() {
-  const document = useAppStore((s) => s.document);
+  const mapDocument = useAppStore((s) => s.document);
   const toast = useAppStore((s) => s.toast);
   const setToast = useAppStore((s) => s.setToast);
   const lastLoadError = useAppStore((s) => s.lastLoadError);
@@ -102,9 +102,15 @@ export function App() {
         useAppStore.getState().selectPage(null);
         return;
       }
-      if (e.key === '/' && !(e.target instanceof HTMLInputElement) && !(e.target instanceof HTMLTextAreaElement)) {
+      if (
+        e.key === '/' &&
+        !(e.target instanceof HTMLInputElement) &&
+        !(e.target instanceof HTMLTextAreaElement)
+      ) {
         e.preventDefault();
-        const input = document.querySelector<HTMLInputElement>('input[placeholder="title / path"]');
+        const input = window.document.querySelector<HTMLInputElement>(
+          'input[data-lam-search]',
+        );
         input?.focus();
       }
     };
@@ -169,12 +175,12 @@ export function App() {
           </div>
         ) : null}
 
-        {document && parseIssues.length > 0 ? (
+        {mapDocument && parseIssues.length > 0 ? (
           <div className="warnings-banner" role="status">
             <strong>Предупреждения parse ({parseIssues.length})</strong>
             <ul>
               {parseIssues.slice(0, 6).map((d, i) => (
-                <li key={`${d.code ?? 'w'}-${i}`}>
+                <li key={`${d.code}-${i}`}>
                   {d.message}
                   {d.path ? ` · ${d.path}` : ''}
                 </li>
@@ -186,7 +192,7 @@ export function App() {
           </div>
         ) : null}
 
-        {!document ? (
+        {!mapDocument ? (
           <div className="empty-state">
             <div className="empty-state__card">
               <h1>Live App Map</h1>
@@ -239,7 +245,7 @@ export function App() {
         <span>role: {globalRole || '—'}</span>
         <span>
           nodes:{' '}
-          {document?.nodes.filter((n) => n.kind === 'page').length ?? 0}
+          {mapDocument?.nodes.filter((n) => n.kind === 'page').length ?? 0}
         </span>
         <span>warnings: {parseIssues.length}</span>
       </footer>
