@@ -122,9 +122,12 @@ export function materializePath(
   const missing: string[] = [];
   let result = pattern;
 
-  // optional catch-all [[...param]]
+  // optional catch-all [[...param]] — empty array → no segment (root-friendly)
   result = result.replace(/\[\[\.\.\.([^\]]+)\]\]/g, (_m, name: string) => {
-    const v = byRoute?.[name] ?? exampleParams[name] ?? [];
+    const v = byRoute?.[name] ?? exampleParams[name];
+    if (v === undefined) {
+      return '';
+    }
     if (Array.isArray(v)) {
       return v.length ? v.join('/') : '';
     }
