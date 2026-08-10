@@ -10,3 +10,4 @@ apps/visualizer-spa/dist
 packages/*/dist
 maps/*.generated.json
 .scratch
+*.tsbuildinfo

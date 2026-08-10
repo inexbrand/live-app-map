@@ -1,0 +1,65 @@
+/**
+ * Структурная проверка shipped Korbor maps (не mock): реальные файлы public/maps.
+ */
+import { describe, expect, test } from 'bun:test';
+import { readFileSync, existsSync } from 'node:fs';
+import path from 'node:path';
+import { parseLiveAppMapJson } from '../packages/schema/src/index';
+import { applyStateToUrl } from '../packages/graph/src/index';
+
+const root = path.resolve(import.meta.dir, '..');
+const pub = path.join(root, 'apps/visualizer-spa/public/maps');
+
+function load(name: string) {
+  const file = path.join(pub, name);
+  expect(existsSync(file)).toBe(true);
+  const text = readFileSync(file, 'utf8');
+  const result = parseLiveAppMapJson(text);
+  expect(result.ok).toBe(true);
+  if (!result.ok) {
+    throw new Error(result.errors.map((e) => e.message).join('; '));
+  }
+  return result.document;
+}
+
+describe('korbor maps (shipped artifacts)', () => {
+  test('miniapp has recruiter and employer states', () => {
+    const doc = load('korbor-miniapp.liveappmap.json');
+    expect(doc.pages.length).toBeGreaterThanOrEqual(10);
+    expect(doc.baseUrl).toContain('5175');
+    const roles = new Set<string>();
+    for (const p of doc.pages) {
+      for (const s of p.states ?? []) {
+        if (s.inject?.role) {
+          roles.add(s.inject.role);
+        }
+      }
+    }
+    expect(roles.has('recruiter')).toBe(true);
+    expect(roles.has('employer')).toBe(true);
+    const feed = doc.pages.find((p) => p.path === '/feed' || p.path?.endsWith('/feed'));
+    expect(feed).toBeDefined();
+    const url = applyStateToUrl(feed?.url ?? `${doc.baseUrl}/feed`, {
+      role: 'recruiter',
+    });
+    expect(url).toContain('lam_role=recruiter');
+  });
+
+  test('admin has vacancies and deals', () => {
+    const doc = load('korbor-admin.liveappmap.json');
+    expect(doc.pages.length).toBeGreaterThanOrEqual(15);
+    const paths = new Set(doc.pages.map((p) => p.path));
+    expect(paths.has('/vacancies') || [...paths].some((p) => p?.includes('vacancies'))).toBe(
+      true,
+    );
+    expect(paths.has('/deals') || [...paths].some((p) => p?.includes('deals'))).toBe(true);
+  });
+
+  test('site has home and payload admin', () => {
+    const doc = load('korbor-site.liveappmap.json');
+    expect(doc.pages.length).toBeGreaterThanOrEqual(3);
+    const paths = doc.pages.map((p) => p.path);
+    expect(paths).toContain('/');
+    expect(paths.some((p) => p?.startsWith('/admin'))).toBe(true);
+  });
+});
