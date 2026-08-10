@@ -17,6 +17,7 @@
     "scan": "bun run packages/cli/src/bin.ts scan",
     "dev:map": "bun run packages/cli/src/bin.ts dev",
     "scan:korbor": "bun run scripts/scan-korbor.ts",
+    "smoke": "bun run scripts/runtime-smoke.ts",
     "doctor": "bun run packages/cli/src/bin.ts doctor"
   },
   "devDependencies": {
