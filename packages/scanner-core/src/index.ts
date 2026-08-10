@@ -14,6 +14,9 @@ import type {
 } from '@live-app-map/schema';
 import { FORMAT_VERSION } from '@live-app-map/schema';
 
+/** Реэкспорт framework kind для CLI / defineConfig. */
+export type { FrameworkKind };
+
 /** Значение example-параметра: скаляр или сегменты catch-all. */
 export type ParamExampleValue = string | readonly string[];
 
