@@ -59,16 +59,18 @@ export function parseAppMapDocument(input: unknown): ParseResult<AppMapDocument>
   for (const edge of doc.edges) {
     if (!ids.has(edge.from)) {
       warnings.push({
-        code: 'DANGLING_EDGE_FROM',
+        code: 'DANGLING_EDGE',
         severity: 'warning',
         message: `Ребро ${edge.id}: from=${edge.from} не найден`,
+        path: edge.id,
       });
     }
     if (edge.to !== null && !ids.has(edge.to)) {
       warnings.push({
-        code: 'DANGLING_EDGE_TO',
+        code: 'DANGLING_EDGE',
         severity: 'warning',
         message: `Ребро ${edge.id}: to=${edge.to} не найден`,
+        path: edge.id,
       });
     }
   }

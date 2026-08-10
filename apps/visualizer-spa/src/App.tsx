@@ -10,6 +10,7 @@ import {
   KORBOR_PRESETS,
   type KorborPreset,
 } from './korbor-presets';
+import { importMapFile } from './lib/import-map';
 import {
   DEFAULT_MAX_PINNED,
   useAppStore,
@@ -126,24 +127,15 @@ export function App() {
       if (!file) {
         return;
       }
-      if (file.name.endsWith('.appmap') || file.name.endsWith('.zip')) {
-        const { parseAppMapZip } = await import('@live-app-map/export-appmap');
-        const result = await parseAppMapZip(await file.arrayBuffer());
-        if (!result.ok) {
-          const msg = result.errors.join('; ');
-          setLastLoadError(msg);
-          setToast(msg);
-          return;
-        }
-        loadUnknownJson(result.document);
+      const result = await importMapFile(file);
+      if (!result.ok) {
+        setLastLoadError(result.error);
+        setToast(result.error);
         return;
       }
-      try {
-        loadUnknownJson(JSON.parse(await file.text()) as unknown);
-      } catch {
-        const msg = 'Не удалось прочитать файл';
-        setLastLoadError(msg);
-        setToast(msg);
+      loadUnknownJson(result.json);
+      if (result.toast !== undefined) {
+        setToast(result.toast);
       }
     },
     [loadUnknownJson, setLastLoadError, setToast],

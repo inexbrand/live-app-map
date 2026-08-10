@@ -5,11 +5,44 @@ import type {
   AppMapDocument,
   AppMapEdge,
   AppMapNode,
+  EdgeKind,
   LiveAppMapDocument,
   LiveAppMapEdge,
   LiveAppMapPage,
 } from './types';
 import { FORMAT_VERSION } from './types';
+
+/** Канонический набор EdgeKind для runtime-сужения на границе. */
+const EDGE_KIND_SET: ReadonlySet<string> = new Set<EdgeKind>([
+  'link',
+  'push',
+  'replace',
+  'redirect',
+  'middleware',
+  'wraps',
+  'parallel',
+  'intercept',
+  'parent',
+  'unknown',
+  'navigation',
+  'deep-link',
+  'back',
+]);
+
+/** Виды рёбер, попадающие в viewer (навигация, не structure/composition). */
+const NAVIGATION_EDGE_KIND_SET: ReadonlySet<string> = new Set<string>([
+  'link',
+  'push',
+  'replace',
+  'redirect',
+  'navigation',
+  'middleware',
+  'deep-link',
+  'unknown',
+]);
+
+/** Дефолт kind при отсутствии/невалидном значении во viewer-документе. */
+const DEFAULT_EDGE_KIND: EdgeKind = 'unknown';
 
 function stableHash(parts: readonly string[]): string {
   let h = 2166136261;
@@ -23,7 +56,48 @@ function stableHash(parts: readonly string[]): string {
 }
 
 /**
+ * Type guard: строка — валидный EdgeKind.
+ */
+export function isEdgeKind(value: string): value is EdgeKind {
+  return EDGE_KIND_SET.has(value);
+}
+
+/**
+ * Type guard: kind — навигационный (попадает в liveappmap).
+ */
+export function isNavigationEdgeKind(kind: string): boolean {
+  return NAVIGATION_EDGE_KIND_SET.has(kind);
+}
+
+/**
+ * Сужение optional/unknown kind viewer → EdgeKind с типизированным дефолтом.
+ * Невалидные значения не кастуются — подставляется DEFAULT_EDGE_KIND.
+ */
+export function coerceEdgeKind(kind: string | undefined): EdgeKind {
+  if (kind === undefined || kind.length === 0) {
+    return DEFAULT_EDGE_KIND;
+  }
+  if (isEdgeKind(kind)) {
+    return kind;
+  }
+  return DEFAULT_EDGE_KIND;
+}
+
+/**
+ * Ребро enterprise с разрешённым `to` (не null).
+ */
+type AppMapEdgeWithTarget = AppMapEdge & { readonly to: string };
+
+/**
+ * Type guard: ребро с non-null target и навигационным kind (для viewer).
+ */
+function isLiveNavigableEdge(e: AppMapEdge): e is AppMapEdgeWithTarget {
+  return e.to !== null && isNavigationEdgeKind(e.kind);
+}
+
+/**
  * Enterprise document → viewer liveappmap (pages/edges).
+ * Рёбра без target или с non-navigation kind отбрасываются.
  */
 export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
   const pages: LiveAppMapPage[] = doc.nodes
@@ -31,17 +105,8 @@ export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
     .map((n) => nodeToPage(n));
 
   const edges: LiveAppMapEdge[] = doc.edges
-    .filter((e) => e.to !== null)
-    .filter((e) => isNavigationEdge(e.kind))
-    .map((e) => ({
-      id: e.id,
-      from: e.from,
-      to: e.to as string,
-      label: e.label,
-      kind: e.kind,
-      raw: e.raw,
-      metadata: e.metadata,
-    }));
+    .filter(isLiveNavigableEdge)
+    .map((e) => appEdgeToLiveEdge(e));
 
   return {
     version: '1.0',
@@ -64,6 +129,21 @@ export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
         framework: doc.project.framework,
       },
     },
+  };
+}
+
+/**
+ * Enterprise edge → live edge (только после isLiveNavigableEdge).
+ */
+function appEdgeToLiveEdge(e: AppMapEdgeWithTarget): LiveAppMapEdge {
+  return {
+    id: e.id,
+    from: e.from,
+    to: e.to,
+    label: e.label,
+    kind: e.kind,
+    raw: e.raw,
+    metadata: e.metadata,
   };
 }
 
@@ -90,34 +170,13 @@ function nodeToPage(n: AppMapNode): LiveAppMapPage {
   };
 }
 
-function isNavigationEdge(kind: string): boolean {
-  return (
-    kind === 'link' ||
-    kind === 'push' ||
-    kind === 'replace' ||
-    kind === 'redirect' ||
-    kind === 'navigation' ||
-    kind === 'middleware' ||
-    kind === 'deep-link' ||
-    kind === 'unknown'
-  );
-}
-
 /**
  * Viewer liveappmap → enterprise AppMapDocument.
+ * kind сужается через coerceEdgeKind (дефолт unknown, без `as`).
  */
 export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
   const nodes: AppMapNode[] = doc.pages.map((p) => pageToNode(p, doc.baseUrl));
-  const edges: AppMapEdge[] = doc.edges.map((e, i) => ({
-    id: e.id ?? `${e.from}->${e.to}#${i}`,
-    from: e.from,
-    to: e.to,
-    kind: (e.kind as AppMapEdge['kind']) ?? 'link',
-    confidence: 'high' as const,
-    label: e.label,
-    raw: e.raw,
-    metadata: e.metadata,
-  }));
+  const edges: AppMapEdge[] = doc.edges.map((e, i) => liveEdgeToAppEdge(e, i));
 
   const revision = stableHash([
     ...nodes.map((n) => n.id),
@@ -145,6 +204,22 @@ export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
     groups: doc.groups,
     layout: doc.layout,
     extensions: doc.extensions,
+  };
+}
+
+/**
+ * Live edge → enterprise edge с типизированным kind.
+ */
+function liveEdgeToAppEdge(e: LiveAppMapEdge, index: number): AppMapEdge {
+  return {
+    id: e.id ?? `${e.from}->${e.to}#${index}`,
+    from: e.from,
+    to: e.to,
+    kind: coerceEdgeKind(e.kind),
+    confidence: 'high',
+    label: e.label,
+    raw: e.raw,
+    metadata: e.metadata,
   };
 }
 

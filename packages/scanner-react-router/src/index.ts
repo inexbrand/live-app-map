@@ -8,6 +8,7 @@ import { diag } from '@live-app-map/diagnostics';
 import {
   assembleDocument,
   extractDynamicParams,
+  humanTitle,
   materializePath,
   walkFiles,
   type ExampleParamsConfig,
@@ -118,17 +119,6 @@ export function rrToPattern(pathStr: string): string {
     .join('/');
 }
 
-function humanTitle(pattern: string): string {
-  if (pattern === '/') {
-    return 'Home';
-  }
-  return pattern
-    .split('/')
-    .filter(Boolean)
-    .map((s) => s.replace(/^\[/, '').replace(/\]$/, '').replace(/^\.\.\./, ''))
-    .join(' / ');
-}
-
 /**
  * Скан React Router приложения.
  */
@@ -194,8 +184,11 @@ export async function scanReactRouterApp(
     }
   }
 
-  // Always include root
-  rawPaths.add('/');
+  // Корень добавляем только если уже есть реальные path (иначе dual-scan
+  // framework=unknown всегда «выигрывает» RR с 1 synthetic page).
+  if (rawPaths.size > 0 && !rawPaths.has('/')) {
+    rawPaths.add('/');
+  }
 
   const nodes: AppMapNode[] = [];
   for (const raw of [...rawPaths].sort()) {

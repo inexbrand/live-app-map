@@ -1,5 +1,5 @@
 /**
- * Scanner host: walk, ignore, example params, document assembly.
+ * Ядро сканера: walk, ignore, example params, сборка документа.
  */
 import { createHash } from 'node:crypto';
 import { existsSync, readFileSync, readdirSync, statSync } from 'node:fs';
@@ -81,6 +81,26 @@ export type ScanResult = {
   };
 };
 
+/**
+ * Описание ошибки FS при обходе (контракт skip reason, не silent empty catch).
+ */
+export type WalkFsError = {
+  readonly absPath: string;
+  readonly relativePath: string;
+  readonly phase: 'readdir' | 'stat';
+  readonly error: unknown;
+  readonly reason: string;
+};
+
+/**
+ * Опции walkFiles: exclude + колбэк на ошибки FS.
+ */
+export type WalkFilesOptions = {
+  readonly exclude?: readonly string[];
+  /** Вызывается при skip из-за ошибки readdir/stat (диагностика / логирование). */
+  readonly onFsError?: (info: WalkFsError) => void;
+};
+
 const DEFAULT_EXCLUDE = [
   'node_modules',
   '.next',
@@ -94,7 +114,41 @@ const DEFAULT_EXCLUDE = [
 ];
 
 /**
- * Проверяет, исключён ли путь.
+ * Нормализует аргументы walkFiles: массив exclude или объект опций.
+ */
+function resolveWalkOptions(
+  excludeOrOptions: readonly string[] | WalkFilesOptions | undefined,
+): { exclude: readonly string[]; onFsError: WalkFilesOptions['onFsError'] } {
+  if (excludeOrOptions === undefined) {
+    return { exclude: DEFAULT_EXCLUDE, onFsError: undefined };
+  }
+  if (Array.isArray(excludeOrOptions)) {
+    return { exclude: excludeOrOptions, onFsError: undefined };
+  }
+  const opts = excludeOrOptions as WalkFilesOptions;
+  return {
+    exclude: opts.exclude ?? DEFAULT_EXCLUDE,
+    onFsError: opts.onFsError,
+  };
+}
+
+/**
+ * Текст причины skip по ошибке FS (для логов / diagnostics).
+ */
+function formatFsSkipReason(phase: WalkFsError['phase'], error: unknown): string {
+  const msg =
+    error instanceof Error
+      ? error.message
+      : typeof error === 'string'
+        ? error
+        : 'unknown error';
+  return phase === 'readdir'
+    ? `skip: readdir failed (${msg})`
+    : `skip: stat failed (${msg})`;
+}
+
+/**
+ * Проверяет, исключён ли posix-путь по списку exclude (имена сегментов или globs вида star-star/name/star-star).
  */
 export function isExcluded(
   relPosix: string,
@@ -112,17 +166,40 @@ export function isExcluded(
 
 /**
  * Рекурсивный walk файлов (posix relative paths).
+ * Ошибки readdir/stat не глотаются молча: вызывается `onFsError` с reason, каталог/файл пропускается.
+ *
+ * @param absRoot — абсолютный корень обхода
+ * @param excludeOrOptions — список exclude (как раньше) или {@link WalkFilesOptions}
  */
 export function walkFiles(
   absRoot: string,
-  exclude: readonly string[] = DEFAULT_EXCLUDE,
+  excludeOrOptions: readonly string[] | WalkFilesOptions = DEFAULT_EXCLUDE,
 ): string[] {
+  const { exclude, onFsError } = resolveWalkOptions(excludeOrOptions);
   const out: string[] = [];
+
+  function reportFsError(
+    absPath: string,
+    relativePath: string,
+    phase: WalkFsError['phase'],
+    error: unknown,
+  ): void {
+    const reason = formatFsSkipReason(phase, error);
+    onFsError?.({
+      absPath,
+      relativePath,
+      phase,
+      error,
+      reason,
+    });
+  }
+
   function walk(abs: string, rel: string): void {
     let entries: string[];
     try {
       entries = readdirSync(abs);
-    } catch {
+    } catch (error: unknown) {
+      reportFsError(abs, rel, 'readdir', error);
       return;
     }
     for (const name of entries) {
@@ -134,7 +211,8 @@ export function walkFiles(
       let st;
       try {
         st = statSync(full);
-      } catch {
+      } catch (error: unknown) {
+        reportFsError(full, relPosix, 'stat', error);
         continue;
       }
       if (st.isDirectory()) {
@@ -151,7 +229,7 @@ export function walkFiles(
 }
 
 /**
- * Materialize path pattern with example params.
+ * Подставляет example-params в path pattern (dynamic / catch-all / optional catch-all).
  */
 export function materializePath(
   pattern: string,
@@ -211,7 +289,7 @@ export function materializePath(
 }
 
 /**
- * Extract dynamic param names from pattern.
+ * Извлекает имена dynamic-параметров из path pattern.
  */
 export function extractDynamicParams(pattern: string): string[] {
   const names: string[] = [];
@@ -227,7 +305,27 @@ export function extractDynamicParams(pattern: string): string[] {
 }
 
 /**
- * Content hash for revision.
+ * Человекочитаемый заголовок маршрута для UI карты (общий для next / react-router).
+ *
+ * @param pattern pathPattern вида `/`, `/users/[id]`, `/shop/[...slug]`
+ * @returns «Главная» для корня, иначе сегменты через ` / ` без скобок dynamic
+ */
+export function humanTitle(pattern: string): string {
+  if (pattern === '/' || pattern === '') {
+    return 'Главная';
+  }
+  return pattern
+    .split('/')
+    .filter(Boolean)
+    .map((seg) => {
+      const stripped = seg.replace(/^\[+\.?\.?\.?/, '').replace(/\]+$/, '');
+      return stripped || seg;
+    })
+    .join(' / ');
+}
+
+/**
+ * Стабильный короткий content-hash (sha256, 16 hex) для revision документа.
  */
 export function contentRevision(parts: readonly string[]): string {
   const h = createHash('sha256');
@@ -283,7 +381,7 @@ export function assembleDocument(input: {
 }
 
 /**
- * Детект framework в каталоге.
+ * Детект framework в каталоге (next / hybrid / react-router / unknown).
  */
 export function detectFramework(absRoot: string): FrameworkKind {
   const hasApp =
@@ -302,6 +400,7 @@ export function detectFramework(absRoot: string): FrameworkKind {
     try {
       deps = JSON.stringify(JSON.parse(readFileSync(pkgPath, 'utf8')) as unknown);
     } catch {
+      // битый package.json — не считаем deps, detekt по layout
       deps = '';
     }
   }

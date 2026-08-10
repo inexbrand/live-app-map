@@ -1,12 +1,39 @@
 # Live App Map Visualizer — Technical Design Document
 
-**Версия документа:** 1.0  
+**Версия документа:** 1.1  
 **Дата:** 2026-08-10  
-**Статус:** design only (без реализации SPA)  
-**Стек целевого продукта:** React 19 + TypeScript + Vite + `@xyflow/react` + Zustand
+**Статус:** Implemented / partial — SPA [`apps/visualizer-spa`](../apps/visualizer-spa) на порту **4310**  
+**Стек:** Bun workspaces monorepo · React 19 + TypeScript + Vite + `@xyflow/react` + Zustand · Zod schemas · pure `iframe-policy`
 
 > **Канон продукта (enterprise):** см. [`live-app-map-enterprise-tdd.md`](./live-app-map-enterprise-tdd.md) — scanner, monorepo packages, Next integration, plugins, roadmap.  
-> Этот файл — ранний seed: JSON-формат viewer + iframe freeze; сохраняется как reference для visualizer/export.
+> Этот файл — seed по JSON-формату viewer + iframe freeze; остаётся reference для visualizer/export.  
+> **Код уже в репозитории** (не «design only»): monorepo + standalone SPA.
+
+### Где лежит реализация
+
+| Что | Путь |
+|-----|------|
+| Visualizer SPA (dev **http://localhost:4310**) | [`apps/visualizer-spa`](../apps/visualizer-spa) |
+| Схема / parse / convert | [`packages/schema`](../packages/schema) |
+| Graph index / search / URL + state inject | [`packages/graph`](../packages/graph) |
+| Бюджет iframe (pure reconcile) | [`packages/iframe-policy`](../packages/iframe-policy) |
+| Export `.appmap` | [`packages/export-appmap`](../packages/export-appmap) |
+| CLI `scan` / `diff` / `doctor` | [`packages/cli`](../packages/cli) |
+| Scanners (Next, React Router, core) | [`packages/scanner-*`](../packages) |
+| Embed / Devtools shell | [`packages/react`](../packages/react) |
+| Korbor maps (dogfood) | [`maps/`](../maps) + [`apps/visualizer-spa/public/maps/`](../apps/visualizer-spa/public/maps) |
+
+### Проверка (корень monorepo)
+
+```bash
+bun install
+bun test packages apps/visualizer-spa
+bun run typecheck
+bun run scan:korbor
+bun run dev:visualizer
+```
+
+Открыть: http://localhost:4310 → пресеты **Korbor Miniapp / Admin / Site**. Полный список пакетов и CLI — в [`README.md`](../README.md).
 
 ---
 
@@ -882,59 +909,43 @@ IO — thin adapter.
 
 ## 6. Структура папок
 
+**Фактически в monorepo** (актуально):
+
 ```
 all-screens-viewer/
+├── apps/visualizer-spa/            # SPA :4310 (Vite + React 19)
+│   ├── public/examples/demo-shop.liveappmap.json
+│   ├── public/maps/korbor-*.liveappmap.json
+│   └── src/
+│       ├── App.tsx, main.tsx
+│       ├── components/             # MapToolbar, StateInjectPanel, …
+│       ├── flow/                   # AppMapCanvas, PageNode, layout
+│       ├── store/                  # Zustand
+│       └── styles/
+├── packages/                       # schema, graph, iframe-policy, scanners, cli, …
+├── maps/                           # korbor-*.json / *.liveappmap.json
 ├── docs/
-│   └── live-app-map-design.md      # этот документ
-├── public/
-│   └── examples/
-│       └── demo-shop.liveappmap.json
+│   ├── live-app-map-design.md      # этот документ (viewer seed)
+│   └── live-app-map-enterprise-tdd.md
+├── package.json                    # bun workspaces
+└── README.md
+```
+
+Ниже — **исходный seed-layout** одиночного SPA (исторический reference; domain/parsers/iframe-policy вынесены в `packages/*`):
+
+```
+apps/visualizer-spa/   # (раньше — корень all-screens-viewer/)
+├── public/examples/demo-shop.liveappmap.json
 ├── src/
 │   ├── main.tsx
 │   ├── App.tsx
 │   ├── styles/
-│   │   ├── global.css
-│   │   └── themes.css              # light/dark tokens
-│   ├── domain/
-│   │   ├── types.ts                # LiveAppMapDocument, Runtime*, ParseIssue
-│   │   ├── schema.ts               # zod schemas
-│   │   ├── resolve-url.ts
-│   │   └── adjacency.ts
-│   ├── parsers/
-│   │   ├── parse-liveappmap-json.ts
-│   │   ├── parse-appmap-zip.ts
-│   │   ├── map-appmap-to-document.ts
-│   │   ├── detect-format.ts
-│   │   └── assets.ts               # Blob URL AssetStore
+│   ├── domain/          → сейчас packages/schema + packages/graph
+│   ├── parsers/         → packages/schema, packages/export-appmap
 │   ├── store/
-│   │   ├── app-store.ts            # Zustand
-│   │   └── selectors.ts
-│   ├── iframe-manager/
-│   │   ├── types.ts
-│   │   ├── policy.ts               # reconcile pure
-│   │   ├── visibility.ts           # IntersectionObserver adapter
-│   │   ├── manager.ts              # singleton / context
-│   │   └── use-iframe-slot.ts      # React hook for LiveFrameSlot
+│   ├── iframe-manager/  → packages/iframe-policy (+ SPA adapter)
 │   ├── flow/
-│   │   ├── AppMapCanvas.tsx
-│   │   ├── layout.ts               # dagre
-│   │   ├── to-flow-elements.ts     # graph → Node[] Edge[]
-│   │   ├── node-types.ts
-│   │   └── edges.ts
-│   ├── components/
-│   │   ├── nodes/
-│   │   │   ├── PageNode.tsx
-│   │   │   ├── LiveFrameSlot.tsx
-│   │   │   └── NodeChrome.tsx
-│   │   ├── shell/
-│   │   │   ├── MapToolbar.tsx
-│   │   │   ├── SearchPalette.tsx
-│   │   │   ├── DropZone.tsx
-│   │   │   └── StatusBar.tsx
-│   │   └── ui/                     # small primitives (button, toggle)
-│   └── lib/
-│       ├── cn.ts
-│       └── file.ts
+│   └── components/
 ├── package.json
 ├── tsconfig.json
 ├── vite.config.ts
@@ -993,7 +1004,18 @@ all-screens-viewer/
 
 ## 9. Этапы реализации
 
-### Phase 0 — Scaffold (0.5–1 day)
+Статус относительно monorepo + `apps/visualizer-spa` (порт **4310**):
+
+| Phase | Содержание | Статус |
+|-------|------------|--------|
+| **0** Scaffold | Vite + React 19 + TS; React Flow shell | **Implemented** |
+| **1** MVP map | JSON parse, Zustand, dagre, `PageNode`, search/select, demo JSON | **Implemented** |
+| **2** Appmap import | zip pipeline / screenshots / baseUrl | **Partial** (export bridge в packages; UI-import — по мере polish) |
+| **3** Live iframe + freeze | policy reconcile, pin, live mode, tests | **Implemented** (core policy в `@live-app-map/iframe-policy`) |
+| **4** Polish | empty/error, Korbor presets, state inject roles | **Partial** |
+| **5** Backlog | proxy headers, ELK, session restore, e2e polish | **Backlog** |
+
+### Phase 0 — Scaffold
 
 - Vite + React 19 + TS strict.
 - CSS themes dark default.
@@ -1040,6 +1062,7 @@ all-screens-viewer/
 - Keyboard: `/` search, `Esc` clear selection.
 - Performance pass (memo, near-viewport stubs).
 - README: format + how to run against local app.
+- Korbor dogfood presets + role state inject (`lam_role`).
 
 ### Phase 5 — Improvements (backlog)
 
@@ -1047,13 +1070,20 @@ all-screens-viewer/
 - Export JSON with positions.
 - ELK; groups as parent nodes (RF sub-flows).
 - session restore; compare two maps.
-- Playwright smoke (load example, assert node count).
+- Playwright smoke (load example, assert node count) — e2e scaffold уже в `apps/visualizer-spa/e2e/`.
 
 ---
 
-## 10. Критерии готовности продукта (для будущей реализации)
+## 10. Критерии готовности продукта
 
-Не часть текущей design-only поставки; ориентир для build:
+Ориентир приёмки visualizer; **ядро SPA + packages уже в monorepo** (статус шапки: Implemented / partial). Проверка:
+
+```bash
+bun install
+bun test packages apps/visualizer-spa
+bun run typecheck
+bun run dev:visualizer   # http://localhost:4310
+```
 
 1. JSON + appmap ingest green path.
 2. Live iframes only for reconciled load set.
@@ -1063,6 +1093,8 @@ all-screens-viewer/
 6. 100-node fixture usable on mid laptop (no tab crash on pan).
 7. Dark theme usable.
 8. Types strict; parsers unit-tested.
+
+Часть пунктов (1–5, 7–8) закрыта в packages/SPA; 6 и polish appmap — residual / Phase 4–5.
 
 ---
 
@@ -1078,7 +1110,8 @@ all-screens-viewer/
 | Scale | CSS transform inside fixed node geometry |
 | Interact | pointer-events none until select |
 | Frame blocked sites | fallback + document risk; no mandatory proxy in MVP |
+| Где код | monorepo: `apps/visualizer-spa` (:4310) + `packages/*` |
 
 ---
 
-*Конец design document. Реализация SPA — отдельный этап (non-goal этого документа).*
+*Конец design document. Реализация SPA — **не** non-goal: код в monorepo (`apps/visualizer-spa`, порт 4310). Документ остаётся seed по формату и политике freeze; product-канон — [`live-app-map-enterprise-tdd.md`](./live-app-map-enterprise-tdd.md).*

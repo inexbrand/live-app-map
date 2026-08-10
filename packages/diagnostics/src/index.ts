@@ -56,7 +56,7 @@ const CATALOG: Record<
   },
   PARALLEL_LIVE_LIMITATION: {
     severity: 'info',
-    title: 'Parallel route: live iframe = hard navigation',
+    title: 'Parallel route: live iframe = жёсткая навигация',
     hint: 'Модальный intercept soft-nav не эмулируется',
   },
   PIN_DEFERRED: {
@@ -97,8 +97,15 @@ const CATALOG: Record<
   SCAN_OK: {
     severity: 'info',
     title: 'Скан завершён',
-    hint: '',
+    hint: 'Действий не требуется',
   },
+};
+
+/** Русские подписи severity для CLI/UI. */
+const SEVERITY_LABEL_RU: Record<DiagnosticSeverity, string> = {
+  error: 'ошибка',
+  warning: 'предупреждение',
+  info: 'инфо',
 };
 
 /**
@@ -120,11 +127,13 @@ export function diag(
 }
 
 /**
- * Форматирует diagnostic для CLI (одна строка).
+ * Форматирует diagnostic для CLI (одна строка, human-readable RU).
+ * Включает severity (RU), code, path/file и message.
  */
 export function formatDiagnostic(d: Diagnostic): string {
   const loc = d.file ? ` ${d.file}` : d.path ? ` ${d.path}` : '';
-  return `[${d.severity}] ${d.code}${loc}: ${d.message}`;
+  const severityRu = SEVERITY_LABEL_RU[d.severity];
+  return `[${severityRu}] ${d.code}${loc}: ${d.message}`;
 }
 
 /**

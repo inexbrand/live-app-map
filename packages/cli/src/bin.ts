@@ -47,14 +47,20 @@ async function main(argv: string[]): Promise<void> {
       framework,
       format,
     });
-    for (const d of sortDiagnostics(result.diagnostics)) {
+    const diagnostics = sortDiagnostics(result.diagnostics);
+    for (const d of diagnostics) {
+      // Человекочитаемый stderr: severity/code/message (+ hint из каталога).
       console.error(formatDiagnostic(d));
+      if (d.hint !== undefined && d.hint.length > 0) {
+        console.error(`  подсказка: ${d.hint}`);
+      }
     }
+    const hasError = diagnostics.some((d) => d.severity === 'error');
     const pages = result.document.nodes.filter((n) => n.kind === 'page').length;
     console.log(
       JSON.stringify(
         {
-          ok: true,
+          ok: !hasError,
           pages,
           nodes: result.document.nodes.length,
           edges: result.document.edges.length,
@@ -67,6 +73,10 @@ async function main(argv: string[]): Promise<void> {
         2,
       ),
     );
+    // NO_APP_DIR / NO_ROUTES_FOUND и прочие error → ненулевой exit для CI.
+    if (hasError) {
+      process.exit(1);
+    }
     return;
   }
 
@@ -118,17 +128,24 @@ async function main(argv: string[]): Promise<void> {
     const target = flag(argv, '--target-url') ?? 'http://localhost:3000';
     const port = Number(flag(argv, '--port') ?? '4310');
     const mapFile = flag(argv, '--map');
+    const visualizerUrl = `http://localhost:${port}/?baseUrl=${encodeURIComponent(target)}`;
+    // Один явный next step: команда + порт (без «угадывания» usage).
+    const message =
+      `Следующий шаг: bun run dev:visualizer (порт ${port}). ` +
+      `Откройте ${visualizerUrl} и укажите baseUrl целевого приложения` +
+      (mapFile !== null ? ` (карта: ${mapFile})` : '');
+    console.error(message);
     console.log(
       JSON.stringify(
         {
           ok: true,
           mode: 'dev-sidecar-hint',
-          message:
-            'Запустите visualizer-spa: bun run dev:visualizer, откройте карту и укажите baseUrl',
+          message,
+          command: 'bun run dev:visualizer',
           targetUrl: target,
           port,
           mapFile,
-          visualizerHint: `http://localhost:${port}/?baseUrl=${encodeURIComponent(target)}`,
+          visualizerHint: visualizerUrl,
         },
         null,
         2,

@@ -189,6 +189,8 @@ export function diffDocuments(
     }
   }
 
+  changed.sort((a, b) => a.id.localeCompare(b.id));
+
   return {
     formatVersion: 1,
     leftRevision: left.revision,
@@ -240,6 +242,7 @@ export function sortDocument(doc: AppMapDocument): AppMapDocument {
 
 /**
  * Резолв live URL для ноды.
+ * Невалидный / небезопасный base → `null` (предсказуемо, без silent fallback на javascript:/data:).
  */
 export function resolveNodeUrl(
   node: AppMapNode,
@@ -255,9 +258,19 @@ export function resolveNodeUrl(
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return isSafeUrl(path) ? path : null;
   }
-  if (baseUrl && path) {
+  if (path.startsWith('javascript:') || path.startsWith('data:')) {
+    return null;
+  }
+  if (baseUrl !== null && baseUrl !== '' && path) {
+    if (!isSafeUrl(baseUrl)) {
+      return null;
+    }
     try {
-      return new URL(path.startsWith('/') ? path : `/${path}`, baseUrl).href;
+      const href = new URL(
+        path.startsWith('/') ? path : `/${path}`,
+        baseUrl,
+      ).href;
+      return isSafeUrl(href) ? href : null;
     } catch {
       return null;
     }

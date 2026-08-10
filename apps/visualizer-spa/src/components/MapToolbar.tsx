@@ -1,5 +1,5 @@
 /**
- * Тулбар: загрузка, mode, scale, роль, baseUrl, пресеты Korbor, бюджет iframe.
+ * Тулбар: загрузка (primary), mode, scale, роль, baseUrl, пресеты Korbor (secondary), бюджет.
  */
 import { useState } from 'react';
 import {
@@ -7,6 +7,7 @@ import {
   KORBOR_PRESETS,
   type KorborPreset,
 } from '../korbor-presets';
+import { importMapFile } from '../lib/import-map';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 
 export function MapToolbar() {
@@ -36,27 +37,15 @@ export function MapToolbar() {
     if (!file) {
       return;
     }
-    if (file.name.endsWith('.appmap') || file.name.endsWith('.zip')) {
-      const { parseAppMapZip } = await import('@live-app-map/export-appmap');
-      const buf = await file.arrayBuffer();
-      const result = await parseAppMapZip(buf);
-      if (!result.ok) {
-        const msg = result.errors.join('; ');
-        setLastLoadError(msg);
-        setToast(msg);
-        return;
-      }
-      loadUnknownJson(result.document);
-      setToast(`Импорт .appmap: ${result.document.pages.length} pages`);
+    const result = await importMapFile(file);
+    if (!result.ok) {
+      setLastLoadError(result.error);
+      setToast(result.error);
       return;
     }
-    const text = await file.text();
-    try {
-      loadUnknownJson(JSON.parse(text) as unknown);
-    } catch {
-      const msg = 'Файл не JSON';
-      setLastLoadError(msg);
-      setToast(msg);
+    loadUnknownJson(result.json);
+    if (result.toast !== undefined) {
+      setToast(result.toast);
     }
   };
 
@@ -82,7 +71,7 @@ export function MapToolbar() {
     <header className="toolbar">
       <div className="toolbar__brand">Live App Map</div>
 
-      <label className="btn">
+      <label className="btn btn--primary" title="Открыть JSON / .appmap">
         Открыть…
         <input
           type="file"
@@ -96,19 +85,19 @@ export function MapToolbar() {
         Очистить
       </button>
 
-      <div className="toolbar__group">
+      <div className="toolbar__group" role="group" aria-label="Пресеты Korbor">
         {KORBOR_PRESETS.map((p) => {
           const busy = loadingPresetId === p.id;
           return (
             <button
               key={p.id}
               type="button"
-              className="btn btn--primary"
+              className="btn"
               disabled={loadingPresetId !== null}
               aria-busy={busy}
               onClick={() => void loadPreset(p)}
             >
-              {busy ? `Загрузка…` : p.label}
+              {busy ? 'Загрузка…' : p.label}
             </button>
           );
         })}

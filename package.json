@@ -11,8 +11,9 @@
   "scripts": {
     "build": "bun run --filter '*' build",
     "typecheck": "bun run --filter '*' typecheck",
-    "test": "bun test packages apps",
-    "test:unit": "bun test packages",
+    "test": "bun test --max-concurrency=1 packages apps/visualizer-spa/src scripts",
+    "test:unit": "bun test --max-concurrency=1 packages apps/visualizer-spa/src scripts",
+    "test:e2e": "bun run --filter '@live-app-map/visualizer-spa' test:e2e",
     "dev:visualizer": "bun run --filter '@live-app-map/visualizer-spa' dev",
     "scan": "bun run packages/cli/src/bin.ts scan",
     "dev:map": "bun run packages/cli/src/bin.ts dev",

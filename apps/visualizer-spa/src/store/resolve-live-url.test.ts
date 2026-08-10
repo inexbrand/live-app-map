@@ -24,7 +24,10 @@ const miniDoc: AppMapDocument = {
       states: [
         {
           name: 'recruiter',
-          inject: { role: 'recruiter', query: { lam_role: 'recruiter' } },
+          inject: {
+            role: 'recruiter',
+            query: { lam_role: 'recruiter', view: 'grid' },
+          },
         },
         {
           name: 'employer',
@@ -55,7 +58,9 @@ describe('resolveLiveUrl', () => {
   beforeEach(() => {
     useAppStore.getState().clearMap();
     useAppStore.getState().setGlobalRole('');
+    useAppStore.getState().setBaseUrlOverride('');
     useAppStore.getState().setLastLoadError(null);
+    useAppStore.getState().setToast(null);
   });
 
   test('null document → null URL', () => {
@@ -130,5 +135,17 @@ describe('resolveLiveUrl', () => {
     expect(useAppStore.getState().maxLiveIframes).toBe(16);
     useAppStore.getState().setMaxLiveIframes(4);
     expect(useAppStore.getState().maxLiveIframes).toBe(4);
+  });
+
+  test('role + extra query стейта в resolveLiveUrl', () => {
+    useAppStore.getState().loadDocument(miniDoc);
+    useAppStore.getState().setGlobalRole('employer');
+    // applyPageState хранит имя; resolve читает inject из document.states
+    const feedState = miniDoc.nodes[0]!.states![0]! as AppMapPageState;
+    useAppStore.getState().applyPageState('route:/feed', feedState);
+    const url = useAppStore.getState().resolveLiveUrl('route:/feed');
+    expect(url).toContain('lam_role=recruiter');
+    expect(url).toContain('view=grid');
+    expect(url).not.toMatch(/lam_role=employer/);
   });
 });

@@ -1,5 +1,5 @@
 /**
- * Next.js App Router + Pages Router route discovery + edge extraction (literals).
+ * Сканер Next.js: App Router + Pages Router, рёбра из литералов (Link / router / redirect).
  */
 import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
@@ -7,6 +7,7 @@ import { diag } from '@live-app-map/diagnostics';
 import {
   assembleDocument,
   extractDynamicParams,
+  humanTitle,
   materializePath,
   walkFiles,
   type ExampleParamsConfig,
@@ -14,6 +15,9 @@ import {
   type ScanResult,
 } from '@live-app-map/scanner-core';
 import type { AppMapEdge, AppMapNode, Diagnostic } from '@live-app-map/schema';
+
+/** Реэкспорт title-helper из scanner-core (единый источник). */
+export { humanTitle };
 
 const PAGE_RE = /^(page|route|layout|loading|error|not-found|default|template)\.(js|jsx|ts|tsx|mdx)$/;
 const PAGES_IGNORE = new Set(['_app', '_document', '_error', '_middleware']);
@@ -168,7 +172,7 @@ function discoverAppRouter(
       layouts.push({
         id,
         kind: 'layout',
-        title: `Layout ${pattern}`,
+        title: `Макет ${pattern}`,
         pathPattern: pattern,
         source: { file: sourceFile },
         groupIds: groups.length ? groups : undefined,
@@ -246,17 +250,6 @@ function discoverAppRouter(
   }
 
   return { nodes, diagnostics, layouts };
-}
-
-function humanTitle(pattern: string): string {
-  if (pattern === '/') {
-    return 'Home';
-  }
-  return pattern
-    .split('/')
-    .filter(Boolean)
-    .map((s) => s.replace(/^\[+\.?\.?\.?/, '').replace(/\]+$/, '') || s)
-    .join(' / ');
 }
 
 function discoverPagesRouter(

@@ -92,25 +92,56 @@ function rebuildIndex(doc: AppMapDocument | null): GraphIndex | null {
   return doc ? indexDocument(doc) : null;
 }
 
-function withBaseUrl(doc: AppMapDocument, baseUrl: string): AppMapDocument {
+/** Результат переписывания node.url относительно baseUrl. */
+type WithBaseUrlResult = {
+  readonly document: AppMapDocument;
+  readonly error: string | null;
+};
+
+/**
+ * Переписывает URL нод относительно base.
+ * При невалидном base — исходный document + error (без silent keep URL).
+ *
+ * @param doc — текущий документ карты
+ * @param baseUrl — новый base (override или document.baseUrl)
+ * @returns document (переписанный или исходный) и error при невалидном base
+ */
+function withBaseUrl(doc: AppMapDocument, baseUrl: string): WithBaseUrlResult {
   const trimmed = baseUrl.trim();
   if (!trimmed) {
-    return doc;
+    return { document: doc, error: null };
   }
+
+  let base: URL;
+  try {
+    base = new URL(trimmed);
+  } catch {
+    return {
+      document: doc,
+      error: `Некорректный Base URL: «${trimmed}»`,
+    };
+  }
+
+  if (base.protocol !== 'http:' && base.protocol !== 'https:') {
+    return {
+      document: doc,
+      error: `Base URL: только http/https («${trimmed}»)`,
+    };
+  }
+
   const nodes = doc.nodes.map((n) => {
     if (n.kind !== 'page' && n.kind !== 'not-found') {
       return n;
     }
     const path = n.pathExample ?? n.pathPattern;
-    let url = n.url;
     try {
-      url = new URL(path.startsWith('/') ? path : `/${path}`, trimmed).href;
+      const url = new URL(path.startsWith('/') ? path : `/${path}`, base).href;
+      return { ...n, url };
     } catch {
-      /* keep */
+      return n;
     }
-    return { ...n, url };
   });
-  return { ...doc, baseUrl: trimmed, nodes };
+  return { document: { ...doc, baseUrl: trimmed, nodes }, error: null };
 }
 
 function clampMaxLive(n: number): number {
@@ -142,15 +173,34 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   loadDocument: (doc, warnings = []) => {
     const base = get().baseUrlOverride || doc.baseUrl || '';
-    const normalized = base ? withBaseUrl(doc, base) : doc;
+    const result = base
+      ? withBaseUrl(doc, base)
+      : { document: doc, error: null as string | null };
+    const normalized = result.document;
+    const withoutBaseIssues = warnings.filter((d) => d.code !== 'INVALID_BASE_URL');
+    const parseIssues: Diagnostic[] =
+      result.error !== null
+        ? [
+            ...withoutBaseIssues,
+            {
+              code: 'INVALID_BASE_URL',
+              severity: 'error',
+              message: result.error,
+              path: 'baseUrl',
+              hint: 'Укажите полный http(s) URL, например http://localhost:5175',
+            },
+          ]
+        : [...withoutBaseIssues];
     const pinned = new Set(
       normalized.nodes.filter((n) => n.defaultPinned).map((n) => n.id),
     );
     set({
       document: normalized,
       index: rebuildIndex(normalized),
-      parseIssues: [...warnings],
-      lastLoadError: null,
+      parseIssues,
+      // Успех всегда сбрасывает lastLoadError; ошибка base — явный message.
+      lastLoadError: result.error,
+      toast: result.error !== null ? result.error : get().toast,
       pinnedPageIds: pinned,
       selectedPageId: null,
       highlightedPageIds: new Set(),
@@ -253,9 +303,53 @@ export const useAppStore = create<AppStore>((set, get) => ({
   setBaseUrlOverride: (url) => {
     set({ baseUrlOverride: url });
     const doc = get().document;
-    if (doc) {
-      get().loadDocument(doc, get().parseIssues);
+    if (!doc) {
+      const trimmed = url.trim();
+      if (trimmed === '') {
+        set({ lastLoadError: null, toast: null });
+        return;
+      }
+      try {
+        const parsed = new URL(trimmed);
+        if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') {
+          const message = `Base URL: только http/https («${trimmed}»)`;
+          set({
+            lastLoadError: message,
+            toast: message,
+            parseIssues: [
+              {
+                code: 'INVALID_BASE_URL',
+                severity: 'error',
+                message,
+                path: 'baseUrl',
+              },
+            ],
+          });
+        } else {
+          set({
+            lastLoadError: null,
+            parseIssues: get().parseIssues.filter((d) => d.code !== 'INVALID_BASE_URL'),
+          });
+        }
+      } catch {
+        const message = `Некорректный Base URL: «${trimmed}»`;
+        set({
+          lastLoadError: message,
+          toast: message,
+          parseIssues: [
+            {
+              code: 'INVALID_BASE_URL',
+              severity: 'error',
+              message,
+              path: 'baseUrl',
+            },
+          ],
+        });
+      }
+      return;
     }
+    const kept = get().parseIssues.filter((d) => d.code !== 'INVALID_BASE_URL');
+    get().loadDocument(doc, kept);
   },
 
   setGlobalRole: (role) => {
@@ -328,8 +422,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   openPageInNewTab: (id) => {
     const url = get().resolveLiveUrl(id);
-    if (url) {
-      window.open(url, '_blank', 'noopener,noreferrer');
+    if (!url) {
+      return;
+    }
+    const openFn = globalThis.window?.open?.bind(globalThis.window);
+    if (openFn) {
+      openFn(url, '_blank', 'noopener,noreferrer');
     }
   },
 

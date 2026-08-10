@@ -5,6 +5,21 @@
 import { parseAppMapDocument, type AppMapDocument } from '@live-app-map/schema';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
+/** Пользовательские строки UI (кириллица). */
+export const LIVE_APP_MAP_COPY = {
+  loading: 'Загрузка карты…',
+  errorPrefix: 'Ошибка LiveAppMap: ',
+  invalidJson: 'Невалидный AppMap JSON',
+  projectFallback: 'Карта приложения',
+  pagesUnit: 'страниц',
+  edgesUnit: 'рёбер',
+  baseUrlLabel: 'baseUrl',
+  devtoolsOpen: 'Карта приложения',
+  devtoolsClose: 'Закрыть',
+  devtoolsHint:
+    'Live App Map Devtools — откройте standalone SPA на :4310 или передайте graphUrl в <LiveAppMap />.',
+} as const;
+
 export type LiveAppMapProps = {
   readonly document?: AppMapDocument;
   readonly graphUrl?: string;
@@ -13,6 +28,80 @@ export type LiveAppMapProps = {
   readonly className?: string;
   readonly children?: ReactNode;
 };
+
+export type FetchAppMapResult =
+  | { readonly ok: true; readonly document: AppMapDocument }
+  | { readonly ok: false; readonly error: string };
+
+/**
+ * Загружает graph JSON по URL и валидирует через parseAppMapDocument.
+ * Граница сети/схемы для embed LiveAppMap (без silent cast).
+ *
+ * @param graphUrl - URL документа AppMap / live-app-map
+ * @returns Успешный document либо текст ошибки для UI
+ */
+export async function fetchAppMapDocument(graphUrl: string): Promise<FetchAppMapResult> {
+  try {
+    const response = await fetch(graphUrl);
+    if (!response.ok) {
+      return {
+        ok: false,
+        error: `HTTP ${response.status}: не удалось загрузить карту`,
+      };
+    }
+    const json: unknown = await response.json();
+    const parsed = parseAppMapDocument(json);
+    if (parsed.ok) {
+      return { ok: true, document: parsed.document };
+    }
+    return {
+      ok: false,
+      error: parsed.errors[0]?.message ?? LIVE_APP_MAP_COPY.invalidJson,
+    };
+  } catch (err: unknown) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : String(err),
+    };
+  }
+}
+
+/**
+ * Презентационный слой embed: loading / error / summary по document.
+ * Вынесен для unit-тестов без DOM effects.
+ */
+export function LiveAppMapView(props: {
+  readonly document: AppMapDocument | null;
+  readonly error: string | null;
+  readonly mode?: LiveAppMapProps['mode'];
+  readonly baseUrl?: string;
+  readonly className?: string;
+  readonly children?: ReactNode;
+}) {
+  if (props.error !== null) {
+    return (
+      <div className={props.className} role="alert">
+        {LIVE_APP_MAP_COPY.errorPrefix}
+        {props.error}
+      </div>
+    );
+  }
+  if (props.document === null) {
+    return <div className={props.className}>{LIVE_APP_MAP_COPY.loading}</div>;
+  }
+  const pages = props.document.nodes.filter((n) => n.kind === 'page').length;
+  return (
+    <div className={props.className} data-mode={props.mode ?? 'map-only'}>
+      <strong>{props.document.project.name ?? LIVE_APP_MAP_COPY.projectFallback}</strong>
+      <div>
+        {pages} {LIVE_APP_MAP_COPY.pagesUnit} · {props.document.edges.length}{' '}
+        {LIVE_APP_MAP_COPY.edgesUnit} · {LIVE_APP_MAP_COPY.baseUrlLabel}{' '}
+        {props.baseUrl ?? props.document.baseUrl ?? '—'}
+      </div>
+      {props.children}
+    </div>
+  );
+}
 
 /**
  * Минимальный embed: загружает graph JSON и рендерит summary (SPA — полный UI).
@@ -31,46 +120,33 @@ export function LiveAppMap(props: LiveAppMapProps) {
       return;
     }
     let cancelled = false;
-    void fetch(props.graphUrl)
-      .then((r) => r.json())
-      .then((json: unknown) => {
-        if (cancelled) {
-          return;
-        }
-        const parsed = parseAppMapDocument(json);
-        if (parsed.ok) {
-          setDoc(parsed.document);
-          setError(null);
-          return;
-        }
-        setError(parsed.errors[0]?.message ?? 'Невалидный AppMap JSON');
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : String(err));
-        }
-      });
+    void fetchAppMapDocument(props.graphUrl).then((result) => {
+      if (cancelled) {
+        return;
+      }
+      if (result.ok) {
+        setDoc(result.document);
+        setError(null);
+        return;
+      }
+      setDoc(null);
+      setError(result.error);
+    });
     return () => {
       cancelled = true;
     };
   }, [props.document, props.graphUrl]);
 
-  if (error) {
-    return <div className={props.className}>LiveAppMap error: {error}</div>;
-  }
-  if (!doc) {
-    return <div className={props.className}>Loading map…</div>;
-  }
-  const pages = doc.nodes.filter((n) => n.kind === 'page').length;
   return (
-    <div className={props.className} data-mode={props.mode ?? 'map-only'}>
-      <strong>{doc.project.name ?? 'App map'}</strong>
-      <div>
-        {pages} pages · {doc.edges.length} edges · baseUrl{' '}
-        {props.baseUrl ?? doc.baseUrl ?? '—'}
-      </div>
+    <LiveAppMapView
+      document={doc}
+      error={error}
+      mode={props.mode}
+      baseUrl={props.baseUrl}
+      className={props.className}
+    >
       {props.children}
-    </div>
+    </LiveAppMapView>
   );
 }
 
@@ -80,7 +156,7 @@ export type DevtoolsProps = {
 };
 
 /**
- * Floating Devtools button (open SPA or in-app panel).
+ * Плавающая кнопка Devtools (открыть SPA или in-app panel). Только non-production.
  */
 export function LiveAppMapDevtools(props: DevtoolsProps) {
   const [open, setOpen] = useState(props.initialIsOpen ?? false);
@@ -93,10 +169,16 @@ export function LiveAppMapDevtools(props: DevtoolsProps) {
     [props.position === 'bottom-left' ? 'left' : 'right']: 16,
     zIndex: 99999,
   };
+  const buttonStyle: CSSProperties = {
+    minWidth: 44,
+    minHeight: 44,
+    padding: '8px 12px',
+    cursor: 'pointer',
+  };
   return (
     <div style={style}>
-      <button type="button" onClick={() => setOpen((v) => !v)}>
-        {open ? 'Close' : 'App Map'}
+      <button type="button" style={buttonStyle} onClick={() => setOpen((v) => !v)}>
+        {open ? LIVE_APP_MAP_COPY.devtoolsClose : LIVE_APP_MAP_COPY.devtoolsOpen}
       </button>
       {open ? (
         <div
@@ -110,8 +192,7 @@ export function LiveAppMapDevtools(props: DevtoolsProps) {
             border: '1px solid #2a3140',
           }}
         >
-          Live App Map Devtools — откройте standalone SPA на :4310 или передайте
-          graphUrl в {'<LiveAppMap />'}.
+          {LIVE_APP_MAP_COPY.devtoolsHint}
         </div>
       ) : null}
     </div>

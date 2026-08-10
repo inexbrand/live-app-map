@@ -10,5 +10,7 @@ apps/visualizer-spa/dist
 packages/*/dist
 maps/*.generated.json
 maps/*.appmap
+apps/visualizer-spa/test-results
+apps/visualizer-spa/playwright-report
 .scratch
 *.tsbuildinfo

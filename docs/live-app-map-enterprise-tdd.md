@@ -2,11 +2,39 @@
 
 | | |
 |---|---|
-| **Версия** | 1.0 |
-| **Статус** | Design only (код не пишем) |
+| **Версия** | 1.1 |
+| **Статус** | **Implementation in progress** (код в monorepo есть; документ — канон + трекинг gaps) |
 | **Аудитория** | maintainers, contributors, technical stakeholders |
 | **Горизонт** | 3–5 лет поддержки продукта |
 | **Связь** | Предыдущий viewer-ориентированный draft: `docs/live-app-map-design.md` (формат JSON / freeze seed). Этот документ — **канон продукта**. |
+| **Репозиторий** | `C:\work\all-screens-viewer` — Bun workspaces (`packages/*`, `apps/*`), не «design-only». |
+
+### 0. Implementation status (факт vs план)
+
+Статус **не** «Design only / код не пишем». Ниже — снимок monorepo относительно фаз §14 (обновлять при существенных ship).
+
+| Package / app | Роль | Статус | Комментарий |
+|---------------|------|--------|-------------|
+| `@live-app-map/schema` | formatVersion 1, Zod, convert liveappmap | **done** | parse/validate/boundary tests |
+| `@live-app-map/graph` | index, search, diff, URL + state | **done** | unit tests |
+| `@live-app-map/diagnostics` | codes + formatters | **done** | |
+| `@live-app-map/scanner-core` | walk, materialize, detect | **done** | |
+| `@live-app-map/scanner-next` | App/Pages Router | **done** | fixture `fixtures/next-app-router-basic/` |
+| `@live-app-map/scanner-react-router` | RR path configs | **done** | wave 2 раньше roadmap; `fixtures/react-router-basic/` |
+| `@live-app-map/iframe-policy` | pure reconcile budget | **done** | policy unit tests |
+| `@live-app-map/export-appmap` | `.appmap` zip bridge | **done** | |
+| `@live-app-map/cli` | `scan` / `diff` / `doctor` | **done** | root scripts: `scan`, `doctor`, `scan:korbor` |
+| `@live-app-map/plugin-api` | Scanner/UI plugin contracts | **partial** | типы + `applyPlugins`; нет registry/пример-плагина GA |
+| `@live-app-map/next` | `withLiveAppMap`, rewrites | **partial** | integration есть; zero-config polish Phase D open |
+| `@live-app-map/react` | embed + Devtools shell | **partial** | summary embed; **полный canvas** — SPA |
+| `@live-app-map/visualizer` | re-export graph/policy utils | **partial** | host UI **не** здесь |
+| `apps/visualizer-spa` | full UI, порт **4310** | **done** | React Flow + PageNode + Korbor presets; e2e |
+| `apps/docs` | doc site | **gap** | нет в дереве |
+| `apps/playground` | synthetic 150–200 routes | **gap** | нет; dogfood = Korbor maps |
+| `fixtures/*-complex`, monorepo-turbo | golden matrix §12.3 | **gap / partial** | только basic Next + RR |
+| CI golden + Playwright on main | quality gate §12.4 / GA | **partial** | e2e **есть** (см. §12.1); gate «required on main» — residual |
+
+**Verify (корневые команды):** `bun install` · `bun test packages` · `bun test apps/visualizer-spa` · `bun run scan:korbor` · `bun run dev:visualizer` · e2e: `apps/visualizer-spa` → `bun run test:e2e`.
 
 ---
 
@@ -951,9 +979,9 @@ Export utilities: `isLinkJsx`, `getStaticHref`, `matchRoute(path, nodes)` from `
 
 | Risk | Mitigation |
 |------|------------|
-| `javascript:` / `data:` iframe URLs | allowlist `http:`/`https:` only in resolve |
+| `javascript:` / `data:` iframe URLs | allowlist `http:`/`https:` only in resolve (`apps/visualizer-spa` store: protocol check) |
 | User-supplied graph JSON XSS | no `dangerouslySetInnerHTML` of map fields; text content only |
-| iframe sandbox | default `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"`; configurable tighten |
+| iframe sandbox | default attrs ниже; **см. tradeoff vs PageNode** |
 | Devtools in production | off by default; explicit opt-in |
 | Path traversal in scanner | stay within `projectRoot` realpath |
 | SSRF via baseUrl in CI | CLI doesn’t fetch arbitrary iframe targets server-side for scan |
@@ -962,7 +990,31 @@ Export utilities: `isLinkJsx`, `getStaticHref`, `matchRoute(path, nodes)` from `
 | Clickjacking user app | we are the embedder; user app headers may block us — OK |
 | Multi-tenant host of maps | out of scope for core; if SaaS later, isolate tenants |
 
-**Enterprise note:** offer `sandbox` preset `strict` (no same-origin) for untrusted baseUrl demos — breaks some apps; document tradeoff.
+#### 11.1. Iframe `sandbox`: дизайн vs факт (`PageNode`)
+
+**Целевое (TDD / enterprise):**
+
+| Preset | Атрибут `sandbox` | Когда |
+|--------|-------------------|--------|
+| **default** (dev dogfood) | `allow-scripts allow-same-origin allow-forms allow-popups allow-modals` | доверенный `baseUrl` (localhost / monorepo dev) |
+| **strict** (будущее) | **без** `allow-same-origin` (остальное по политике) | untrusted `baseUrl` / demo чужих origin |
+
+**Факт в коде (сейчас):**
+
+- Живой iframe рендерится в `apps/visualizer-spa/src/flow/PageNode.tsx` с **жёстко прошитой** строкой:
+  `sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-modals"`.
+- Preset `strict`, конфиг `iframePolicy.sandbox`, UI-переключатель — **не реализованы**.
+- Разрешение URL (`resolveLiveUrl` / store) отсекает не-`http(s)`; это **не** замена sandbox.
+
+**Tradeoff (зачем `allow-same-origin` в default):**
+
+| С `allow-same-origin` + `allow-scripts` | Без `allow-same-origin` (`strict`) |
+|----------------------------------------|-------------------------------------|
+| Dev-app на том же origin / cookie / localStorage / часть client routers **работают** как у пользователя в вкладке | Сильнее изоляция iframe (меньше XSS-поверхности к parent, если src malicious) |
+| Классический риск: `allow-scripts` **+** `allow-same-origin` ≈ снятие sandbox-изоляции для same-origin документа | Ломает приложения, которым нужен storage, same-origin fetch к своему API из iframe, часть auth flows |
+| Ок для **доверенного** local dogfood (Korbor miniapp/admin/site) | Нужен для untrusted map demos — **когда** появится preset |
+
+**Решение продукта (зафиксировано):** default остаётся permissive (как PageNode сейчас) для DX; enterprise `strict` — **gap** до конфигурируемого policy + docs warning при untrusted baseUrl. Не утверждать в маркетинге «строгий sandbox из коробки», пока PageNode hardcode.
 
 ---
 
@@ -970,16 +1022,32 @@ Export utilities: `isLinkJsx`, `getStaticHref`, `matchRoute(path, nodes)` from `
 
 ### 12.1. Layers
 
-| Layer | Tool | What |
-|-------|------|------|
-| Unit | Vitest | segment parser, example params, reconcile policy, diff, href resolve |
-| Fixture integration | Vitest + real dirs under `fixtures/` | App Router complex, pages, hybrid |
-| Scanner golden | compare graph JSON to committed golden (stable ids) | |
-| Visualizer RTL | Testing Library | mode switch, selection highlight |
-| Policy tables | Vitest | pin/visible matrix |
-| E2E | Playwright | playground app: open devtools, node count, live ≤ cap |
-| CI multi-OS | GH Actions | win/linux path normalization |
-| Perf smoke | script | scan time + node count thresholds on complex fixture |
+| Layer | Tool (план) | Факт в monorepo | What |
+|-------|-------------|-----------------|------|
+| Unit | Vitest / bun test | **bun test** в `packages/*`, `apps/visualizer-spa` | segment parser, example params, reconcile, diff, URL/state |
+| Fixture integration | Vitest + `fixtures/` | **partial** — `next-app-router-basic`, `react-router-basic` | App Router / RR; complex matrix §12.3 — gap |
+| Scanner golden | golden JSON | dogfood maps `maps/korbor-*.json` + SPA public maps | stable ids; full golden CI — residual |
+| Visualizer RTL | Testing Library | unit store/presets tests; RTL suite — gap | mode/selection |
+| Policy tables | bun test | `packages/iframe-policy` | pin/visible matrix |
+| **E2E** | **Playwright** | **required path — см. ниже** | smoke + import/clear на visualizer SPA |
+| CI multi-OS | GH Actions | residual | win/linux path normalization |
+| Perf smoke | script | `scripts/runtime-smoke.ts` (smoke) | scan thresholds on complex fixture — gap |
+
+#### 12.1.1. Playwright (обязательный e2e-path)
+
+E2E **не** «design-only» и **не** отложены: конфиг и спеки лежат в SPA после внедрения e2e (fix-004 / visualizer-spa).
+
+| Артефакт | Путь |
+|----------|------|
+| Config | `apps/visualizer-spa/playwright.config.ts` |
+| Smoke | `apps/visualizer-spa/e2e/smoke.spec.ts` — preset Korbor Miniapp → nodes > 0 → role `recruiter` → Live URL |
+| Import / clear | `apps/visualizer-spa/e2e/import-clear.spec.ts` — empty → import map → clear → empty-state |
+| Команда | из `apps/visualizer-spa`: `bun run test:e2e` (`@playwright/test`); dev server webServer на порту **4310** |
+| package script | `apps/visualizer-spa/package.json` → `"test:e2e": "playwright test"` |
+
+**Quality bar (цель GA):** Playwright smoke pass на main; live-count ≤ cap (policy invariant — unit + e2e).
+
+**Residual (честно):** suite **существует** и обязателен в bar; «CI required on main» (§16.4) и стабильно зелёный gate на всех agent-раннерах — **ещё не** закрыты как enterprise CI (локальные `test-results/` могут содержать fail-артефакты окружения). Нет e2e на synthetic playground 200 routes (`apps/playground` — gap).
 
 ### 12.2. Golden tests discipline
 
@@ -1002,11 +1070,12 @@ Export utilities: `isLinkJsx`, `getStaticHref`, `matchRoute(path, nodes)` from `
 
 ### 12.4. Quality gates for release
 
-- Unit + golden pass  
+- Unit + golden pass (`bun test packages`, scanner fixtures)  
 - Policy package 100% branch on reconcile  
-- Playwright smoke pass  
-- `pnpm publint` / exports check  
-- Types: `tsc --noEmit` all packages  
+- **Playwright smoke pass** — path: `apps/visualizer-spa/e2e/smoke.spec.ts` (+ import-clear); cmd `bun run test:e2e` в SPA  
+- Publint / exports check (package manager: **Bun** workspaces; publint — residual tooling)  
+- Types: `bun run typecheck` / `tsc --noEmit` per package  
+
 
 ---
 
@@ -1145,13 +1214,14 @@ Optional SaaS compare hosted maps; team annotations; AI-suggested missing links 
 ### 16.4. Definition of enterprise-ready (GA checklist)
 
 - [ ] Phases A–D complete with quality bars  
-- [ ] Schema v1 frozen + migration policy published  
-- [ ] Security section reviewed  
-- [ ] Playwright + golden CI required on main  
+- [x] Schema v1 **in code** (`@live-app-map/schema`); migration policy published — residual  
+- [x] Security section reviewed (+ sandbox tradeoff §11.1 vs PageNode)  
+- [ ] Playwright + golden **CI required on main** (e2e path **есть**: §12.1.1; gate on main — residual)  
 - [ ] LTS Next N/N-1 stated  
 - [ ] Changelog + migration guides process  
 - [ ] Performance budgets measured & published  
 - [ ] Plugin API documented with 1 official example plugin  
+- [ ] Sandbox preset `strict` configurable (сейчас hardcode default в PageNode)  
 
 ---
 
@@ -1184,7 +1254,8 @@ Optional SaaS compare hosted maps; team annotations; AI-suggested missing links 
 | Ver | Date | Notes |
 |-----|------|-------|
 | 1.0 | 2026-08-10 | Initial enterprise TDD; supersedes viewer-only draft as product canon |
+| 1.1 | 2026-08-10 | Статус → **Implementation in progress**; §0 матрица packages done/partial/gap; §11.1 sandbox tradeoff vs `PageNode`; §12.1.1 Playwright paths (`apps/visualizer-spa/e2e/*`); убран «Design only (код не пишем)» |
 
 ---
 
-*End of Technical Design Document. Implementation is a separate execution track against Phases A→G.*
+*Конец TDD. Код уже в monorepo (см. §0); фазы A→G — план доводки и gaps, не «писать с нуля».*

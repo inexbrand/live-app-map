@@ -30,7 +30,19 @@ export type LiveAppMapPlugin = {
 };
 
 /**
- * Последовательно применяет plugins к документу.
+ * Последовательно применяет плагины к документу карты.
+ *
+ * Для каждого плагина (в порядке массива):
+ * 1. `contributeNodes` / `contributeEdges` — дописывают узлы и рёбра к текущему документу;
+ * 2. `transformDocument` — получает уже объединённый документ и может заменить его целиком.
+ *
+ * Пустой список плагинов возвращает тот же объект документа (identity).
+ * Хуки `visualizer` здесь не вызываются — их подключает SPA visualizer.
+ *
+ * @param doc — исходный AppMapDocument
+ * @param plugins — упорядоченный список LiveAppMapPlugin
+ * @param ctx — корень проекта и приложения (без `document`; подставляется на каждом шаге)
+ * @returns документ после всех contribute/transform
  */
 export async function applyPlugins(
   doc: AppMapDocument,
