@@ -3,6 +3,7 @@
  */
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import { DiagnosticsDock } from './components/DiagnosticsDock';
 import { FeedbackPanel } from './components/FeedbackPanel';
 import { MapToolbar } from './components/MapToolbar';
 import { StateInjectPanel } from './components/StateInjectPanel';
@@ -13,7 +14,7 @@ import {
   type KorborPreset,
 } from './korbor-presets';
 import { importMapFile } from './lib/import-map';
-import { DEFAULT_MAX_PINNED, useAppStore } from './store/app-store';
+import { useAppStore } from './store/app-store';
 import { Button } from './ui';
 
 /**
@@ -29,12 +30,7 @@ export function App() {
   const loadUnknownJson = useAppStore((s) => s.loadUnknownJson);
   const setBaseUrlOverride = useAppStore((s) => s.setBaseUrlOverride);
   const setMode = useAppStore((s) => s.setMode);
-  const liveCount = useAppStore((s) => s.livePageIds.size);
-  const maxLiveIframes = useAppStore((s) => s.maxLiveIframes);
-  const pinCount = useAppStore((s) => s.pinnedPageIds.size);
-  const mode = useAppStore((s) => s.mode);
   const parseIssues = useAppStore((s) => s.parseIssues);
-  const globalRole = useAppStore((s) => s.globalRole);
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
 
@@ -220,40 +216,8 @@ export function App() {
             <StateInjectPanel />
           </>
         )}
+        <DiagnosticsDock />
       </div>
-      <footer className="status-bar">
-        <span>
-          режим:{' '}
-          <strong>
-            {mode === 'live' ? 'живой' : mode === 'compact' ? 'компакт' : 'карта'}
-          </strong>
-        </span>
-        <span>
-          живых <strong>{liveCount}/{maxLiveIframes}</strong>
-        </span>
-        <span>
-          закреплено <strong>{pinCount}/{DEFAULT_MAX_PINNED}</strong>
-        </span>
-        <span>
-          роль:{' '}
-          <strong>
-            {globalRole === 'recruiter'
-              ? 'рекрутер'
-              : globalRole === 'employer'
-                ? 'клиент'
-                : '—'}
-          </strong>
-        </span>
-        <span>
-          экранов:{' '}
-          <strong>
-            {mapDocument?.nodes.filter((n) => n.kind === 'page').length ?? 0}
-          </strong>
-        </span>
-        <span>
-          предупреждений: <strong>{parseIssues.length}</strong>
-        </span>
-      </footer>
       {toast ? (
         <div className="toast" role="status">
           {toast}

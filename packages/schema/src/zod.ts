@@ -71,6 +71,13 @@ export const appMapNodeSchema = z
         y: z.number(),
       })
       .optional(),
+    viewport: z
+      .object({
+        width: z.number().positive(),
+        height: z.number().positive(),
+        label: z.string().optional(),
+      })
+      .optional(),
     states: z.array(appMapPageStateSchema).optional(),
     defaultPinned: z.boolean().optional(),
     screenshot: z.string().nullable().optional(),
@@ -164,6 +171,13 @@ export const liveAppMapPageSchema = z
       .object({
         x: z.number(),
         y: z.number(),
+      })
+      .optional(),
+    viewport: z
+      .object({
+        width: z.number().positive(),
+        height: z.number().positive(),
+        label: z.string().optional(),
       })
       .optional(),
     iframeDisabled: z.boolean().optional(),

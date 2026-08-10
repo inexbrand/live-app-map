@@ -25,10 +25,12 @@ import {
   parseLiveAppMapDocument,
   type AppMapDocument,
   type AppMapPageState,
+  type DeviceViewport,
   type Diagnostic,
   type LiveAppMapDocument,
 } from '@live-app-map/schema';
 import { create } from 'zustand';
+import { clampViewport } from '../lib/viewport';
 
 export type IframeScale = 0.5 | 0.75 | 1;
 
@@ -37,8 +39,19 @@ export type ActiveStateSel = {
   readonly stateName: string;
 };
 
+/** Запись журнала visualizer / per-page (load, error, info). */
+export type AppLogEntry = {
+  readonly id: string;
+  readonly ts: string;
+  readonly level: 'info' | 'warn' | 'error';
+  /** system | pageId */
+  readonly source: string;
+  readonly message: string;
+};
+
 const MIN_LIVE_IFRAMES = 1;
 const MAX_LIVE_IFRAMES_CAP = 16;
+const MAX_LOGS = 400;
 
 type AppStore = {
   document: AppMapDocument | null;
@@ -58,6 +71,14 @@ type AppStore = {
   interactPageId: string | null;
   /** Активный инжект стейта по page id */
   activeStates: ReadonlyMap<string, string>;
+  /** Runtime override размера окна (адаптив) */
+  nodeViewports: ReadonlyMap<string, DeviceViewport>;
+  /** Журнал системы и per-page load/error */
+  logs: readonly AppLogEntry[];
+  /** Панель логов </> открыта */
+  diagnosticsOpen: boolean;
+  /** Фильтр логов по page id (null = все) */
+  logFilterPageId: string | null;
   /** Глобальная роль (Korbor): employer | recruiter | '' */
   globalRole: string;
   baseUrlOverride: string;
@@ -78,6 +99,14 @@ type AppStore = {
   applyPageState: (pageId: string, state: AppMapPageState | null) => void;
   setInteract: (id: string | null) => void;
   openPageInNewTab: (id: string) => void;
+  setNodeViewport: (pageId: string, viewport: DeviceViewport | null) => void;
+  getNodeViewport: (pageId: string) => DeviceViewport | undefined;
+  pushLog: (
+    entry: Omit<AppLogEntry, 'id' | 'ts'> & { readonly ts?: string },
+  ) => void;
+  clearLogs: () => void;
+  setDiagnosticsOpen: (open: boolean) => void;
+  setLogFilterPageId: (pageId: string | null) => void;
   /**
    * Собирает live URL с учётом globalRole и per-page state inject.
    * Per-page inject.role перекрывает global; query стейта мержится поверх.
@@ -167,6 +196,10 @@ export const useAppStore = create<AppStore>((set, get) => ({
   livePageIds: new Set(),
   interactPageId: null,
   activeStates: new Map(),
+  nodeViewports: new Map(),
+  logs: [],
+  diagnosticsOpen: false,
+  logFilterPageId: null,
   globalRole: '',
   baseUrlOverride: '',
   toast: null,
@@ -205,8 +238,15 @@ export const useAppStore = create<AppStore>((set, get) => ({
       selectedPageId: null,
       highlightedPageIds: new Set(),
       activeStates: new Map(),
+      nodeViewports: new Map(),
       visiblePageIds: new Set(),
       livePageIds: new Set(),
+    });
+    const pages = normalized.nodes.filter((n) => n.kind === 'page').length;
+    get().pushLog({
+      level: 'info',
+      source: 'system',
+      message: `Карта загружена: ${pages} экранов, revision ${normalized.revision}`,
     });
     get().recomputeLive();
   },
@@ -230,6 +270,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       lastLoadError: message,
       toast: message,
     });
+    get().pushLog({ level: 'error', source: 'system', message });
   },
 
   clearMap: () => {
@@ -244,8 +285,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       visiblePageIds: new Set(),
       livePageIds: new Set(),
       activeStates: new Map(),
+      nodeViewports: new Map(),
       interactPageId: null,
+      logFilterPageId: null,
     });
+    get().pushLog({ level: 'info', source: 'system', message: 'Карта очищена' });
   },
 
   clearLoadError: () => set({ lastLoadError: null }),
@@ -369,6 +413,50 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   setInteract: (id) => set({ interactPageId: id }),
+
+  setNodeViewport: (pageId, viewport) => {
+    const next = new Map(get().nodeViewports);
+    if (viewport === null) {
+      next.delete(pageId);
+    } else {
+      next.set(pageId, clampViewport(viewport));
+    }
+    set({ nodeViewports: next });
+    get().pushLog({
+      level: 'info',
+      source: pageId,
+      message:
+        viewport === null
+          ? 'Размер окна сброшен к appmap'
+          : `Размер окна ${viewport.width}×${viewport.height}${viewport.label ? ` (${viewport.label})` : ''}`,
+    });
+  },
+
+  getNodeViewport: (pageId) => {
+    const override = get().nodeViewports.get(pageId);
+    if (override) {
+      return override;
+    }
+    return get().index?.nodesById.get(pageId)?.viewport;
+  },
+
+  pushLog: (entry) => {
+    const full: AppLogEntry = {
+      id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+      ts: entry.ts ?? new Date().toISOString(),
+      level: entry.level,
+      source: entry.source,
+      message: entry.message,
+    };
+    const logs = [...get().logs, full].slice(-MAX_LOGS);
+    set({ logs });
+  },
+
+  clearLogs: () => set({ logs: [] }),
+
+  setDiagnosticsOpen: (diagnosticsOpen) => set({ diagnosticsOpen }),
+
+  setLogFilterPageId: (logFilterPageId) => set({ logFilterPageId }),
 
   resolveLiveUrl: (id) => {
     const { document, index, activeStates, globalRole, baseUrlOverride } = get();

@@ -1,18 +1,28 @@
 /**
- * Кастомная нода React Flow: chrome + live iframe + стейты (UI kit + Lucide).
+ * Нода карты: live iframe, размер окна (адаптив), лог load/error.
  */
-import type { AppMapNode, AppMapPageState } from '@live-app-map/schema';
+import type { AppMapNode, AppMapPageState, DeviceViewport } from '@live-app-map/schema';
 import {
   Handle,
   Position,
   type Node,
   type NodeProps,
 } from '@xyflow/react';
-import { ExternalLink, Pin, PinOff } from 'lucide-react';
-import { memo, useEffect, useRef, useState } from 'react';
+import {
+  ExternalLink,
+  Pin,
+  PinOff,
+  Smartphone,
+  Terminal,
+} from 'lucide-react';
+import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
+import {
+  nodeOuterSize,
+  resolveNodeViewport,
+  VIEWPORT_PRESETS,
+} from '../lib/viewport';
 import { Badge, Chip } from '../ui';
 import { useAppStore } from '../store/app-store';
-import { NODE_H, NODE_W } from './layout';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
@@ -28,9 +38,6 @@ export const SANDBOX_TRUSTED =
 export const SANDBOX_STRICT =
   'allow-scripts allow-forms allow-popups allow-modals';
 
-/**
- * Trusted dogfood host (localhost / loopback / *.localhost).
- */
 export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): boolean {
   if (baseUrl === null || baseUrl === undefined) {
     return false;
@@ -55,9 +62,6 @@ export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): bool
   }
 }
 
-/**
- * Preset sandbox по baseUrl.
- */
 export function resolveIframeSandboxPreset(
   baseUrl: string | null | undefined,
   override?: IframeSandboxPreset | null,
@@ -68,16 +72,10 @@ export function resolveIframeSandboxPreset(
   return isTrustedIframeBaseUrl(baseUrl) ? 'trusted' : 'strict';
 }
 
-/**
- * Атрибут sandbox.
- */
 export function sandboxAttrForPreset(preset: IframeSandboxPreset): string {
   return preset === 'trusted' ? SANDBOX_TRUSTED : SANDBOX_STRICT;
 }
 
-/**
- * Плейсхолдер слота.
- */
 export function resolvePagePlaceholder(args: {
   readonly mode: 'live' | 'map-only' | 'compact';
   readonly hasUrl: boolean;
@@ -90,19 +88,16 @@ export function resolvePagePlaceholder(args: {
     return args.hasUrl ? 'Заморожено (вне viewport / бюджета)' : 'Нет URL';
   }
   if (args.mode === 'compact') {
-    return 'Compact';
+    return 'Компакт';
   }
-  return 'Map-only';
+  return 'Только карта';
 }
 
-/**
- * Короткая подпись sandbox (tooltip).
- */
 export function sandboxPresetLabel(preset: IframeSandboxPreset): string {
   if (preset === 'trusted') {
-    return 'Sandbox trusted: same-origin для dogfood localhost';
+    return 'Sandbox trusted (localhost)';
   }
-  return 'Sandbox strict: без same-origin (вне allowlist)';
+  return 'Sandbox strict';
 }
 
 function PageNodeInner(props: NodeProps<PageFlowNode>) {
@@ -115,12 +110,17 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const scale = useAppStore((s) => s.iframeScale);
   const interactPageId = useAppStore((s) => s.interactPageId);
   const activeStates = useAppStore((s) => s.activeStates);
+  const nodeViewports = useAppStore((s) => s.nodeViewports);
   const selectPage = useAppStore((s) => s.selectPage);
   const togglePin = useAppStore((s) => s.togglePin);
   const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
   const applyPageState = useAppStore((s) => s.applyPageState);
   const setInteract = useAppStore((s) => s.setInteract);
   const setVisible = useAppStore((s) => s.setVisible);
+  const setNodeViewport = useAppStore((s) => s.setNodeViewport);
+  const pushLog = useAppStore((s) => s.pushLog);
+  const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
+  const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
   const visiblePageIds = useAppStore((s) => s.visiblePageIds);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
@@ -135,6 +135,10 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const activeStateName = activeStates.get(node.id);
   const isPinned = pinned.has(node.id);
 
+  const override = nodeViewports.get(node.id);
+  const viewport = resolveNodeViewport(node.viewport, override);
+  const outer = nodeOuterSize(viewport, scale);
+
   const effectiveBaseUrl =
     baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl;
   const sandboxPreset = resolveIframeSandboxPreset(effectiveBaseUrl);
@@ -143,7 +147,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   useEffect(() => {
     setIframeError(false);
-  }, [url]);
+  }, [url, viewport.width, viewport.height]);
 
   useEffect(() => {
     const el = bodyRef.current;
@@ -171,9 +175,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     return () => io.disconnect();
   }, [node.id, setVisible, visiblePageIds.size]);
 
-  const iframeW = (NODE_W - 16) / scale;
-  const iframeH = (NODE_H - 112) / scale;
-
   const onState = (st: AppMapPageState) => {
     if (activeStateName === st.name) {
       applyPageState(node.id, null);
@@ -189,11 +190,50 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   });
 
   const showIframe = isLive && url && !iframeError;
+  const bodyH = Math.max(80, outer.height - 108);
+
+  const applyPreset = (p: (typeof VIEWPORT_PRESETS)[number]) => {
+    const next: DeviceViewport = {
+      width: p.width,
+      height: p.height,
+      label: p.label,
+    };
+    setNodeViewport(node.id, next);
+  };
+
+  const onResizePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
+    e.stopPropagation();
+    e.preventDefault();
+    const startX = e.clientX;
+    const startY = e.clientY;
+    const startW = viewport.width;
+    const startH = viewport.height;
+    const pointerId = e.pointerId;
+    const target = e.currentTarget;
+    target.setPointerCapture(pointerId);
+
+    const onMove = (ev: PointerEvent) => {
+      const dw = (ev.clientX - startX) / scale;
+      const dh = (ev.clientY - startY) / scale;
+      setNodeViewport(node.id, {
+        width: startW + dw,
+        height: startH + dh,
+        label: 'Свой',
+      });
+    };
+    const onUp = () => {
+      target.releasePointerCapture(pointerId);
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+  };
 
   return (
     <div
       className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}`}
-      style={{ width: NODE_W, height: NODE_H }}
+      style={{ width: outer.width, height: outer.height }}
       data-page-id={node.id}
       data-lam-node={node.id}
       onClick={() => selectPage(node.id)}
@@ -206,8 +246,21 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         <div className="page-node__actions">
           <button
             type="button"
+            className="icon-btn"
+            title="Лог экрана"
+            aria-label="Лог экрана"
+            onClick={(e) => {
+              e.stopPropagation();
+              setLogFilterPageId(node.id);
+              setDiagnosticsOpen(true);
+            }}
+          >
+            <Terminal size={15} strokeWidth={1.75} />
+          </button>
+          <button
+            type="button"
             className={`icon-btn${isPinned ? ' icon-btn--on' : ''}`}
-            title="Закрепить live iframe"
+            title="Закрепить live"
             aria-label={isPinned ? 'Открепить' : 'Закрепить'}
             aria-pressed={isPinned}
             onClick={(e) => {
@@ -215,30 +268,40 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               togglePin(node.id);
             }}
           >
-            {isPinned ? <PinOff size={16} strokeWidth={1.75} /> : <Pin size={16} strokeWidth={1.75} />}
+            {isPinned ? (
+              <PinOff size={15} strokeWidth={1.75} />
+            ) : (
+              <Pin size={15} strokeWidth={1.75} />
+            )}
           </button>
           <button
             type="button"
             className="icon-btn"
-            title="Открыть в новой вкладке"
-            aria-label="Открыть в новой вкладке"
+            title="Открыть во вкладке"
+            aria-label="Открыть во вкладке"
             onClick={(e) => {
               e.stopPropagation();
               openPageInNewTab(node.id);
             }}
           >
-            <ExternalLink size={16} strokeWidth={1.75} />
+            <ExternalLink size={15} strokeWidth={1.75} />
           </button>
         </div>
       </div>
       <div className="page-node__path" title={url ?? node.pathPattern}>
         {node.pathExample ?? node.pathPattern}
+        <span className="page-node__size">
+          {' '}
+          · {viewport.width}×{viewport.height}
+          {viewport.label ? ` ${viewport.label}` : ''}
+        </span>
       </div>
       <div
         className="page-node__body"
         ref={bodyRef}
         data-page-id={node.id}
         title={sandboxNote}
+        style={{ height: bodyH }}
       >
         {showIframe ? (
           <div
@@ -246,20 +309,37 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             data-sandbox-preset={sandboxPreset}
           >
             <iframe
-              key={`${url}:${sandboxPreset}`}
+              key={`${url}:${sandboxPreset}:${viewport.width}x${viewport.height}`}
               title={node.title}
               src={url}
-              width={iframeW}
-              height={iframeH}
+              width={viewport.width}
+              height={viewport.height}
               referrerPolicy="strict-origin-when-cross-origin"
               allow="clipboard-read; clipboard-write"
               style={{
                 transform: `scale(${scale})`,
+                width: viewport.width,
+                height: viewport.height,
                 pointerEvents:
                   interactPageId === node.id || isSelected ? 'auto' : 'none',
               }}
               sandbox={sandboxValue}
-              onError={() => setIframeError(true)}
+              onLoad={() => {
+                setIframeError(false);
+                pushLog({
+                  level: 'info',
+                  source: node.id,
+                  message: `iframe load ${viewport.width}×${viewport.height} · ${url}`,
+                });
+              }}
+              onError={() => {
+                setIframeError(true);
+                pushLog({
+                  level: 'error',
+                  source: node.id,
+                  message: `iframe error · ${url ?? 'no url'}`,
+                });
+              }}
             />
           </div>
         ) : (
@@ -267,8 +347,36 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             {placeholder}
           </div>
         )}
+        <div
+          className="page-node__resize"
+          title="Тяните, чтобы менять размер окна (адаптив)"
+          onPointerDown={onResizePointerDown}
+          onClick={(e) => e.stopPropagation()}
+        />
       </div>
-      {node.states && node.states.length > 0 ? (
+      {isSelected ? (
+        <div
+          className="page-node__viewport-bar"
+          onClick={(e) => e.stopPropagation()}
+        >
+          <Smartphone size={12} strokeWidth={1.75} aria-hidden={true} />
+          {VIEWPORT_PRESETS.map((p) => (
+            <button
+              key={p.id}
+              type="button"
+              className={`page-node__vp-btn${
+                viewport.width === p.width && viewport.height === p.height
+                  ? ' page-node__vp-btn--on'
+                  : ''
+              }`}
+              title={`${p.label} ${p.width}×${p.height}`}
+              onClick={() => applyPreset(p)}
+            >
+              {p.label}
+            </button>
+          ))}
+        </div>
+      ) : node.states && node.states.length > 0 ? (
         <div className="page-node__states">
           {node.states.map((st) => (
             <Chip
@@ -280,7 +388,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 onState(st);
               }}
             >
-              {st.name}
+              {st.name === 'recruiter'
+                ? 'рекрутер'
+                : st.name === 'employer'
+                  ? 'клиент'
+                  : st.name}
             </Chip>
           ))}
         </div>

@@ -64,6 +64,17 @@ export type StateInjectSpec = {
   readonly labels?: readonly string[];
 };
 
+/**
+ * Размер «окна» устройства для live iframe (адаптив).
+ * CSS px логического viewport; visualizer может масштабировать для карты.
+ */
+export type DeviceViewport = {
+  readonly width: number;
+  readonly height: number;
+  /** Подпись пресета: phone / tablet / desktop / custom */
+  readonly label?: string;
+};
+
 export type AppMapNode = {
   readonly id: string;
   readonly kind: NodeKind;
@@ -84,6 +95,10 @@ export type AppMapNode = {
   };
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly position?: { readonly x: number; readonly y: number };
+  /**
+   * Размер окна превью (адаптив). Если нет — visualizer берёт дефолт карты.
+   */
+  readonly viewport?: DeviceViewport;
   /** Именованные UI-состояния (роли, empty, …) */
   readonly states?: readonly AppMapPageState[];
   readonly defaultPinned?: boolean;
@@ -166,6 +181,8 @@ export type LiveAppMapPage = {
   readonly screenshot?: string | null;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly position?: { readonly x: number; readonly y: number };
+  /** Размер окна для live-превью (адаптив) */
+  readonly viewport?: DeviceViewport;
   readonly iframeDisabled?: boolean;
   readonly defaultPinned?: boolean;
 };

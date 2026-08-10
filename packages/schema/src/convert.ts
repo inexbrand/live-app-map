@@ -165,6 +165,7 @@ function nodeToPage(n: AppMapNode): LiveAppMapPage {
       tags: n.tags,
     },
     position: n.position,
+    viewport: n.viewport,
     iframeDisabled: n.iframePolicy ? !n.iframePolicy.enabled : false,
     defaultPinned: n.defaultPinned,
   };
@@ -239,6 +240,7 @@ function pageToNode(p: LiveAppMapPage, baseUrl?: string): AppMapNode {
     groupIds: p.group ? [p.group] : undefined,
     metadata: p.metadata,
     position: p.position,
+    viewport: p.viewport,
     states: p.states,
     defaultPinned: p.defaultPinned,
     screenshot: p.screenshot,
