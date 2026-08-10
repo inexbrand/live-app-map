@@ -5,7 +5,7 @@
     "name": "miniapp",
     "platform": "web",
     "generator": "@live-app-map/scanner-react-router/0.1.0",
-    "generatedAt": "2026-08-10T01:37:19.125Z"
+    "generatedAt": "2026-08-10T01:40:05.890Z"
   },
   "pages": [
     {
@@ -541,6 +541,62 @@
       "from": "route:/",
       "to": "route:/feed",
       "label": "/feed",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/feed->route:/applications",
+      "from": "route:/feed",
+      "to": "route:/applications",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/applications->route:/wallet",
+      "from": "route:/applications",
+      "to": "route:/wallet",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/wallet->route:/chats",
+      "from": "route:/wallet",
+      "to": "route:/chats",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/chats->route:/verification",
+      "from": "route:/chats",
+      "to": "route:/verification",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/verification->route:/employer/create",
+      "from": "route:/verification",
+      "to": "route:/employer/create",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/employer/create->route:/employer/vacancies",
+      "from": "route:/employer/create",
+      "to": "route:/employer/vacancies",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/employer/vacancies->route:/register",
+      "from": "route:/employer/vacancies",
+      "to": "route:/register",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/feed->route:/vacancies/[id]",
+      "from": "route:/feed",
+      "to": "route:/vacancies/[id]",
+      "label": "Open vacancy",
       "kind": "link"
     }
   ],

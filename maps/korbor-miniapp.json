@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "kind": "live-app-map",
-  "generatedAt": "2026-08-10T01:37:19.125Z",
+  "generatedAt": "2026-08-10T01:40:05.890Z",
   "generator": {
     "name": "@live-app-map/scanner-react-router",
     "version": "0.1.0"
@@ -630,6 +630,70 @@
         "line": 1,
         "column": 1292
       }
+    },
+    {
+      "id": "edge:tab:route:/feed->route:/applications",
+      "from": "route:/feed",
+      "to": "route:/applications",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/applications->route:/wallet",
+      "from": "route:/applications",
+      "to": "route:/wallet",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/wallet->route:/chats",
+      "from": "route:/wallet",
+      "to": "route:/chats",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/chats->route:/verification",
+      "from": "route:/chats",
+      "to": "route:/verification",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/verification->route:/employer/create",
+      "from": "route:/verification",
+      "to": "route:/employer/create",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/employer/create->route:/employer/vacancies",
+      "from": "route:/employer/create",
+      "to": "route:/employer/vacancies",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:tab:route:/employer/vacancies->route:/register",
+      "from": "route:/employer/vacancies",
+      "to": "route:/register",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "tab"
+    },
+    {
+      "id": "edge:route:/feed->route:/vacancies/[id]",
+      "from": "route:/feed",
+      "to": "route:/vacancies/[id]",
+      "kind": "link",
+      "confidence": "high",
+      "label": "Open vacancy"
     }
   ],
   "layout": {

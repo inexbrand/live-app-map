@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "kind": "live-app-map",
-  "generatedAt": "2026-08-10T01:37:19.143Z",
+  "generatedAt": "2026-08-10T01:40:05.903Z",
   "generator": {
     "name": "@live-app-map/scanner-react-router",
     "version": "0.1.0"

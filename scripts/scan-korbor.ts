@@ -50,7 +50,7 @@ const RECRUITER_PATHS = new Set([
 ]);
 
 function enrichMiniapp(doc: AppMapDocument): AppMapDocument {
-  const nodes: AppMapNode[] = doc.nodes.map((n) => {
+  let nodes: AppMapNode[] = doc.nodes.map((n) => {
     if (n.kind !== 'page') {
       return n;
     }
@@ -83,9 +83,64 @@ function enrichMiniapp(doc: AppMapDocument): AppMapDocument {
     }
     return states.length ? { ...n, states } : n;
   });
+
+  // Навигационные рёбра между основными табами (RR config element:null — AST edges бедны)
+  const byPath = new Map(
+    nodes
+      .filter((n) => n.kind === 'page')
+      .map((n) => [n.pathExample ?? n.pathPattern, n.id] as const),
+  );
+  const tabOrder = [
+    '/feed',
+    '/applications',
+    '/wallet',
+    '/chats',
+    '/verification',
+    '/employer/create',
+    '/employer/vacancies',
+    '/register',
+  ];
+  const extraEdges = [...doc.edges];
+  const seen = new Set(extraEdges.map((e) => `${e.from}->${e.to}`));
+  for (let i = 0; i < tabOrder.length - 1; i++) {
+    const from = byPath.get(tabOrder[i] ?? '');
+    const to = byPath.get(tabOrder[i + 1] ?? '');
+    if (!from || !to) {
+      continue;
+    }
+    const key = `${from}->${to}`;
+    if (seen.has(key)) {
+      continue;
+    }
+    seen.add(key);
+    extraEdges.push({
+      id: `edge:tab:${from}->${to}`,
+      from,
+      to,
+      kind: 'link',
+      confidence: 'medium',
+      label: 'tab',
+    });
+  }
+  const feedId = byPath.get('/feed');
+  const vacId = [...byPath.entries()].find(
+    ([p]) => p.startsWith('/vacancies/') && !p.includes('employer'),
+  )?.[1];
+  if (feedId && vacId && !seen.has(`${feedId}->${vacId}`)) {
+    extraEdges.push({
+      id: `edge:${feedId}->${vacId}`,
+      from: feedId,
+      to: vacId,
+      kind: 'link',
+      confidence: 'high',
+      label: 'Open vacancy',
+    });
+  }
+
   return {
     ...doc,
     nodes,
+    edges: extraEdges,
     extensions: {
       ...doc.extensions,
       stateInject: {
@@ -163,7 +218,7 @@ async function main(): Promise<void> {
         category: 'system',
         step: 'profile',
         code: 'terms',
-        slug: ['home'],
+        slug: [] as string[],
         segments: ['collections'],
         rest: ['PLATFORM_COMMISSION_BPS'],
       },
@@ -171,8 +226,103 @@ async function main(): Promise<void> {
     for (const d of result.diagnostics) {
       console.log(`[${d.severity}] ${d.code}: ${d.message}`);
     }
-    writeBoth(t.name, t.enrich(result.document));
+    let doc = t.enrich(result.document);
+    if (t.name === 'korbor-site') {
+      doc = enrichSite(doc, t.baseUrl);
+    }
+    writeBoth(t.name, doc);
   }
+}
+
+/** Конкретные CMS-страницы поверх catch-all Next (Payload). */
+function enrichSite(doc: AppMapDocument, baseUrl: string): AppMapDocument {
+  const extras: AppMapNode[] = [
+    {
+      id: 'site-home',
+      kind: 'page',
+      title: 'Marketing Home',
+      pathPattern: '/',
+      pathExample: '/',
+      url: `${baseUrl}/`,
+      groupIds: ['marketing'],
+      defaultPinned: true,
+      iframePolicy: { enabled: true },
+    },
+    {
+      id: 'site-payload-admin',
+      kind: 'page',
+      title: 'Payload Admin',
+      pathPattern: '/admin',
+      pathExample: '/admin',
+      url: `${baseUrl}/admin`,
+      groupIds: ['cms'],
+      iframePolicy: { enabled: true },
+    },
+    {
+      id: 'site-payload-login',
+      kind: 'page',
+      title: 'Payload Login',
+      pathPattern: '/admin/login',
+      pathExample: '/admin/login',
+      url: `${baseUrl}/admin/login`,
+      groupIds: ['cms'],
+      iframePolicy: { enabled: true },
+    },
+    {
+      id: 'site-payload-collections',
+      kind: 'page',
+      title: 'Payload Collections',
+      pathPattern: '/admin/collections',
+      pathExample: '/admin/collections',
+      url: `${baseUrl}/admin/collections`,
+      groupIds: ['cms'],
+      iframePolicy: { enabled: true },
+    },
+  ];
+  const nodes = [
+    ...extras,
+    ...doc.nodes.filter(
+      (n) =>
+        n.kind === 'page' &&
+        !extras.some((e) => e.pathExample === (n.pathExample ?? n.pathPattern)),
+    ),
+  ];
+  const edges = [
+    {
+      id: 'edge:site-home->site-payload-admin',
+      from: 'site-home',
+      to: 'site-payload-admin',
+      kind: 'link' as const,
+      confidence: 'high' as const,
+      label: 'CMS',
+    },
+    {
+      id: 'edge:site-payload-admin->site-payload-login',
+      from: 'site-payload-admin',
+      to: 'site-payload-login',
+      kind: 'link' as const,
+      confidence: 'medium' as const,
+      label: 'Login',
+    },
+    {
+      id: 'edge:site-payload-admin->site-payload-collections',
+      from: 'site-payload-admin',
+      to: 'site-payload-collections',
+      kind: 'link' as const,
+      confidence: 'medium' as const,
+      label: 'Collections',
+    },
+    ...doc.edges,
+  ];
+  return {
+    ...doc,
+    nodes,
+    edges,
+    groups: [
+      { id: 'marketing', title: 'Marketing', color: '#3b82f6', order: 0 },
+      { id: 'cms', title: 'Payload CMS', color: '#a78bfa', order: 1 },
+    ],
+  };
 }
 
 main().catch((err: unknown) => {
