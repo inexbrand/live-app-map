@@ -120,16 +120,21 @@ code,
   font-weight: 600;
 }
 
-/* ——— Toolbar ——— */
+/* ——— Toolbar (slim) ——— */
 
 .toolbar {
   display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
+  flex-wrap: nowrap;
+  gap: 10px;
   align-items: center;
-  padding: 10px 12px;
+  padding: 8px 12px;
   background: var(--card);
   border-bottom: 1px solid var(--border);
+  min-height: 52px;
+}
+
+.toolbar--slim {
+  overflow-x: auto;
 }
 
 .toolbar__brand {
@@ -140,13 +145,172 @@ code,
   letter-spacing: -0.02em;
   margin-right: 4px;
   color: var(--foreground);
+  white-space: nowrap;
+  font-size: 13px;
 }
 
 .toolbar__group {
   display: flex;
   gap: 6px;
   align-items: center;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+}
+
+.mode-seg {
+  display: inline-flex;
+  align-items: stretch;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--secondary);
+}
+
+.mode-seg__btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: transparent;
+  color: var(--muted-foreground);
+  padding: 0 12px;
+  min-height: 34px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.mode-seg__btn:hover {
+  color: var(--foreground);
+  background: var(--accent);
+}
+
+.mode-seg__btn--on {
+  color: var(--primary-foreground);
+  background: var(--primary);
+}
+
+/* ——— Edge sheets (modals) ——— */
+
+.edge-sheet-root {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  pointer-events: none;
+}
+
+.edge-sheet-backdrop {
+  position: absolute;
+  inset: 0;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: rgba(0, 0, 0, 0.55);
+  cursor: pointer;
+  pointer-events: auto;
+}
+
+.edge-sheet {
+  position: absolute;
+  pointer-events: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  max-height: min(88vh, 720px);
+  width: min(380px, calc(100vw - 24px));
+}
+
+.edge-sheet--left {
+  top: 64px;
+  left: 12px;
+  bottom: 48px;
+  max-height: none;
+  border-radius: var(--radius-lg);
+}
+
+.edge-sheet--right {
+  top: 64px;
+  right: 12px;
+  bottom: 48px;
+  max-height: none;
+  border-radius: var(--radius-lg);
+}
+
+.edge-sheet--top {
+  top: 64px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 24px));
+  border-radius: var(--radius-lg);
+}
+
+.edge-sheet--bottom {
+  bottom: 48px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: min(480px, calc(100vw - 24px));
+  border-radius: var(--radius-lg);
+}
+
+.edge-sheet--center {
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: min(420px, calc(100vw - 24px));
+  border-radius: var(--radius-lg);
+}
+
+.edge-sheet__header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 14px 0;
+}
+
+.edge-sheet__title {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.edge-sheet__desc {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--muted-foreground);
+  line-height: 1.4;
+}
+
+.edge-sheet__body {
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  overflow: auto;
+}
+
+.sheet-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sheet-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.source-file-btn {
+  width: 100%;
+  cursor: pointer;
+}
+
+.drawer--edge {
+  /* side drawers under top bar, above canvas chrome */
+  top: 64px;
+  max-height: calc(100% - 76px);
 }
 
 .toolbar__spacer {

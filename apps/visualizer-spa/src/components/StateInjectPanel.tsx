@@ -2,7 +2,6 @@
  * Панель стейтов / ролей / interact (UI kit).
  */
 import { Copy, MousePointer2, ExternalLink } from 'lucide-react';
-import { useMemo } from 'react';
 import { Button, Chip, Field, PanelBody, PanelHeader, Select } from '../ui';
 import { useAppStore } from '../store/app-store';
 
@@ -29,21 +28,6 @@ export function StateInjectPanel() {
     ? activeStates.get(selectedPageId)
     : undefined;
 
-  const allRoleStates = useMemo(() => {
-    if (!index) {
-      return [];
-    }
-    const out: Array<{ pageId: string; title: string; name: string }> = [];
-    for (const n of index.nodesById.values()) {
-      for (const st of n.states ?? []) {
-        if (st.inject?.role) {
-          out.push({ pageId: n.id, title: n.title, name: st.name });
-        }
-      }
-    }
-    return out;
-  }, [index]);
-
   const copyUrl = async () => {
     if (!liveUrl) {
       setToast('Нет URL');
@@ -58,42 +42,17 @@ export function StateInjectPanel() {
   };
 
   if (!selectedPageId || !node) {
-    return (
-      <aside className="drawer ui-panel">
-        <PanelHeader
-          title="Стейты и роли"
-          description="Выберите ноду. Глобальная роль → query lam_role на live URL."
-        />
-        <PanelBody>
-          <Field label="Глобальная роль" htmlFor="global-role">
-            <Select
-              id="global-role"
-              value={globalRole}
-              onChange={(e) => setGlobalRole(e.target.value)}
-            >
-              <option value="">— нет —</option>
-              <option value="recruiter">Рекрутер</option>
-              <option value="employer">Клиент (employer)</option>
-            </Select>
-          </Field>
-          {allRoleStates.length > 0 ? (
-            <p className="drawer__hint">
-              Стейты с ролями: {allRoleStates.length} (см. chips на нодах).
-            </p>
-          ) : null}
-        </PanelBody>
-      </aside>
-    );
+    return null;
   }
 
   return (
-    <aside className="drawer ui-panel">
+    <aside className="drawer ui-panel drawer--edge">
       <PanelHeader
         title={node.title}
         description={node.pathExample ?? node.pathPattern}
       />
       <PanelBody>
-        <Field label="Live URL" htmlFor="live-url-view">
+        <Field label="Живой URL" htmlFor="live-url-view">
           <textarea
             id="live-url-view"
             className="ui-textarea font-mono"
@@ -109,15 +68,15 @@ export function StateInjectPanel() {
             value={globalRole}
             onChange={(e) => setGlobalRole(e.target.value)}
           >
-            <option value="">— нет —</option>
+            <option value="">Без роли</option>
             <option value="recruiter">Рекрутер</option>
-            <option value="employer">Клиент (employer)</option>
+            <option value="employer">Клиент (работодатель)</option>
           </Select>
         </Field>
 
         {(node.states ?? []).length > 0 ? (
           <div className="drawer__row">
-            <span className="ui-field__label">Стейты страницы</span>
+            <span className="ui-field__label">Состояния экрана</span>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
               {(node.states ?? []).map((st) => (
                 <Chip
@@ -131,15 +90,18 @@ export function StateInjectPanel() {
                     )
                   }
                 >
-                  {st.name}
-                  {st.inject?.role ? ` · ${st.inject.role}` : ''}
+                  {st.name === 'recruiter'
+                    ? 'рекрутер'
+                    : st.name === 'employer'
+                      ? 'клиент'
+                      : st.name}
                 </Chip>
               ))}
             </div>
           </div>
         ) : (
           <p className="drawer__hint">
-            Именованных states нет — используйте глобальную роль.
+            Отдельных состояний нет — задайте глобальную роль.
           </p>
         )}
 
@@ -151,11 +113,11 @@ export function StateInjectPanel() {
             onClick={() => openPageInNewTab(node.id)}
           >
             <ExternalLink size={16} strokeWidth={1.75} />
-            Вкладка
+            В новой вкладке
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={() => void copyUrl()}>
             <Copy size={16} strokeWidth={1.75} />
-            URL
+            Копировать URL
           </Button>
           <Button
             type="button"
@@ -167,7 +129,7 @@ export function StateInjectPanel() {
             }
           >
             <MousePointer2 size={16} strokeWidth={1.75} />
-            Interact
+            Клики в iframe
           </Button>
         </div>
       </PanelBody>

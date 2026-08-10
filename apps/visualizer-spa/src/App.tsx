@@ -103,15 +103,6 @@ export function App() {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         useAppStore.getState().selectPage(null);
-        return;
-      }
-      if (
-        e.key === '/' &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLTextAreaElement)
-      ) {
-        e.preventDefault();
-        window.document.querySelector<HTMLInputElement>('input[data-lam-search]')?.focus();
       }
     };
     window.addEventListener('keydown', onKey);
@@ -191,15 +182,14 @@ export function App() {
         {!mapDocument ? (
           <div className="empty-state">
             <div className="empty-state__card">
-              <h1>Live App Map</h1>
+              <h1>Карта приложения</h1>
               <p>
-                Загрузите карту или откройте пресет Korbor. Live iframe на dogfood
-                (localhost / *.localhost) — trusted sandbox. Роли miniapp: recruiter /
-                employer.
+                Откройте пресет Korbor или файл карты. В шапке: «Источники»,
+                «Настройки», поиск. Режим «Живой» показывает iframe.
               </p>
               <p>
-                Feedback: выберите экран → опишите дефект слева → скопируйте промпт или
-                JSON для CLI.
+                Выберите экран → слева замечание для агента, справа роли и стейты.
+                Роли мини-приложения: рекрутер / клиент.
               </p>
               <div className="empty-state__actions">
                 {KORBOR_PRESETS.map((p) => {
@@ -219,7 +209,7 @@ export function App() {
                 })}
               </div>
               <p className="drawer__hint">
-                <code>bun run dev</code> → http://localhost:4310
+                Запуск: <code>bun run dev</code> → http://localhost:4310
               </p>
             </div>
           </div>
@@ -233,25 +223,35 @@ export function App() {
       </div>
       <footer className="status-bar">
         <span>
-          mode: <strong>{mode}</strong>
+          режим:{' '}
+          <strong>
+            {mode === 'live' ? 'живой' : mode === 'compact' ? 'компакт' : 'карта'}
+          </strong>
         </span>
         <span>
-          live <strong>{liveCount}/{maxLiveIframes}</strong>
+          живых <strong>{liveCount}/{maxLiveIframes}</strong>
         </span>
         <span>
-          pin <strong>{pinCount}/{DEFAULT_MAX_PINNED}</strong>
+          закреплено <strong>{pinCount}/{DEFAULT_MAX_PINNED}</strong>
         </span>
         <span>
-          role: <strong>{globalRole || '—'}</strong>
+          роль:{' '}
+          <strong>
+            {globalRole === 'recruiter'
+              ? 'рекрутер'
+              : globalRole === 'employer'
+                ? 'клиент'
+                : '—'}
+          </strong>
         </span>
         <span>
-          nodes:{' '}
+          экранов:{' '}
           <strong>
             {mapDocument?.nodes.filter((n) => n.kind === 'page').length ?? 0}
           </strong>
         </span>
         <span>
-          warnings: <strong>{parseIssues.length}</strong>
+          предупреждений: <strong>{parseIssues.length}</strong>
         </span>
       </footer>
       {toast ? (

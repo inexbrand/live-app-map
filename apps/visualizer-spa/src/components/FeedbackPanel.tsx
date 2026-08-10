@@ -1,12 +1,7 @@
 /**
  * Feedback: описание проблемы по выбранному экрану → copy prompt / export JSON для CLI.
  */
-import {
-  Camera,
-  ClipboardCopy,
-  Download,
-  MessageSquareWarning,
-} from 'lucide-react';
+import { Camera, ClipboardCopy, Download } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   buildFeedbackArtifact,
@@ -163,51 +158,39 @@ export function FeedbackPanel() {
   };
 
   if (!selectedPageId || !node) {
-    return (
-      <aside className="drawer drawer--left ui-panel">
-        <PanelHeader
-          title="Feedback / промпт"
-          description="Выберите экран на карте, опишите дефект, скопируйте промпт или JSON для CLI."
-        />
-        <PanelBody>
-          <p className="drawer__hint">
-            Иконка <MessageSquareWarning size={14} style={{ verticalAlign: 'text-bottom' }} /> в
-            заголовке — каноничный путь: экран → note → clipboard / feedback.json.
-          </p>
-        </PanelBody>
-      </aside>
-    );
+    // Без выбора экрана панель скрыта — холст чище.
+    return null;
   }
 
   return (
-    <aside className="drawer drawer--left ui-panel">
+    <aside className="drawer drawer--left ui-panel drawer--edge">
       <PanelHeader
-        title="Feedback / промпт"
+        title="Замечание"
         description={`${node.title} · ${node.pathExample ?? node.pathPattern}`}
       />
       <PanelBody>
-        <Field label="Severity" htmlFor="fb-severity">
+        <Field label="Важность" htmlFor="fb-severity">
           <Select
             id="fb-severity"
             value={severity}
             onChange={(e) => setSeverity(e.target.value as FeedbackSeverity)}
           >
-            <option value="blocker">blocker</option>
-            <option value="high">high</option>
-            <option value="medium">medium</option>
-            <option value="low">low</option>
+            <option value="blocker">блокер</option>
+            <option value="high">высокая</option>
+            <option value="medium">средняя</option>
+            <option value="low">низкая</option>
           </Select>
         </Field>
 
         <Field
           label="Что не так"
           htmlFor="fb-note"
-          hint="Конкретно: UI, баг, iframe, роль, copy. Промпт уйдёт в агента/CLI."
+          hint="UI, баг, iframe, роль, тексты — промпт уйдёт в агента или CLI."
         >
           <Textarea
             id="fb-note"
             value={note}
-            placeholder="Например: кнопка «Откликнуться» обрезана на mobile width…"
+            placeholder="Например: кнопка «Откликнуться» обрезана на ширине 375px…"
             onChange={(e) => setNote(e.target.value)}
             rows={5}
           />
@@ -242,7 +225,7 @@ export function FeedbackPanel() {
           </Button>
           <Button type="button" variant="outline" size="sm" onClick={downloadJson}>
             <Download size={16} strokeWidth={1.75} />
-            JSON для CLI
+            Скачать JSON
           </Button>
         </div>
       </PanelBody>

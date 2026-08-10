@@ -13,20 +13,20 @@ export type KorborDogfoodId = (typeof KORBOR_DOGFOOD_IDS)[number];
 export const KORBOR_PRESETS = [
   {
     id: 'miniapp',
-    label: 'Korbor Miniapp',
+    label: 'Мини-приложение',
     path: '/maps/korbor-miniapp.liveappmap.json',
     /** Vite TLS host miniapp (см. scan-korbor / runtime-smoke). */
     baseUrl: 'https://vite.localhost:5175',
   },
   {
     id: 'admin',
-    label: 'Korbor Admin',
+    label: 'Админка',
     path: '/maps/korbor-admin.liveappmap.json',
     baseUrl: 'http://localhost:16002',
   },
   {
     id: 'site',
-    label: 'Korbor Site',
+    label: 'Сайт',
     path: '/maps/korbor-site.liveappmap.json',
     baseUrl: 'http://localhost:16001',
   },
