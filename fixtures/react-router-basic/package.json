@@ -1,0 +1,8 @@
+{
+  "name": "react-router-basic-fixture",
+  "private": true,
+  "version": "0.0.0",
+  "dependencies": {
+    "react-router-dom": "^7.0.0"
+  }
+}

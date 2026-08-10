@@ -129,6 +129,7 @@ function PageNodeInner(props: NodeProps) {
         {isLive && url ? (
           <div className="page-node__iframe-shell">
             <iframe
+              key={url}
               title={node.title}
               src={url}
               width={iframeW}

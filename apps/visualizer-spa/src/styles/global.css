@@ -384,6 +384,125 @@ button {
   font-size: 13px;
 }
 
+.budget-pill {
+  margin-left: auto;
+  font-size: 12px;
+  color: var(--text-muted);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.budget-pill--inline {
+  margin-left: 0;
+  color: inherit;
+}
+
+.error-banner {
+  position: absolute;
+  top: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 25;
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: min(640px, calc(100% - 24px));
+  padding: 10px 12px;
+  background: rgba(243, 18, 96, 0.12);
+  border: 1px solid var(--danger);
+  border-radius: 10px;
+  color: var(--text);
+  pointer-events: auto;
+}
+
+.error-banner__body {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 13px;
+  min-width: 0;
+}
+
+.error-banner__body strong {
+  color: var(--danger);
+}
+
+.warnings-banner {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 18;
+  max-width: min(360px, calc(100% - 24px));
+  padding: 10px 12px;
+  background: rgba(245, 165, 36, 0.1);
+  border: 1px solid var(--warning);
+  border-radius: 10px;
+  font-size: 12px;
+  color: var(--text);
+  pointer-events: auto;
+}
+
+.warnings-banner ul {
+  margin: 6px 0 0;
+  padding-left: 18px;
+  color: var(--text-muted);
+}
+
+.empty-state__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  justify-content: center;
+  margin: 16px 0 8px;
+}
+
+.empty-state__cta {
+  min-height: 44px;
+  min-width: 140px;
+}
+
+.drawer__list {
+  margin: 0;
+  padding-left: 18px;
+  font-size: 13px;
+}
+
+.drawer__hint {
+  margin: 4px 0 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.drawer__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer__actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.state-chip:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.state-chip--hit {
+  min-height: 36px;
+  padding: 6px 12px;
+  font-size: 12px;
+}
+
+.btn:focus-visible,
+.field select:focus-visible,
+.field input:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
