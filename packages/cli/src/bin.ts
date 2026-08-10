@@ -1,0 +1,132 @@
+#!/usr/bin/env bun
+/**
+ * CLI: live-app-map scan | diff | doctor | dev
+ */
+import { formatDiagnostic, sortDiagnostics } from '@live-app-map/diagnostics';
+import { runDiff, runDoctor, runScan } from './index';
+
+function usage(): never {
+  console.log(`live-app-map — scanner & tools
+
+Usage:
+  live-app-map scan --dir <path> [-o out.json] [--base-url url] [--framework next|react-router|auto]
+  live-app-map diff <left.json> <right.json>
+  live-app-map doctor [--dir <path>]
+  live-app-map dev --target-url <url> [--port 4310] [--map <file.json>]
+
+Examples:
+  live-app-map scan --dir ../korbor/apps/miniapp --base-url http://localhost:5175 -o maps/miniapp.json
+  live-app-map doctor --dir ../korbor/apps/site
+`);
+  process.exit(1);
+}
+
+async function main(argv: string[]): Promise<void> {
+  const cmd = argv[0] ?? '';
+  if (!cmd || cmd === '-h' || cmd === '--help') {
+    usage();
+  }
+
+  if (cmd === 'scan') {
+    const dir = flag(argv, '--dir') ?? '.';
+    const out = flag(argv, '-o') ?? flag(argv, '--out');
+    const baseUrl = flag(argv, '--base-url');
+    const framework = (flag(argv, '--framework') ?? 'auto') as
+      | 'auto'
+      | 'next'
+      | 'react-router';
+    const format = (flag(argv, '--format') ?? 'enterprise') as
+      | 'enterprise'
+      | 'liveappmap';
+    const result = await runScan({
+      dir,
+      out: out ?? undefined,
+      baseUrl: baseUrl ?? undefined,
+      framework,
+      format,
+    });
+    for (const d of sortDiagnostics(result.diagnostics)) {
+      console.error(formatDiagnostic(d));
+    }
+    const pages = result.document.nodes.filter((n) => n.kind === 'page').length;
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          pages,
+          nodes: result.document.nodes.length,
+          edges: result.document.edges.length,
+          revision: result.document.revision,
+          framework: result.document.project.framework,
+          out: out ?? null,
+          timing: result.timing,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  if (cmd === 'diff') {
+    const left = argv[1];
+    const right = argv[2];
+    if (!left || !right) {
+      usage();
+    }
+    const d = runDiff(left, right);
+    console.log(JSON.stringify(d, null, 2));
+    const changed =
+      d.nodes.added.length +
+      d.nodes.removed.length +
+      d.nodes.changed.length +
+      d.edges.added.length +
+      d.edges.removed.length;
+    process.exit(changed > 0 ? 1 : 0);
+  }
+
+  if (cmd === 'doctor') {
+    const dir = flag(argv, '--dir') ?? '.';
+    console.log(JSON.stringify(runDoctor(dir), null, 2));
+    return;
+  }
+
+  if (cmd === 'dev') {
+    const target = flag(argv, '--target-url') ?? 'http://localhost:3000';
+    const port = Number(flag(argv, '--port') ?? '4310');
+    const mapFile = flag(argv, '--map');
+    console.log(
+      JSON.stringify(
+        {
+          ok: true,
+          mode: 'dev-sidecar-hint',
+          message:
+            'Запустите visualizer-spa: bun run dev:visualizer, откройте карту и укажите baseUrl',
+          targetUrl: target,
+          port,
+          mapFile,
+          visualizerHint: `http://localhost:${port}/?baseUrl=${encodeURIComponent(target)}`,
+        },
+        null,
+        2,
+      ),
+    );
+    return;
+  }
+
+  usage();
+}
+
+function flag(argv: string[], name: string): string | null {
+  const i = argv.indexOf(name);
+  if (i === -1) {
+    return null;
+  }
+  return argv[i + 1] ?? null;
+}
+
+main(process.argv.slice(2)).catch((err: unknown) => {
+  const message = err instanceof Error ? err.message : String(err);
+  console.error(message);
+  process.exit(1);
+});

@@ -1,0 +1,92 @@
+{
+  "version": "1.0",
+  "baseUrl": "http://localhost:16001",
+  "app": {
+    "name": "site",
+    "platform": "web",
+    "generator": "@live-app-map/scanner-next/0.1.0",
+    "generatedAt": "2026-08-10T01:37:19.150Z"
+  },
+  "pages": [
+    {
+      "id": "not-found:/[[...slug]]",
+      "title": "slug",
+      "path": "/home",
+      "url": "http://localhost:16001/home",
+      "group": "frontend",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/[[...slug]]",
+        "kind": "not-found",
+        "sourceFile": "src/app/(frontend)/[[...slug]]/not-found.tsx"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "route:/[[...slug]]",
+      "title": "slug",
+      "path": "/home",
+      "url": "http://localhost:16001/home",
+      "group": "frontend",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/[[...slug]]",
+        "kind": "page",
+        "sourceFile": "src/app/(frontend)/[[...slug]]/page.tsx"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "not-found:/admin/[[...segments]]",
+      "title": "admin / segments",
+      "path": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "group": "payload",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin/[[...segments]]",
+        "kind": "not-found",
+        "sourceFile": "src/app/(payload)/admin/[[...segments]]/not-found.tsx"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "route:/admin/[[...segments]]",
+      "title": "admin / segments",
+      "path": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "group": "payload",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin/[[...segments]]",
+        "kind": "page",
+        "sourceFile": "src/app/(payload)/admin/[[...segments]]/page.tsx"
+      },
+      "iframeDisabled": false
+    }
+  ],
+  "edges": [],
+  "groups": [
+    {
+      "id": "frontend",
+      "title": "frontend",
+      "order": 0
+    },
+    {
+      "id": "payload",
+      "title": "payload",
+      "order": 1
+    }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR"
+  },
+  "extensions": {
+    "liveAppMap": {
+      "formatVersion": 1,
+      "revision": "a83caa9c401c771a",
+      "framework": "next"
+    }
+  }
+}

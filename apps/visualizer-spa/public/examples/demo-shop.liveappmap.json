@@ -1,0 +1,75 @@
+{
+  "version": "1.0",
+  "baseUrl": "http://localhost:5173",
+  "app": {
+    "name": "Demo Shop",
+    "platform": "web",
+    "generator": "hand-written/1.0",
+    "generatedAt": "2026-08-10T12:00:00.000Z"
+  },
+  "groups": [
+    { "id": "auth", "title": "Auth", "color": "#f59e0b", "order": 0 },
+    { "id": "catalog", "title": "Catalog", "color": "#3b82f6", "order": 1 },
+    { "id": "checkout", "title": "Checkout", "color": "#22c55e", "order": 2 }
+  ],
+  "pages": [
+    {
+      "id": "home",
+      "title": "Home",
+      "path": "/",
+      "group": "catalog",
+      "type": "route",
+      "defaultPinned": true
+    },
+    {
+      "id": "product",
+      "title": "Product",
+      "path": "/product/demo-sku",
+      "group": "catalog",
+      "type": "route",
+      "states": [
+        {
+          "name": "out-of-stock",
+          "url": "http://localhost:5173/product/demo-sku?stock=0",
+          "note": "Empty CTA",
+          "inject": { "query": { "stock": "0" } }
+        }
+      ]
+    },
+    {
+      "id": "cart",
+      "title": "Cart",
+      "path": "/cart",
+      "group": "checkout",
+      "type": "route"
+    },
+    {
+      "id": "login",
+      "title": "Login",
+      "path": "/login",
+      "group": "auth",
+      "type": "auth"
+    },
+    {
+      "id": "checkout",
+      "title": "Checkout",
+      "path": "/checkout",
+      "group": "checkout",
+      "type": "route",
+      "metadata": { "requiresAuth": true }
+    }
+  ],
+  "edges": [
+    { "from": "home", "to": "product", "label": "Open product", "kind": "navigation" },
+    { "from": "product", "to": "cart", "label": "Add to cart", "kind": "navigation" },
+    { "from": "cart", "to": "checkout", "label": "Checkout", "kind": "navigation" },
+    { "from": "checkout", "to": "login", "label": "Need auth", "kind": "redirect" },
+    { "from": "login", "to": "checkout", "label": "After login", "kind": "redirect" },
+    { "from": "home", "to": "login", "label": "Sign in", "kind": "link" }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR",
+    "defaultViewport": { "x": 0, "y": 0, "zoom": 0.75 }
+  }
+}

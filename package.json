@@ -1,0 +1,26 @@
+﻿{
+  "name": "live-app-map",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Live App Map — scanner + visualizer monorepo (enterprise TDD)",
+  "packageManager": "bun@1.2.0",
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ],
+  "scripts": {
+    "build": "bun run --filter '*' build",
+    "typecheck": "bun run --filter '*' typecheck",
+    "test": "bun test packages apps",
+    "test:unit": "bun test packages",
+    "dev:visualizer": "bun run --filter '@live-app-map/visualizer-spa' dev",
+    "scan": "bun run packages/cli/src/bin.ts scan",
+    "dev:map": "bun run packages/cli/src/bin.ts dev",
+    "scan:korbor": "bun run scripts/scan-korbor.ts",
+    "doctor": "bun run packages/cli/src/bin.ts doctor"
+  },
+  "devDependencies": {
+    "@types/bun": "latest",
+    "typescript": "^5.8.2"
+  }
+}

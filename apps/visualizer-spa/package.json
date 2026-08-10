@@ -1,0 +1,31 @@
+{
+  "name": "@live-app-map/visualizer-spa",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --port 4310 --host",
+    "build": "vite build",
+    "preview": "vite preview --port 4310",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.4",
+    "@live-app-map/export-appmap": "workspace:*",
+    "@live-app-map/graph": "workspace:*",
+    "@live-app-map/iframe-policy": "workspace:*",
+    "@live-app-map/schema": "workspace:*",
+    "@xyflow/react": "^12.6.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "zustand": "^5.0.3"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.10",
+    "@types/react-dom": "^19.0.4",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.8.2",
+    "vite": "^6.2.0"
+  }
+}

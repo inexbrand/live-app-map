@@ -1,0 +1,649 @@
+{
+  "formatVersion": 1,
+  "kind": "live-app-map",
+  "generatedAt": "2026-08-10T01:37:19.125Z",
+  "generator": {
+    "name": "@live-app-map/scanner-react-router",
+    "version": "0.1.0"
+  },
+  "revision": "d2c5ec4ee8fcee38",
+  "project": {
+    "name": "miniapp",
+    "root": "C:\\work\\korbor\\apps\\miniapp",
+    "framework": "react-router"
+  },
+  "baseUrl": "https://vite.localhost:5175",
+  "nodes": [
+    {
+      "id": "route:/",
+      "kind": "page",
+      "title": "Home",
+      "pathPattern": "/",
+      "pathExample": "/",
+      "url": "https://vite.localhost:5175/",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/applications",
+      "kind": "page",
+      "title": "applications",
+      "pathPattern": "/applications",
+      "pathExample": "/applications",
+      "url": "https://vite.localhost:5175/applications",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/applications"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/applications/[id]/submit",
+      "kind": "page",
+      "title": "applications / id / submit",
+      "pathPattern": "/applications/[id]/submit",
+      "pathExample": "/applications/demo/submit",
+      "url": "https://vite.localhost:5175/applications/demo/submit",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "id"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/applications/:id/submit"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/chat/[candidateId]",
+      "kind": "page",
+      "title": "chat / candidateId",
+      "pathPattern": "/chat/[candidateId]",
+      "pathExample": "/chat/cand-demo",
+      "url": "https://vite.localhost:5175/chat/cand-demo",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "candidateId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chat/:candidateId"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/chats",
+      "kind": "page",
+      "title": "chats",
+      "pathPattern": "/chats",
+      "pathExample": "/chats",
+      "url": "https://vite.localhost:5175/chats",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/employer/create",
+      "kind": "page",
+      "title": "employer / create",
+      "pathPattern": "/employer/create",
+      "pathExample": "/employer/create",
+      "url": "https://vite.localhost:5175/employer/create",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/create"
+      },
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/employer/vacancies",
+      "kind": "page",
+      "title": "employer / vacancies",
+      "pathPattern": "/employer/vacancies",
+      "pathExample": "/employer/vacancies",
+      "url": "https://vite.localhost:5175/employer/vacancies",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/vacancies"
+      },
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/employer/vacancies/[id]",
+      "kind": "page",
+      "title": "employer / vacancies / id",
+      "pathPattern": "/employer/vacancies/[id]",
+      "pathExample": "/employer/vacancies/demo",
+      "url": "https://vite.localhost:5175/employer/vacancies/demo",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "id"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/vacancies/:id"
+      },
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/feed",
+      "kind": "page",
+      "title": "feed",
+      "pathPattern": "/feed",
+      "pathExample": "/feed",
+      "url": "https://vite.localhost:5175/feed",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/feed"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/legal/[code]",
+      "kind": "page",
+      "title": "legal / code",
+      "pathPattern": "/legal/[code]",
+      "pathExample": "/legal/terms",
+      "url": "https://vite.localhost:5175/legal/terms",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "code"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal/:code"
+      }
+    },
+    {
+      "id": "route:/marketmaker",
+      "kind": "page",
+      "title": "marketmaker",
+      "pathPattern": "/marketmaker",
+      "pathExample": "/marketmaker",
+      "url": "https://vite.localhost:5175/marketmaker",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker"
+      }
+    },
+    {
+      "id": "route:/register",
+      "kind": "page",
+      "title": "register",
+      "pathPattern": "/register",
+      "pathExample": "/register",
+      "url": "https://vite.localhost:5175/register",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/register"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/register/[step]",
+      "kind": "page",
+      "title": "register / step",
+      "pathPattern": "/register/[step]",
+      "pathExample": "/register/profile",
+      "url": "https://vite.localhost:5175/register/profile",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "step"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/register/:step"
+      }
+    },
+    {
+      "id": "route:/vacancies/[id]",
+      "kind": "page",
+      "title": "vacancies / id",
+      "pathPattern": "/vacancies/[id]",
+      "pathExample": "/vacancies/demo",
+      "url": "https://vite.localhost:5175/vacancies/demo",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [
+        "id"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies/:id"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/verification",
+      "kind": "page",
+      "title": "verification",
+      "pathPattern": "/verification",
+      "pathExample": "/verification",
+      "url": "https://vite.localhost:5175/verification",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/verification"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "id": "route:/wallet",
+      "kind": "page",
+      "title": "wallet",
+      "pathPattern": "/wallet",
+      "pathExample": "/wallet",
+      "url": "https://vite.localhost:5175/wallet",
+      "source": {
+        "file": "src/app/routes-config.tsx"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/wallet"
+      },
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ]
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:route:/->route:/feed",
+      "from": "route:/",
+      "to": "route:/feed",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/feed",
+      "source": {
+        "file": "src/app/routes-config.tsx",
+        "line": 1,
+        "column": 1292
+      }
+    }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR"
+  },
+  "extensions": {
+    "stateInject": {
+      "roles": [
+        "recruiter",
+        "employer"
+      ],
+      "queryParam": "lam_role",
+      "description": "Korbor miniapp: recruiter vs employer (клиент). Visualizer добавляет ?lam_role= в iframe URL."
+    }
+  }
+}

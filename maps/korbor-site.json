@@ -1,0 +1,179 @@
+{
+  "formatVersion": 1,
+  "kind": "live-app-map",
+  "generatedAt": "2026-08-10T01:37:19.150Z",
+  "generator": {
+    "name": "@live-app-map/scanner-next",
+    "version": "0.1.0"
+  },
+  "revision": "a83caa9c401c771a",
+  "project": {
+    "name": "site",
+    "root": "C:\\work\\korbor\\apps\\site",
+    "framework": "next",
+    "next": {
+      "router": "app"
+    }
+  },
+  "baseUrl": "http://localhost:16001",
+  "nodes": [
+    {
+      "id": "layout:/[[...slug]]",
+      "kind": "layout",
+      "title": "Layout /[[...slug]]",
+      "pathPattern": "/[[...slug]]",
+      "source": {
+        "file": "src/app/(frontend)/[[...slug]]/layout.tsx"
+      },
+      "groupIds": [
+        "frontend"
+      ],
+      "iframePolicy": {
+        "enabled": false,
+        "reason": "layout is structure-only"
+      }
+    },
+    {
+      "id": "layout:/",
+      "kind": "layout",
+      "title": "Layout /",
+      "pathPattern": "/",
+      "source": {
+        "file": "src/app/(payload)/layout.tsx"
+      },
+      "groupIds": [
+        "payload"
+      ],
+      "iframePolicy": {
+        "enabled": false,
+        "reason": "layout is structure-only"
+      }
+    },
+    {
+      "id": "not-found:/[[...slug]]",
+      "kind": "not-found",
+      "title": "slug",
+      "pathPattern": "/[[...slug]]",
+      "pathExample": "/home",
+      "url": "http://localhost:16001/home",
+      "source": {
+        "file": "src/app/(frontend)/[[...slug]]/not-found.tsx"
+      },
+      "groupIds": [
+        "frontend"
+      ],
+      "dynamicParams": [
+        "[...slug"
+      ],
+      "parallelSlot": null,
+      "intercept": null,
+      "presentation": "page",
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "route:/[[...slug]]",
+      "kind": "page",
+      "title": "slug",
+      "pathPattern": "/[[...slug]]",
+      "pathExample": "/home",
+      "url": "http://localhost:16001/home",
+      "source": {
+        "file": "src/app/(frontend)/[[...slug]]/page.tsx"
+      },
+      "groupIds": [
+        "frontend"
+      ],
+      "dynamicParams": [
+        "[...slug"
+      ],
+      "parallelSlot": null,
+      "intercept": null,
+      "presentation": "page",
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "not-found:/admin/[[...segments]]",
+      "kind": "not-found",
+      "title": "admin / segments",
+      "pathPattern": "/admin/[[...segments]]",
+      "pathExample": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "source": {
+        "file": "src/app/(payload)/admin/[[...segments]]/not-found.tsx"
+      },
+      "groupIds": [
+        "payload"
+      ],
+      "dynamicParams": [
+        "[...segments"
+      ],
+      "parallelSlot": null,
+      "intercept": null,
+      "presentation": "page",
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "route:/admin/[[...segments]]",
+      "kind": "page",
+      "title": "admin / segments",
+      "pathPattern": "/admin/[[...segments]]",
+      "pathExample": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "source": {
+        "file": "src/app/(payload)/admin/[[...segments]]/page.tsx"
+      },
+      "groupIds": [
+        "payload"
+      ],
+      "dynamicParams": [
+        "[...segments"
+      ],
+      "parallelSlot": null,
+      "intercept": null,
+      "presentation": "page",
+      "iframePolicy": {
+        "enabled": true
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "wraps:layout:/[[...slug]]->route:/[[...slug]]",
+      "from": "layout:/[[...slug]]",
+      "to": "route:/[[...slug]]",
+      "kind": "wraps",
+      "confidence": "high",
+      "label": "wraps"
+    },
+    {
+      "id": "wraps:layout:/->route:/admin/[[...segments]]",
+      "from": "layout:/",
+      "to": "route:/admin/[[...segments]]",
+      "kind": "wraps",
+      "confidence": "high",
+      "label": "wraps"
+    }
+  ],
+  "groups": [
+    {
+      "id": "frontend",
+      "title": "frontend",
+      "order": 0
+    },
+    {
+      "id": "payload",
+      "title": "payload",
+      "order": 1
+    }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR"
+  }
+}

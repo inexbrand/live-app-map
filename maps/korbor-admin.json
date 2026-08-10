@@ -1,0 +1,793 @@
+{
+  "formatVersion": 1,
+  "kind": "live-app-map",
+  "generatedAt": "2026-08-10T01:37:19.143Z",
+  "generator": {
+    "name": "@live-app-map/scanner-react-router",
+    "version": "0.1.0"
+  },
+  "revision": "a3aa3b16fb7a17af",
+  "project": {
+    "name": "admin",
+    "root": "C:\\work\\korbor\\apps\\admin",
+    "framework": "react-router"
+  },
+  "baseUrl": "http://localhost:16002",
+  "nodes": [
+    {
+      "id": "route:/",
+      "kind": "page",
+      "title": "Home",
+      "pathPattern": "/",
+      "pathExample": "/",
+      "url": "http://localhost:16002/",
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/"
+      }
+    },
+    {
+      "id": "route:/audit",
+      "kind": "page",
+      "title": "audit",
+      "pathPattern": "/audit",
+      "pathExample": "/audit",
+      "url": "http://localhost:16002/audit",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/audit"
+      }
+    },
+    {
+      "id": "route:/audit/[entryId]",
+      "kind": "page",
+      "title": "audit / entryId",
+      "pathPattern": "/audit/[entryId]",
+      "pathExample": "/audit/ent-demo",
+      "url": "http://localhost:16002/audit/ent-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "entryId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/audit/:entryId"
+      }
+    },
+    {
+      "id": "route:/chats",
+      "kind": "page",
+      "title": "chats",
+      "pathPattern": "/chats",
+      "pathExample": "/chats",
+      "url": "http://localhost:16002/chats",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats"
+      }
+    },
+    {
+      "id": "route:/chats/[threadId]",
+      "kind": "page",
+      "title": "chats / threadId",
+      "pathPattern": "/chats/[threadId]",
+      "pathExample": "/chats/thr-demo",
+      "url": "http://localhost:16002/chats/thr-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "threadId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats/:threadId"
+      }
+    },
+    {
+      "id": "route:/config",
+      "kind": "page",
+      "title": "config",
+      "pathPattern": "/config",
+      "pathExample": "/config",
+      "url": "http://localhost:16002/config",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/config"
+      }
+    },
+    {
+      "id": "route:/config/[...rest]",
+      "kind": "page",
+      "title": "config / rest",
+      "pathPattern": "/config/[...rest]",
+      "pathExample": "/config/PLATFORM_COMMISSION_BPS",
+      "url": "http://localhost:16002/config/PLATFORM_COMMISSION_BPS",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "rest"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/config/*"
+      }
+    },
+    {
+      "id": "route:/deals",
+      "kind": "page",
+      "title": "deals",
+      "pathPattern": "/deals",
+      "pathExample": "/deals",
+      "url": "http://localhost:16002/deals",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/deals"
+      }
+    },
+    {
+      "id": "route:/deals/[dealId]",
+      "kind": "page",
+      "title": "deals / dealId",
+      "pathPattern": "/deals/[dealId]",
+      "pathExample": "/deals/deal-demo",
+      "url": "http://localhost:16002/deals/deal-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "dealId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/deals/:dealId"
+      }
+    },
+    {
+      "id": "route:/disputes",
+      "kind": "page",
+      "title": "disputes",
+      "pathPattern": "/disputes",
+      "pathExample": "/disputes",
+      "url": "http://localhost:16002/disputes",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/disputes"
+      }
+    },
+    {
+      "id": "route:/disputes/[disputeId]",
+      "kind": "page",
+      "title": "disputes / disputeId",
+      "pathPattern": "/disputes/[disputeId]",
+      "pathExample": "/disputes/disp-demo",
+      "url": "http://localhost:16002/disputes/disp-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "disputeId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/disputes/:disputeId"
+      }
+    },
+    {
+      "id": "route:/ledger",
+      "kind": "page",
+      "title": "ledger",
+      "pathPattern": "/ledger",
+      "pathExample": "/ledger",
+      "url": "http://localhost:16002/ledger",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/ledger"
+      }
+    },
+    {
+      "id": "route:/ledger/[ledgerId]",
+      "kind": "page",
+      "title": "ledger / ledgerId",
+      "pathPattern": "/ledger/[ledgerId]",
+      "pathExample": "/ledger/led-demo",
+      "url": "http://localhost:16002/ledger/led-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "ledgerId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/ledger/:ledgerId"
+      }
+    },
+    {
+      "id": "route:/legal",
+      "kind": "page",
+      "title": "legal",
+      "pathPattern": "/legal",
+      "pathExample": "/legal",
+      "url": "http://localhost:16002/legal",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal"
+      }
+    },
+    {
+      "id": "route:/legal/[documentId]",
+      "kind": "page",
+      "title": "legal / documentId",
+      "pathPattern": "/legal/[documentId]",
+      "pathExample": "/legal/doc-demo",
+      "url": "http://localhost:16002/legal/doc-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "documentId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal/:documentId"
+      }
+    },
+    {
+      "id": "route:/llm",
+      "kind": "page",
+      "title": "llm",
+      "pathPattern": "/llm",
+      "pathExample": "/llm",
+      "url": "http://localhost:16002/llm",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm"
+      }
+    },
+    {
+      "id": "route:/llm/knowledge/[documentId]",
+      "kind": "page",
+      "title": "llm / knowledge / documentId",
+      "pathPattern": "/llm/knowledge/[documentId]",
+      "pathExample": "/llm/knowledge/doc-demo",
+      "url": "http://localhost:16002/llm/knowledge/doc-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "documentId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm/knowledge/:documentId"
+      }
+    },
+    {
+      "id": "route:/llm/prompts/[category]",
+      "kind": "page",
+      "title": "llm / prompts / category",
+      "pathPattern": "/llm/prompts/[category]",
+      "pathExample": "/llm/prompts/system",
+      "url": "http://localhost:16002/llm/prompts/system",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "category"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm/prompts/:category"
+      }
+    },
+    {
+      "id": "route:/marketmaker",
+      "kind": "page",
+      "title": "marketmaker",
+      "pathPattern": "/marketmaker",
+      "pathExample": "/marketmaker",
+      "url": "http://localhost:16002/marketmaker",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker"
+      }
+    },
+    {
+      "id": "route:/marketmaker/[vacancyId]",
+      "kind": "page",
+      "title": "marketmaker / vacancyId",
+      "pathPattern": "/marketmaker/[vacancyId]",
+      "pathExample": "/marketmaker/vac-demo",
+      "url": "http://localhost:16002/marketmaker/vac-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "vacancyId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker/:vacancyId"
+      }
+    },
+    {
+      "id": "route:/metrics",
+      "kind": "page",
+      "title": "metrics",
+      "pathPattern": "/metrics",
+      "pathExample": "/metrics",
+      "url": "http://localhost:16002/metrics",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/metrics"
+      }
+    },
+    {
+      "id": "route:/recruiters",
+      "kind": "page",
+      "title": "recruiters",
+      "pathPattern": "/recruiters",
+      "pathExample": "/recruiters",
+      "url": "http://localhost:16002/recruiters",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/recruiters"
+      }
+    },
+    {
+      "id": "route:/recruiters/[userId]",
+      "kind": "page",
+      "title": "recruiters / userId",
+      "pathPattern": "/recruiters/[userId]",
+      "pathExample": "/recruiters/user-demo",
+      "url": "http://localhost:16002/recruiters/user-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "userId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/recruiters/:userId"
+      }
+    },
+    {
+      "id": "route:/specializations",
+      "kind": "page",
+      "title": "specializations",
+      "pathPattern": "/specializations",
+      "pathExample": "/specializations",
+      "url": "http://localhost:16002/specializations",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/specializations"
+      }
+    },
+    {
+      "id": "route:/users",
+      "kind": "page",
+      "title": "users",
+      "pathPattern": "/users",
+      "pathExample": "/users",
+      "url": "http://localhost:16002/users",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/users"
+      }
+    },
+    {
+      "id": "route:/users/[userId]",
+      "kind": "page",
+      "title": "users / userId",
+      "pathPattern": "/users/[userId]",
+      "pathExample": "/users/user-demo",
+      "url": "http://localhost:16002/users/user-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "userId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/users/:userId"
+      }
+    },
+    {
+      "id": "route:/vacancies",
+      "kind": "page",
+      "title": "vacancies",
+      "pathPattern": "/vacancies",
+      "pathExample": "/vacancies",
+      "url": "http://localhost:16002/vacancies",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies"
+      }
+    },
+    {
+      "id": "route:/vacancies/[vacancyId]",
+      "kind": "page",
+      "title": "vacancies / vacancyId",
+      "pathPattern": "/vacancies/[vacancyId]",
+      "pathExample": "/vacancies/vac-demo",
+      "url": "http://localhost:16002/vacancies/vac-demo",
+      "source": {
+        "file": "src/features/shell/route-config.ts"
+      },
+      "dynamicParams": [
+        "vacancyId"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies/:vacancyId"
+      }
+    },
+    {
+      "id": "route:/verification-requests",
+      "kind": "page",
+      "title": "verification-requests",
+      "pathPattern": "/verification-requests",
+      "pathExample": "/verification-requests",
+      "url": "http://localhost:16002/verification-requests",
+      "source": {
+        "file": "src/features/shell/nav.ts"
+      },
+      "dynamicParams": [],
+      "iframePolicy": {
+        "enabled": true
+      },
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/verification-requests"
+      }
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:route:/->route:/vacancies",
+      "from": "route:/",
+      "to": "route:/vacancies",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/vacancies",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1373
+      }
+    },
+    {
+      "id": "edge:route:/vacancies->route:/deals",
+      "from": "route:/vacancies",
+      "to": "route:/deals",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/deals",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1477
+      }
+    },
+    {
+      "id": "edge:route:/deals->route:/recruiters",
+      "from": "route:/deals",
+      "to": "route:/recruiters",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/recruiters",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1569
+      }
+    },
+    {
+      "id": "edge:route:/recruiters->route:/verification-requests",
+      "from": "route:/recruiters",
+      "to": "route:/verification-requests",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/verification-requests",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1667
+      }
+    },
+    {
+      "id": "edge:route:/verification-requests->route:/marketmaker",
+      "from": "route:/verification-requests",
+      "to": "route:/marketmaker",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/marketmaker",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1803
+      }
+    },
+    {
+      "id": "edge:route:/marketmaker->route:/disputes",
+      "from": "route:/marketmaker",
+      "to": "route:/disputes",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/disputes",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 1960
+      }
+    },
+    {
+      "id": "edge:route:/disputes->route:/ledger",
+      "from": "route:/disputes",
+      "to": "route:/ledger",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/ledger",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2051
+      }
+    },
+    {
+      "id": "edge:route:/ledger->route:/metrics",
+      "from": "route:/ledger",
+      "to": "route:/metrics",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/metrics",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2145
+      }
+    },
+    {
+      "id": "edge:route:/metrics->route:/config",
+      "from": "route:/metrics",
+      "to": "route:/config",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/config",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2363
+      }
+    },
+    {
+      "id": "edge:route:/config->route:/llm",
+      "from": "route:/config",
+      "to": "route:/llm",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/llm",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2457
+      }
+    },
+    {
+      "id": "edge:route:/llm->route:/users",
+      "from": "route:/llm",
+      "to": "route:/users",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/users",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2540
+      }
+    },
+    {
+      "id": "edge:route:/users->route:/audit",
+      "from": "route:/users",
+      "to": "route:/audit",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/audit",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2630
+      }
+    },
+    {
+      "id": "edge:route:/audit->route:/chats",
+      "from": "route:/audit",
+      "to": "route:/chats",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/chats",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2723
+      }
+    },
+    {
+      "id": "edge:route:/chats->route:/legal",
+      "from": "route:/chats",
+      "to": "route:/legal",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/legal",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2819
+      }
+    },
+    {
+      "id": "edge:route:/legal->route:/specializations",
+      "from": "route:/legal",
+      "to": "route:/specializations",
+      "kind": "link",
+      "confidence": "medium",
+      "label": "/specializations",
+      "source": {
+        "file": "src/features/shell/nav.ts",
+        "line": 1,
+        "column": 2914
+      }
+    }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR"
+  }
+}
