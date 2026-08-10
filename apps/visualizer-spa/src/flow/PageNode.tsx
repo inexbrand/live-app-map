@@ -1,5 +1,6 @@
 /**
  * Кастомная нода React Flow: chrome + live iframe slot + стейты.
+ * URL — селектор `resolveLiveUrl(id)`, чтобы role/state триггерили src.
  */
 import type { AppMapNode, AppMapPageState } from '@live-app-map/schema';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
@@ -27,16 +28,16 @@ function PageNodeInner(props: NodeProps) {
   const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
   const applyPageState = useAppStore((s) => s.applyPageState);
   const setInteract = useAppStore((s) => s.setInteract);
-  const resolveLiveUrl = useAppStore((s) => s.resolveLiveUrl);
   const setVisible = useAppStore((s) => s.setVisible);
   const visiblePageIds = useAppStore((s) => s.visiblePageIds);
+  /** Подписка на строку URL, не на метод — иначе globalRole/activeStates не двигают iframe */
+  const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const isSelected = selectedPageId === node.id;
   const isDim =
     highlighted.size > 0 && !highlighted.has(node.id) && !isSelected;
   const isLive = live.has(node.id) && mode === 'live';
-  const url = resolveLiveUrl(node.id);
   const activeStateName = activeStates.get(node.id);
 
   useEffect(() => {
@@ -76,12 +77,19 @@ function PageNodeInner(props: NodeProps) {
     }
   };
 
+  let placeholder = 'Map-only';
+  if (mode === 'live') {
+    placeholder = url ? 'Заморожено / вне бюджета' : 'Нет URL';
+  } else if (mode === 'compact') {
+    placeholder = 'Compact';
+  }
+
   return (
     <div
       className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}`}
       style={{ width: NODE_W, height: NODE_H }}
       onClick={() => selectPage(node.id)}
-      onDoubleClick={() => setInteract(isSelected ? node.id : node.id)}
+      onDoubleClick={() => setInteract(node.id)}
     >
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
@@ -134,15 +142,7 @@ function PageNodeInner(props: NodeProps) {
             />
           </div>
         ) : (
-          <div className="page-node__placeholder">
-            {mode === 'live'
-              ? url
-                ? 'Заморожено / вне бюджета'
-                : 'Нет URL'
-              : mode === 'compact'
-                ? 'Compact'
-                : 'Map-only'}
-          </div>
+          <div className="page-node__placeholder">{placeholder}</div>
         )}
       </div>
       {node.states && node.states.length > 0 ? (

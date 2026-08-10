@@ -1,5 +1,10 @@
 /**
  * Zustand store visualizer SPA.
+ *
+ * Контракт live URL: `resolveLiveUrl(id)` читает document, index, activeStates,
+ * globalRole, baseUrlOverride. В React-компонентах подписывайтесь на *результат*
+ * селектора `s => s.resolveLiveUrl(id)`, а не на ссылку метода — иначе смена
+ * роли/стейта не перерисует iframe и drawer.
  */
 import {
   applyStateToUrl,
@@ -32,10 +37,15 @@ export type ActiveStateSel = {
   readonly stateName: string;
 };
 
+const MIN_LIVE_IFRAMES = 1;
+const MAX_LIVE_IFRAMES_CAP = 16;
+
 type AppStore = {
   document: AppMapDocument | null;
   index: GraphIndex | null;
   parseIssues: Diagnostic[];
+  /** Персистентная ошибка загрузки/parse (не только toast 4с) */
+  lastLoadError: string | null;
   mode: ViewMode;
   iframeScale: IframeScale;
   maxLiveIframes: number;
@@ -55,8 +65,10 @@ type AppStore = {
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
   loadUnknownJson: (raw: unknown) => void;
   clearMap: () => void;
+  clearLoadError: () => void;
   setMode: (mode: ViewMode) => void;
   setIframeScale: (s: IframeScale) => void;
+  setMaxLiveIframes: (n: number) => void;
   setSearchQuery: (q: string) => void;
   selectPage: (id: string | null) => void;
   togglePin: (id: string) => void;
@@ -66,8 +78,13 @@ type AppStore = {
   applyPageState: (pageId: string, state: AppMapPageState | null) => void;
   setInteract: (id: string | null) => void;
   openPageInNewTab: (id: string) => void;
+  /**
+   * Собирает live URL с учётом globalRole и per-page state inject.
+   * Per-page inject.role перекрывает global; query стейта мержится поверх.
+   */
   resolveLiveUrl: (id: string) => string | null;
   setToast: (msg: string | null) => void;
+  setLastLoadError: (msg: string | null) => void;
   recomputeLive: () => void;
 };
 
@@ -96,10 +113,18 @@ function withBaseUrl(doc: AppMapDocument, baseUrl: string): AppMapDocument {
   return { ...doc, baseUrl: trimmed, nodes };
 }
 
+function clampMaxLive(n: number): number {
+  if (!Number.isFinite(n)) {
+    return DEFAULT_MAX_LIVE;
+  }
+  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(MIN_LIVE_IFRAMES, Math.round(n)));
+}
+
 export const useAppStore = create<AppStore>((set, get) => ({
   document: null,
   index: null,
   parseIssues: [],
+  lastLoadError: null,
   mode: 'map-only',
   iframeScale: 0.5,
   maxLiveIframes: DEFAULT_MAX_LIVE,
@@ -125,6 +150,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       document: normalized,
       index: rebuildIndex(normalized),
       parseIssues: [...warnings],
+      lastLoadError: null,
       pinnedPageIds: pinned,
       selectedPageId: null,
       highlightedPageIds: new Set(),
@@ -147,8 +173,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
       get().loadDocument(enterprise, asLive.warnings);
       return;
     }
+    const message = `Не удалось разобрать JSON: ${
+      asLive.errors[0]?.message ?? asApp.errors[0]?.message ?? 'неизвестная ошибка'
+    }`;
     set({
-      toast: `Не удалось разобрать JSON: ${asLive.errors[0]?.message ?? asApp.errors[0]?.message}`,
+      lastLoadError: message,
+      toast: message,
     });
   },
 
@@ -157,14 +187,18 @@ export const useAppStore = create<AppStore>((set, get) => ({
       document: null,
       index: null,
       parseIssues: [],
+      lastLoadError: null,
       selectedPageId: null,
       highlightedPageIds: new Set(),
       pinnedPageIds: new Set(),
       visiblePageIds: new Set(),
       livePageIds: new Set(),
       activeStates: new Map(),
+      interactPageId: null,
     });
   },
+
+  clearLoadError: () => set({ lastLoadError: null }),
 
   setMode: (mode) => {
     set({ mode });
@@ -172,6 +206,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   setIframeScale: (iframeScale) => set({ iframeScale }),
+
+  setMaxLiveIframes: (n) => {
+    set({ maxLiveIframes: clampMaxLive(n) });
+    get().recomputeLive();
+  },
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
@@ -195,7 +234,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       next.delete(id);
     } else {
       if (next.size >= DEFAULT_MAX_PINNED) {
-        set({ toast: `Лимит pin: ${DEFAULT_MAX_PINNED}. Открепите другую страницу.` });
+        set({
+          toast: `Лимит pin: ${DEFAULT_MAX_PINNED}. Открепите другую страницу.`,
+        });
         return;
       }
       next.add(id);
@@ -219,6 +260,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setGlobalRole: (role) => {
     set({ globalRole: role });
+    get().recomputeLive();
   },
 
   applyPageState: (pageId, state) => {
@@ -229,6 +271,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       next.set(pageId, state.name);
     }
     set({ activeStates: next });
+    get().recomputeLive();
   },
 
   setInteract: (id) => set({ interactPageId: id }),
@@ -292,6 +335,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setToast: (toast) => set({ toast }),
 
+  setLastLoadError: (lastLoadError) => set({ lastLoadError }),
+
   recomputeLive: () => {
     const s = get();
     if (!s.document) {
@@ -303,7 +348,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       .map((n) => n.id);
     const iframeAllowed: Record<string, boolean> = {};
     for (const n of s.document.nodes) {
-      iframeAllowed[n.id] = n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id));
+      iframeAllowed[n.id] =
+        n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id));
     }
     const result = reconcile({
       mode: s.mode,
@@ -328,4 +374,5 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 }));
 
+export { DEFAULT_MAX_PINNED, DEFAULT_MAX_LIVE };
 export type { LiveAppMapDocument };

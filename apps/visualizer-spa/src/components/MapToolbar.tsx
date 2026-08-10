@@ -1,34 +1,21 @@
 /**
- * Тулбар: загрузка, mode, scale, роль, baseUrl, пресеты Korbor.
+ * Тулбар: загрузка, mode, scale, роль, baseUrl, пресеты Korbor, бюджет iframe.
  */
-import { useAppStore } from '../store/app-store';
-
-const KORBOR_PRESETS = [
-  {
-    id: 'miniapp',
-    label: 'Korbor Miniapp',
-    path: '/maps/korbor-miniapp.liveappmap.json',
-    baseUrl: 'https://vite.localhost:5175',
-  },
-  {
-    id: 'admin',
-    label: 'Korbor Admin',
-    path: '/maps/korbor-admin.liveappmap.json',
-    baseUrl: 'http://localhost:16002',
-  },
-  {
-    id: 'site',
-    label: 'Korbor Site',
-    path: '/maps/korbor-site.liveappmap.json',
-    baseUrl: 'http://localhost:16001',
-  },
-] as const;
+import { useState } from 'react';
+import {
+  fetchKorborPreset,
+  KORBOR_PRESETS,
+  type KorborPreset,
+} from '../korbor-presets';
+import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 
 export function MapToolbar() {
   const mode = useAppStore((s) => s.mode);
   const setMode = useAppStore((s) => s.setMode);
   const iframeScale = useAppStore((s) => s.iframeScale);
   const setIframeScale = useAppStore((s) => s.setIframeScale);
+  const maxLiveIframes = useAppStore((s) => s.maxLiveIframes);
+  const setMaxLiveIframes = useAppStore((s) => s.setMaxLiveIframes);
   const searchQuery = useAppStore((s) => s.searchQuery);
   const setSearchQuery = useAppStore((s) => s.setSearchQuery);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
@@ -38,9 +25,12 @@ export function MapToolbar() {
   const loadUnknownJson = useAppStore((s) => s.loadUnknownJson);
   const clearMap = useAppStore((s) => s.clearMap);
   const setToast = useAppStore((s) => s.setToast);
+  const setLastLoadError = useAppStore((s) => s.setLastLoadError);
   const document = useAppStore((s) => s.document);
   const liveCount = useAppStore((s) => s.livePageIds.size);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
+
+  const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
 
   const onFile = async (file: File | null) => {
     if (!file) {
@@ -51,7 +41,9 @@ export function MapToolbar() {
       const buf = await file.arrayBuffer();
       const result = await parseAppMapZip(buf);
       if (!result.ok) {
-        setToast(result.errors.join('; '));
+        const msg = result.errors.join('; ');
+        setLastLoadError(msg);
+        setToast(msg);
         return;
       }
       loadUnknownJson(result.document);
@@ -62,25 +54,27 @@ export function MapToolbar() {
     try {
       loadUnknownJson(JSON.parse(text) as unknown);
     } catch {
-      setToast('Файл не JSON');
+      const msg = 'Файл не JSON';
+      setLastLoadError(msg);
+      setToast(msg);
     }
   };
 
-  const loadPreset = async (preset: (typeof KORBOR_PRESETS)[number]) => {
+  const loadPreset = async (preset: KorborPreset) => {
+    setLoadingPresetId(preset.id);
     try {
-      const res = await fetch(preset.path);
+      const res = await fetchKorborPreset(preset);
       if (!res.ok) {
-        setToast(`Не удалось загрузить ${preset.path}: ${res.status}`);
+        setLastLoadError(res.error);
+        setToast(res.error);
         return;
       }
-      const json = (await res.json()) as unknown;
       setBaseUrlOverride(preset.baseUrl);
-      loadUnknownJson(json);
+      loadUnknownJson(res.json);
       setMode('live');
       setToast(`${preset.label} · baseUrl ${preset.baseUrl}`);
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setToast(message);
+    } finally {
+      setLoadingPresetId(null);
     }
   };
 
@@ -103,11 +97,21 @@ export function MapToolbar() {
       </button>
 
       <div className="toolbar__group">
-        {KORBOR_PRESETS.map((p) => (
-          <button key={p.id} type="button" className="btn btn--primary" onClick={() => void loadPreset(p)}>
-            {p.label}
-          </button>
-        ))}
+        {KORBOR_PRESETS.map((p) => {
+          const busy = loadingPresetId === p.id;
+          return (
+            <button
+              key={p.id}
+              type="button"
+              className="btn btn--primary"
+              disabled={loadingPresetId !== null}
+              aria-busy={busy}
+              onClick={() => void loadPreset(p)}
+            >
+              {busy ? `Загрузка…` : p.label}
+            </button>
+          );
+        })}
       </div>
 
       <div className="toolbar__group">
@@ -146,6 +150,20 @@ export function MapToolbar() {
         </select>
       </label>
 
+      <label className="field" title="Максимум одновременных live iframe (1–16)">
+        Max live
+        <select
+          value={maxLiveIframes}
+          onChange={(e) => setMaxLiveIframes(Number(e.target.value))}
+        >
+          {[1, 2, 4, 6, 8, 12, 16].map((n) => (
+            <option key={n} value={n}>
+              {n}
+            </option>
+          ))}
+        </select>
+      </label>
+
       <label className="field" title="Инжект роли в iframe URL (?lam_role=)">
         Роль
         <select value={globalRole} onChange={(e) => setGlobalRole(e.target.value)}>
@@ -175,8 +193,8 @@ export function MapToolbar() {
         />
       </label>
 
-      <span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--text-muted)' }}>
-        live {liveCount}/{useAppStore.getState().maxLiveIframes} · pin {pinCount}
+      <span className="budget-pill" title="Бюджет live iframe и pin">
+        live {liveCount}/{maxLiveIframes} · pin {pinCount}/{DEFAULT_MAX_PINNED}
       </span>
     </header>
   );
