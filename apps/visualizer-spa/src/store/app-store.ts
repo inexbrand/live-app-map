@@ -185,7 +185,19 @@ type WithBaseUrlResult = {
  * @param baseUrl — новый base (override или document.baseUrl)
  * @returns document (переписанный или исходный) и error при невалидном base
  */
-function withBaseUrl(doc: AppMapDocument, baseUrl: string): WithBaseUrlResult {
+type WithBaseUrlOptions = {
+  /**
+   * true — переписать все page URL с path+base (явный override пользователя).
+   * false — сохранить абсолютные http(s) URL нод (multi-surface korbor-all).
+   */
+  readonly forceRewrite?: boolean;
+};
+
+function withBaseUrl(
+  doc: AppMapDocument,
+  baseUrl: string,
+  options: WithBaseUrlOptions = {},
+): WithBaseUrlResult {
   const trimmed = baseUrl.trim();
   if (!trimmed) {
     return { document: doc, error: null };
@@ -208,9 +220,22 @@ function withBaseUrl(doc: AppMapDocument, baseUrl: string): WithBaseUrlResult {
     };
   }
 
+  const forceRewrite = options.forceRewrite === true;
+
   const nodes = doc.nodes.map((n) => {
     if (n.kind !== 'page' && n.kind !== 'not-found') {
       return n;
+    }
+    // Multi-surface maps: keep absolute live URLs unless user forced base override
+    if (!forceRewrite && n.url) {
+      try {
+        const existing = new URL(n.url);
+        if (existing.protocol === 'http:' || existing.protocol === 'https:') {
+          return n;
+        }
+      } catch {
+        // fall through — materialize from path
+      }
     }
     const path = n.pathExample ?? n.pathPattern;
     try {
@@ -258,9 +283,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
   toast: null,
 
   loadDocument: (doc, warnings = []) => {
-    const base = get().baseUrlOverride || doc.baseUrl || '';
+    const userOverride = get().baseUrlOverride.trim();
+    const base = userOverride || doc.baseUrl || '';
+    // forceRewrite только при явном override: иначе absolute multi-host URLs (korbor-all) сохраняются
     const result = base
-      ? withBaseUrl(doc, base)
+      ? withBaseUrl(doc, base, { forceRewrite: userOverride.length > 0 })
       : { document: doc, error: null as string | null };
     const normalized = result.document;
     const withoutBaseIssues = warnings.filter((d) => d.code !== 'INVALID_BASE_URL');
