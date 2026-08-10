@@ -747,6 +747,8 @@ code,
   overflow: hidden;
   box-shadow: var(--shadow);
   font-family: var(--font);
+  display: flex;
+  flex-direction: column;
 }
 
 .page-node--selected {
@@ -792,11 +794,12 @@ code,
 
 .page-node__body {
   position: relative;
-  margin: 0 8px 6px;
+  margin: 0 auto 6px;
   border-radius: var(--radius);
   overflow: hidden;
-  background: #050505;
+  background: #0a0a0a;
   border: 1px solid var(--border);
+  flex-shrink: 0;
 }
 
 .page-node__placeholder {
@@ -812,10 +815,10 @@ code,
 }
 
 .page-node__iframe-shell {
-  position: absolute;
-  inset: 0;
+  position: relative;
   overflow: hidden;
   background: #fff;
+  /* content width/height задаётся inline = viewport × scale */
 }
 
 .page-node__iframe-shell iframe {
@@ -823,6 +826,7 @@ code,
   transform-origin: 0 0;
   background: #fff;
   display: block;
+  /* scale() в inline style; shell обрезает до 16:9 display size */
 }
 
 .page-node__states {

@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
+  contentDisplaySize,
   nodeOuterSize,
   resolveNodeViewport,
   VIEWPORT_PRESETS,
@@ -147,10 +148,13 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   const override = nodeViewports.get(node.id);
   const viewport = resolveNodeViewport(node.viewport, override);
-  const outer = nodeOuterSize(viewport, scale);
+  const outer = nodeOuterSize(viewport, scale, { selected: isSelected });
+  const content = contentDisplaySize(viewport, scale);
 
   // Sandbox trust: proxy URL same-origin, иначе dogfood host / baseUrl
-  const sandboxHintUrl = url ?? (baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl);
+  const sandboxHintUrl =
+    url ??
+    (baseUrlOverride.trim() !== '' ? baseUrlOverride : documentBaseUrl);
   const sandboxPreset = resolveIframeSandboxPreset(sandboxHintUrl);
   const sandboxValue = sandboxAttrForPreset(sandboxPreset);
   const sandboxNote = sandboxPresetLabel(sandboxPreset);
@@ -200,7 +204,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   });
 
   const showIframe = isLive && url && !iframeError;
-  const bodyH = Math.max(80, outer.height - 108);
 
   const applyPreset = (p: (typeof VIEWPORT_PRESETS)[number]) => {
     const next: DeviceViewport = {
@@ -211,6 +214,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     setNodeViewport(node.id, next);
   };
 
+  /** Resize: по умолчанию держим 16:9; Shift — свободный aspect */
   const onResizePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     e.preventDefault();
@@ -218,16 +222,27 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     const startY = e.clientY;
     const startW = viewport.width;
     const startH = viewport.height;
+    const lock16x9 = !e.shiftKey;
     const pointerId = e.pointerId;
     const target = e.currentTarget;
     target.setPointerCapture(pointerId);
 
     const onMove = (ev: PointerEvent) => {
       const dw = (ev.clientX - startX) / scale;
+      const nextW = Math.max(200, startW + dw);
+      if (lock16x9) {
+        const nextH = Math.round(nextW * (9 / 16));
+        setNodeViewport(node.id, {
+          width: nextW,
+          height: nextH,
+          label: '16:9',
+        });
+        return;
+      }
       const dh = (ev.clientY - startY) / scale;
       setNodeViewport(node.id, {
-        width: startW + dw,
-        height: startH + dh,
+        width: nextW,
+        height: Math.max(120, startH + dh),
         label: 'Свой',
       });
     };
@@ -311,12 +326,19 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         ref={bodyRef}
         data-page-id={node.id}
         title={sandboxNote}
-        style={{ height: bodyH }}
+        style={{
+          width: content.width,
+          height: content.height,
+          // body внутри card: центрируем по горизонтали с margin auto feel
+          marginLeft: 'auto',
+          marginRight: 'auto',
+        }}
       >
         {showIframe ? (
           <div
             className="page-node__iframe-shell"
             data-sandbox-preset={sandboxPreset}
+            style={{ width: content.width, height: content.height }}
           >
             <iframe
               key={`${url}:${sandboxPreset}:${viewport.width}x${viewport.height}`}
@@ -328,6 +350,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               allow="clipboard-read; clipboard-write"
               style={{
                 transform: `scale(${scale})`,
+                transformOrigin: '0 0',
                 width: viewport.width,
                 height: viewport.height,
                 pointerEvents:
@@ -359,7 +382,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         )}
         <div
           className="page-node__resize"
-          title="Тяните, чтобы менять размер окна (адаптив)"
+          title="Тяните за угол: 16:9 (Shift — свободный aspect)"
           onPointerDown={onResizePointerDown}
           onClick={(e) => e.stopPropagation()}
         />

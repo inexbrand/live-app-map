@@ -13,6 +13,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import type { AppMapDocument, AppMapEdge, AppMapNode } from '@live-app-map/schema';
 import { useMemo } from 'react';
+import { nodeOuterSize, resolveNodeViewport } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
 import { layoutNodes } from './layout';
 import { PageNode, type PageNodeData } from './PageNode';
@@ -77,6 +78,9 @@ export function AppMapCanvas() {
   const selectPage = useAppStore((s) => s.selectPage);
   const searchQuery = useAppStore((s) => s.searchQuery);
   const setSearchQuery = useAppStore((s) => s.setSearchQuery);
+  const iframeScale = useAppStore((s) => s.iframeScale);
+  const nodeViewports = useAppStore((s) => s.nodeViewports);
+  const selectedPageId = useAppStore((s) => s.selectedPageId);
 
   const { nodes, edges, isSearchMiss, displayQuery } = useMemo(() => {
     if (!document) {
@@ -106,10 +110,15 @@ export function AppMapCanvas() {
     const positions = layoutNodes(filtered, navEdges, 'LR');
     const nodes: Node[] = filtered.map((n) => {
       const pos = positions.get(n.id);
+      const vp = resolveNodeViewport(n.viewport, nodeViewports.get(n.id));
+      const outer = nodeOuterSize(vp, iframeScale, {
+        selected: selectedPageId === n.id,
+      });
       return {
         id: n.id,
         type: 'page',
         position: { x: pos?.x ?? 0, y: pos?.y ?? 0 },
+        style: { width: outer.width, height: outer.height },
         data: { node: n } satisfies PageNodeData,
       };
     });
@@ -124,7 +133,7 @@ export function AppMapCanvas() {
         target,
         label: e.label,
         animated: e.kind === 'redirect',
-        style: { stroke: '#5b8cff' },
+        style: { stroke: '#737373' },
       };
     });
     return {
@@ -133,7 +142,7 @@ export function AppMapCanvas() {
       isSearchMiss: false,
       displayQuery: searchQuery.trim(),
     };
-  }, [document, searchQuery]);
+  }, [document, searchQuery, iframeScale, nodeViewports, selectedPageId]);
 
   if (!document) {
     return null;
