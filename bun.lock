@@ -39,6 +39,7 @@
       },
       "dependencies": {
         "@live-app-map/diagnostics": "workspace:*",
+        "@live-app-map/export-appmap": "workspace:*",
         "@live-app-map/graph": "workspace:*",
         "@live-app-map/scanner-core": "workspace:*",
         "@live-app-map/scanner-next": "workspace:*",

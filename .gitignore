@@ -9,5 +9,6 @@ coverage
 apps/visualizer-spa/dist
 packages/*/dist
 maps/*.generated.json
+maps/*.appmap
 .scratch
 *.tsbuildinfo
