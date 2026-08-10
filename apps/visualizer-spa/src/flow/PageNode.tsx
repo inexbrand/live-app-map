@@ -17,8 +17,7 @@ import {
 } from 'lucide-react';
 import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
-  contentDisplaySize,
-  nodeOuterSize,
+  computeNodeLayout,
   resolveNodeViewport,
   VIEWPORT_PRESETS,
 } from '../lib/viewport';
@@ -148,8 +147,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   const override = nodeViewports.get(node.id);
   const viewport = resolveNodeViewport(node.viewport, override);
-  const outer = nodeOuterSize(viewport, scale, { selected: isSelected });
-  const content = contentDisplaySize(viewport, scale);
+  const layout = computeNodeLayout(viewport, scale, { selected: isSelected });
 
   // Sandbox trust: proxy URL same-origin, иначе dogfood host / baseUrl
   const sandboxHintUrl =
@@ -258,9 +256,13 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   return (
     <div
       className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}`}
-      style={{ width: outer.width, height: outer.height }}
+      style={{ width: '100%', height: '100%' }}
       data-page-id={node.id}
       data-lam-node={node.id}
+      data-lam-outer-w={layout.outerWidth}
+      data-lam-outer-h={layout.outerHeight}
+      data-lam-content-w={layout.contentWidth}
+      data-lam-content-h={layout.contentHeight}
       onClick={() => selectPage(node.id)}
       onDoubleClick={() => setInteract(node.id)}
     >
@@ -325,20 +327,23 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         className="page-node__body"
         ref={bodyRef}
         data-page-id={node.id}
+        data-lam-preview-body
         title={sandboxNote}
         style={{
-          width: content.width,
-          height: content.height,
-          // body внутри card: центрируем по горизонтали с margin auto feel
-          marginLeft: 'auto',
-          marginRight: 'auto',
+          width: layout.contentWidth,
+          height: layout.contentHeight,
+          flex: '0 0 auto',
         }}
       >
         {showIframe ? (
           <div
             className="page-node__iframe-shell"
             data-sandbox-preset={sandboxPreset}
-            style={{ width: content.width, height: content.height }}
+            data-lam-iframe-shell
+            style={{
+              width: layout.contentWidth,
+              height: layout.contentHeight,
+            }}
           >
             <iframe
               key={`${url}:${sandboxPreset}:${viewport.width}x${viewport.height}`}
@@ -349,10 +354,14 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               referrerPolicy="strict-origin-when-cross-origin"
               allow="clipboard-read; clipboard-write"
               style={{
-                transform: `scale(${scale})`,
-                transformOrigin: '0 0',
+                position: 'absolute',
+                top: 0,
+                left: 0,
                 width: viewport.width,
                 height: viewport.height,
+                border: 0,
+                transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
+                transformOrigin: '0 0',
                 pointerEvents:
                   interactPageId === node.id || isSelected ? 'auto' : 'none',
               }}

@@ -3,9 +3,12 @@
  */
 import dagre from '@dagrejs/dagre';
 import type { AppMapEdge, AppMapNode } from '@live-app-map/schema';
+import { computeNodeLayout, DEFAULT_VIEWPORT } from '../lib/viewport';
 
-export const NODE_W = 300;
-export const NODE_H = 240;
+/** Дефолтные габариты под 16:9 @ 0.75 (dagre spacing). */
+const defaultLayout = computeNodeLayout(DEFAULT_VIEWPORT, 0.75);
+export const NODE_W = defaultLayout.outerWidth;
+export const NODE_H = defaultLayout.outerHeight;
 
 export type Positioned = {
   readonly id: string;

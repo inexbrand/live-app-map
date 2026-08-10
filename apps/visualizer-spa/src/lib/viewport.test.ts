@@ -1,10 +1,13 @@
 import { describe, expect, test } from 'bun:test';
 import {
   ASPECT_16_9,
+  assertShellConsistency,
   clampViewport,
+  computeNodeLayout,
   contentDisplaySize,
   DEFAULT_VIEWPORT,
   fitTo16x9,
+  NODE_PAD_X,
   nodeOuterSize,
   resolveNodeViewport,
 } from './viewport';
@@ -30,16 +33,43 @@ describe('viewport', () => {
     expect(clampViewport({ width: 5000, height: 5000 }).width).toBe(1920);
   });
 
+  test('640×360 @ 0.75: content both axes + outer chrome', () => {
+    const layout = computeNodeLayout(
+      { width: 640, height: 360, label: '16:9' },
+      0.75,
+    );
+    expect(layout.contentWidth).toBe(480);
+    expect(layout.contentHeight).toBe(270);
+    expect(layout.outerWidth).toBe(480 + NODE_PAD_X);
+    expect(layout.outerHeight).toBe(270 + layout.chromeHeight);
+    expect(assertShellConsistency(layout)).toBe(true);
+    const outer = nodeOuterSize({ width: 640, height: 360 }, 0.75);
+    expect(outer.width).toBe(layout.outerWidth);
+    expect(outer.height).toBe(layout.outerHeight);
+  });
+
+  test('phone 390×844 @ 0.5: non-16:9 shell consistency', () => {
+    const layout = computeNodeLayout({ width: 390, height: 844 }, 0.5);
+    expect(layout.contentWidth).toBe(195);
+    expect(layout.contentHeight).toBe(422);
+    expect(assertShellConsistency(layout)).toBe(true);
+    expect(layout.outerWidth).toBe(layout.contentWidth + NODE_PAD_X);
+  });
+
+  test('selected adds chrome bar height', () => {
+    const plain = computeNodeLayout(DEFAULT_VIEWPORT, 0.75, { selected: false });
+    const selected = computeNodeLayout(DEFAULT_VIEWPORT, 0.75, {
+      selected: true,
+    });
+    expect(selected.outerHeight).toBeGreaterThan(plain.outerHeight);
+    expect(selected.contentWidth).toBe(plain.contentWidth);
+    expect(assertShellConsistency(selected)).toBe(true);
+  });
+
   test('contentDisplaySize scales both axes', () => {
     const c = contentDisplaySize({ width: 640, height: 360 }, 0.5);
     expect(c.width).toBe(320);
     expect(c.height).toBe(180);
-  });
-
-  test('outer size includes chrome', () => {
-    const o = nodeOuterSize({ width: 640, height: 360 }, 0.5);
-    expect(o.width).toBe(320 + 16);
-    expect(o.height).toBeGreaterThan(180);
   });
 
   test('override wins over node viewport', () => {

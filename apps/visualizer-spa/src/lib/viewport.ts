@@ -1,6 +1,6 @@
 /**
  * Пресеты и утилиты размера окна (адаптив live iframe).
- * Дефолт и «Карта» — 16:9.
+ * Дефолт — 16:9. Единая math для RF style, outer DOM и iframe shell.
  */
 import type { DeviceViewport } from '@live-app-map/schema';
 
@@ -31,18 +31,24 @@ export const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   { id: 'desktop', label: 'Десктоп', width: 1280, height: 720 },
 ] as const;
 
-/** Дефолт: 16:9 (640×360) — удобно на карте. */
+/** Дефолт: 16:9 (640×360). */
 export const DEFAULT_VIEWPORT: DeviceViewport = {
   width: 640,
   height: 360,
   label: '16:9',
 };
 
-/** Высота chrome ноды (header + path + footer bar). */
-export const NODE_CHROME_H = 96;
+/**
+ * Chrome ноды (header + path + margins).
+ * Должен совпадать с фактическим DOM (min-heights + padding).
+ */
+export const NODE_CHROME_H = 72;
+/** Горизонтальные поля body (padding card). */
 export const NODE_PAD_X = 16;
-/** Доп. высота панели пресетов, когда нода выбрана */
-export const NODE_SELECTED_BAR_H = 32;
+/** Панель пресетов, когда нода выбрана */
+export const NODE_SELECTED_BAR_H = 36;
+/** Запас под states-chips, если не selected */
+export const NODE_STATES_BAR_H = 0;
 
 /**
  * Нормализует viewport (clamp разумных границ).
@@ -68,6 +74,7 @@ export function fitTo16x9(width: number): DeviceViewport {
 
 /**
  * Размер области превью (контент) после display scale.
+ * body + iframe-shell = ровно эти width/height.
  */
 export function contentDisplaySize(
   viewport: DeviceViewport,
@@ -82,18 +89,57 @@ export function contentDisplaySize(
 
 /**
  * Внешний размер ноды на карте (content + chrome).
+ * RF `style` width/height и root `.page-node` используют это.
  */
 export function nodeOuterSize(
   viewport: DeviceViewport,
   displayScale: number,
   options?: { readonly selected?: boolean },
 ): { readonly width: number; readonly height: number } {
-  const content = contentDisplaySize(viewport, displayScale);
-  const chrome =
+  const layout = computeNodeLayout(viewport, displayScale, options);
+  return { width: layout.outerWidth, height: layout.outerHeight };
+}
+
+/**
+ * Полная раскладка размеров одной page-node (единый источник правды).
+ */
+export type NodeLayoutMetrics = {
+  readonly viewport: DeviceViewport;
+  readonly displayScale: number;
+  /** Область превью (body / iframe-shell) */
+  readonly contentWidth: number;
+  readonly contentHeight: number;
+  readonly chromeHeight: number;
+  readonly outerWidth: number;
+  readonly outerHeight: number;
+  /** scale() для iframe: content/viewport */
+  readonly iframeScaleX: number;
+  readonly iframeScaleY: number;
+};
+
+/**
+ * Считает согласованные размеры outer / content / iframe scale.
+ */
+export function computeNodeLayout(
+  viewportInput: DeviceViewport,
+  displayScale: number,
+  options?: { readonly selected?: boolean },
+): NodeLayoutMetrics {
+  const viewport = clampViewport(viewportInput);
+  const scale = Math.min(1, Math.max(0.2, displayScale));
+  const content = contentDisplaySize(viewport, scale);
+  const chromeHeight =
     NODE_CHROME_H + (options?.selected === true ? NODE_SELECTED_BAR_H : 0);
   return {
-    width: content.width + NODE_PAD_X,
-    height: content.height + chrome,
+    viewport,
+    displayScale: scale,
+    contentWidth: content.width,
+    contentHeight: content.height,
+    chromeHeight,
+    outerWidth: content.width + NODE_PAD_X,
+    outerHeight: content.height + chromeHeight,
+    iframeScaleX: content.width / viewport.width,
+    iframeScaleY: content.height / viewport.height,
   };
 }
 
@@ -111,4 +157,19 @@ export function resolveNodeViewport(
     return clampViewport(nodeViewport);
   }
   return DEFAULT_VIEWPORT;
+}
+
+/**
+ * Проверка: outer = content + chrome; shell fills content (equality).
+ */
+export function assertShellConsistency(layout: NodeLayoutMetrics): boolean {
+  const outerOk =
+    layout.outerWidth === layout.contentWidth + NODE_PAD_X &&
+    layout.outerHeight === layout.contentHeight + layout.chromeHeight;
+  const scaleOk =
+    Math.abs(layout.iframeScaleX * layout.viewport.width - layout.contentWidth) <
+      1.5 &&
+    Math.abs(layout.iframeScaleY * layout.viewport.height - layout.contentHeight) <
+      1.5;
+  return outerOk && scaleOk;
 }

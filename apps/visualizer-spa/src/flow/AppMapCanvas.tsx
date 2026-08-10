@@ -13,7 +13,7 @@ import {
 import '@xyflow/react/dist/style.css';
 import type { AppMapDocument, AppMapEdge, AppMapNode } from '@live-app-map/schema';
 import { useMemo } from 'react';
-import { nodeOuterSize, resolveNodeViewport } from '../lib/viewport';
+import { computeNodeLayout, resolveNodeViewport } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
 import { layoutNodes } from './layout';
 import { PageNode, type PageNodeData } from './PageNode';
@@ -111,14 +111,20 @@ export function AppMapCanvas() {
     const nodes: Node[] = filtered.map((n) => {
       const pos = positions.get(n.id);
       const vp = resolveNodeViewport(n.viewport, nodeViewports.get(n.id));
-      const outer = nodeOuterSize(vp, iframeScale, {
+      const layout = computeNodeLayout(vp, iframeScale, {
         selected: selectedPageId === n.id,
       });
       return {
         id: n.id,
         type: 'page',
         position: { x: pos?.x ?? 0, y: pos?.y ?? 0 },
-        style: { width: outer.width, height: outer.height },
+        // xyflow: width/height + style — один math с PageNode DOM
+        width: layout.outerWidth,
+        height: layout.outerHeight,
+        style: {
+          width: layout.outerWidth,
+          height: layout.outerHeight,
+        },
         data: { node: n } satisfies PageNodeData,
       };
     });
