@@ -2,7 +2,7 @@
  * Embed API (@live-app-map/react).
  * Полноценный canvas — apps/visualizer-spa; здесь headless hooks + Devtools shell.
  */
-import type { AppMapDocument } from '@live-app-map/schema';
+import { parseAppMapDocument, type AppMapDocument } from '@live-app-map/schema';
 import { useEffect, useState, type CSSProperties, type ReactNode } from 'react';
 
 export type LiveAppMapProps = {
@@ -24,6 +24,7 @@ export function LiveAppMap(props: LiveAppMapProps) {
   useEffect(() => {
     if (props.document) {
       setDoc(props.document);
+      setError(null);
       return;
     }
     if (!props.graphUrl) {
@@ -33,9 +34,16 @@ export function LiveAppMap(props: LiveAppMapProps) {
     void fetch(props.graphUrl)
       .then((r) => r.json())
       .then((json: unknown) => {
-        if (!cancelled) {
-          setDoc(json as AppMapDocument);
+        if (cancelled) {
+          return;
         }
+        const parsed = parseAppMapDocument(json);
+        if (parsed.ok) {
+          setDoc(parsed.document);
+          setError(null);
+          return;
+        }
+        setError(parsed.errors[0]?.message ?? 'Невалидный AppMap JSON');
       })
       .catch((err: unknown) => {
         if (!cancelled) {

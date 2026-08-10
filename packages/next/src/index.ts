@@ -9,6 +9,29 @@ export type LiveAppMapNextOptions = {
   readonly routePrefix?: string;
 };
 
+/** Элемент rewrites Next.js (source → destination). */
+type NextRewriteRule = {
+  readonly source: string;
+  readonly destination: string;
+};
+
+/** Фазовая форма rewrites (beforeFiles / afterFiles / fallback). */
+type NextRewritePhases = {
+  readonly beforeFiles?: readonly NextRewriteRule[];
+  readonly afterFiles?: readonly NextRewriteRule[];
+  readonly fallback?: readonly NextRewriteRule[];
+};
+
+/**
+ * Сужает unknown rewrites к фазовой форме Next.
+ */
+function asRewritePhases(value: unknown): NextRewritePhases | null {
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    return null;
+  }
+  return value as NextRewritePhases;
+}
+
 /**
  * Оборачивает next.config — dev-only rewrite placeholder для /__live-app-map/*.
  */
@@ -23,40 +46,49 @@ export function withLiveAppMap(options: LiveAppMapNextOptions = {}) {
     if (!enabled && !allowProduction) {
       return nextConfig;
     }
-    const rewrites = async () => {
+    const rewrites = async (): Promise<
+      readonly NextRewriteRule[] | NextRewritePhases
+    > => {
+      const rawRewrites = nextConfig['rewrites'];
       const userRewrites =
-        typeof nextConfig['rewrites'] === 'function'
-          ? await (nextConfig['rewrites'] as () => Promise<unknown>)()
-          : nextConfig['rewrites'];
-      const extra = [
+        typeof rawRewrites === 'function'
+          ? await (
+              rawRewrites as () => Promise<
+                readonly NextRewriteRule[] | NextRewritePhases
+              >
+            )()
+          : rawRewrites;
+      const extra: NextRewriteRule[] = [
         {
           source: `${routePrefix}/:path*`,
           destination: `${routePrefix}/:path*`,
         },
       ];
       if (Array.isArray(userRewrites)) {
-        return [...extra, ...userRewrites];
+        return [...extra, ...(userRewrites as readonly NextRewriteRule[])];
       }
-      if (userRewrites && typeof userRewrites === 'object') {
-        const u = userRewrites as {
-          beforeFiles?: unknown[];
-          afterFiles?: unknown[];
-          fallback?: unknown[];
-        };
+      const phases = asRewritePhases(userRewrites);
+      if (phases) {
         return {
-          ...u,
-          beforeFiles: [...extra, ...(u.beforeFiles ?? [])],
+          ...phases,
+          beforeFiles: [...extra, ...(phases.beforeFiles ?? [])],
         };
       }
       return extra;
     };
+    const prevEnv =
+      nextConfig['env'] !== null &&
+      typeof nextConfig['env'] === 'object' &&
+      !Array.isArray(nextConfig['env'])
+        ? (nextConfig['env'] as Record<string, string>)
+        : {};
     return {
       ...nextConfig,
       rewrites,
       env: {
-        ...((nextConfig['env'] as Record<string, string> | undefined) ?? {}),
+        ...prevEnv,
         LIVE_APP_MAP_ENABLED: enabled || allowProduction ? '1' : '0',
       },
-    } as T;
+    };
   };
 }

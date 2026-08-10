@@ -14,11 +14,47 @@ import type {
 } from '@live-app-map/schema';
 import { FORMAT_VERSION } from '@live-app-map/schema';
 
+/** Значение example-параметра: скаляр или сегменты catch-all. */
+export type ParamExampleValue = string | readonly string[];
+
+/** Переопределения example-параметров по pathPattern. */
+export type ExampleParamsByRoute = Readonly<
+  Record<string, Readonly<Record<string, ParamExampleValue>>>
+>;
+
+/**
+ * Примеры dynamic params для materialize.
+ * Именованные ключи — имена параметров; `byRoute` — override per pathPattern.
+ */
 export type ExampleParamsConfig = {
-  readonly [paramName: string]: string | readonly string[];
-} & {
-  readonly byRoute?: Readonly<Record<string, Readonly<Record<string, string | readonly string[]>>>>;
+  readonly byRoute?: ExampleParamsByRoute;
+  readonly [paramName: string]:
+    | ParamExampleValue
+    | ExampleParamsByRoute
+    | undefined;
 };
+
+/**
+ * Читает example-значение параметра (byRoute → top-level; byRoute-ключ игнорируется).
+ */
+export function getExampleParam(
+  exampleParams: ExampleParamsConfig,
+  name: string,
+  byRoute?: Readonly<Record<string, ParamExampleValue>>,
+): ParamExampleValue | undefined {
+  const fromRoute = byRoute?.[name];
+  if (fromRoute !== undefined) {
+    return fromRoute;
+  }
+  if (name === 'byRoute') {
+    return undefined;
+  }
+  const v = exampleParams[name];
+  if (typeof v === 'string' || Array.isArray(v)) {
+    return v;
+  }
+  return undefined;
+}
 
 export type ScanRequest = {
   readonly projectRoot: string;
@@ -122,9 +158,9 @@ export function materializePath(
   const missing: string[] = [];
   let result = pattern;
 
-  // optional catch-all [[...param]] — empty array → no segment (root-friendly)
+  // optional catch-all [[...param]] — empty/undefined → no segment
   result = result.replace(/\[\[\.\.\.([^\]]+)\]\]/g, (_m, name: string) => {
-    const v = byRoute?.[name] ?? exampleParams[name];
+    const v = getExampleParam(exampleParams, name, byRoute);
     if (v === undefined) {
       return '';
     }
@@ -136,7 +172,7 @@ export function materializePath(
 
   // catch-all [...param]
   result = result.replace(/\[\.\.\.([^\]]+)\]/g, (_m, name: string) => {
-    const v = byRoute?.[name] ?? exampleParams[name];
+    const v = getExampleParam(exampleParams, name, byRoute);
     if (v === undefined) {
       missing.push(name);
       return 'example';
@@ -149,7 +185,7 @@ export function materializePath(
 
   // dynamic [param]
   result = result.replace(/\[([^\].]+)\]/g, (_m, name: string) => {
-    const v = byRoute?.[name] ?? exampleParams[name];
+    const v = getExampleParam(exampleParams, name, byRoute);
     if (v === undefined) {
       missing.push(name);
       return 'example';

@@ -137,3 +137,4 @@ export function runDoctor(dir: string): DoctorReport {
 
 export { formatDiagnostic, sortDiagnostics };
 export type { AppMapDocument };
+export { defineConfig, type LiveAppMapConfig } from './define-config';
