@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "kind": "live-app-map",
-  "generatedAt": "2026-08-10T01:42:48.931Z",
+  "generatedAt": "2026-08-10T02:35:33.414Z",
   "generator": {
     "name": "@live-app-map/scanner-react-router",
     "version": "0.1.0"
@@ -17,7 +17,7 @@
     {
       "id": "route:/",
       "kind": "page",
-      "title": "Home",
+      "title": "Главная",
       "pathPattern": "/",
       "pathExample": "/",
       "url": "http://localhost:16002/",

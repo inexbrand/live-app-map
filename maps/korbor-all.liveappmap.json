@@ -1,0 +1,1453 @@
+{
+  "version": "1.0",
+  "app": {
+    "name": "Korbor (все поверхности)",
+    "platform": "web",
+    "generator": "scan-korbor+merge/0.1.0",
+    "generatedAt": "2026-08-10T02:35:56.771Z",
+    "description": "Объединённая карта: miniapp + admin + site"
+  },
+  "pages": [
+    {
+      "id": "miniapp:route:/",
+      "title": "[Мини-приложение] Главная",
+      "path": "/",
+      "url": "https://vite.localhost:5175/",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/",
+        "pathPattern": "/",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/applications",
+      "title": "[Мини-приложение] applications",
+      "path": "/applications",
+      "url": "https://vite.localhost:5175/applications",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/applications",
+        "pathPattern": "/applications",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/applications",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/applications/[id]/submit",
+      "title": "[Мини-приложение] applications / id / submit",
+      "path": "/applications/demo/submit",
+      "url": "https://vite.localhost:5175/applications/demo/submit",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/applications/:id/submit",
+        "pathPattern": "/applications/[id]/submit",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/applications/[id]/submit",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/chat/[candidateId]",
+      "title": "[Мини-приложение] chat / candidateId",
+      "path": "/chat/cand-demo",
+      "url": "https://vite.localhost:5175/chat/cand-demo",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chat/:candidateId",
+        "pathPattern": "/chat/[candidateId]",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/chat/[candidateId]",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/chats",
+      "title": "[Мини-приложение] chats",
+      "path": "/chats",
+      "url": "https://vite.localhost:5175/chats",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats",
+        "pathPattern": "/chats",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/chats",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/employer/create",
+      "title": "[Мини-приложение] employer / create",
+      "path": "/employer/create",
+      "url": "https://vite.localhost:5175/employer/create",
+      "type": "route",
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/create",
+        "pathPattern": "/employer/create",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/employer/create",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/employer/vacancies",
+      "title": "[Мини-приложение] employer / vacancies",
+      "path": "/employer/vacancies",
+      "url": "https://vite.localhost:5175/employer/vacancies",
+      "type": "route",
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/vacancies",
+        "pathPattern": "/employer/vacancies",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/employer/vacancies",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/employer/vacancies/[id]",
+      "title": "[Мини-приложение] employer / vacancies / id",
+      "path": "/employer/vacancies/demo",
+      "url": "https://vite.localhost:5175/employer/vacancies/demo",
+      "type": "route",
+      "states": [
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/employer/vacancies/:id",
+        "pathPattern": "/employer/vacancies/[id]",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/employer/vacancies/[id]",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/feed",
+      "title": "[Мини-приложение] feed",
+      "path": "/feed",
+      "url": "https://vite.localhost:5175/feed",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/feed",
+        "pathPattern": "/feed",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/feed",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/legal/[code]",
+      "title": "[Мини-приложение] legal / code",
+      "path": "/legal/terms",
+      "url": "https://vite.localhost:5175/legal/terms",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal/:code",
+        "pathPattern": "/legal/[code]",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/legal/[code]",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/marketmaker",
+      "title": "[Мини-приложение] marketmaker",
+      "path": "/marketmaker",
+      "url": "https://vite.localhost:5175/marketmaker",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker",
+        "pathPattern": "/marketmaker",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/marketmaker",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/register",
+      "title": "[Мини-приложение] register",
+      "path": "/register",
+      "url": "https://vite.localhost:5175/register",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/register",
+        "pathPattern": "/register",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/register",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/register/[step]",
+      "title": "[Мини-приложение] register / step",
+      "path": "/register/profile",
+      "url": "https://vite.localhost:5175/register/profile",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/register/:step",
+        "pathPattern": "/register/[step]",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/register/[step]",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/vacancies/[id]",
+      "title": "[Мини-приложение] vacancies / id",
+      "path": "/vacancies/demo",
+      "url": "https://vite.localhost:5175/vacancies/demo",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies/:id",
+        "pathPattern": "/vacancies/[id]",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/vacancies/[id]",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/verification",
+      "title": "[Мини-приложение] verification",
+      "path": "/verification",
+      "url": "https://vite.localhost:5175/verification",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/verification",
+        "pathPattern": "/verification",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/verification",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "miniapp:route:/wallet",
+      "title": "[Мини-приложение] wallet",
+      "path": "/wallet",
+      "url": "https://vite.localhost:5175/wallet",
+      "type": "route",
+      "states": [
+        {
+          "name": "recruiter",
+          "note": "Роль рекрутера — лента, отклики, верификация",
+          "inject": {
+            "role": "recruiter",
+            "query": {
+              "lam_role": "recruiter"
+            },
+            "labels": [
+              "role",
+              "miniapp"
+            ]
+          }
+        },
+        {
+          "name": "employer",
+          "note": "Роль клиента (employer) — создание вакансий, кабинет",
+          "inject": {
+            "role": "employer",
+            "query": {
+              "lam_role": "employer"
+            },
+            "labels": [
+              "role",
+              "miniapp",
+              "client"
+            ]
+          }
+        }
+      ],
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/wallet",
+        "pathPattern": "/wallet",
+        "kind": "page",
+        "sourceFile": "src/app/routes-config.tsx",
+        "surface": "miniapp",
+        "originalId": "route:/wallet",
+        "baseUrl": "https://vite.localhost:5175"
+      },
+      "iframeDisabled": false,
+      "group": "miniapp"
+    },
+    {
+      "id": "admin:route:/",
+      "title": "[Админка] Главная",
+      "path": "/",
+      "url": "http://localhost:16002/",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/",
+        "pathPattern": "/",
+        "kind": "page",
+        "surface": "admin",
+        "originalId": "route:/",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/audit",
+      "title": "[Админка] audit",
+      "path": "/audit",
+      "url": "http://localhost:16002/audit",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/audit",
+        "pathPattern": "/audit",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/audit",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/audit/[entryId]",
+      "title": "[Админка] audit / entryId",
+      "path": "/audit/ent-demo",
+      "url": "http://localhost:16002/audit/ent-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/audit/:entryId",
+        "pathPattern": "/audit/[entryId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/audit/[entryId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/chats",
+      "title": "[Админка] chats",
+      "path": "/chats",
+      "url": "http://localhost:16002/chats",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats",
+        "pathPattern": "/chats",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/chats",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/chats/[threadId]",
+      "title": "[Админка] chats / threadId",
+      "path": "/chats/thr-demo",
+      "url": "http://localhost:16002/chats/thr-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/chats/:threadId",
+        "pathPattern": "/chats/[threadId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/chats/[threadId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/config",
+      "title": "[Админка] config",
+      "path": "/config",
+      "url": "http://localhost:16002/config",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/config",
+        "pathPattern": "/config",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/config",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/config/[...rest]",
+      "title": "[Админка] config / rest",
+      "path": "/config/PLATFORM_COMMISSION_BPS",
+      "url": "http://localhost:16002/config/PLATFORM_COMMISSION_BPS",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/config/*",
+        "pathPattern": "/config/[...rest]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/config/[...rest]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/deals",
+      "title": "[Админка] deals",
+      "path": "/deals",
+      "url": "http://localhost:16002/deals",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/deals",
+        "pathPattern": "/deals",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/deals",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/deals/[dealId]",
+      "title": "[Админка] deals / dealId",
+      "path": "/deals/deal-demo",
+      "url": "http://localhost:16002/deals/deal-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/deals/:dealId",
+        "pathPattern": "/deals/[dealId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/deals/[dealId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/disputes",
+      "title": "[Админка] disputes",
+      "path": "/disputes",
+      "url": "http://localhost:16002/disputes",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/disputes",
+        "pathPattern": "/disputes",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/disputes",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/disputes/[disputeId]",
+      "title": "[Админка] disputes / disputeId",
+      "path": "/disputes/disp-demo",
+      "url": "http://localhost:16002/disputes/disp-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/disputes/:disputeId",
+        "pathPattern": "/disputes/[disputeId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/disputes/[disputeId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/ledger",
+      "title": "[Админка] ledger",
+      "path": "/ledger",
+      "url": "http://localhost:16002/ledger",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/ledger",
+        "pathPattern": "/ledger",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/ledger",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/ledger/[ledgerId]",
+      "title": "[Админка] ledger / ledgerId",
+      "path": "/ledger/led-demo",
+      "url": "http://localhost:16002/ledger/led-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/ledger/:ledgerId",
+        "pathPattern": "/ledger/[ledgerId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/ledger/[ledgerId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/legal",
+      "title": "[Админка] legal",
+      "path": "/legal",
+      "url": "http://localhost:16002/legal",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal",
+        "pathPattern": "/legal",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/legal",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/legal/[documentId]",
+      "title": "[Админка] legal / documentId",
+      "path": "/legal/doc-demo",
+      "url": "http://localhost:16002/legal/doc-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/legal/:documentId",
+        "pathPattern": "/legal/[documentId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/legal/[documentId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/llm",
+      "title": "[Админка] llm",
+      "path": "/llm",
+      "url": "http://localhost:16002/llm",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm",
+        "pathPattern": "/llm",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/llm",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/llm/knowledge/[documentId]",
+      "title": "[Админка] llm / knowledge / documentId",
+      "path": "/llm/knowledge/doc-demo",
+      "url": "http://localhost:16002/llm/knowledge/doc-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm/knowledge/:documentId",
+        "pathPattern": "/llm/knowledge/[documentId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/llm/knowledge/[documentId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/llm/prompts/[category]",
+      "title": "[Админка] llm / prompts / category",
+      "path": "/llm/prompts/system",
+      "url": "http://localhost:16002/llm/prompts/system",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/llm/prompts/:category",
+        "pathPattern": "/llm/prompts/[category]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/llm/prompts/[category]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/marketmaker",
+      "title": "[Админка] marketmaker",
+      "path": "/marketmaker",
+      "url": "http://localhost:16002/marketmaker",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker",
+        "pathPattern": "/marketmaker",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/marketmaker",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/marketmaker/[vacancyId]",
+      "title": "[Админка] marketmaker / vacancyId",
+      "path": "/marketmaker/vac-demo",
+      "url": "http://localhost:16002/marketmaker/vac-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/marketmaker/:vacancyId",
+        "pathPattern": "/marketmaker/[vacancyId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/marketmaker/[vacancyId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/metrics",
+      "title": "[Админка] metrics",
+      "path": "/metrics",
+      "url": "http://localhost:16002/metrics",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/metrics",
+        "pathPattern": "/metrics",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/metrics",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/recruiters",
+      "title": "[Админка] recruiters",
+      "path": "/recruiters",
+      "url": "http://localhost:16002/recruiters",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/recruiters",
+        "pathPattern": "/recruiters",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/recruiters",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/recruiters/[userId]",
+      "title": "[Админка] recruiters / userId",
+      "path": "/recruiters/user-demo",
+      "url": "http://localhost:16002/recruiters/user-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/recruiters/:userId",
+        "pathPattern": "/recruiters/[userId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/recruiters/[userId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/specializations",
+      "title": "[Админка] specializations",
+      "path": "/specializations",
+      "url": "http://localhost:16002/specializations",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/specializations",
+        "pathPattern": "/specializations",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/specializations",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/users",
+      "title": "[Админка] users",
+      "path": "/users",
+      "url": "http://localhost:16002/users",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/users",
+        "pathPattern": "/users",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/users",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/users/[userId]",
+      "title": "[Админка] users / userId",
+      "path": "/users/user-demo",
+      "url": "http://localhost:16002/users/user-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/users/:userId",
+        "pathPattern": "/users/[userId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/users/[userId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/vacancies",
+      "title": "[Админка] vacancies",
+      "path": "/vacancies",
+      "url": "http://localhost:16002/vacancies",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies",
+        "pathPattern": "/vacancies",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/vacancies",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/vacancies/[vacancyId]",
+      "title": "[Админка] vacancies / vacancyId",
+      "path": "/vacancies/vac-demo",
+      "url": "http://localhost:16002/vacancies/vac-demo",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/vacancies/:vacancyId",
+        "pathPattern": "/vacancies/[vacancyId]",
+        "kind": "page",
+        "sourceFile": "src/features/shell/route-config.ts",
+        "surface": "admin",
+        "originalId": "route:/vacancies/[vacancyId]",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "admin:route:/verification-requests",
+      "title": "[Админка] verification-requests",
+      "path": "/verification-requests",
+      "url": "http://localhost:16002/verification-requests",
+      "type": "route",
+      "metadata": {
+        "router": "react-router",
+        "rrPath": "/verification-requests",
+        "pathPattern": "/verification-requests",
+        "kind": "page",
+        "sourceFile": "src/features/shell/nav.ts",
+        "surface": "admin",
+        "originalId": "route:/verification-requests",
+        "baseUrl": "http://localhost:16002"
+      },
+      "iframeDisabled": false,
+      "group": "admin"
+    },
+    {
+      "id": "site:site-home",
+      "title": "[Сайт] Marketing Home",
+      "path": "/",
+      "url": "http://localhost:16001/",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-home",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": true
+    },
+    {
+      "id": "site:site-payload-admin",
+      "title": "[Сайт] Payload Admin",
+      "path": "/admin",
+      "url": "http://localhost:16001/admin",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-payload-admin",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-login",
+      "title": "[Сайт] Payload Login",
+      "path": "/admin/login",
+      "url": "http://localhost:16001/admin/login",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin/login",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-payload-login",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-collections",
+      "title": "[Сайт] Payload Collections",
+      "path": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin/collections",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-payload-collections",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    }
+  ],
+  "edges": [
+    {
+      "id": "edge:route:/->route:/feed:miniapp",
+      "from": "miniapp:route:/",
+      "to": "miniapp:route:/feed",
+      "label": "/feed",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/feed->route:/applications:miniapp",
+      "from": "miniapp:route:/feed",
+      "to": "miniapp:route:/applications",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/applications->route:/wallet:miniapp",
+      "from": "miniapp:route:/applications",
+      "to": "miniapp:route:/wallet",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/wallet->route:/chats:miniapp",
+      "from": "miniapp:route:/wallet",
+      "to": "miniapp:route:/chats",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/chats->route:/verification:miniapp",
+      "from": "miniapp:route:/chats",
+      "to": "miniapp:route:/verification",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/verification->route:/employer/create:miniapp",
+      "from": "miniapp:route:/verification",
+      "to": "miniapp:route:/employer/create",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/employer/create->route:/employer/vacancies:miniapp",
+      "from": "miniapp:route:/employer/create",
+      "to": "miniapp:route:/employer/vacancies",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:tab:route:/employer/vacancies->route:/register:miniapp",
+      "from": "miniapp:route:/employer/vacancies",
+      "to": "miniapp:route:/register",
+      "label": "tab",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/feed->route:/vacancies/[id]:miniapp",
+      "from": "miniapp:route:/feed",
+      "to": "miniapp:route:/vacancies/[id]",
+      "label": "Open vacancy",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/->route:/vacancies:admin",
+      "from": "admin:route:/",
+      "to": "admin:route:/vacancies",
+      "label": "/vacancies",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/vacancies->route:/deals:admin",
+      "from": "admin:route:/vacancies",
+      "to": "admin:route:/deals",
+      "label": "/deals",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/deals->route:/recruiters:admin",
+      "from": "admin:route:/deals",
+      "to": "admin:route:/recruiters",
+      "label": "/recruiters",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/recruiters->route:/verification-requests:admin",
+      "from": "admin:route:/recruiters",
+      "to": "admin:route:/verification-requests",
+      "label": "/verification-requests",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/verification-requests->route:/marketmaker:admin",
+      "from": "admin:route:/verification-requests",
+      "to": "admin:route:/marketmaker",
+      "label": "/marketmaker",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/marketmaker->route:/disputes:admin",
+      "from": "admin:route:/marketmaker",
+      "to": "admin:route:/disputes",
+      "label": "/disputes",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/disputes->route:/ledger:admin",
+      "from": "admin:route:/disputes",
+      "to": "admin:route:/ledger",
+      "label": "/ledger",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/ledger->route:/metrics:admin",
+      "from": "admin:route:/ledger",
+      "to": "admin:route:/metrics",
+      "label": "/metrics",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/metrics->route:/config:admin",
+      "from": "admin:route:/metrics",
+      "to": "admin:route:/config",
+      "label": "/config",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/config->route:/llm:admin",
+      "from": "admin:route:/config",
+      "to": "admin:route:/llm",
+      "label": "/llm",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/llm->route:/users:admin",
+      "from": "admin:route:/llm",
+      "to": "admin:route:/users",
+      "label": "/users",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/users->route:/audit:admin",
+      "from": "admin:route:/users",
+      "to": "admin:route:/audit",
+      "label": "/audit",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/audit->route:/chats:admin",
+      "from": "admin:route:/audit",
+      "to": "admin:route:/chats",
+      "label": "/chats",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/chats->route:/legal:admin",
+      "from": "admin:route:/chats",
+      "to": "admin:route:/legal",
+      "label": "/legal",
+      "kind": "link"
+    },
+    {
+      "id": "edge:route:/legal->route:/specializations:admin",
+      "from": "admin:route:/legal",
+      "to": "admin:route:/specializations",
+      "label": "/specializations",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-payload-admin:site",
+      "from": "site:site-home",
+      "to": "site:site-payload-admin",
+      "label": "CMS",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-admin->site-payload-login:site",
+      "from": "site:site-payload-admin",
+      "to": "site:site-payload-login",
+      "label": "Login",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-admin->site-payload-collections:site",
+      "from": "site:site-payload-admin",
+      "to": "site:site-payload-collections",
+      "label": "Collections",
+      "kind": "link"
+    },
+    {
+      "from": "site:site-home",
+      "to": "admin:route:/",
+      "label": "Админка",
+      "kind": "link"
+    },
+    {
+      "from": "site:site-home",
+      "to": "miniapp:route:/",
+      "label": "Miniapp",
+      "kind": "link"
+    }
+  ],
+  "groups": [
+    {
+      "id": "miniapp",
+      "title": "Мини-приложение",
+      "order": 0
+    },
+    {
+      "id": "admin",
+      "title": "Админка",
+      "order": 1
+    },
+    {
+      "id": "site",
+      "title": "Сайт",
+      "order": 2
+    }
+  ],
+  "layout": {
+    "algorithm": "dagre",
+    "direction": "LR"
+  },
+  "extensions": {
+    "korbor": {
+      "surfaces": {
+        "miniapp": "https://vite.localhost:5175",
+        "admin": "http://localhost:16002",
+        "site": "http://localhost:16001",
+        "api": "http://localhost:16000",
+        "visualizer": "http://localhost:4310"
+      }
+    }
+  },
+  "baseUrl": "http://localhost:16001"
+}

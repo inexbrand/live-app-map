@@ -12,6 +12,13 @@ export type KorborDogfoodId = (typeof KORBOR_DOGFOOD_IDS)[number];
 
 export const KORBOR_PRESETS = [
   {
+    id: 'all',
+    label: 'Весь Korbor',
+    path: '/maps/korbor-all.liveappmap.json',
+    /** У страниц уже absolute url; baseUrl — fallback */
+    baseUrl: 'http://localhost:16001',
+  },
+  {
     id: 'miniapp',
     label: 'Мини-приложение',
     path: '/maps/korbor-miniapp.liveappmap.json',

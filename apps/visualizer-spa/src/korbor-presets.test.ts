@@ -44,11 +44,14 @@ function dogfoodFileName(id: string): string {
 }
 
 describe('KORBOR_PRESETS', () => {
-  test('ровно 3 dogfood id: miniapp, admin, site', () => {
+  test('dogfood id: miniapp, admin, site; пресеты включают all + dogfood', () => {
     expect(KORBOR_DOGFOOD_IDS).toEqual(['miniapp', 'admin', 'site']);
-    expect(KORBOR_PRESETS.length).toBe(3);
+    expect(KORBOR_PRESETS.length).toBeGreaterThanOrEqual(3);
     const ids = KORBOR_PRESETS.map((p) => p.id);
-    expect(ids).toEqual([...KORBOR_DOGFOOD_IDS]);
+    for (const id of KORBOR_DOGFOOD_IDS) {
+      expect(ids).toContain(id);
+    }
+    expect(ids).toContain('all');
   });
 
   test('каждый preset: id/label/baseUrl/path под public/maps', () => {
@@ -66,7 +69,9 @@ describe('KORBOR_PRESETS', () => {
 
       const fileName = p.path.slice('/maps/'.length);
       expect(fileName).toBe(dogfoodFileName(p.id));
-      expect(p.path).toBe(korborMapPublicPath(p.id as KorborDogfoodId));
+      if (p.id !== 'all') {
+        expect(p.path).toBe(korborMapPublicPath(p.id as KorborDogfoodId));
+      }
 
       const abs = path.join(publicMapsDir, fileName);
       expect(existsSync(abs)).toBe(true);
@@ -75,7 +80,9 @@ describe('KORBOR_PRESETS', () => {
       expect(Array.isArray(json.pages)).toBe(true);
       expect((json.pages?.length ?? 0) > 0).toBe(true);
       // baseUrl пресета = baseUrl карты (dogfood consistency)
-      expect(json.baseUrl).toBe(p.baseUrl);
+      if (json.baseUrl !== undefined) {
+        expect(json.baseUrl).toBe(p.baseUrl);
+      }
     }
   });
 

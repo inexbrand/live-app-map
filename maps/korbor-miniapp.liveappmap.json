@@ -5,12 +5,12 @@
     "name": "miniapp",
     "platform": "web",
     "generator": "@live-app-map/scanner-react-router/0.1.0",
-    "generatedAt": "2026-08-10T01:42:48.903Z"
+    "generatedAt": "2026-08-10T02:35:33.399Z"
   },
   "pages": [
     {
       "id": "route:/",
-      "title": "Home",
+      "title": "Главная",
       "path": "/",
       "url": "https://vite.localhost:5175/",
       "type": "route",
