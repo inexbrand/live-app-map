@@ -8,12 +8,9 @@ import { FeedbackPanel } from './components/FeedbackPanel';
 import { MapToolbar } from './components/MapToolbar';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
-import {
-  fetchKorborPreset,
-  KORBOR_PRESETS,
-  type KorborPreset,
-} from './korbor-presets';
+import { KORBOR_PRESETS, type KorborPreset } from './korbor-presets';
 import { importMapFile } from './lib/import-map';
+import { loadKorborPresetIntoStore } from './lib/load-korbor-preset';
 import { useAppStore } from './store/app-store';
 import { Button } from './ui';
 
@@ -38,15 +35,16 @@ export function App() {
     async (preset: KorborPreset) => {
       setLoadingPresetId(preset.id);
       try {
-        const res = await fetchKorborPreset(preset);
+        const res = await loadKorborPresetIntoStore(preset, {
+          setBaseUrlOverride,
+          loadUnknownJson,
+          setMode,
+        });
         if (!res.ok) {
           setLastLoadError(res.error);
           setToast(res.error);
           return;
         }
-        setBaseUrlOverride(preset.baseUrl);
-        loadUnknownJson(res.json);
-        setMode('live');
         setToast(`${preset.label} · ${preset.baseUrl}`);
       } finally {
         setLoadingPresetId(null);

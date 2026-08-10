@@ -193,6 +193,34 @@ type WithBaseUrlOptions = {
   readonly forceRewrite?: boolean;
 };
 
+/**
+ * Число различных http(s) host:port среди absolute page/not-found URL.
+ * ≥2 → multi-surface карта (korbor-all): forceRewrite нельзя — схлопнет хосты.
+ *
+ * @param doc - документ до rewrite
+ * @returns число уникальных host:port
+ */
+export function countAbsolutePageHosts(doc: AppMapDocument): number {
+  const hosts = new Set<string>();
+  for (const n of doc.nodes) {
+    if (n.kind !== 'page' && n.kind !== 'not-found') {
+      continue;
+    }
+    if (!n.url) {
+      continue;
+    }
+    try {
+      const existing = new URL(n.url);
+      if (existing.protocol === 'http:' || existing.protocol === 'https:') {
+        hosts.add(existing.host);
+      }
+    } catch {
+      // malformed url — ignore for host inventory
+    }
+  }
+  return hosts.size;
+}
+
 function withBaseUrl(
   doc: AppMapDocument,
   baseUrl: string,
@@ -285,9 +313,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
   loadDocument: (doc, warnings = []) => {
     const userOverride = get().baseUrlOverride.trim();
     const base = userOverride || doc.baseUrl || '';
-    // forceRewrite только при явном override: иначе absolute multi-host URLs (korbor-all) сохраняются
+    // Multi-surface (≥2 absolute hosts): never force-rewrite — UI preset path
+    // всегда setBaseUrlOverride(preset.baseUrl) перед load; иначе korbor-all
+    // схлопывается в один host (site :16001).
+    const multiSurface = countAbsolutePageHosts(doc) >= 2;
     const result = base
-      ? withBaseUrl(doc, base, { forceRewrite: userOverride.length > 0 })
+      ? withBaseUrl(doc, base, {
+          forceRewrite: userOverride.length > 0 && !multiSurface,
+        })
       : { document: doc, error: null as string | null };
     const normalized = result.document;
     const withoutBaseIssues = warnings.filter((d) => d.code !== 'INVALID_BASE_URL');
