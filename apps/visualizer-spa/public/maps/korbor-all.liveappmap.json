@@ -1,11 +1,12 @@
 {
   "version": "1.0",
+  "baseUrl": "http://localhost:16001",
   "app": {
     "name": "Korbor (все поверхности)",
     "platform": "web",
-    "generator": "scan-korbor+merge/0.1.0",
-    "generatedAt": "2026-08-10T02:35:56.771Z",
-    "description": "Объединённая карта: miniapp + admin + site"
+    "generator": "scan-korbor+merge/0.2.0",
+    "generatedAt": "2026-08-10T06:23:33.166Z",
+    "description": "Unified live graph: miniapp + admin + site (no god-root)"
   },
   "pages": [
     {
@@ -19,10 +20,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -33,10 +34,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -69,10 +70,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -104,10 +105,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -139,10 +140,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -174,10 +175,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -188,10 +189,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -224,10 +225,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -260,10 +261,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -296,10 +297,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -332,10 +333,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -346,10 +347,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -420,10 +421,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -434,10 +435,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -489,10 +490,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -524,10 +525,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -559,10 +560,10 @@
           "name": "recruiter",
           "note": "Роль рекрутера — лента, отклики, верификация",
           "inject": {
-            "role": "recruiter",
             "query": {
               "lam_role": "recruiter"
             },
+            "role": "recruiter",
             "labels": [
               "role",
               "miniapp"
@@ -573,10 +574,10 @@
           "name": "employer",
           "note": "Роль клиента (employer) — создание вакансий, кабинет",
           "inject": {
-            "role": "employer",
             "query": {
               "lam_role": "employer"
             },
+            "role": "employer",
             "labels": [
               "role",
               "miniapp",
@@ -1446,8 +1447,8 @@
         "site": "http://localhost:16001",
         "api": "http://localhost:16000",
         "visualizer": "http://localhost:4310"
-      }
+      },
+      "liveOnly": true
     }
-  },
-  "baseUrl": "http://localhost:16001"
+  }
 }

@@ -21,7 +21,14 @@ const LIVEAPPMAP_NAMES = [
   'korbor-miniapp.liveappmap.json',
   'korbor-admin.liveappmap.json',
   'korbor-site.liveappmap.json',
+  'korbor-all.liveappmap.json',
 ] as const;
+
+const SURFACE_HOST: Record<string, string> = {
+  'korbor-miniapp.liveappmap.json': 'vite.localhost:5175',
+  'korbor-admin.liveappmap.json': 'localhost:16002',
+  'korbor-site.liveappmap.json': 'localhost:16001',
+};
 
 function load(name: string) {
   const file = path.join(pub, name);
@@ -98,5 +105,52 @@ describe('korbor maps (shipped artifacts)', () => {
     const paths = doc.pages.map((p) => p.path);
     expect(paths).toContain('/');
     expect(paths.some((p) => p?.startsWith('/admin'))).toBe(true);
+  });
+
+  test('each surface page URLs match expected host', () => {
+    for (const [name, host] of Object.entries(SURFACE_HOST)) {
+      const doc = load(name);
+      for (const p of doc.pages) {
+        if (!p.url) {
+          continue;
+        }
+        const u = new URL(p.url);
+        expect(u.host).toBe(host);
+      }
+    }
+  });
+
+  test('no dual same-path roots within a single surface map', () => {
+    for (const name of [
+      'korbor-miniapp.liveappmap.json',
+      'korbor-admin.liveappmap.json',
+      'korbor-site.liveappmap.json',
+    ] as const) {
+      const doc = load(name);
+      const byPath = new Map<string, string[]>();
+      for (const p of doc.pages) {
+        const key = p.path ?? p.id;
+        const list = byPath.get(key) ?? [];
+        list.push(p.id);
+        byPath.set(key, list);
+      }
+      for (const [pathKey, ids] of byPath) {
+        expect(ids.length).toBe(1);
+        void pathKey;
+      }
+    }
+  });
+
+  test('korbor-all: three product entry roots, no god-root ownership', () => {
+    const doc = load('korbor-all.liveappmap.json');
+    const rootIds = doc.pages
+      .filter((p) => p.path === '/')
+      .map((p) => p.id)
+      .sort();
+    expect(rootIds).toContain('miniapp:route:/');
+    expect(rootIds).toContain('admin:route:/');
+    expect(rootIds).toContain('site:site-home');
+    // cross-links may exist but each surface keeps own entry root id
+    expect(rootIds.length).toBe(3);
   });
 });

@@ -235,7 +235,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   index: null,
   parseIssues: [],
   lastLoadError: null,
-  mode: 'map-only',
+  mode: 'live',
   iframeScale: 0.75,
   maxLiveIframes: DEFAULT_MAX_LIVE,
   searchQuery: '',
@@ -294,6 +294,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       nodeViewports: new Map(),
       visiblePageIds: new Set(),
       livePageIds: new Set(),
+      mode: 'live',
     });
     const pages = normalized.nodes.filter((n) => n.kind === 'page').length;
     get().pushLog({
@@ -348,7 +349,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
   clearLoadError: () => set({ lastLoadError: null }),
 
   setMode: (mode) => {
-    set({ mode });
+    // Dogfood: только live — map-only/compact не нужны (всегда iframe).
+    const next = mode === 'live' ? 'live' : 'live';
+    set({ mode: next });
     get().recomputeLive();
   },
 

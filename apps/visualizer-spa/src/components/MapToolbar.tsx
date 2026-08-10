@@ -6,7 +6,6 @@ import {
   Eraser,
   FolderOpen,
   LayoutGrid,
-  Map as MapIcon,
   Radio,
   Search,
   Settings2,
@@ -37,7 +36,6 @@ type SheetId = 'sources' | 'settings' | 'search' | null;
  * Главный chrome visualizer (минимализм + edge sheets).
  */
 export function MapToolbar() {
-  const mode = useAppStore((s) => s.mode);
   const setMode = useAppStore((s) => s.setMode);
   const iframeScale = useAppStore((s) => s.iframeScale);
   const setIframeScale = useAppStore((s) => s.setIframeScale);
@@ -177,9 +175,6 @@ export function MapToolbar() {
     }
   };
 
-  const modeLabel =
-    mode === 'live' ? 'Живой' : mode === 'compact' ? 'Компакт' : 'Карта';
-
   return (
     <>
       <header className="toolbar toolbar--slim">
@@ -188,39 +183,17 @@ export function MapToolbar() {
           <span>Карта приложения</span>
         </div>
 
-        <div className="mode-seg" role="group" aria-label="Режим просмотра">
-          <button
-            type="button"
-            className={`mode-seg__btn${mode === 'map-only' ? ' mode-seg__btn--on' : ''}`}
-            onClick={() => setMode('map-only')}
-            title="Только схема"
-          >
-            <MapIcon size={15} strokeWidth={1.75} />
-            Карта
-          </button>
-          <button
-            type="button"
-            className={`mode-seg__btn${mode === 'live' ? ' mode-seg__btn--on' : ''}`}
-            onClick={() => setMode('live')}
-            title="Живые iframe"
-          >
+        <div className="mode-seg" role="status" aria-label="Режим: только живой">
+          <span className="mode-seg__btn mode-seg__btn--on" title="Живые iframe">
             <Radio size={15} strokeWidth={1.75} />
             Живой
-          </button>
-          <button
-            type="button"
-            className={`mode-seg__btn${mode === 'compact' ? ' mode-seg__btn--on' : ''}`}
-            onClick={() => setMode('compact')}
-            title="Плотные узлы"
-          >
-            Компакт
-          </button>
+          </span>
         </div>
 
         <div className="toolbar__spacer" />
 
         <span className="budget-pill" title="Бюджет iframe и закреплений">
-          {modeLabel} · живых {liveCount}/{maxLiveIframes} · pin {pinCount}/
+          живых {liveCount}/{maxLiveIframes} · pin {pinCount}/
           {DEFAULT_MAX_PINNED}
         </span>
 

@@ -13,9 +13,22 @@
  *   только sync из канона через {@link writeMapsAndSyncPublic}.
  * - Проверка равенства пар: `scripts/verify-korbor-maps.test.ts`.
  */
-import { copyFileSync, mkdirSync, writeFileSync, existsSync } from 'node:fs';
+import {
+  copyFileSync,
+  mkdirSync,
+  writeFileSync,
+  existsSync,
+  readFileSync,
+  unlinkSync,
+} from 'node:fs';
 import path from 'node:path';
-import { appMapToLiveAppMap } from '../packages/schema/src/index';
+import {
+  appMapToLiveAppMap,
+  parseLiveAppMapJson,
+  type LiveAppMapDocument,
+  type LiveAppMapPage,
+  type LiveAppMapEdge,
+} from '../packages/schema/src/index';
 import { runScan } from '../packages/cli/src/index';
 import type { AppMapDocument, AppMapNode, AppMapPageState } from '../packages/schema/src/types';
 
@@ -254,6 +267,169 @@ async function main(): Promise<void> {
     }
     writeMapsAndSyncPublic(t.name, doc);
   }
+
+  // Unified live graph: prefix ids per surface; no god-root ownership.
+  writeKorborAllLiveMap();
+  // Stale non-live dogfood zip
+  const staleAppmap = path.join(OUT, 'korbor-miniapp.appmap');
+  if (existsSync(staleAppmap)) {
+    unlinkSync(staleAppmap);
+    console.log('removed stale maps/korbor-miniapp.appmap');
+  }
+}
+
+/**
+ * Собирает korbor-all.liveappmap.json из трёх surface-карт.
+ * Корни продуктов остаются отдельными (miniapp:/, admin:/, site:/).
+ * Cross-link edges только с label, без замены entry roots.
+ */
+function writeKorborAllLiveMap(): void {
+  const surfaces: Array<{
+    id: string;
+    title: string;
+    file: string;
+    expectedHost: string;
+  }> = [
+    {
+      id: 'miniapp',
+      title: 'Мини-приложение',
+      file: path.join(OUT, 'korbor-miniapp.liveappmap.json'),
+      expectedHost: 'vite.localhost:5175',
+    },
+    {
+      id: 'admin',
+      title: 'Админка',
+      file: path.join(OUT, 'korbor-admin.liveappmap.json'),
+      expectedHost: 'localhost:16002',
+    },
+    {
+      id: 'site',
+      title: 'Сайт',
+      file: path.join(OUT, 'korbor-site.liveappmap.json'),
+      expectedHost: 'localhost:16001',
+    },
+  ];
+
+  const pages: LiveAppMapPage[] = [];
+  const edges: LiveAppMapEdge[] = [];
+  const groups: Array<{ id: string; title: string; order: number }> = [];
+
+  for (const s of surfaces) {
+    if (!existsSync(s.file)) {
+      throw new Error(`merge all: missing ${s.file}`);
+    }
+    const raw = JSON.parse(readFileSync(s.file, 'utf8')) as unknown;
+    const parsed = parseLiveAppMapJson(JSON.stringify(raw));
+    if (!parsed.ok) {
+      throw new Error(`merge all: invalid ${s.file}`);
+    }
+    const doc = parsed.document;
+    groups.push({ id: s.id, title: s.title, order: groups.length });
+    const idMap = new Map<string, string>();
+
+    for (const p of doc.pages) {
+      // hygiene: absolute url must stay on this surface host
+      let url = p.url;
+      if (url) {
+        try {
+          const u = new URL(url);
+          if (u.host !== s.expectedHost) {
+            const pathPart = p.path ?? u.pathname;
+            const protocol = s.expectedHost.includes('5175') ? 'https' : 'http';
+            url = `${protocol}://${s.expectedHost}${pathPart.startsWith('/') ? pathPart : `/${pathPart}`}`;
+          }
+        } catch {
+          url = p.url;
+        }
+      }
+      const nid = `${s.id}:${p.id}`;
+      idMap.set(p.id, nid);
+      pages.push({
+        ...p,
+        id: nid,
+        group: s.id,
+        title: `[${s.title}] ${p.title}`,
+        url,
+        metadata: {
+          ...p.metadata,
+          surface: s.id,
+          originalId: p.id,
+          baseUrl: doc.baseUrl,
+        },
+      });
+    }
+
+    for (const e of doc.edges) {
+      const from = idMap.get(e.from);
+      const to = idMap.get(e.to);
+      if (!from || !to) {
+        continue;
+      }
+      edges.push({
+        ...e,
+        id: e.id ? `${e.id}:${s.id}` : undefined,
+        from,
+        to,
+      });
+    }
+  }
+
+  // Intentional cross-surface links (label only — not ownership of roots)
+  const siteHome = pages.find((p) => p.id === 'site:site-home');
+  const adminRoot = pages.find((p) => p.id === 'admin:route:/');
+  const miniRoot = pages.find((p) => p.id === 'miniapp:route:/');
+  if (siteHome && adminRoot) {
+    edges.push({
+      from: siteHome.id,
+      to: adminRoot.id,
+      label: 'Админка',
+      kind: 'link',
+    });
+  }
+  if (siteHome && miniRoot) {
+    edges.push({
+      from: siteHome.id,
+      to: miniRoot.id,
+      label: 'Miniapp',
+      kind: 'link',
+    });
+  }
+
+  const live: LiveAppMapDocument = {
+    version: '1.0',
+    baseUrl: 'http://localhost:16001',
+    app: {
+      name: 'Korbor (все поверхности)',
+      platform: 'web',
+      generator: 'scan-korbor+merge/0.2.0',
+      generatedAt: new Date().toISOString(),
+      description: 'Unified live graph: miniapp + admin + site (no god-root)',
+    },
+    pages,
+    edges,
+    groups,
+    layout: { algorithm: 'dagre', direction: 'LR' },
+    extensions: {
+      korbor: {
+        surfaces: {
+          miniapp: 'https://vite.localhost:5175',
+          admin: 'http://localhost:16002',
+          site: 'http://localhost:16001',
+          api: 'http://localhost:16000',
+          visualizer: 'http://localhost:4310',
+        },
+        liveOnly: true,
+      },
+    },
+  };
+
+  const livePath = path.join(OUT, 'korbor-all.liveappmap.json');
+  const pubLive = path.join(PUBLIC_MAPS, 'korbor-all.liveappmap.json');
+  writeFileSync(livePath, `${JSON.stringify(live, null, 2)}\n`);
+  copyFileSync(livePath, pubLive);
+  console.log(
+    `wrote korbor-all (canon + public): pages=${pages.length} edges=${edges.length}`,
+  );
 }
 
 /** Конкретные CMS-страницы поверх catch-all Next (Payload). */

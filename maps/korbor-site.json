@@ -1,7 +1,7 @@
 {
   "formatVersion": 1,
   "kind": "live-app-map",
-  "generatedAt": "2026-08-10T02:35:33.419Z",
+  "generatedAt": "2026-08-10T06:23:33.146Z",
   "generator": {
     "name": "@live-app-map/scanner-next",
     "version": "0.1.0"

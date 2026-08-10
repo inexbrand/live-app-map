@@ -17,7 +17,6 @@ export function DiagnosticsDock() {
   const clearLogs = useAppStore((s) => s.clearLogs);
   const filter = useAppStore((s) => s.logFilterPageId);
   const setFilter = useAppStore((s) => s.setLogFilterPageId);
-  const mode = useAppStore((s) => s.mode);
   const liveCount = useAppStore((s) => s.livePageIds.size);
   const maxLive = useAppStore((s) => s.maxLiveIframes);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
@@ -43,8 +42,6 @@ export function DiagnosticsDock() {
       .map((n) => ({ id: n.id, title: n.title }));
   }, [document]);
 
-  const modeRu =
-    mode === 'live' ? 'живой' : mode === 'compact' ? 'компакт' : 'карта';
   const roleRu =
     globalRole === 'recruiter'
       ? 'рекрутер'
@@ -77,7 +74,7 @@ export function DiagnosticsDock() {
       >
         <div className="diag-stats">
           <span>
-            режим <strong>{modeRu}</strong>
+            режим <strong>живой</strong>
           </span>
           <span>
             живых <strong>{liveCount}/{maxLive}</strong>
