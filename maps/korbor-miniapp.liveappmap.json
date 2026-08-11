@@ -5,7 +5,7 @@
     "name": "miniapp",
     "platform": "web",
     "generator": "@live-app-map/scanner-react-router/0.1.0",
-    "generatedAt": "2026-08-10T06:23:33.122Z"
+    "generatedAt": "2026-08-10T07:55:20.635Z"
   },
   "pages": [
     {
@@ -602,7 +602,16 @@
   ],
   "layout": {
     "algorithm": "dagre",
-    "direction": "LR"
+    "direction": "LR",
+    "defaultWidth": 390,
+    "defaultHeight": 844,
+    "defaultHeightMode": "fixed",
+    "defaultDeviceViewport": {
+      "width": 390,
+      "height": 844,
+      "label": "390",
+      "heightMode": "fixed"
+    }
   },
   "extensions": {
     "stateInject": {

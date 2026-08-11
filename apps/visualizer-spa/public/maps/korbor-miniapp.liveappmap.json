@@ -5,7 +5,7 @@
     "name": "miniapp",
     "platform": "web",
     "generator": "@live-app-map/scanner-react-router/0.1.0",
-    "generatedAt": "2026-08-10T06:23:33.122Z"
+    "generatedAt": "2026-08-10T07:55:20.635Z"
   },
   "pages": [
     {
@@ -601,8 +601,68 @@
     }
   ],
   "layout": {
-    "algorithm": "dagre",
-    "direction": "LR"
+    "algorithm": "row",
+    "direction": "LR",
+    "defaultWidth": 390,
+    "defaultHeight": 844,
+    "defaultHeightMode": "fixed",
+    "nodeGap": 48,
+    "viewportPresets": [
+      {
+        "id": "w360",
+        "label": "360",
+        "width": 360,
+        "heightMode": "fixed",
+        "height": 844
+      },
+      {
+        "id": "w390",
+        "label": "390",
+        "width": 390,
+        "heightMode": "fixed",
+        "height": 844
+      },
+      {
+        "id": "w480",
+        "label": "480",
+        "width": 480,
+        "heightMode": "fixed",
+        "height": 900
+      },
+      {
+        "id": "w768",
+        "label": "768",
+        "width": 768,
+        "heightMode": "fixed",
+        "height": 1024
+      },
+      {
+        "id": "w1280",
+        "label": "1280",
+        "width": 1280,
+        "heightMode": "fixed",
+        "height": 800
+      },
+      {
+        "id": "w1920",
+        "label": "1920",
+        "width": 1920,
+        "heightMode": "fixed",
+        "height": 800
+      }
+    ],
+    "connector": {
+      "screenWidth": 112,
+      "screenHeight": 40,
+      "maxScreenWidth": 168,
+      "maxScreenHeight": 56
+    },
+    "defaultDeviceViewport": {
+      "width": 390,
+      "height": 844,
+      "label": "390",
+      "heightMode": "fixed"
+    }
   },
   "extensions": {
     "stateInject": {

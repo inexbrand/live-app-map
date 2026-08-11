@@ -37,7 +37,11 @@ import {
   rewriteUrlThroughTlsProxy,
   shouldUseTlsProxyForUrl,
 } from '../lib/tls-proxy';
-import { clampViewport } from '../lib/viewport';
+import {
+  applyMapDeviceViewport,
+  clampViewport,
+  viewportFromPresetId,
+} from '../lib/viewport';
 
 /** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
 export type IframeScale = 0.25 | 0.35 | 0.5 | 0.75 | 1;
@@ -145,6 +149,13 @@ type AppStore = {
   getNodeViewport: (pageId: string) => DeviceViewport | undefined;
   /** Записать измеренную высоту контента (auto); no-op при шуме */
   setContentHeight: (pageId: string, height: number) => void;
+  /**
+   * Глобальная адаптивка карты: layout.defaultDeviceViewport (+ width/height/mode).
+   * Сбрасывает per-page runtime overrides и contentHeights (fixed path).
+   */
+  setMapDeviceViewport: (viewport: DeviceViewport) => void;
+  /** Применить builtin/layout preset id как map-level adaptive */
+  setMapViewportPreset: (presetId: string) => void;
   pushLog: (
     entry: Omit<AppLogEntry, 'id' | 'ts'> & { readonly ts?: string },
   ) => void;
@@ -653,6 +664,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   },
 
   setContentHeight: (pageId, height) => {
+    // Measure только имеет смысл если page/map в auto; store не знает mode
+    // per-id — вызывающий (PageNode) уже гейтит heightMode===auto.
     if (!Number.isFinite(height) || height < 120) {
       return;
     }
@@ -664,6 +677,44 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const next = new Map(get().contentHeights);
     next.set(pageId, rounded);
     set({ contentHeights: next });
+  },
+
+  setMapDeviceViewport: (viewport) => {
+    const doc = get().document;
+    if (!doc) {
+      set({ toast: 'Нет загруженной карты' });
+      return;
+    }
+    const clamped = clampViewport(viewport);
+    const layout = applyMapDeviceViewport(doc.layout, clamped);
+    set({
+      document: { ...doc, layout },
+      // fixed map adaptive — сбросить runtime measure/overrides
+      nodeViewports: new Map(),
+      contentHeights: new Map(),
+      toast: `Адаптив карты: ${clamped.width}×${clamped.height}${
+        clamped.label ? ` (${clamped.label})` : ''
+      } · ${clamped.heightMode ?? 'fixed'}`,
+    });
+    get().pushLog({
+      level: 'info',
+      source: 'system',
+      message: `map adaptive ${clamped.width}×${clamped.height} mode=${clamped.heightMode ?? 'fixed'}`,
+    });
+  },
+
+  setMapViewportPreset: (presetId) => {
+    const doc = get().document;
+    if (!doc) {
+      set({ toast: 'Нет загруженной карты' });
+      return;
+    }
+    const vp = viewportFromPresetId(presetId, doc.layout);
+    if (vp === null) {
+      set({ toast: `Пресет «${presetId}» не найден` });
+      return;
+    }
+    get().setMapDeviceViewport(vp);
   },
 
   pushLog: (entry) => {

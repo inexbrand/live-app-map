@@ -65,14 +65,54 @@ export type StateInjectSpec = {
 };
 
 /**
+ * Режим высоты превью:
+ * - `auto` — visualizer измеряет scrollHeight контента iframe
+ * - `fixed` — height из JSON / пресета
+ */
+export type ViewportHeightMode = 'auto' | 'fixed';
+
+/**
  * Размер «окна» устройства для live iframe (адаптив).
  * CSS px логического viewport; visualizer может масштабировать для карты.
+ * Ширина задаётся в JSON; высота при heightMode=auto — из контента.
  */
 export type DeviceViewport = {
   readonly width: number;
+  /** Логическая высота iframe; при auto — fallback до measure / после measure */
   readonly height: number;
-  /** Подпись пресета: phone / tablet / desktop / custom */
+  /** Подпись пресета: 360 / phone / tablet / desktop / custom */
   readonly label?: string;
+  /**
+   * auto — высота по measure iframe (явный opt-in).
+   * fixed (dogfood default) — height только из JSON / layout, без measure.
+   */
+  readonly heightMode?: ViewportHeightMode;
+};
+
+/**
+ * Пресет ширины (брейкпоинт адаптивки) в layout JSON карты.
+ * height опционален: без него / heightMode auto → measure.
+ */
+export type MapViewportPreset = {
+  readonly id: string;
+  readonly label: string;
+  readonly width: number;
+  readonly height?: number;
+  readonly heightMode?: ViewportHeightMode;
+};
+
+/**
+ * Настройки screen-space размера связующих нод (меню, hub).
+ * Размер в CSS px на экране (не в world), clamp по max*.
+ */
+export type ConnectorScreenSize = {
+  /** Базовая ширина на экране (px) */
+  readonly screenWidth?: number;
+  readonly screenHeight?: number;
+  readonly maxScreenWidth?: number;
+  readonly maxScreenHeight?: number;
+  readonly minScreenWidth?: number;
+  readonly minScreenHeight?: number;
 };
 
 export type AppMapNode = {
@@ -96,9 +136,15 @@ export type AppMapNode = {
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly position?: { readonly x: number; readonly y: number };
   /**
-   * Размер окна превью (адаптив). Если нет — visualizer берёт дефолт карты.
+   * Размер окна превью (адаптив). Ширина из JSON; heightMode auto → measure.
+   * Если нет — layout.defaultWidth / layout.defaultHeightMode.
    */
   readonly viewport?: DeviceViewport;
+  /**
+   * Связующая нода (меню / hub): screen-space размер, видна на любом zoom.
+   * Альтернатива: kind=layout, type=menu|nav|connector, metadata.connector=true.
+   */
+  readonly connector?: boolean;
   /** Именованные UI-состояния (роли, empty, …) */
   readonly states?: readonly AppMapPageState[];
   readonly defaultPinned?: boolean;
@@ -129,13 +175,43 @@ export type AppMapGroup = {
 };
 
 export type LayoutHints = {
+  /**
+   * `row` — экраны в ряд (дефолт visualizer).
+   * `dagre` — граф LR/TB.
+   * Если у всех нод есть position — position побеждает.
+   */
   readonly algorithm?: string;
   readonly direction?: 'TB' | 'LR' | 'BT' | 'RL';
+  /**
+   * Стартовая **камера** React Flow (x/y/zoom). Не путать с device viewport.
+   * Редко; обычно fitView.
+   */
   readonly defaultViewport?: {
     readonly x: number;
     readonly y: number;
     readonly zoom: number;
   };
+  /**
+   * Глобальный размер окна экранов карты (device viewport).
+   * Применяется ко всем page без per-page `viewport`.
+   * Предпочтительнее разрозненных defaultWidth/Height/Mode.
+   */
+  readonly defaultDeviceViewport?: DeviceViewport;
+  /** Дефолтная ширина превью экрана (px), если у page нет viewport.width */
+  readonly defaultWidth?: number;
+  /** Fallback высоты до measure / при fixed без height */
+  readonly defaultHeight?: number;
+  /**
+   * Дефолт heightMode для page без viewport.heightMode.
+   * Dogfood: `fixed` (размер из JSON, без measure-on-render).
+   */
+  readonly defaultHeightMode?: ViewportHeightMode;
+  /** Зазор между нодами в row-layout (world px до display scale) */
+  readonly nodeGap?: number;
+  /** Пресеты брейкпоинтов (360 / 480 / …) — UI + JSON */
+  readonly viewportPresets?: readonly MapViewportPreset[];
+  /** Screen-space clamp для связующих нод (menu / connector) */
+  readonly connector?: ConnectorScreenSize;
 };
 
 export type GeneratorMeta = {
@@ -181,8 +257,18 @@ export type LiveAppMapPage = {
   readonly screenshot?: string | null;
   readonly metadata?: Readonly<Record<string, unknown>>;
   readonly position?: { readonly x: number; readonly y: number };
-  /** Размер окна для live-превью (адаптив) */
-  readonly viewport?: DeviceViewport;
+  /**
+   * Размер окна: width обязателен; height опционален при heightMode=auto.
+   * (enterprise DeviceViewport после convert всегда с height).
+   */
+  readonly viewport?: {
+    readonly width: number;
+    readonly height?: number;
+    readonly label?: string;
+    readonly heightMode?: ViewportHeightMode;
+  };
+  /** Связующая нода (меню / hub) — screen-space */
+  readonly connector?: boolean;
   readonly iframeDisabled?: boolean;
   readonly defaultPinned?: boolean;
 };

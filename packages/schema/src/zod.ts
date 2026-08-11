@@ -76,11 +76,64 @@ export const appMapNodeSchema = z
         width: z.number().positive(),
         height: z.number().positive(),
         label: z.string().optional(),
+        heightMode: z.enum(['auto', 'fixed']).optional(),
       })
       .optional(),
+    connector: z.boolean().optional(),
     states: z.array(appMapPageStateSchema).optional(),
     defaultPinned: z.boolean().optional(),
     screenshot: z.string().nullable().optional(),
+  })
+  .passthrough();
+
+export const mapViewportPresetSchema = z
+  .object({
+    id: z.string().min(1),
+    label: z.string().min(1),
+    width: z.number().positive(),
+    height: z.number().positive().optional(),
+    heightMode: z.enum(['auto', 'fixed']).optional(),
+  })
+  .strict();
+
+export const connectorScreenSizeSchema = z
+  .object({
+    screenWidth: z.number().positive().optional(),
+    screenHeight: z.number().positive().optional(),
+    maxScreenWidth: z.number().positive().optional(),
+    maxScreenHeight: z.number().positive().optional(),
+    minScreenWidth: z.number().positive().optional(),
+    minScreenHeight: z.number().positive().optional(),
+  })
+  .strict();
+
+export const layoutHintsSchema = z
+  .object({
+    algorithm: z.string().optional(),
+    direction: z.enum(['TB', 'LR', 'BT', 'RL']).optional(),
+    /** Камера React Flow (x/y/zoom), не device size */
+    defaultViewport: z
+      .object({
+        x: z.number(),
+        y: z.number(),
+        zoom: z.number(),
+      })
+      .optional(),
+    /** Глобальный device viewport всех page без per-page viewport */
+    defaultDeviceViewport: z
+      .object({
+        width: z.number().positive(),
+        height: z.number().positive(),
+        label: z.string().optional(),
+        heightMode: z.enum(['auto', 'fixed']).optional(),
+      })
+      .optional(),
+    defaultWidth: z.number().positive().optional(),
+    defaultHeight: z.number().positive().optional(),
+    defaultHeightMode: z.enum(['auto', 'fixed']).optional(),
+    nodeGap: z.number().nonnegative().optional(),
+    viewportPresets: z.array(mapViewportPresetSchema).optional(),
+    connector: connectorScreenSizeSchema.optional(),
   })
   .passthrough();
 
@@ -139,19 +192,7 @@ export const appMapDocumentSchema = z
     nodes: z.array(appMapNodeSchema).min(1),
     edges: z.array(appMapEdgeSchema),
     groups: z.array(appMapGroupSchema).optional(),
-    layout: z
-      .object({
-        algorithm: z.string().optional(),
-        direction: z.enum(['TB', 'LR', 'BT', 'RL']).optional(),
-        defaultViewport: z
-          .object({
-            x: z.number(),
-            y: z.number(),
-            zoom: z.number(),
-          })
-          .optional(),
-      })
-      .optional(),
+    layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
   })
   .passthrough();
@@ -176,10 +217,12 @@ export const liveAppMapPageSchema = z
     viewport: z
       .object({
         width: z.number().positive(),
-        height: z.number().positive(),
+        height: z.number().positive().optional(),
         label: z.string().optional(),
+        heightMode: z.enum(['auto', 'fixed']).optional(),
       })
       .optional(),
+    connector: z.boolean().optional(),
     iframeDisabled: z.boolean().optional(),
     defaultPinned: z.boolean().optional(),
   })
@@ -214,7 +257,7 @@ export const liveAppMapDocumentSchema = z
         .passthrough(),
     ),
     groups: z.array(appMapGroupSchema).optional(),
-    layout: z.record(z.unknown()).optional(),
+    layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
   })
   .passthrough();

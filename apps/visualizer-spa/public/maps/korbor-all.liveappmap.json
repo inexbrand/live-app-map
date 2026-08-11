@@ -5,7 +5,7 @@
     "name": "Korbor (все поверхности)",
     "platform": "web",
     "generator": "scan-korbor+merge/0.2.0",
-    "generatedAt": "2026-08-10T06:23:33.166Z",
+    "generatedAt": "2026-08-10T07:55:20.684Z",
     "description": "Unified live graph: miniapp + admin + site (no god-root)"
   },
   "pages": [
@@ -1151,15 +1151,17 @@
     },
     {
       "id": "site:site-home",
-      "title": "[Сайт] Marketing Home",
+      "title": "[Сайт] Главная",
       "path": "/",
       "url": "http://localhost:16001/",
       "group": "site",
       "type": "route",
       "metadata": {
+        "locale": "ru",
+        "slug": "home",
+        "surface": "site",
         "pathPattern": "/",
         "kind": "page",
-        "surface": "site",
         "originalId": "site-home",
         "baseUrl": "http://localhost:16001"
       },
@@ -1167,16 +1169,340 @@
       "defaultPinned": true
     },
     {
+      "id": "site:site-employers",
+      "title": "[Сайт] Работодателям",
+      "path": "/employers",
+      "url": "http://localhost:16001/employers",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "employers",
+        "surface": "site",
+        "pathPattern": "/employers",
+        "kind": "page",
+        "originalId": "site-employers",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-recruiters",
+      "title": "[Сайт] Рекрутерам",
+      "path": "/recruiters",
+      "url": "http://localhost:16001/recruiters",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "recruiters",
+        "surface": "site",
+        "pathPattern": "/recruiters",
+        "kind": "page",
+        "originalId": "site-recruiters",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-how-it-works",
+      "title": "[Сайт] Как это работает",
+      "path": "/how-it-works",
+      "url": "http://localhost:16001/how-it-works",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "how-it-works",
+        "surface": "site",
+        "pathPattern": "/how-it-works",
+        "kind": "page",
+        "originalId": "site-how-it-works",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-pricing",
+      "title": "[Сайт] Тарифы",
+      "path": "/pricing",
+      "url": "http://localhost:16001/pricing",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "pricing",
+        "surface": "site",
+        "pathPattern": "/pricing",
+        "kind": "page",
+        "originalId": "site-pricing",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-guarantees",
+      "title": "[Сайт] Гарантии",
+      "path": "/guarantees",
+      "url": "http://localhost:16001/guarantees",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "guarantees",
+        "surface": "site",
+        "pathPattern": "/guarantees",
+        "kind": "page",
+        "originalId": "site-guarantees",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-about",
+      "title": "[Сайт] О нас",
+      "path": "/about",
+      "url": "http://localhost:16001/about",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "about",
+        "surface": "site",
+        "pathPattern": "/about",
+        "kind": "page",
+        "originalId": "site-about",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-faq",
+      "title": "[Сайт] Вопросы",
+      "path": "/faq",
+      "url": "http://localhost:16001/faq",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "faq",
+        "surface": "site",
+        "pathPattern": "/faq",
+        "kind": "page",
+        "originalId": "site-faq",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-contacts",
+      "title": "[Сайт] Контакты",
+      "path": "/contacts",
+      "url": "http://localhost:16001/contacts",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "ru",
+        "slug": "contacts",
+        "surface": "site",
+        "pathPattern": "/contacts",
+        "kind": "page",
+        "originalId": "site-contacts",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-home",
+      "title": "[Сайт] Главная (UZ)",
+      "path": "/uz",
+      "url": "http://localhost:16001/uz",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "home",
+        "surface": "site",
+        "pathPattern": "/uz",
+        "kind": "page",
+        "originalId": "site-uz-home",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-employers",
+      "title": "[Сайт] Работодателям (UZ)",
+      "path": "/uz/employers",
+      "url": "http://localhost:16001/uz/employers",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "employers",
+        "surface": "site",
+        "pathPattern": "/uz/employers",
+        "kind": "page",
+        "originalId": "site-uz-employers",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-recruiters",
+      "title": "[Сайт] Рекрутерам (UZ)",
+      "path": "/uz/recruiters",
+      "url": "http://localhost:16001/uz/recruiters",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "recruiters",
+        "surface": "site",
+        "pathPattern": "/uz/recruiters",
+        "kind": "page",
+        "originalId": "site-uz-recruiters",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-how-it-works",
+      "title": "[Сайт] Как это работает (UZ)",
+      "path": "/uz/how-it-works",
+      "url": "http://localhost:16001/uz/how-it-works",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "how-it-works",
+        "surface": "site",
+        "pathPattern": "/uz/how-it-works",
+        "kind": "page",
+        "originalId": "site-uz-how-it-works",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-pricing",
+      "title": "[Сайт] Тарифы (UZ)",
+      "path": "/uz/pricing",
+      "url": "http://localhost:16001/uz/pricing",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "pricing",
+        "surface": "site",
+        "pathPattern": "/uz/pricing",
+        "kind": "page",
+        "originalId": "site-uz-pricing",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-guarantees",
+      "title": "[Сайт] Гарантии (UZ)",
+      "path": "/uz/guarantees",
+      "url": "http://localhost:16001/uz/guarantees",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "guarantees",
+        "surface": "site",
+        "pathPattern": "/uz/guarantees",
+        "kind": "page",
+        "originalId": "site-uz-guarantees",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-about",
+      "title": "[Сайт] О нас (UZ)",
+      "path": "/uz/about",
+      "url": "http://localhost:16001/uz/about",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "about",
+        "surface": "site",
+        "pathPattern": "/uz/about",
+        "kind": "page",
+        "originalId": "site-uz-about",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-faq",
+      "title": "[Сайт] Вопросы (UZ)",
+      "path": "/uz/faq",
+      "url": "http://localhost:16001/uz/faq",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "faq",
+        "surface": "site",
+        "pathPattern": "/uz/faq",
+        "kind": "page",
+        "originalId": "site-uz-faq",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
+      "id": "site:site-uz-contacts",
+      "title": "[Сайт] Контакты (UZ)",
+      "path": "/uz/contacts",
+      "url": "http://localhost:16001/uz/contacts",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "locale": "uz",
+        "slug": "contacts",
+        "surface": "site",
+        "pathPattern": "/uz/contacts",
+        "kind": "page",
+        "originalId": "site-uz-contacts",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false,
+      "defaultPinned": false
+    },
+    {
       "id": "site:site-payload-admin",
-      "title": "[Сайт] Payload Admin",
+      "title": "[Сайт] Payload Dashboard",
       "path": "/admin",
       "url": "http://localhost:16001/admin",
       "group": "site",
       "type": "route",
       "metadata": {
+        "surface": "site",
+        "cms": "payload",
         "pathPattern": "/admin",
         "kind": "page",
-        "surface": "site",
         "originalId": "site-payload-admin",
         "baseUrl": "http://localhost:16001"
       },
@@ -1190,10 +1516,45 @@
       "group": "site",
       "type": "route",
       "metadata": {
+        "surface": "site",
+        "cms": "payload",
         "pathPattern": "/admin/login",
         "kind": "page",
-        "surface": "site",
         "originalId": "site-payload-login",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-create-first-user",
+      "title": "[Сайт] Payload Create first user",
+      "path": "/admin/create-first-user",
+      "url": "http://localhost:16001/admin/create-first-user",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/create-first-user",
+        "kind": "page",
+        "originalId": "site-payload-create-first-user",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-account",
+      "title": "[Сайт] Payload Account",
+      "path": "/admin/account",
+      "url": "http://localhost:16001/admin/account",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/account",
+        "kind": "page",
+        "originalId": "site-payload-account",
         "baseUrl": "http://localhost:16001"
       },
       "iframeDisabled": false
@@ -1206,10 +1567,215 @@
       "group": "site",
       "type": "route",
       "metadata": {
+        "surface": "site",
+        "cms": "payload",
         "pathPattern": "/admin/collections",
         "kind": "page",
-        "surface": "site",
         "originalId": "site-payload-collections",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-pages",
+      "title": "[Сайт] CMS Pages",
+      "path": "/admin/collections/pages",
+      "url": "http://localhost:16001/admin/collections/pages",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/pages",
+        "kind": "page",
+        "originalId": "site-payload-pages",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-pages-create",
+      "title": "[Сайт] CMS Pages · create",
+      "path": "/admin/collections/pages/create",
+      "url": "http://localhost:16001/admin/collections/pages/create",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/pages/create",
+        "kind": "page",
+        "originalId": "site-payload-pages-create",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-media",
+      "title": "[Сайт] CMS Media",
+      "path": "/admin/collections/media",
+      "url": "http://localhost:16001/admin/collections/media",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/media",
+        "kind": "page",
+        "originalId": "site-payload-media",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-media-create",
+      "title": "[Сайт] CMS Media · create",
+      "path": "/admin/collections/media/create",
+      "url": "http://localhost:16001/admin/collections/media/create",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/media/create",
+        "kind": "page",
+        "originalId": "site-payload-media-create",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-users",
+      "title": "[Сайт] CMS Users",
+      "path": "/admin/collections/users",
+      "url": "http://localhost:16001/admin/collections/users",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/users",
+        "kind": "page",
+        "originalId": "site-payload-users",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-users-create",
+      "title": "[Сайт] CMS Users · create",
+      "path": "/admin/collections/users/create",
+      "url": "http://localhost:16001/admin/collections/users/create",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/collections/users/create",
+        "kind": "page",
+        "originalId": "site-payload-users-create",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-globals",
+      "title": "[Сайт] Payload Globals",
+      "path": "/admin/globals",
+      "url": "http://localhost:16001/admin/globals",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/globals",
+        "kind": "page",
+        "originalId": "site-payload-globals",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-nav",
+      "title": "[Сайт] Global · Navigation",
+      "path": "/admin/globals/navigation",
+      "url": "http://localhost:16001/admin/globals/navigation",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/globals/navigation",
+        "kind": "page",
+        "originalId": "site-payload-nav",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-footer",
+      "title": "[Сайт] Global · Footer",
+      "path": "/admin/globals/footer",
+      "url": "http://localhost:16001/admin/globals/footer",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/globals/footer",
+        "kind": "page",
+        "originalId": "site-payload-footer",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-payload-settings",
+      "title": "[Сайт] Global · Site settings",
+      "path": "/admin/globals/site-settings",
+      "url": "http://localhost:16001/admin/globals/site-settings",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "surface": "site",
+        "cms": "payload",
+        "pathPattern": "/admin/globals/site-settings",
+        "kind": "page",
+        "originalId": "site-payload-settings",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:not-found:/[[...slug]]",
+      "title": "[Сайт] slug",
+      "path": "/",
+      "url": "http://localhost:16001/",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/[[...slug]]",
+        "kind": "not-found",
+        "sourceFile": "src/app/(frontend)/[[...slug]]/not-found.tsx",
+        "surface": "site",
+        "originalId": "not-found:/[[...slug]]",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:not-found:/admin/[[...segments]]",
+      "title": "[Сайт] admin / segments",
+      "path": "/admin/collections",
+      "url": "http://localhost:16001/admin/collections",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/admin/[[...segments]]",
+        "kind": "not-found",
+        "sourceFile": "src/app/(payload)/admin/[[...segments]]/not-found.tsx",
+        "surface": "site",
+        "originalId": "not-found:/admin/[[...segments]]",
         "baseUrl": "http://localhost:16001"
       },
       "iframeDisabled": false
@@ -1385,6 +1951,125 @@
       "kind": "link"
     },
     {
+      "id": "edge:site-home->site-employers:site",
+      "from": "site:site-home",
+      "to": "site:site-employers",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-employers->site-recruiters:site",
+      "from": "site:site-employers",
+      "to": "site:site-recruiters",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-recruiters->site-how-it-works:site",
+      "from": "site:site-recruiters",
+      "to": "site:site-how-it-works",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-how-it-works->site-pricing:site",
+      "from": "site:site-how-it-works",
+      "to": "site:site-pricing",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-pricing->site-guarantees:site",
+      "from": "site:site-pricing",
+      "to": "site:site-guarantees",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-guarantees->site-about:site",
+      "from": "site:site-guarantees",
+      "to": "site:site-about",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-about->site-faq:site",
+      "from": "site:site-about",
+      "to": "site:site-faq",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-faq->site-contacts:site",
+      "from": "site:site-faq",
+      "to": "site:site-contacts",
+      "label": "nav",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-recruiters:site",
+      "from": "site:site-home",
+      "to": "site:site-recruiters",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-how-it-works:site",
+      "from": "site:site-home",
+      "to": "site:site-how-it-works",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-pricing:site",
+      "from": "site:site-home",
+      "to": "site:site-pricing",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-guarantees:site",
+      "from": "site:site-home",
+      "to": "site:site-guarantees",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-about:site",
+      "from": "site:site-home",
+      "to": "site:site-about",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-faq:site",
+      "from": "site:site-home",
+      "to": "site:site-faq",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-contacts:site",
+      "from": "site:site-home",
+      "to": "site:site-contacts",
+      "label": "menu",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-uz-home:site",
+      "from": "site:site-home",
+      "to": "site:site-uz-home",
+      "label": "UZ",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-uz-home->site-home:site",
+      "from": "site:site-uz-home",
+      "to": "site:site-home",
+      "label": "RU",
+      "kind": "link"
+    },
+    {
       "id": "edge:site-home->site-payload-admin:site",
       "from": "site:site-home",
       "to": "site:site-payload-admin",
@@ -1399,10 +2084,87 @@
       "kind": "link"
     },
     {
+      "id": "edge:site-payload-admin->site-payload-account:site",
+      "from": "site:site-payload-admin",
+      "to": "site:site-payload-account",
+      "label": "Account",
+      "kind": "link"
+    },
+    {
       "id": "edge:site-payload-admin->site-payload-collections:site",
       "from": "site:site-payload-admin",
       "to": "site:site-payload-collections",
       "label": "Collections",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-admin->site-payload-globals:site",
+      "from": "site:site-payload-admin",
+      "to": "site:site-payload-globals",
+      "label": "Globals",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-collections->site-payload-pages:site",
+      "from": "site:site-payload-collections",
+      "to": "site:site-payload-pages",
+      "label": "Pages",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-collections->site-payload-media:site",
+      "from": "site:site-payload-collections",
+      "to": "site:site-payload-media",
+      "label": "Media",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-collections->site-payload-users:site",
+      "from": "site:site-payload-collections",
+      "to": "site:site-payload-users",
+      "label": "Users",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-pages->site-payload-pages-create:site",
+      "from": "site:site-payload-pages",
+      "to": "site:site-payload-pages-create",
+      "label": "Create",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-media->site-payload-media-create:site",
+      "from": "site:site-payload-media",
+      "to": "site:site-payload-media-create",
+      "label": "Create",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-users->site-payload-users-create:site",
+      "from": "site:site-payload-users",
+      "to": "site:site-payload-users-create",
+      "label": "Create",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-globals->site-payload-nav:site",
+      "from": "site:site-payload-globals",
+      "to": "site:site-payload-nav",
+      "label": "Navigation",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-globals->site-payload-footer:site",
+      "from": "site:site-payload-globals",
+      "to": "site:site-payload-footer",
+      "label": "Footer",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-payload-globals->site-payload-settings:site",
+      "from": "site:site-payload-globals",
+      "to": "site:site-payload-settings",
+      "label": "Settings",
       "kind": "link"
     },
     {
@@ -1437,7 +2199,16 @@
   ],
   "layout": {
     "algorithm": "dagre",
-    "direction": "LR"
+    "direction": "LR",
+    "defaultWidth": 390,
+    "defaultHeight": 844,
+    "defaultHeightMode": "fixed",
+    "defaultDeviceViewport": {
+      "width": 390,
+      "height": 844,
+      "label": "390",
+      "heightMode": "fixed"
+    }
   },
   "extensions": {
     "korbor": {

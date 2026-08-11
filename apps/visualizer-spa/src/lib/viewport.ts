@@ -1,41 +1,62 @@
 /**
  * Пресеты и утилиты размера окна (адаптив live iframe).
- * Дефолт — 16:9. Единая math для RF style, outer DOM и iframe shell.
+ * Размер для layout — из map JSON (page.viewport / layout.defaultDeviceViewport).
+ * Measure iframe только при явном heightMode=auto.
  */
-import type { DeviceViewport } from '@live-app-map/schema';
+import type {
+  AppMapNode,
+  DeviceViewport,
+  LayoutHints,
+  MapViewportPreset,
+  ViewportHeightMode,
+} from '@live-app-map/schema';
 
-export type ViewportPresetId =
-  | 'map'
-  | 'phone-sm'
-  | 'phone'
-  | 'tablet'
-  | 'desktop'
-  | 'custom';
+export type ViewportPresetId = string;
 
 export type ViewportPreset = {
   readonly id: ViewportPresetId;
   readonly label: string;
   readonly width: number;
+  /** Высота кадра (fixed dogfood) или fallback до measure (auto) */
   readonly height: number;
+  readonly heightMode?: ViewportHeightMode;
 };
 
-/** 16:9 — базовый aspect для превью на карте */
+/** 16:9 — только для fixed landscape helper */
 export const ASPECT_16_9 = 16 / 9;
 
-/** Канонические пресеты (RU). «Карта» и «Десктоп» — 16:9. */
-export const VIEWPORT_PRESETS: readonly ViewportPreset[] = [
-  { id: 'map', label: '16:9', width: 640, height: 360 },
-  { id: 'phone-sm', label: 'Телефон S', width: 375, height: 667 },
-  { id: 'phone', label: 'Телефон', width: 390, height: 844 },
-  { id: 'tablet', label: 'Планшет', width: 768, height: 1024 },
-  { id: 'desktop', label: 'Десктоп', width: 1280, height: 720 },
+/**
+ * Канонические брейкпоинты (JSON layout + UI).
+ * heightMode fixed — размер layout без measure-on-render.
+ */
+export const BUILTIN_VIEWPORT_PRESETS: readonly ViewportPreset[] = [
+  { id: 'w360', label: '360', width: 360, height: 800, heightMode: 'fixed' },
+  { id: 'w390', label: '390', width: 390, height: 844, heightMode: 'fixed' },
+  { id: 'w480', label: '480', width: 480, height: 900, heightMode: 'fixed' },
+  { id: 'w768', label: '768', width: 768, height: 1024, heightMode: 'fixed' },
+  { id: 'w1024', label: '1024', width: 1024, height: 900, heightMode: 'fixed' },
+  { id: 'w1280', label: '1280', width: 1280, height: 800, heightMode: 'fixed' },
+  { id: 'w1920', label: '1920', width: 1920, height: 1080, heightMode: 'fixed' },
 ] as const;
 
-/** Дефолт: 16:9 (640×360). */
+/** @deprecated alias — UI/тесты; то же что BUILTIN */
+export const VIEWPORT_PRESETS = BUILTIN_VIEWPORT_PRESETS;
+
+/** Дефолт ширины, если layout/JSON молчат (mobile-first dogfood). */
+export const DEFAULT_WIDTH = 390;
+
+/** Fallback высоты (типичный phone frame). */
+export const DEFAULT_HEIGHT_FALLBACK = 844;
+
+/** Макс. измеренная высота контента (защита от runaway). */
+export const MAX_CONTENT_HEIGHT = 50_000;
+
+/** Дефолт dogfood: 390×844 fixed — без measure при рендере карты. */
 export const DEFAULT_VIEWPORT: DeviceViewport = {
-  width: 640,
-  height: 360,
-  label: '16:9',
+  width: DEFAULT_WIDTH,
+  height: DEFAULT_HEIGHT_FALLBACK,
+  label: '390',
+  heightMode: 'fixed',
 };
 
 /**
@@ -51,30 +72,244 @@ export const NODE_SELECTED_BAR_H = 36;
 export const NODE_STATES_BAR_H = 0;
 
 /**
- * Нормализует viewport (clamp разумных границ).
+ * Нормализует viewport (clamp). heightMode auto допускает tall content.
  */
 export function clampViewport(v: DeviceViewport): DeviceViewport {
-  const width = Math.min(1920, Math.max(200, Math.round(v.width)));
-  const height = Math.min(2400, Math.max(120, Math.round(v.height)));
+  const width = Math.min(2560, Math.max(200, Math.round(v.width)));
+  const height = Math.min(
+    MAX_CONTENT_HEIGHT,
+    Math.max(120, Math.round(v.height)),
+  );
+  const heightMode: ViewportHeightMode =
+    v.heightMode === 'fixed' ? 'fixed' : 'auto';
   return {
     width,
     height,
     label: v.label,
+    heightMode,
   };
 }
 
 /**
- * Подгоняет height под 16:9 при известной width.
+ * Подгоняет height под 16:9 при известной width (fixed helper).
  */
 export function fitTo16x9(width: number): DeviceViewport {
-  const w = Math.min(1920, Math.max(200, Math.round(width)));
+  const w = Math.min(2560, Math.max(200, Math.round(width)));
   const h = Math.round(w / ASPECT_16_9);
-  return { width: w, height: h, label: '16:9' };
+  return { width: w, height: h, label: '16:9', heightMode: 'fixed' };
+}
+
+/**
+ * Пресеты: layout JSON → иначе builtin.
+ */
+export function resolveViewportPresets(
+  layout: LayoutHints | undefined,
+): readonly ViewportPreset[] {
+  const fromJson = layout?.viewportPresets;
+  if (fromJson !== undefined && fromJson.length > 0) {
+    return fromJson.map((p: MapViewportPreset) => ({
+      id: p.id,
+      label: p.label,
+      width: p.width,
+      height: p.height ?? DEFAULT_HEIGHT_FALLBACK,
+      heightMode: p.heightMode ?? 'fixed',
+    }));
+  }
+  return BUILTIN_VIEWPORT_PRESETS;
+}
+
+/**
+ * Глобальный device viewport из layout JSON (если есть).
+ */
+export function resolveLayoutDeviceViewport(
+  layout: LayoutHints | undefined,
+): DeviceViewport | undefined {
+  const ddv = layout?.defaultDeviceViewport;
+  if (ddv !== undefined && typeof ddv.width === 'number') {
+    return clampViewport({
+      width: ddv.width,
+      height:
+        typeof ddv.height === 'number' && ddv.height >= 120
+          ? ddv.height
+          : DEFAULT_HEIGHT_FALLBACK,
+      label: ddv.label,
+      heightMode: ddv.heightMode === 'auto' ? 'auto' : 'fixed',
+    });
+  }
+  return undefined;
+}
+
+/**
+ * Дефолтная ширина из layout или константа.
+ */
+export function resolveDefaultWidth(layout: LayoutHints | undefined): number {
+  const fromDevice = resolveLayoutDeviceViewport(layout);
+  if (fromDevice !== undefined) {
+    return fromDevice.width;
+  }
+  const w = layout?.defaultWidth;
+  if (typeof w === 'number' && Number.isFinite(w) && w >= 200) {
+    return Math.min(2560, Math.round(w));
+  }
+  return DEFAULT_WIDTH;
+}
+
+/**
+ * Fallback высоты из layout.
+ */
+export function resolveDefaultHeight(layout: LayoutHints | undefined): number {
+  const fromDevice = resolveLayoutDeviceViewport(layout);
+  if (fromDevice !== undefined) {
+    return fromDevice.height;
+  }
+  const h = layout?.defaultHeight;
+  if (typeof h === 'number' && Number.isFinite(h) && h >= 120) {
+    return Math.min(MAX_CONTENT_HEIGHT, Math.round(h));
+  }
+  return DEFAULT_HEIGHT_FALLBACK;
+}
+
+/**
+ * heightMode: override → page → layout.defaultDeviceViewport → layout.defaultHeightMode → fixed.
+ */
+export function resolveHeightMode(
+  nodeViewport: DeviceViewport | undefined,
+  layout: LayoutHints | undefined,
+  override?: DeviceViewport,
+): ViewportHeightMode {
+  if (override?.heightMode === 'fixed' || override?.heightMode === 'auto') {
+    return override.heightMode;
+  }
+  if (
+    nodeViewport?.heightMode === 'fixed' ||
+    nodeViewport?.heightMode === 'auto'
+  ) {
+    return nodeViewport.heightMode;
+  }
+  const mapDevice = resolveLayoutDeviceViewport(layout);
+  if (mapDevice?.heightMode === 'fixed' || mapDevice?.heightMode === 'auto') {
+    return mapDevice.heightMode;
+  }
+  if (
+    layout?.defaultHeightMode === 'fixed' ||
+    layout?.defaultHeightMode === 'auto'
+  ) {
+    return layout.defaultHeightMode;
+  }
+  return 'fixed';
+}
+
+export type ResolveViewportArgs = {
+  readonly nodeViewport?: DeviceViewport;
+  readonly override?: DeviceViewport;
+  readonly layout?: LayoutHints;
+  /**
+   * Измеренная высота document — **только** при heightMode=auto.
+   * При fixed игнорируется (размер из JSON/layout).
+   */
+  readonly measuredHeight?: number;
+};
+
+/**
+ * Итоговый viewport ноды.
+ * Источник: override → page.viewport → layout.defaultDeviceViewport → defaultWidth/Height → constants.
+ * Measure не участвует, пока heightMode !== 'auto'.
+ */
+export function resolveNodeViewport(args: ResolveViewportArgs = {}): DeviceViewport {
+  const mapDevice = resolveLayoutDeviceViewport(args.layout);
+  const heightMode = resolveHeightMode(
+    args.nodeViewport,
+    args.layout,
+    args.override,
+  );
+  const defaultW = resolveDefaultWidth(args.layout);
+  const defaultH = resolveDefaultHeight(args.layout);
+
+  const width =
+    args.override?.width ??
+    args.nodeViewport?.width ??
+    mapDevice?.width ??
+    defaultW;
+
+  let height: number;
+  if (heightMode === 'auto') {
+    if (
+      typeof args.measuredHeight === 'number' &&
+      Number.isFinite(args.measuredHeight) &&
+      args.measuredHeight >= 120
+    ) {
+      height = args.measuredHeight;
+    } else {
+      height =
+        args.override?.height ??
+        args.nodeViewport?.height ??
+        mapDevice?.height ??
+        defaultH;
+    }
+  } else {
+    // fixed: never use measuredHeight
+    height =
+      args.override?.height ??
+      args.nodeViewport?.height ??
+      mapDevice?.height ??
+      defaultH;
+  }
+
+  const label =
+    args.override?.label ??
+    args.nodeViewport?.label ??
+    mapDevice?.label ??
+    String(Math.round(width));
+
+  return clampViewport({
+    width,
+    height,
+    label,
+    heightMode,
+  });
+}
+
+/**
+ * Пишет глобальный adaptive viewport в layout (immutable merge).
+ * Синхронизирует defaultDeviceViewport + defaultWidth/Height/Mode.
+ */
+export function applyMapDeviceViewport(
+  layout: LayoutHints | undefined,
+  device: DeviceViewport,
+): LayoutHints {
+  const clamped = clampViewport(device);
+  const base = layout ?? {};
+  return {
+    ...base,
+    defaultDeviceViewport: clamped,
+    defaultWidth: clamped.width,
+    defaultHeight: clamped.height,
+    defaultHeightMode: clamped.heightMode ?? 'fixed',
+  };
+}
+
+/**
+ * Собрать DeviceViewport из id builtin/layout preset.
+ */
+export function viewportFromPresetId(
+  presetId: string,
+  layout: LayoutHints | undefined,
+): DeviceViewport | null {
+  const presets = resolveViewportPresets(layout);
+  const p = presets.find((x) => x.id === presetId);
+  if (p === undefined) {
+    return null;
+  }
+  return clampViewport({
+    width: p.width,
+    height: p.height,
+    label: p.label,
+    heightMode: p.heightMode ?? 'fixed',
+  });
 }
 
 /**
  * Размер области превью (контент) после display scale.
- * body + iframe-shell = ровно эти width/height.
  */
 export function contentDisplaySize(
   viewport: DeviceViewport,
@@ -89,7 +324,6 @@ export function contentDisplaySize(
 
 /**
  * Внешний размер ноды на карте (content + chrome).
- * RF `style` width/height и root `.page-node` используют это.
  */
 export function nodeOuterSize(
   viewport: DeviceViewport,
@@ -100,19 +334,14 @@ export function nodeOuterSize(
   return { width: layout.outerWidth, height: layout.outerHeight };
 }
 
-/**
- * Полная раскладка размеров одной page-node (единый источник правды).
- */
 export type NodeLayoutMetrics = {
   readonly viewport: DeviceViewport;
   readonly displayScale: number;
-  /** Область превью (body / iframe-shell) */
   readonly contentWidth: number;
   readonly contentHeight: number;
   readonly chromeHeight: number;
   readonly outerWidth: number;
   readonly outerHeight: number;
-  /** scale() для iframe: content/viewport */
   readonly iframeScaleX: number;
   readonly iframeScaleY: number;
 };
@@ -144,23 +373,59 @@ export function computeNodeLayout(
 }
 
 /**
- * Viewport из appmap node или дефолт 16:9.
+ * Связующая нода: menu / nav / connector / kind layout + flag.
  */
-export function resolveNodeViewport(
-  nodeViewport: DeviceViewport | undefined,
-  override: DeviceViewport | undefined,
-): DeviceViewport {
-  if (override) {
-    return clampViewport(override);
+export function isConnectorNode(node: AppMapNode): boolean {
+  if (node.connector === true) {
+    return true;
   }
-  if (nodeViewport) {
-    return clampViewport(nodeViewport);
+  if (node.kind === 'layout') {
+    return true;
   }
-  return DEFAULT_VIEWPORT;
+  const meta = node.metadata;
+  if (meta !== undefined && meta['connector'] === true) {
+    return true;
+  }
+  const tags = node.tags;
+  if (tags !== undefined) {
+    for (const t of tags) {
+      if (t === 'menu' || t === 'nav' || t === 'connector') {
+        return true;
+      }
+    }
+  }
+  return false;
 }
 
 /**
- * Проверка: outer = content + chrome; shell fills content (equality).
+ * World-size связующей ноды из screen px и zoom (постоянный размер на экране).
+ */
+export function connectorWorldSize(args: {
+  readonly zoom: number;
+  readonly screenWidth: number;
+  readonly screenHeight: number;
+  readonly maxScreenWidth: number;
+  readonly maxScreenHeight: number;
+  readonly minScreenWidth: number;
+  readonly minScreenHeight: number;
+}): { readonly width: number; readonly height: number } {
+  const z = Number.isFinite(args.zoom) && args.zoom > 0.01 ? args.zoom : 1;
+  const sw = Math.min(
+    args.maxScreenWidth,
+    Math.max(args.minScreenWidth, args.screenWidth),
+  );
+  const sh = Math.min(
+    args.maxScreenHeight,
+    Math.max(args.minScreenHeight, args.screenHeight),
+  );
+  return {
+    width: Math.max(8, sw / z),
+    height: Math.max(8, sh / z),
+  };
+}
+
+/**
+ * Проверка: outer = content + chrome; shell fills content.
  */
 export function assertShellConsistency(layout: NodeLayoutMetrics): boolean {
   const outerOk =

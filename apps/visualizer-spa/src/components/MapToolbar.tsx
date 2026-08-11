@@ -46,6 +46,20 @@ export function MapToolbar(props: MapToolbarProps) {
   const setIframeScale = useAppStore((s) => s.setIframeScale);
   const maxLiveIframes = useAppStore((s) => s.maxLiveIframes);
   const setMaxLiveIframes = useAppStore((s) => s.setMaxLiveIframes);
+  const setMapViewportPreset = useAppStore((s) => s.setMapViewportPreset);
+  const mapLayout = useAppStore((s) => s.document?.layout);
+  const mapDeviceW =
+    mapLayout?.defaultDeviceViewport?.width ??
+    mapLayout?.defaultWidth ??
+    390;
+  const mapDeviceH =
+    mapLayout?.defaultDeviceViewport?.height ??
+    mapLayout?.defaultHeight ??
+    844;
+  const mapDeviceMode =
+    mapLayout?.defaultDeviceViewport?.heightMode ??
+    mapLayout?.defaultHeightMode ??
+    'fixed';
   // maxWarm / warmCount — keep-alive; fallbacks на случай partial HMR store
   const maxWarmIframes = useAppStore((s) =>
     typeof s.maxWarmIframes === 'number' ? s.maxWarmIframes : 8,
@@ -415,6 +429,52 @@ export function MapToolbar(props: MapToolbarProps) {
             <option value={0.5}>50%</option>
             <option value={0.75}>75%</option>
             <option value={1}>100%</option>
+          </Select>
+        </Field>
+
+        <Field
+          label="Адаптив всех экранов (карта)"
+          htmlFor="set-map-adaptive"
+          hint={`Сейчас ${mapDeviceW}×${mapDeviceH} · ${mapDeviceMode}. Размер из layout JSON (fixed), не measure при рендере.`}
+        >
+          <Select
+            id="set-map-adaptive"
+            data-testid="map-adaptive-select"
+            disabled={!document}
+            value={
+              mapLayout?.defaultDeviceViewport?.label
+                ? String(mapDeviceW)
+                : String(mapDeviceW)
+            }
+            onChange={(e) => {
+              const w = Number(e.target.value);
+              // match builtin by width
+              const id =
+                w === 360
+                  ? 'w360'
+                  : w === 390
+                    ? 'w390'
+                    : w === 480
+                      ? 'w480'
+                      : w === 768
+                        ? 'w768'
+                        : w === 1024
+                          ? 'w1024'
+                          : w === 1280
+                            ? 'w1280'
+                            : w === 1920
+                              ? 'w1920'
+                              : 'w390';
+              setMapViewportPreset(id);
+            }}
+          >
+            <option value={360}>360×800 phone S</option>
+            <option value={390}>390×844 phone (default)</option>
+            <option value={480}>480×900</option>
+            <option value={768}>768×1024 tablet</option>
+            <option value={1024}>1024×900</option>
+            <option value={1280}>1280×800 laptop</option>
+            <option value={1920}>1920×1080 desktop</option>
           </Select>
         </Field>
 

@@ -186,7 +186,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const widthPresets = resolveViewportPresets(mapLayout);
 
   const applyMeasuredHeight = () => {
-    if (viewport.heightMode === 'fixed') {
+    // Размер layout — из JSON fixed; measure только при explicit auto
+    if (viewport.heightMode !== 'auto') {
       return;
     }
     const h = measureIframeContentHeight(iframeRef.current);
