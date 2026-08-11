@@ -84,8 +84,10 @@ export function reconcile(s: PolicyState): ReconcileResult {
 
   const live = new Set<string>();
   const reasons = new Map<string, PriorityReason>();
+  // maxLiveIframes <= 0 или >= 9999 → без лимита (все с priority > 0)
+  const unlimited = s.maxLiveIframes <= 0 || s.maxLiveIframes >= 9999;
   for (const x of ranked) {
-    if (live.size >= s.maxLiveIframes) {
+    if (!unlimited && live.size >= s.maxLiveIframes) {
       break;
     }
     live.add(x.id);
@@ -146,5 +148,10 @@ export function liveDiff(
   };
 }
 
+/**
+ * Бюджет live iframe (enterprise TDD §7): multi-iframe, не «все сразу».
+ * 9999 в UI = opt-in unlimited.
+ */
 export const DEFAULT_MAX_LIVE = 8;
+/** Pin soft-cap; excess pins → deferred toast, live режет maxLive. */
 export const DEFAULT_MAX_PINNED = 6;

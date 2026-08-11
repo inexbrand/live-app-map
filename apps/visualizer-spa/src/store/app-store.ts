@@ -753,6 +753,21 @@ export const useAppStore = create<AppStore>((set, get) => ({
       iframeAllowed[n.id] =
         n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id));
     }
+
+    // Prefetch 1-hop соседей selected — прогрев без pin
+    const prefetch = new Set<string>();
+    if (s.selectedPageId !== null && s.index !== null) {
+      for (const id of neighbors(s.index, s.selectedPageId)) {
+        prefetch.add(id);
+      }
+    }
+
+    // Hysteresis: уже LIVE чуть приоритетнее — меньше thrash при pan
+    const recentLiveScore: Record<string, number> = {};
+    for (const id of s.livePageIds) {
+      recentLiveScore[id] = 5;
+    }
+
     const result = reconcile({
       mode: s.mode,
       maxLiveIframes: s.maxLiveIframes,
@@ -761,14 +776,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
       pinned: s.pinnedPageIds,
       visible: s.visiblePageIds,
       selected: s.selectedPageId,
-      prefetch: new Set(),
+      prefetch,
       iframeAllowed,
-      recentLiveScore: {},
+      recentLiveScore,
     });
     if (result.deferredPins.length > 0) {
       set({
         livePageIds: result.liveIds,
-        toast: `Pin отложен (бюджет iframe): ${result.deferredPins.join(', ')}`,
+        toast: `Pin отложен (бюджет iframe ${s.maxLiveIframes}): ${result.deferredPins.join(', ')}`,
       });
       return;
     }

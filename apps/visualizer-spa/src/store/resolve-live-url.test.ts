@@ -128,13 +128,16 @@ describe('resolveLiveUrl', () => {
     expect(useAppStore.getState().document).not.toBeNull();
   });
 
-  test('setMaxLiveIframes: 0/9999 = unlimited, иначе clamp 1–cap', () => {
+  test('setMaxLiveIframes: 0/9999 = unlimited, иначе clamp; default budget 8', () => {
     useAppStore.getState().loadDocument(miniDoc);
     useAppStore.getState().setMode('live');
+    // default after clear is DEFAULT_MAX_LIVE=8
     useAppStore.getState().setMaxLiveIframes(0);
     expect(useAppStore.getState().maxLiveIframes).toBe(9999);
     useAppStore.getState().setMaxLiveIframes(4);
     expect(useAppStore.getState().maxLiveIframes).toBe(4);
+    useAppStore.getState().setMaxLiveIframes(8);
+    expect(useAppStore.getState().maxLiveIframes).toBe(8);
     useAppStore.getState().setMaxLiveIframes(9999);
     expect(useAppStore.getState().maxLiveIframes).toBe(9999);
   });

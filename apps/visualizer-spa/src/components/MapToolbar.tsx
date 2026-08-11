@@ -409,19 +409,20 @@ export function MapToolbar(props: MapToolbarProps) {
         <Field
           label="Макс. живых iframe"
           htmlFor="set-max"
-          hint="Без лимита = все видимые и закреплённые. Слишком много тяжёлых iframe может просадить вкладку."
+          hint="Multi-iframe с бюджетом: pin + выбранный + видимые (по приоритету). Остальные — placeholder. «Без лимита» только для маленьких карт."
         >
           <Select
             id="set-max"
             value={maxLiveIframes >= 9999 ? 9999 : maxLiveIframes}
             onChange={(e) => setMaxLiveIframes(Number(e.target.value))}
           >
-            <option value={9999}>Без лимита</option>
-            {[8, 16, 32, 64, 128, 256].map((n) => (
+            {[4, 6, 8, 12, 16].map((n) => (
               <option key={n} value={n}>
                 {n}
+                {n === 8 ? ' (по умолчанию)' : ''}
               </option>
             ))}
+            <option value={9999}>Без лимита (осторожно)</option>
           </Select>
         </Field>
 

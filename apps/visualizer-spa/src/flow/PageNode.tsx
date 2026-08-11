@@ -17,9 +17,12 @@ import {
 } from 'lucide-react';
 import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
+  measureIframeContentHeight,
+} from '../lib/measure-iframe-height';
+import {
   computeNodeLayout,
   resolveNodeViewport,
-  VIEWPORT_PRESETS,
+  resolveViewportPresets,
 } from '../lib/viewport';
 import { Badge, Chip } from '../ui';
 import { useAppStore } from '../store/app-store';
@@ -49,6 +52,8 @@ export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): bool
   // Same-origin Vite TLS proxy (self-signed target, secure:false)
   if (
     trimmed.includes('/__lam_proxy/miniapp') ||
+    trimmed.includes('/__lam_proxy/admin') ||
+    trimmed.includes('/__lam_proxy/site') ||
     trimmed.includes('/__lam_proxy/https/')
   ) {
     return true;
@@ -90,12 +95,24 @@ export function resolvePagePlaceholder(args: {
   readonly mode: 'live' | 'map-only' | 'compact';
   readonly hasUrl: boolean;
   readonly iframeError: boolean;
+  /** Нода в viewport, но не в live-бюджете */
+  readonly inViewport?: boolean;
+  readonly isPinned?: boolean;
 }): string {
   if (args.iframeError) {
     return 'Ошибка загрузки iframe';
   }
   if (args.mode === 'live') {
-    return args.hasUrl ? 'Заморожено (вне viewport / бюджета)' : 'Нет URL';
+    if (!args.hasUrl) {
+      return 'Нет URL';
+    }
+    if (args.isPinned) {
+      return 'Pin в очереди (бюджет iframe)';
+    }
+    if (args.inViewport) {
+      return 'В кадре · ждёт слот (бюджет iframe)';
+    }
+    return 'Вне кадра · live при приближении';
   }
   if (args.mode === 'compact') {
     return 'Компакт';
@@ -121,6 +138,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const interactPageId = useAppStore((s) => s.interactPageId);
   const activeStates = useAppStore((s) => s.activeStates);
   const nodeViewports = useAppStore((s) => s.nodeViewports);
+  const contentHeights = useAppStore((s) => s.contentHeights);
+  const mapLayout = useAppStore((s) => s.document?.layout);
   const selectPage = useAppStore((s) => s.selectPage);
   const togglePin = useAppStore((s) => s.togglePin);
   const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
@@ -128,6 +147,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const setInteract = useAppStore((s) => s.setInteract);
   const setVisible = useAppStore((s) => s.setVisible);
   const setNodeViewport = useAppStore((s) => s.setNodeViewport);
+  const setContentHeight = useAppStore((s) => s.setContentHeight);
   const pushLog = useAppStore((s) => s.pushLog);
   const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
   const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
@@ -137,6 +157,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
+  const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeError, setIframeError] = useState(false);
   const isSelected = selectedPageId === node.id;
   const isDim =
@@ -146,8 +167,24 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const isPinned = pinned.has(node.id);
 
   const override = nodeViewports.get(node.id);
-  const viewport = resolveNodeViewport(node.viewport, override);
+  const viewport = resolveNodeViewport({
+    nodeViewport: node.viewport,
+    override,
+    layout: mapLayout,
+    measuredHeight: contentHeights.get(node.id),
+  });
   const layout = computeNodeLayout(viewport, scale, { selected: isSelected });
+  const widthPresets = resolveViewportPresets(mapLayout);
+
+  const applyMeasuredHeight = () => {
+    if (viewport.heightMode === 'fixed') {
+      return;
+    }
+    const h = measureIframeContentHeight(iframeRef.current);
+    if (h !== null) {
+      setContentHeight(node.id, h);
+    }
+  };
 
   // Sandbox trust: proxy URL same-origin, иначе dogfood host / baseUrl
   const sandboxHintUrl =
@@ -195,24 +232,36 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     }
   };
 
+  const inViewport = visiblePageIds.has(node.id);
   const placeholder = resolvePagePlaceholder({
     mode,
     hasUrl: Boolean(url),
     iframeError,
+    inViewport,
+    isPinned,
   });
 
   const showIframe = isLive && url && !iframeError;
 
-  const applyPreset = (p: (typeof VIEWPORT_PRESETS)[number]) => {
+  const applyPreset = (p: {
+    readonly id: string;
+    readonly label: string;
+    readonly width: number;
+    readonly height: number;
+    readonly heightMode?: 'auto' | 'fixed';
+  }) => {
     const next: DeviceViewport = {
       width: p.width,
       height: p.height,
       label: p.label,
+      heightMode: p.heightMode ?? 'auto',
     };
     setNodeViewport(node.id, next);
+    // width сменился — re-measure после reload iframe
+    window.setTimeout(() => applyMeasuredHeight(), 400);
   };
 
-  /** Resize: по умолчанию держим 16:9; Shift — свободный aspect */
+  /** Resize по ширине; высота auto переизмеряется. Shift — free height (fixed). */
   const onResizePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
     e.preventDefault();
@@ -220,34 +269,36 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     const startY = e.clientY;
     const startW = viewport.width;
     const startH = viewport.height;
-    const lock16x9 = !e.shiftKey;
+    const freeHeight = e.shiftKey;
     const pointerId = e.pointerId;
     const target = e.currentTarget;
     target.setPointerCapture(pointerId);
 
     const onMove = (ev: PointerEvent) => {
       const dw = (ev.clientX - startX) / scale;
-      const nextW = Math.max(200, startW + dw);
-      if (lock16x9) {
-        const nextH = Math.round(nextW * (9 / 16));
+      const nextW = Math.max(200, Math.min(2560, startW + dw));
+      if (freeHeight) {
+        const dh = (ev.clientY - startY) / scale;
         setNodeViewport(node.id, {
-          width: nextW,
-          height: nextH,
-          label: '16:9',
+          width: Math.round(nextW),
+          height: Math.max(120, startH + dh),
+          label: 'Свой',
+          heightMode: 'fixed',
         });
         return;
       }
-      const dh = (ev.clientY - startY) / scale;
       setNodeViewport(node.id, {
-        width: nextW,
-        height: Math.max(120, startH + dh),
-        label: 'Свой',
+        width: Math.round(nextW),
+        height: viewport.height,
+        label: String(Math.round(nextW)),
+        heightMode: 'auto',
       });
     };
     const onUp = () => {
       target.releasePointerCapture(pointerId);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
+      window.setTimeout(() => applyMeasuredHeight(), 200);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);
@@ -320,6 +371,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         <span className="page-node__size">
           {' '}
           · {viewport.width}×{viewport.height}
+          {viewport.heightMode === 'auto' ? ' auto' : ''}
           {viewport.label ? ` ${viewport.label}` : ''}
         </span>
       </div>
@@ -346,13 +398,20 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             }}
           >
             <iframe
-              key={`${url}:${sandboxPreset}:${viewport.width}x${viewport.height}`}
+              ref={iframeRef}
+              key={`${url}:${sandboxPreset}:${viewport.width}:${viewport.heightMode ?? 'auto'}`}
               title={node.title}
               src={url}
               width={viewport.width}
               height={viewport.height}
               referrerPolicy="strict-origin-when-cross-origin"
               allow="clipboard-read; clipboard-write"
+              className={
+                interactPageId === node.id
+                  ? 'page-node__iframe page-node__iframe--interact nodrag nopan nowheel'
+                  : 'page-node__iframe nodrag nopan nowheel'
+              }
+              data-lam-interact={interactPageId === node.id ? '1' : '0'}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -362,8 +421,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 border: 0,
                 transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
                 transformOrigin: '0 0',
-                pointerEvents:
-                  interactPageId === node.id || isSelected ? 'auto' : 'none',
+                /* Только explicit «Клики в iframe» — hover/click доходят в app */
+                pointerEvents: interactPageId === node.id ? 'auto' : 'none',
+                zIndex: interactPageId === node.id ? 2 : 0,
               }}
               sandbox={sandboxValue}
               onLoad={() => {
@@ -371,7 +431,13 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 pushLog({
                   level: 'info',
                   source: node.id,
-                  message: `iframe load ${viewport.width}×${viewport.height} · ${url}`,
+                  message: `iframe load ${viewport.width}×${viewport.height}${viewport.heightMode === 'auto' ? ' auto' : ''} · ${url}`,
+                });
+                // measure полной высоты страницы (same-origin / proxy)
+                window.requestAnimationFrame(() => {
+                  applyMeasuredHeight();
+                  window.setTimeout(() => applyMeasuredHeight(), 350);
+                  window.setTimeout(() => applyMeasuredHeight(), 1200);
                 });
               }}
               onError={() => {
@@ -391,7 +457,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         )}
         <div
           className="page-node__resize"
-          title="Тяните за угол: 16:9 (Shift — свободный aspect)"
+          title="Ширина (Shift — free height / fixed)"
           onPointerDown={onResizePointerDown}
           onClick={(e) => e.stopPropagation()}
         />
@@ -402,16 +468,14 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
           onClick={(e) => e.stopPropagation()}
         >
           <Smartphone size={12} strokeWidth={1.75} aria-hidden={true} />
-          {VIEWPORT_PRESETS.map((p) => (
+          {widthPresets.map((p) => (
             <button
               key={p.id}
               type="button"
               className={`page-node__vp-btn${
-                viewport.width === p.width && viewport.height === p.height
-                  ? ' page-node__vp-btn--on'
-                  : ''
+                viewport.width === p.width ? ' page-node__vp-btn--on' : ''
               }`}
-              title={`${p.label} ${p.width}×${p.height}`}
+              title={`${p.label} · ${p.width}px · height ${p.heightMode ?? 'auto'}`}
               onClick={() => applyPreset(p)}
             >
               {p.label}
