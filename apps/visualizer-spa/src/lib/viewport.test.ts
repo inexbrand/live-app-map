@@ -161,4 +161,16 @@ describe('viewport', () => {
     expect(v?.height).toBe(1080);
     expect(v?.heightMode).toBe('fixed');
   });
+
+  test('viewportFromPresetId w1024 with incomplete miniapp-like presets', () => {
+    const layout = {
+      viewportPresets: [
+        { id: 'w390', label: '390', width: 390, height: 844, heightMode: 'fixed' as const },
+      ],
+    };
+    const v = viewportFromPresetId('w1024', layout);
+    expect(v).not.toBeNull();
+    expect(v?.width).toBe(1024);
+    expect(v?.height).toBe(900);
+  });
 });

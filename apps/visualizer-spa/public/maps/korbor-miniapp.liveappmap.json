@@ -612,43 +612,50 @@
         "id": "w360",
         "label": "360",
         "width": 360,
-        "heightMode": "fixed",
-        "height": 844
+        "height": 800,
+        "heightMode": "fixed"
       },
       {
         "id": "w390",
         "label": "390",
         "width": 390,
-        "heightMode": "fixed",
-        "height": 844
+        "height": 844,
+        "heightMode": "fixed"
       },
       {
         "id": "w480",
         "label": "480",
         "width": 480,
-        "heightMode": "fixed",
-        "height": 900
+        "height": 900,
+        "heightMode": "fixed"
       },
       {
         "id": "w768",
         "label": "768",
         "width": 768,
-        "heightMode": "fixed",
-        "height": 1024
+        "height": 1024,
+        "heightMode": "fixed"
+      },
+      {
+        "id": "w1024",
+        "label": "1024",
+        "width": 1024,
+        "height": 900,
+        "heightMode": "fixed"
       },
       {
         "id": "w1280",
         "label": "1280",
         "width": 1280,
-        "heightMode": "fixed",
-        "height": 800
+        "height": 800,
+        "heightMode": "fixed"
       },
       {
         "id": "w1920",
         "label": "1920",
         "width": 1920,
-        "heightMode": "fixed",
-        "height": 800
+        "height": 1080,
+        "heightMode": "fixed"
       }
     ],
     "connector": {

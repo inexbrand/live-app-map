@@ -113,4 +113,56 @@ describe('map global adaptive', () => {
     expect(ddv?.width).toBe(480);
     expect(ddv?.height).toBe(900);
   });
+
+  test('incomplete map viewportPresets still resolve w1024 and w1920×1080', () => {
+    // Repro skeptic: miniapp-like partial list without w1024, wrong w1920 height in JSON
+    useAppStore.getState().loadDocument({
+      ...doc,
+      layout: {
+        ...doc.layout,
+        viewportPresets: [
+          { id: 'w390', label: '390', width: 390, height: 844 },
+          { id: 'w1920', label: '1920', width: 1920, height: 800 },
+        ],
+      },
+    });
+    // w1024 missing from JSON → builtin merge
+    useAppStore.getState().setMapViewportPreset('w1024');
+    const after1024 =
+      useAppStore.getState().document?.layout?.defaultDeviceViewport;
+    expect(after1024?.width).toBe(1024);
+    expect(after1024?.height).toBe(900);
+
+    // w1920 in JSON with height 800 → JSON wins (merge overlay)
+    useAppStore.getState().setMapViewportPreset('w1920');
+    const after1920 =
+      useAppStore.getState().document?.layout?.defaultDeviceViewport;
+    expect(after1920?.width).toBe(1920);
+    expect(after1920?.height).toBe(800);
+
+    // pages without viewport follow map adaptive (not measure)
+    const a = resolveNodeViewport({
+      layout: useAppStore.getState().document?.layout,
+      measuredHeight: 50_000,
+    });
+    expect(a.width).toBe(1920);
+    expect(a.height).toBe(800);
+    expect(a.heightMode).toBe('fixed');
+  });
+
+  test('fixed path never uses contentHeights / measuredHeight', () => {
+    useAppStore.getState().loadDocument(doc);
+    useAppStore.getState().setContentHeight('route:/a', 12_000);
+    const layout = useAppStore.getState().document?.layout;
+    const measured = useAppStore.getState().contentHeights.get('route:/a');
+    expect(measured).toBe(12_000);
+    const v = resolveNodeViewport({
+      nodeViewport: undefined,
+      layout,
+      measuredHeight: measured,
+    });
+    expect(v.heightMode).toBe('fixed');
+    expect(v.height).toBe(844);
+    expect(v.height).not.toBe(12_000);
+  });
 });

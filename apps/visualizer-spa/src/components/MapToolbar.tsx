@@ -22,6 +22,7 @@ import { ensureDogfoodSessions as mintMissingDogfood } from '../lib/ensure-dogfo
 import { importMapFile } from '../lib/import-map';
 import { loadMapPresetIntoStore } from '../lib/load-map-preset';
 import type { MapCatalogEntry } from '../lib/map-catalog';
+import { resolveViewportPresets } from '../lib/viewport';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 import { Button, Field, Input, Select, Textarea } from '../ui';
 import { EdgeSheet } from './EdgeSheet';
@@ -441,40 +442,27 @@ export function MapToolbar(props: MapToolbarProps) {
             id="set-map-adaptive"
             data-testid="map-adaptive-select"
             disabled={!document}
-            value={
-              mapLayout?.defaultDeviceViewport?.label
-                ? String(mapDeviceW)
-                : String(mapDeviceW)
-            }
+            value={(() => {
+              const presets = resolveViewportPresets(mapLayout);
+              const match = presets.find(
+                (p) => p.width === mapDeviceW && p.height === mapDeviceH,
+              );
+              return match?.id ?? 'w390';
+            })()}
             onChange={(e) => {
-              const w = Number(e.target.value);
-              // match builtin by width
-              const id =
-                w === 360
-                  ? 'w360'
-                  : w === 390
-                    ? 'w390'
-                    : w === 480
-                      ? 'w480'
-                      : w === 768
-                        ? 'w768'
-                        : w === 1024
-                          ? 'w1024'
-                          : w === 1280
-                            ? 'w1280'
-                            : w === 1920
-                              ? 'w1920'
-                              : 'w390';
-              setMapViewportPreset(id);
+              setMapViewportPreset(e.target.value);
             }}
           >
-            <option value={360}>360×800 phone S</option>
-            <option value={390}>390×844 phone (default)</option>
-            <option value={480}>480×900</option>
-            <option value={768}>768×1024 tablet</option>
-            <option value={1024}>1024×900</option>
-            <option value={1280}>1280×800 laptop</option>
-            <option value={1920}>1920×1080 desktop</option>
+            {resolveViewportPresets(mapLayout).map((p) => (
+              <option key={p.id} value={p.id}>
+                {p.width}×{p.height}
+                {p.id === 'w390' ? ' phone (default)' : ''}
+                {p.id === 'w360' ? ' phone S' : ''}
+                {p.id === 'w768' ? ' tablet' : ''}
+                {p.id === 'w1280' ? ' laptop' : ''}
+                {p.id === 'w1920' ? ' desktop' : ''}
+              </option>
+            ))}
           </Select>
         </Field>
 

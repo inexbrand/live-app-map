@@ -65,16 +65,20 @@ describe('resolveNodeViewport (JSON fixed + optional auto)', () => {
 });
 
 describe('resolveViewportPresets', () => {
-  test('JSON presets', () => {
+  test('JSON presets merge over builtin (incomplete JSON keeps w1024)', () => {
     const p = resolveViewportPresets({
       viewportPresets: [
-        { id: 'm', label: '360', width: 360 },
-        { id: 't', label: '480', width: 480, height: 900 },
+        { id: 'w360', label: '360', width: 360, height: 700 },
+        { id: 'custom', label: 'Custom', width: 500, height: 500 },
       ],
     });
-    expect(p).toHaveLength(2);
-    expect(p[0]?.width).toBe(360);
-    expect(p[0]?.heightMode).toBe('fixed');
+    // builtin ids still present
+    expect(p.some((x) => x.id === 'w1024')).toBe(true);
+    expect(p.some((x) => x.id === 'w1920')).toBe(true);
+    // JSON override height for w360
+    expect(p.find((x) => x.id === 'w360')?.height).toBe(700);
+    // extra custom appended
+    expect(p.find((x) => x.id === 'custom')?.width).toBe(500);
   });
 
   test('без JSON — builtin', () => {
