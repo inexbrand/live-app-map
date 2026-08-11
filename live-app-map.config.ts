@@ -16,7 +16,9 @@ export default defineConfig({
   iframe: {
     maxLiveIframes: 8,
     maxPinned: 6,
-    freezeStrategy: 'unmount',
+    /** keep-alive LRU сверх live (DOM без unmount) */
+    maxWarmIframes: 8,
+    freezeStrategy: 'hybrid',
   },
   edge: {
     includeLowConfidence: false,

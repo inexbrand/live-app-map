@@ -15,6 +15,8 @@ export type LiveAppMapConfig = {
   readonly iframe?: {
     readonly maxLiveIframes?: number;
     readonly maxPinned?: number;
+    /** Keep-alive LRU сверх live (iframe в DOM без unmount). */
+    readonly maxWarmIframes?: number;
     readonly freezeStrategy?: 'unmount' | 'blank' | 'hybrid';
   };
   readonly ignore?: readonly string[];

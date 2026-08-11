@@ -155,3 +155,122 @@ export function liveDiff(
 export const DEFAULT_MAX_LIVE = 8;
 /** Pin soft-cap; excess pins → deferred toast, live режет maxLive. */
 export const DEFAULT_MAX_PINNED = 6;
+/**
+ * Keep-alive: iframe остаётся в DOM (state SPA не сбрасывается) после
+ * выхода из live-бюджета. LRU, pin защищён.
+ */
+export const DEFAULT_MAX_WARM = 8;
+
+export type WarmPoolInput = {
+  /** Текущий live-набор после reconcile */
+  readonly liveIds: ReadonlySet<string>;
+  /** Предыдущий live (до этого recompute) */
+  readonly previousLiveIds: ReadonlySet<string>;
+  /**
+   * LRU warm: **сначала старые** (index 0 = жертва eviction).
+   * Не включает id, которые сейчас live.
+   */
+  readonly previousWarmOrder: readonly string[];
+  readonly pinned: ReadonlySet<string>;
+  /** Сколько слотов держать «тёплыми» сверх live */
+  readonly maxWarm: number;
+  /** id → можно ли монтировать iframe */
+  readonly iframeAllowed: Readonly<Record<string, boolean>>;
+};
+
+export type WarmPoolResult = {
+  /** Только warm (не live), LRU oldest-first */
+  readonly warmOrder: readonly string[];
+  readonly warmIds: ReadonlySet<string>;
+  /** live ∪ warm — iframe остаётся в DOM */
+  readonly mountedIds: ReadonlySet<string>;
+};
+
+function isAllowed(
+  id: string,
+  iframeAllowed: Readonly<Record<string, boolean>>,
+): boolean {
+  return iframeAllowed[id] ?? true;
+}
+
+/**
+ * Keep-alive pool: кто ушёл из live → warm; eviction LRU (не pin первым).
+ * Iframe в mountedIds не unmount — state приложения сохраняется.
+ */
+export function reconcileWarmPool(input: WarmPoolInput): WarmPoolResult {
+  const {
+    liveIds,
+    previousLiveIds,
+    previousWarmOrder,
+    pinned,
+    maxWarm,
+    iframeAllowed,
+  } = input;
+
+  const unlimitedWarm = maxWarm <= 0 || maxWarm >= 9999;
+
+  // Warm candidates: previous order minus live / disallowed
+  let order: string[] = [];
+  const seen = new Set<string>();
+  for (const id of previousWarmOrder) {
+    if (liveIds.has(id)) {
+      continue;
+    }
+    if (!isAllowed(id, iframeAllowed)) {
+      continue;
+    }
+    if (seen.has(id)) {
+      continue;
+    }
+    seen.add(id);
+    order.push(id);
+  }
+
+  // Только что ушли из live → newest (конец массива)
+  for (const id of previousLiveIds) {
+    if (liveIds.has(id)) {
+      continue;
+    }
+    if (!isAllowed(id, iframeAllowed)) {
+      continue;
+    }
+    order = order.filter((x) => x !== id);
+    order.push(id);
+  }
+
+  // Pin всегда в warm, если не live (newest, защищены при eviction)
+  for (const id of pinned) {
+    if (liveIds.has(id)) {
+      continue;
+    }
+    if (!isAllowed(id, iframeAllowed)) {
+      continue;
+    }
+    order = order.filter((x) => x !== id);
+    order.push(id);
+  }
+
+  if (!unlimitedWarm) {
+    while (order.length > maxWarm) {
+      // Evict oldest non-pinned first
+      let victim = -1;
+      for (let i = 0; i < order.length; i++) {
+        const id = order[i];
+        if (id !== undefined && !pinned.has(id)) {
+          victim = i;
+          break;
+        }
+      }
+      if (victim === -1) {
+        // Все pin — всё равно режем oldest
+        order.shift();
+      } else {
+        order.splice(victim, 1);
+      }
+    }
+  }
+
+  const warmIds = new Set(order);
+  const mountedIds = new Set<string>([...liveIds, ...warmIds]);
+  return { warmOrder: order, warmIds, mountedIds };
+}

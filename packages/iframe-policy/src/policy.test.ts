@@ -3,6 +3,7 @@ import {
   liveDiff,
   priority,
   reconcile,
+  reconcileWarmPool,
   transitionSlot,
   type IframeSlotState,
   type PolicyState,
@@ -226,6 +227,72 @@ describe('reconcile', () => {
       }),
     );
     expect([...r.liveIds]).toEqual(['b']);
+  });
+});
+
+describe('reconcileWarmPool', () => {
+  test('ушедшие из live попадают в warm (newest в конце)', () => {
+    const r = reconcileWarmPool({
+      liveIds: new Set(['c']),
+      previousLiveIds: new Set(['a', 'b']),
+      previousWarmOrder: [],
+      pinned: new Set(),
+      maxWarm: 4,
+      iframeAllowed: { a: true, b: true, c: true },
+    });
+    expect([...r.warmIds].sort()).toEqual(['a', 'b']);
+    expect(r.mountedIds.has('c')).toBe(true);
+    expect(r.mountedIds.has('a')).toBe(true);
+    // order: a then b (iteration order of previousLive)
+    expect(r.warmOrder).toEqual(['a', 'b']);
+  });
+
+  test('LRU eviction: oldest non-pin вытесняется при переполнении', () => {
+    const r = reconcileWarmPool({
+      liveIds: new Set(['live']),
+      previousLiveIds: new Set(['live']),
+      previousWarmOrder: ['old1', 'old2', 'old3'],
+      pinned: new Set(['old2']),
+      maxWarm: 2,
+      iframeAllowed: {
+        live: true,
+        old1: true,
+        old2: true,
+        old3: true,
+      },
+    });
+    expect(r.warmIds.size).toBe(2);
+    // pin old2 must stay
+    expect(r.warmIds.has('old2')).toBe(true);
+    // oldest non-pin old1 should go first
+    expect(r.warmIds.has('old1')).toBe(false);
+    expect(r.warmIds.has('old3')).toBe(true);
+  });
+
+  test('pin не в live всегда в warm', () => {
+    const r = reconcileWarmPool({
+      liveIds: new Set(['x']),
+      previousLiveIds: new Set(['x']),
+      previousWarmOrder: [],
+      pinned: new Set(['p']),
+      maxWarm: 4,
+      iframeAllowed: { x: true, p: true },
+    });
+    expect(r.warmIds.has('p')).toBe(true);
+    expect(r.mountedIds.has('p')).toBe(true);
+  });
+
+  test('disallowed id не остаётся mounted', () => {
+    const r = reconcileWarmPool({
+      liveIds: new Set(),
+      previousLiveIds: new Set(['a']),
+      previousWarmOrder: ['b'],
+      pinned: new Set(),
+      maxWarm: 8,
+      iframeAllowed: { a: false, b: true },
+    });
+    expect(r.warmIds.has('a')).toBe(false);
+    expect(r.warmIds.has('b')).toBe(true);
   });
 });
 

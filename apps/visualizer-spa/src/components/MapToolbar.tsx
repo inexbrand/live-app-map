@@ -46,6 +46,8 @@ export function MapToolbar(props: MapToolbarProps) {
   const setIframeScale = useAppStore((s) => s.setIframeScale);
   const maxLiveIframes = useAppStore((s) => s.maxLiveIframes);
   const setMaxLiveIframes = useAppStore((s) => s.setMaxLiveIframes);
+  const maxWarmIframes = useAppStore((s) => s.maxWarmIframes);
+  const setMaxWarmIframes = useAppStore((s) => s.setMaxWarmIframes);
   const searchQuery = useAppStore((s) => s.searchQuery);
   const setSearchQuery = useAppStore((s) => s.setSearchQuery);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
@@ -65,6 +67,7 @@ export function MapToolbar(props: MapToolbarProps) {
   const setLastLoadError = useAppStore((s) => s.setLastLoadError);
   const document = useAppStore((s) => s.document);
   const liveCount = useAppStore((s) => s.livePageIds.size);
+  const warmCount = useAppStore((s) => s.warmPageIds.size);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
 
   const [sheet, setSheet] = useState<SheetId>(null);
@@ -275,9 +278,15 @@ export function MapToolbar(props: MapToolbarProps) {
 
         <div className="toolbar__spacer" />
 
-        <span className="budget-pill" title="Живые iframe (visible+pin); 9999 = без лимита">
-          живых {liveCount}
+        <span
+          className="budget-pill"
+          title="live = активный бюджет; warm = keep-alive в DOM без перезагрузки; pin защищён"
+        >
+          live {liveCount}
           {maxLiveIframes >= 9999 ? '' : `/${maxLiveIframes}`}
+          {' · '}
+          warm {warmCount}
+          {maxWarmIframes >= 9999 ? '' : `/${maxWarmIframes}`}
           {' · '}
           pin {pinCount}
         </span>
@@ -423,6 +432,26 @@ export function MapToolbar(props: MapToolbarProps) {
               </option>
             ))}
             <option value={9999}>Без лимита (осторожно)</option>
+          </Select>
+        </Field>
+
+        <Field
+          label="Warm keep-alive"
+          htmlFor="set-warm"
+          hint="Сколько iframe держать в DOM после ухода из live (без перезагрузки SPA). Pin не вытесняются первыми."
+        >
+          <Select
+            id="set-warm"
+            value={maxWarmIframes >= 9999 ? 9999 : maxWarmIframes}
+            onChange={(e) => setMaxWarmIframes(Number(e.target.value))}
+          >
+            {[0, 4, 6, 8, 12, 16].map((n) => (
+              <option key={n} value={n}>
+                {n === 0 ? '0 (сразу unmount)' : n}
+                {n === 8 ? ' (по умолчанию)' : ''}
+              </option>
+            ))}
+            <option value={9999}>Без лимита warm</option>
           </Select>
         </Field>
 

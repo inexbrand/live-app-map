@@ -16,7 +16,9 @@ import {
 import {
   DEFAULT_MAX_LIVE,
   DEFAULT_MAX_PINNED,
+  DEFAULT_MAX_WARM,
   reconcile,
+  reconcileWarmPool,
   type ViewMode,
 } from '@live-app-map/iframe-policy';
 import {
@@ -69,12 +71,24 @@ type AppStore = {
   mode: ViewMode;
   iframeScale: IframeScale;
   maxLiveIframes: number;
+  /** Keep-alive слотов сверх live (LRU). */
+  maxWarmIframes: number;
   searchQuery: string;
   selectedPageId: string | null;
   highlightedPageIds: ReadonlySet<string>;
   pinnedPageIds: ReadonlySet<string>;
   visiblePageIds: ReadonlySet<string>;
+  /** Активный live-бюджет (viewport/pin priority). */
   livePageIds: ReadonlySet<string>;
+  /**
+   * Warm keep-alive: iframe в DOM, state SPA не сбрасывается.
+   * Не пересекается с livePageIds.
+   */
+  warmPageIds: ReadonlySet<string>;
+  /** LRU warm, oldest first. */
+  warmLruOrder: readonly string[];
+  /** live ∪ warm — монтировать iframe. */
+  mountedPageIds: ReadonlySet<string>;
   interactPageId: string | null;
   /** Активный инжект стейта по page id */
   activeStates: ReadonlyMap<string, string>;
@@ -114,6 +128,7 @@ type AppStore = {
   setMode: (mode: ViewMode) => void;
   setIframeScale: (s: IframeScale) => void;
   setMaxLiveIframes: (n: number) => void;
+  setMaxWarmIframes: (n: number) => void;
   setSearchQuery: (q: string) => void;
   selectPage: (id: string | null) => void;
   togglePin: (id: string) => void;
@@ -297,6 +312,17 @@ function clampMaxLive(n: number): number {
   return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(1, rounded));
 }
 
+function clampMaxWarm(n: number): number {
+  if (!Number.isFinite(n)) {
+    return DEFAULT_MAX_WARM;
+  }
+  const rounded = Math.round(n);
+  if (rounded <= 0 || rounded >= 9999) {
+    return 9999;
+  }
+  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(0, rounded));
+}
+
 export const useAppStore = create<AppStore>((set, get) => ({
   document: null,
   index: null,
@@ -306,12 +332,16 @@ export const useAppStore = create<AppStore>((set, get) => ({
   // 50% — ряд экранов читаем без гигантского world
   iframeScale: 0.5,
   maxLiveIframes: DEFAULT_MAX_LIVE,
+  maxWarmIframes: DEFAULT_MAX_WARM,
   searchQuery: '',
   selectedPageId: null,
   highlightedPageIds: new Set(),
   pinnedPageIds: new Set(),
   visiblePageIds: new Set(),
   livePageIds: new Set(),
+  warmPageIds: new Set(),
+  warmLruOrder: [],
+  mountedPageIds: new Set(),
   interactPageId: null,
   activeStates: new Map(),
   nodeViewports: new Map(),
@@ -416,6 +446,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       pinnedPageIds: new Set(),
       visiblePageIds: new Set(),
       livePageIds: new Set(),
+      warmPageIds: new Set(),
+      warmLruOrder: [],
+      mountedPageIds: new Set(),
       activeStates: new Map(),
       nodeViewports: new Map(),
       contentHeights: new Map(),
@@ -438,6 +471,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setMaxLiveIframes: (n) => {
     set({ maxLiveIframes: clampMaxLive(n) });
+    get().recomputeLive();
+  },
+
+  setMaxWarmIframes: (n) => {
+    set({ maxWarmIframes: clampMaxWarm(n) });
     get().recomputeLive();
   },
 
@@ -742,7 +780,12 @@ export const useAppStore = create<AppStore>((set, get) => ({
   recomputeLive: () => {
     const s = get();
     if (!s.document) {
-      set({ livePageIds: new Set() });
+      set({
+        livePageIds: new Set(),
+        warmPageIds: new Set(),
+        warmLruOrder: [],
+        mountedPageIds: new Set(),
+      });
       return;
     }
     const candidates = s.document.nodes
@@ -767,6 +810,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
     for (const id of s.livePageIds) {
       recentLiveScore[id] = 5;
     }
+    for (const id of s.warmPageIds) {
+      recentLiveScore[id] = Math.max(recentLiveScore[id] ?? 0, 2);
+    }
 
     const result = reconcile({
       mode: s.mode,
@@ -780,16 +826,33 @@ export const useAppStore = create<AppStore>((set, get) => ({
       iframeAllowed,
       recentLiveScore,
     });
+
+    const warm = reconcileWarmPool({
+      liveIds: result.liveIds,
+      previousLiveIds: s.livePageIds,
+      previousWarmOrder: s.warmLruOrder,
+      pinned: s.pinnedPageIds,
+      maxWarm: s.maxWarmIframes,
+      iframeAllowed,
+    });
+
+    const nextState = {
+      livePageIds: result.liveIds,
+      warmPageIds: warm.warmIds,
+      warmLruOrder: warm.warmOrder,
+      mountedPageIds: warm.mountedIds,
+    };
+
     if (result.deferredPins.length > 0) {
       set({
-        livePageIds: result.liveIds,
+        ...nextState,
         toast: `Pin отложен (бюджет iframe ${s.maxLiveIframes}): ${result.deferredPins.join(', ')}`,
       });
       return;
     }
-    set({ livePageIds: result.liveIds });
+    set(nextState);
   },
 }));
 
-export { DEFAULT_MAX_PINNED, DEFAULT_MAX_LIVE };
+export { DEFAULT_MAX_PINNED, DEFAULT_MAX_LIVE, DEFAULT_MAX_WARM };
 export type { LiveAppMapDocument };

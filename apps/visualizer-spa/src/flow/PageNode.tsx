@@ -98,6 +98,8 @@ export function resolvePagePlaceholder(args: {
   /** Нода в viewport, но не в live-бюджете */
   readonly inViewport?: boolean;
   readonly isPinned?: boolean;
+  /** Keep-alive: iframe в DOM, state сохранён */
+  readonly isWarm?: boolean;
 }): string {
   if (args.iframeError) {
     return 'Ошибка загрузки iframe';
@@ -105,6 +107,9 @@ export function resolvePagePlaceholder(args: {
   if (args.mode === 'live') {
     if (!args.hasUrl) {
       return 'Нет URL';
+    }
+    if (args.isWarm) {
+      return 'В памяти (заморожен, без перезагрузки)';
     }
     if (args.isPinned) {
       return 'Pin в очереди (бюджет iframe)';
@@ -133,6 +138,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const highlighted = useAppStore((s) => s.highlightedPageIds);
   const pinned = useAppStore((s) => s.pinnedPageIds);
   const live = useAppStore((s) => s.livePageIds);
+  const warm = useAppStore((s) => s.warmPageIds);
+  const mounted = useAppStore((s) => s.mountedPageIds);
   const mode = useAppStore((s) => s.mode);
   const scale = useAppStore((s) => s.iframeScale);
   const interactPageId = useAppStore((s) => s.interactPageId);
@@ -163,6 +170,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const isDim =
     highlighted.size > 0 && !highlighted.has(node.id) && !isSelected;
   const isLive = live.has(node.id) && mode === 'live';
+  const isWarm = warm.has(node.id) && mode === 'live';
+  const isMounted = mounted.has(node.id) && mode === 'live';
   const activeStateName = activeStates.get(node.id);
   const isPinned = pinned.has(node.id);
 
@@ -239,9 +248,14 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     iframeError,
     inViewport,
     isPinned,
+    // placeholder только если iframe реально нет (холодный слот)
+    isWarm: false,
   });
 
-  const showIframe = isLive && url && !iframeError;
+  // Keep-alive: mounted = live ∪ warm — не unmount, state SPA сохраняется
+  const showIframe = isMounted && url && !iframeError;
+  /** Warm вне live: держим DOM, visually «приглушён» если не в кадре */
+  const iframeDimmed = isWarm && !isLive;
 
   const applyPreset = (p: {
     readonly id: string;
@@ -306,10 +320,13 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   return (
     <div
-      className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}`}
+      className={`page-node${isSelected ? ' page-node--selected' : ''}${isDim ? ' page-node--dim' : ''}${isWarm && !isLive ? ' page-node--warm' : ''}${isLive ? ' page-node--live' : ''}`}
       style={{ width: '100%', height: '100%' }}
       data-page-id={node.id}
       data-lam-node={node.id}
+      data-lam-live={isLive ? '1' : '0'}
+      data-lam-warm={isWarm ? '1' : '0'}
+      data-lam-mounted={isMounted ? '1' : '0'}
       data-lam-outer-w={layout.outerWidth}
       data-lam-outer-h={layout.outerHeight}
       data-lam-content-w={layout.contentWidth}
@@ -321,6 +338,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       <div className="page-node__header">
         {node.groupIds?.[0] ? <Badge>{node.groupIds[0]}</Badge> : null}
         <div className="page-node__title">{node.title}</div>
+        {isLive ? (
+          <Badge>live</Badge>
+        ) : isWarm ? (
+          <Badge>warm</Badge>
+        ) : null}
         <div className="page-node__actions">
           <button
             type="button"
@@ -424,6 +446,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 /* Только explicit «Клики в iframe» — hover/click доходят в app */
                 pointerEvents: interactPageId === node.id ? 'auto' : 'none',
                 zIndex: interactPageId === node.id ? 2 : 0,
+                /* Warm keep-alive: DOM жив; чуть тусклее если не live-слот */
+                opacity: iframeDimmed ? 0.92 : 1,
               }}
               sandbox={sandboxValue}
               onLoad={() => {

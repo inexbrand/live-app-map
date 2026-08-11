@@ -18,7 +18,10 @@ export function DiagnosticsDock() {
   const filter = useAppStore((s) => s.logFilterPageId);
   const setFilter = useAppStore((s) => s.setLogFilterPageId);
   const liveCount = useAppStore((s) => s.livePageIds.size);
+  const warmCount = useAppStore((s) => s.warmPageIds.size);
+  const mountedCount = useAppStore((s) => s.mountedPageIds.size);
   const maxLive = useAppStore((s) => s.maxLiveIframes);
+  const maxWarm = useAppStore((s) => s.maxWarmIframes);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
   const globalRole = useAppStore((s) => s.globalRole);
   const parseIssues = useAppStore((s) => s.parseIssues);
@@ -59,7 +62,7 @@ export function DiagnosticsDock() {
         aria-expanded={open}
         onClick={() => setOpen(!open)}
       >
-        <Code2 size={18} strokeWidth={1.75} />
+        <Code2 size={15} strokeWidth={1.75} />
         {logs.length > 0 ? (
           <span className="diag-fab__badge">{Math.min(99, logs.length)}</span>
         ) : null}
@@ -77,7 +80,21 @@ export function DiagnosticsDock() {
             режим <strong>живой</strong>
           </span>
           <span>
-            живых <strong>{liveCount}/{maxLive}</strong>
+            live{' '}
+            <strong>
+              {liveCount}
+              {maxLive >= 9999 ? '' : `/${maxLive}`}
+            </strong>
+          </span>
+          <span>
+            warm{' '}
+            <strong>
+              {warmCount}
+              {maxWarm >= 9999 ? '' : `/${maxWarm}`}
+            </strong>
+          </span>
+          <span>
+            mounted <strong>{mountedCount}</strong>
           </span>
           <span>
             pin <strong>{pinCount}/{DEFAULT_MAX_PINNED}</strong>
