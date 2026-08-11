@@ -15,9 +15,9 @@ const allPath = path.resolve(
   '../../../../maps/korbor-all.liveappmap.json',
 );
 
-const allPreset = KORBOR_PRESETS.find((p) => p.id === 'all');
+const allPreset = KORBOR_PRESETS.find((p) => p.id === 'korbor-all');
 if (allPreset === undefined) {
-  throw new Error('KORBOR_PRESETS missing id=all');
+  throw new Error('KORBOR_PRESETS missing id=korbor-all');
 }
 
 function pageHosts(
@@ -190,7 +190,7 @@ describe('korbor-all multi-host via REAL UI load path', () => {
       '../../../../maps/korbor-admin.liveappmap.json',
     );
     expect(existsSync(adminPath)).toBe(true);
-    const adminPreset = KORBOR_PRESETS.find((p) => p.id === 'admin');
+    const adminPreset = KORBOR_PRESETS.find((p) => p.id === 'korbor-admin');
     expect(adminPreset).toBeTruthy();
     if (!adminPreset) {
       return;

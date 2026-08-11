@@ -1,10 +1,95 @@
 /**
- * Vite SPA :4310 + TLS dogfood proxy (self-signed miniapp).
+ * Vite SPA :4310 + TLS dogfood proxy (self-signed miniapp) + dynamic /maps catalog.
  */
 import react from '@vitejs/plugin-react';
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
+import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
+import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
+import { agentStateMiddleware } from './src/lib/agent-state-middleware';
+import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
+import {
+  injectSameOriginApiShim,
+  rewriteProxiedAssetPaths,
+  shouldRewriteProxiedBody,
+} from './src/lib/proxy-path-rewrite';
+
+const spaRoot = path.dirname(fileURLToPath(import.meta.url));
+const publicMapsDir = path.join(spaRoot, 'public', 'maps');
+
+/**
+ * POST /api/error-reports — client ErrorBoundary → SMTP (если env).
+ */
+function errorReportsPlugin(): Plugin {
+  return {
+    name: 'lam-error-reports',
+    configureServer(server) {
+      server.middlewares.use(errorReportsMiddleware);
+      server.middlewares.use(agentStateMiddleware);
+      server.middlewares.use(mcpAgentMiddleware);
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use(errorReportsMiddleware);
+      server.middlewares.use(agentStateMiddleware);
+      server.middlewares.use(mcpAgentMiddleware);
+    },
+  };
+}
+
+/**
+ * Динамический каталог: GET /maps/index.json из файлов public/maps/*.liveappmap.json.
+ * Без хардкода продукта — любая карта в папке появляется в UI.
+ */
+function mapsCatalogPlugin(): Plugin {
+  const serveIndex = (
+    _req: IncomingMessage,
+    res: ServerResponse,
+    next: () => void,
+  ): void => {
+    try {
+      const catalog = writeMapCatalogIndex(publicMapsDir);
+      res.statusCode = 200;
+      res.setHeader('content-type', 'application/json; charset=utf-8');
+      res.setHeader('cache-control', 'no-store');
+      res.end(JSON.stringify(catalog, null, 2));
+    } catch (err) {
+      const message = err instanceof Error ? err.message : String(err);
+      res.statusCode = 500;
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ ok: false, error: message }));
+    }
+  };
+
+  return {
+    name: 'live-app-map-catalog',
+    buildStart() {
+      writeMapCatalogIndex(publicMapsDir);
+    },
+    configureServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        if (url === '/maps/index.json') {
+          serveIndex(req, res, next);
+          return;
+        }
+        next();
+      });
+    },
+    configurePreviewServer(server) {
+      server.middlewares.use((req, res, next) => {
+        const url = req.url?.split('?')[0] ?? '';
+        if (url === '/maps/index.json') {
+          serveIndex(req, res, next);
+          return;
+        }
+        next();
+      });
+    },
+  };
+}
 
 /**
  * Middleware: GET /__lam_tls_check?url=https://… — probe TLS (accept self-signed).
@@ -112,41 +197,170 @@ function tlsCheckPlugin(): Plugin {
   };
 }
 
+type ProxyLike = {
+  on: (event: string, fn: (...args: unknown[]) => void) => void;
+};
+
+/**
+ * Снимает X-Frame-Options / CSP frame-ancestors и переписывает absolute `/…`
+ * пути ассетов под path-prefix proxy (иначе Vite/Next грузят visualizer).
+ *
+ * @param proxy - http-proxy
+ * @param label - лог
+ * @param pathPrefix - e.g. `/__lam_proxy/miniapp`
+ */
+function attachFrameBypass(
+  proxy: ProxyLike,
+  label: string,
+  pathPrefix: string,
+): void {
+  proxy.on('error', (...args: unknown[]) => {
+    const err = args[0];
+    const message = err instanceof Error ? err.message : String(err);
+    console.warn(`[lam-proxy ${label}]`, message);
+  });
+
+  // Без gzip — проще rewrite body
+  proxy.on('proxyReq', (...args: unknown[]) => {
+    const proxyReq = args[0] as {
+      setHeader: (k: string, v: string) => void;
+    };
+    proxyReq.setHeader('accept-encoding', 'identity');
+  });
+
+  proxy.on('proxyRes', (...args: unknown[]) => {
+    const proxyRes = args[0] as {
+      headers: Record<string, string | string[] | undefined>;
+      statusCode?: number;
+      on: (ev: string, fn: (chunk?: Buffer) => void) => void;
+      pipe: (dest: unknown) => void;
+    };
+    const req = args[1];
+    const res = args[2] as {
+      writeHead: (code: number, headers?: Record<string, unknown>) => void;
+      end: (body?: string | Buffer) => void;
+      writableEnded?: boolean;
+    };
+
+    delete proxyRes.headers['x-frame-options'];
+    delete proxyRes.headers['X-Frame-Options'];
+    delete proxyRes.headers['content-security-policy'];
+    delete proxyRes.headers['Content-Security-Policy'];
+    // length пересчитаем после rewrite
+    delete proxyRes.headers['content-length'];
+    delete proxyRes.headers['Content-Length'];
+    delete proxyRes.headers['content-encoding'];
+    delete proxyRes.headers['Content-Encoding'];
+
+    const ctRaw = proxyRes.headers['content-type'] ?? proxyRes.headers['Content-Type'];
+    const ct = Array.isArray(ctRaw) ? ctRaw[0] : ctRaw;
+    const rewriteText = shouldRewriteProxiedBody(ct);
+
+    // selfHandleResponse: true → всегда сами пишем ответ
+    const chunks: Buffer[] = [];
+    proxyRes.on('data', (chunk?: Buffer) => {
+      if (chunk) {
+        chunks.push(chunk);
+      }
+    });
+    proxyRes.on('end', () => {
+      if (res.writableEnded) {
+        return;
+      }
+      let buf = Buffer.concat(chunks);
+      if (rewriteText) {
+        let text = rewriteProxiedAssetPaths(buf.toString('utf8'), pathPrefix);
+        // HTML: same-origin `/api` → path-prefix (miniapp VITE_API_BASE_URL="")
+        const ctLower = (ct ?? '').toLowerCase();
+        if (ctLower.includes('text/html')) {
+          text = injectSameOriginApiShim(text, pathPrefix);
+        }
+        buf = Buffer.from(text, 'utf8');
+      }
+      const headers: Record<string, string | number | string[]> = {};
+      for (const [k, v] of Object.entries(proxyRes.headers)) {
+        if (v === undefined) {
+          continue;
+        }
+        const lk = k.toLowerCase();
+        if (
+          lk === 'content-length' ||
+          lk === 'content-encoding' ||
+          lk === 'x-frame-options' ||
+          lk === 'content-security-policy'
+        ) {
+          continue;
+        }
+        headers[k] = v;
+      }
+      headers['content-length'] = buf.length;
+      res.writeHead(proxyRes.statusCode ?? 200, headers);
+      res.end(buf);
+      void req;
+    });
+  });
+}
+
 export default defineConfig({
-  plugins: [react(), tlsCheckPlugin()],
+  plugins: [
+    react(),
+    mapsCatalogPlugin(),
+    tlsCheckPlugin(),
+    errorReportsPlugin(),
+  ],
   server: {
     port: 4310,
     host: true,
-    // Self-signed miniapp (mkcert / basic-ssl): secure:false
+    // Miniapp/site path-proxy + asset rewrite. Admin — direct (no path proxy).
     proxy: {
       '/__lam_proxy/miniapp': {
         target: 'https://vite.localhost:5175',
         changeOrigin: true,
         secure: false,
         ws: true,
+        selfHandleResponse: true,
         rewrite: (p) => {
           const rest = p.replace(/^\/__lam_proxy\/miniapp/, '');
           return rest.length === 0 ? '/' : rest;
         },
         configure: (proxy) => {
-          proxy.on('error', (err) => {
-            console.warn('[lam-proxy miniapp]', err.message);
-          });
-          proxy.on('proxyReqWs', (_proxyReq, _req, socket) => {
-            socket.on('error', () => {
-              /* ignore ws proxy noise */
-            });
-          });
+          attachFrameBypass(proxy, 'miniapp', '/__lam_proxy/miniapp');
         },
       },
-      // generic https://host:port via /__lam_proxy/https/host:port/...
+      // legacy bookmark / stale maps: still proxy admin but WITH asset rewrite
+      '/__lam_proxy/admin': {
+        target: 'http://localhost:16002',
+        changeOrigin: true,
+        ws: true,
+        selfHandleResponse: true,
+        rewrite: (p) => {
+          const rest = p.replace(/^\/__lam_proxy\/admin/, '');
+          return rest.length === 0 ? '/' : rest;
+        },
+        configure: (proxy) => {
+          attachFrameBypass(proxy, 'admin', '/__lam_proxy/admin');
+        },
+      },
+      '/__lam_proxy/site': {
+        target: 'http://localhost:16001',
+        changeOrigin: true,
+        ws: true,
+        selfHandleResponse: true,
+        rewrite: (p) => {
+          const rest = p.replace(/^\/__lam_proxy\/site/, '');
+          return rest.length === 0 ? '/' : rest;
+        },
+        configure: (proxy) => {
+          attachFrameBypass(proxy, 'site', '/__lam_proxy/site');
+        },
+      },
       '/__lam_proxy/https': {
         target: 'https://127.0.0.1',
         changeOrigin: true,
         secure: false,
         ws: true,
+        selfHandleResponse: true,
         bypass() {
-          // router handled below via configureServer? use router function
           return undefined;
         },
         router: (req) => {
@@ -156,7 +370,6 @@ export default defineConfig({
             return 'https://127.0.0.1';
           }
           const hostPort = m[1];
-          // only local dogfood hosts
           const host = hostPort.split(':')[0]?.toLowerCase() ?? '';
           if (
             host !== 'localhost' &&
@@ -172,6 +385,10 @@ export default defineConfig({
           const m = p.match(/^\/__lam_proxy\/https\/[^/?#]+(.*)$/);
           const rest = m?.[1];
           return rest && rest.length > 0 ? rest : '/';
+        },
+        configure: (proxy) => {
+          // generic: prefix is full path base from request — use host segment
+          attachFrameBypass(proxy, 'https', '/__lam_proxy/https');
         },
       },
     },

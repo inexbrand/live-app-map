@@ -81,7 +81,7 @@ describe('resolveLiveUrl', () => {
     const url = useAppStore.getState().resolveLiveUrl('route:/feed');
     expect(url).toBeTruthy();
     expect(url).toContain('lam_role=recruiter');
-    expect(url).toContain('/feed');
+    expect(url).toContain('#/feed');
   });
 
   test('global employer role injects lam_role', () => {
@@ -128,22 +128,24 @@ describe('resolveLiveUrl', () => {
     expect(useAppStore.getState().document).not.toBeNull();
   });
 
-  test('setMaxLiveIframes clamp 1–16 + recompute', () => {
+  test('setMaxLiveIframes: 0/9999 = unlimited, иначе clamp 1–cap', () => {
     useAppStore.getState().loadDocument(miniDoc);
     useAppStore.getState().setMode('live');
     useAppStore.getState().setMaxLiveIframes(0);
-    expect(useAppStore.getState().maxLiveIframes).toBe(1);
-    useAppStore.getState().setMaxLiveIframes(99);
-    expect(useAppStore.getState().maxLiveIframes).toBe(16);
+    expect(useAppStore.getState().maxLiveIframes).toBe(9999);
     useAppStore.getState().setMaxLiveIframes(4);
     expect(useAppStore.getState().maxLiveIframes).toBe(4);
+    useAppStore.getState().setMaxLiveIframes(9999);
+    expect(useAppStore.getState().maxLiveIframes).toBe(9999);
   });
 
   test('TLS proxy переписывает vite.localhost на /__lam_proxy/miniapp', () => {
     useAppStore.getState().loadDocument(miniDoc);
     useAppStore.getState().setUseTlsProxy(true);
     const url = useAppStore.getState().resolveLiveUrl('route:/feed');
-    expect(url).toContain('/__lam_proxy/miniapp/feed');
+    // HashRouter: product path в #/…, proxy prefix + root path
+    expect(url).toContain('/__lam_proxy/miniapp/');
+    expect(url).toContain('#/feed');
     expect(url).not.toContain('https://vite.localhost:5175');
   });
 

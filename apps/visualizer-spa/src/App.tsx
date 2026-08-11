@@ -5,12 +5,18 @@ import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import { DiagnosticsDock } from './components/DiagnosticsDock';
 import { FeedbackPanel } from './components/FeedbackPanel';
+import { LamGrabHost } from './components/LamGrabHost';
 import { MapToolbar } from './components/MapToolbar';
+import { SnapshotOverlay } from './components/SnapshotOverlay';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
-import { KORBOR_PRESETS, type KorborPreset } from './korbor-presets';
+import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
-import { loadKorborPresetIntoStore } from './lib/load-korbor-preset';
+import { loadMapPresetIntoStore } from './lib/load-map-preset';
+import {
+  fetchMapCatalog,
+  type MapCatalogEntry,
+} from './lib/map-catalog';
 import { useAppStore } from './store/app-store';
 import { Button } from './ui';
 
@@ -30,12 +36,48 @@ export function App() {
   const parseIssues = useAppStore((s) => s.parseIssues);
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
+  const [catalog, setCatalog] = useState<readonly MapCatalogEntry[]>([]);
+  const [catalogError, setCatalogError] = useState<string | null>(null);
+  const [catalogLoading, setCatalogLoading] = useState(true);
+
+  useEffect(() => {
+    let cancelled = false;
+    setCatalogLoading(true);
+    void fetchMapCatalog().then((res) => {
+      if (cancelled) {
+        return;
+      }
+      setCatalogLoading(false);
+      if (!res.ok) {
+        setCatalogError(res.error);
+        setCatalog([]);
+        return;
+      }
+      setCatalogError(null);
+      setCatalog(res.catalog.maps);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const runDogfoodAfterMapLoad = useCallback(async () => {
+    const s = useAppStore.getState();
+    await ensureDogfoodSessions({
+      dogfoodAdminAccessToken: s.dogfoodAdminAccessToken,
+      dogfoodMiniappInitData: s.dogfoodMiniappInitData,
+      setDogfoodAdminAccessToken: s.setDogfoodAdminAccessToken,
+      setDogfoodMiniappInitData: s.setDogfoodMiniappInitData,
+      setGlobalRole: s.setGlobalRole,
+      onToast: setToast,
+    });
+  }, [setToast]);
 
   const loadPreset = useCallback(
-    async (preset: KorborPreset) => {
+    async (preset: MapCatalogEntry) => {
       setLoadingPresetId(preset.id);
       try {
-        const res = await loadKorborPresetIntoStore(preset, {
+        const res = await loadMapPresetIntoStore(preset, {
           setBaseUrlOverride,
           loadUnknownJson,
           setMode,
@@ -45,12 +87,22 @@ export function App() {
           setToast(res.error);
           return;
         }
-        setToast(`${preset.label} · ${preset.baseUrl}`);
+        await runDogfoodAfterMapLoad();
+        const baseHint =
+          preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
+        setToast(`${preset.label}${baseHint}`);
       } finally {
         setLoadingPresetId(null);
       }
     },
-    [loadUnknownJson, setBaseUrlOverride, setLastLoadError, setMode, setToast],
+    [
+      loadUnknownJson,
+      runDogfoodAfterMapLoad,
+      setBaseUrlOverride,
+      setLastLoadError,
+      setMode,
+      setToast,
+    ],
   );
 
   useEffect(() => {
@@ -76,6 +128,8 @@ export function App() {
           const json = (await r.json()) as unknown;
           loadUnknownJson(json);
           setMode('live');
+          // Deep-link / refresh: auto dogfood (раньше только через select карты)
+          await runDogfoodAfterMapLoad();
         })
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : String(err);
@@ -83,7 +137,14 @@ export function App() {
           setToast(msg);
         });
     }
-  }, [loadUnknownJson, setBaseUrlOverride, setLastLoadError, setMode, setToast]);
+  }, [
+    loadUnknownJson,
+    runDogfoodAfterMapLoad,
+    setBaseUrlOverride,
+    setLastLoadError,
+    setMode,
+    setToast,
+  ]);
 
   useEffect(() => {
     if (!toast) {
@@ -96,18 +157,19 @@ export function App() {
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
-        useAppStore.getState().selectPage(null);
+        clearLoadError();
+        setToast(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, []);
+  }, [clearLoadError, setToast]);
 
   const onDrop = useCallback(
     async (e: DragEvent) => {
       e.preventDefault();
       setDragging(false);
-      const file = e.dataTransfer.files?.[0];
+      const file = e.dataTransfer.files[0];
       if (!file) {
         return;
       }
@@ -127,7 +189,7 @@ export function App() {
 
   return (
     <div
-      className="app-shell"
+      className={`app-shell${dragging ? ' app-shell--drag' : ''}`}
       onDragOver={(e) => {
         e.preventDefault();
         setDragging(true);
@@ -135,18 +197,15 @@ export function App() {
       onDragLeave={() => setDragging(false)}
       onDrop={(e) => void onDrop(e)}
     >
-      <MapToolbar />
-      <div className="canvas-wrap">
-        {dragging ? (
-          <div className="drop-overlay">Отпустите .json / .appmap</div>
-        ) : null}
-
+      <MapToolbar catalog={catalog} catalogLoading={catalogLoading} />
+      <LamGrabHost />
+      <div className="app-main">
         {lastLoadError ? (
           <div className="error-banner" role="alert">
             <div className="error-banner__body">
               <strong>
                 <AlertTriangle
-                  size={14}
+                  size={16}
                   style={{ verticalAlign: 'text-bottom', marginRight: 6 }}
                 />
                 Ошибка загрузки
@@ -176,17 +235,36 @@ export function App() {
         {!mapDocument ? (
           <div className="empty-state">
             <div className="empty-state__card">
-              <h1>Карта приложения</h1>
+              <h1>Выберите карту</h1>
               <p>
-                Откройте пресет Korbor или файл карты. В шапке: «Источники»,
-                «Настройки», поиск. Режим «Живой» показывает iframe.
+                Карта из каталога (файлы в <code>public/maps</code>), JSON /
+                .appmap или drag-and-drop на холст. В шапке — селект карт,
+                «Источники», «Настройки», поиск.
               </p>
               <p>
-                Выберите экран → слева замечание для агента, справа роли и стейты.
-                Роли мини-приложения: рекрутер / клиент.
+                Выберите экран → слева замечание для агента, справа роли и
+                стейты (если есть в карте).
               </p>
+              {catalogError ? (
+                <p className="drawer__hint" role="status">
+                  {catalogError}
+                </p>
+              ) : null}
               <div className="empty-state__actions">
-                {KORBOR_PRESETS.map((p) => {
+                {catalogLoading ? (
+                  <Button type="button" variant="outline" disabled={true}>
+                    Загрузка каталога…
+                  </Button>
+                ) : null}
+                {!catalogLoading && catalog.length === 0 ? (
+                  <p className="drawer__hint">
+                    Каталог пуст. Положите{' '}
+                    <code>*.liveappmap.json</code> в{' '}
+                    <code>apps/visualizer-spa/public/maps/</code> и обновите
+                    страницу.
+                  </p>
+                ) : null}
+                {catalog.map((p) => {
                   const busy = loadingPresetId === p.id;
                   return (
                     <Button
@@ -195,6 +273,11 @@ export function App() {
                       variant="primary"
                       disabled={loadingPresetId !== null}
                       aria-busy={busy}
+                      title={
+                        p.pageCount > 0
+                          ? `${p.path} · ${p.pageCount} экранов`
+                          : p.path
+                      }
                       onClick={() => void loadPreset(p)}
                     >
                       {busy ? 'Загрузка…' : p.label}
@@ -203,16 +286,18 @@ export function App() {
                 })}
               </div>
               <p className="drawer__hint">
-                Запуск: <code>bun run dev</code> → http://localhost:4310
+                Запуск: <code>bun run dev</code> → http://localhost:4310 ·
+                каталог: <code>/maps/index.json</code>
               </p>
             </div>
           </div>
         ) : (
-          <>
+          <div className="canvas-wrap">
             <AppMapCanvas />
             <FeedbackPanel />
             <StateInjectPanel />
-          </>
+            <SnapshotOverlay />
+          </div>
         )}
         <DiagnosticsDock />
       </div>

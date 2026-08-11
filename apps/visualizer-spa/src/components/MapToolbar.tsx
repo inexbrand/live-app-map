@@ -5,14 +5,11 @@
 import {
   Eraser,
   FolderOpen,
-  LayoutGrid,
-  Radio,
   Search,
   Settings2,
   Layers,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { KORBOR_PRESETS, type KorborPreset } from '../korbor-presets';
 import {
   fetchDogfoodActors,
   formatDogfoodActorOption,
@@ -21,18 +18,29 @@ import {
   mintDogfoodSession,
   type DogfoodActor,
 } from '../lib/dogfood-api';
+import { ensureDogfoodSessions as mintMissingDogfood } from '../lib/ensure-dogfood-sessions';
 import { importMapFile } from '../lib/import-map';
-import { loadKorborPresetIntoStore } from '../lib/load-korbor-preset';
+import { loadMapPresetIntoStore } from '../lib/load-map-preset';
+import type { MapCatalogEntry } from '../lib/map-catalog';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 import { Button, Field, Input, Select, Textarea } from '../ui';
 import { EdgeSheet } from './EdgeSheet';
 
 type SheetId = 'sources' | 'settings' | 'search' | null;
 
+/** Props шапки: каталог из App (fetch /maps/index.json). */
+export type MapToolbarProps = {
+  readonly catalog: readonly MapCatalogEntry[];
+  readonly catalogLoading?: boolean;
+};
+
 /**
  * Главный chrome visualizer (минимализм + edge sheets).
+ *
+ * @param props - каталог карт и состояние загрузки
  */
-export function MapToolbar() {
+export function MapToolbar(props: MapToolbarProps) {
+  const { catalog, catalogLoading = false } = props;
   const setMode = useAppStore((s) => s.setMode);
   const iframeScale = useAppStore((s) => s.iframeScale);
   const setIframeScale = useAppStore((s) => s.setIframeScale);
@@ -61,6 +69,8 @@ export function MapToolbar() {
 
   const [sheet, setSheet] = useState<SheetId>(null);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
+  /** Выбранная карта в шапке (id каталога). */
+  const [activeMapId, setActiveMapId] = useState('');
   const [dogfoodActors, setDogfoodActors] = useState<readonly DogfoodActor[]>(
     [],
   );
@@ -153,10 +163,39 @@ export function MapToolbar() {
     setSheet(null);
   };
 
-  const loadPreset = async (preset: KorborPreset) => {
+  /**
+   * Если нет dogfood-сессии — mint первого admin + первого user с telegramId.
+   * Без этого admin всегда login, miniapp «не открывается» (не Telegram).
+   */
+  const ensureDogfoodSessions = async (): Promise<void> => {
+    setDogfoodBusy(true);
+    try {
+      await mintMissingDogfood({
+        dogfoodAdminAccessToken,
+        dogfoodMiniappInitData,
+        setDogfoodAdminAccessToken,
+        setDogfoodMiniappInitData,
+        setGlobalRole,
+        onActors: (actors) => {
+          setDogfoodActors(actors);
+          setDogfoodActorsError(null);
+        },
+        onError: (message) => setDogfoodActorsError(message),
+        onToast: setToast,
+      });
+    } finally {
+      setDogfoodBusy(false);
+    }
+  };
+
+  const loadPreset = async (preset: MapCatalogEntry) => {
     setLoadingPresetId(preset.id);
     try {
-      const res = await loadKorborPresetIntoStore(preset, {
+      // iframe dogfood: proxy всегда нужен (frame-bypass + TLS)
+      if (!useTlsProxy) {
+        setUseTlsProxy(true);
+      }
+      const res = await loadMapPresetIntoStore(preset, {
         setBaseUrlOverride,
         loadUnknownJson,
         setMode,
@@ -166,33 +205,81 @@ export function MapToolbar() {
         setToast(res.error);
         return;
       }
-      setToast(`Загружено: ${preset.label}`);
+      setActiveMapId(preset.id);
+      await ensureDogfoodSessions();
+      const baseHint =
+        preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
+      setToast(`Загружено: ${preset.label}${baseHint}`);
       setSheet(null);
     } finally {
       setLoadingPresetId(null);
     }
   };
 
+  /**
+   * Селект в шапке: карты из каталога + действия в конце.
+   *
+   * @param value - id карты или __open_file__ / __clear__
+   */
+  const onHeaderMapAction = (value: string): void => {
+    if (value === '' || value === activeMapId) {
+      return;
+    }
+    if (value === '__open_file__') {
+      window.document.getElementById('lam-file-input')?.click();
+      return;
+    }
+    if (value === '__clear__') {
+      clearMap();
+      setActiveMapId('');
+      setToast('Карта очищена');
+      return;
+    }
+    const preset = catalog.find((c) => c.id === value);
+    if (preset) {
+      void loadPreset(preset);
+    }
+  };
+
   return (
     <>
       <header className="toolbar toolbar--slim">
-        <div className="toolbar__brand" title="Live App Map">
-          <LayoutGrid size={18} strokeWidth={1.75} aria-hidden={true} />
-          <span>Карта приложения</span>
-        </div>
-
-        <div className="mode-seg" role="status" aria-label="Режим: только живой">
-          <span className="mode-seg__btn mode-seg__btn--on" title="Живые iframe">
-            <Radio size={15} strokeWidth={1.75} />
-            Живой
-          </span>
-        </div>
+        <label className="toolbar-map-select" title="Выбор карты / действия">
+          <span className="sr-only">Карта</span>
+          <Select
+            aria-label="Карта"
+            data-testid="map-select"
+            value={activeMapId}
+            disabled={catalogLoading || loadingPresetId !== null}
+            onChange={(e) => onHeaderMapAction(e.target.value)}
+          >
+            <option value="">
+              {catalogLoading ? 'Каталог…' : 'Выберите карту…'}
+            </option>
+            {catalog.map((c) => {
+              const pagesHint =
+                c.pageCount > 0 ? ` · ${c.pageCount} экр.` : '';
+              return (
+                <option key={c.id} value={c.id}>
+                  {c.label}
+                  {pagesHint}
+                </option>
+              );
+            })}
+            <option value="__open_file__">── Открыть JSON / .appmap ──</option>
+            <option value="__clear__" disabled={!document}>
+              ── Очистить карту ──
+            </option>
+          </Select>
+        </label>
 
         <div className="toolbar__spacer" />
 
-        <span className="budget-pill" title="Бюджет iframe и закреплений">
-          живых {liveCount}/{maxLiveIframes} · pin {pinCount}/
-          {DEFAULT_MAX_PINNED}
+        <span className="budget-pill" title="Живые iframe (visible+pin); 9999 = без лимита">
+          живых {liveCount}
+          {maxLiveIframes >= 9999 ? '' : `/${maxLiveIframes}`}
+          {' · '}
+          pin {pinCount}
         </span>
 
         <div className="toolbar__group">
@@ -233,13 +320,14 @@ export function MapToolbar() {
         open={sheet === 'sources'}
         side="left"
         title="Источники карты"
-        description="Файл, пресеты Korbor или очистка холста."
+        description="Файл, карта из каталога public/maps или очистка холста."
         onClose={() => setSheet(null)}
       >
         <label className="ui-btn ui-btn--primary source-file-btn">
           <FolderOpen size={16} strokeWidth={1.75} aria-hidden={true} />
           Открыть JSON / .appmap
           <input
+            id="lam-file-input"
             type="file"
             accept=".json,.appmap,.zip,application/json"
             hidden
@@ -248,10 +336,20 @@ export function MapToolbar() {
         </label>
 
         <div className="sheet-block">
-          <div className="ui-field__label">Пресеты Korbor</div>
+          <div className="ui-field__label">Каталог карт</div>
           <div className="sheet-stack">
-            {KORBOR_PRESETS.map((p) => {
+            {catalogLoading ? (
+              <p className="drawer__hint">Загрузка каталога…</p>
+            ) : null}
+            {!catalogLoading && catalog.length === 0 ? (
+              <p className="drawer__hint">
+                Каталог пуст. Положите *.liveappmap.json в public/maps.
+              </p>
+            ) : null}
+            {catalog.map((p) => {
               const busy = loadingPresetId === p.id;
+              const pagesHint =
+                p.pageCount > 0 ? ` · ${p.pageCount} экр.` : '';
               return (
                 <Button
                   key={p.id}
@@ -261,7 +359,7 @@ export function MapToolbar() {
                   aria-busy={busy}
                   onClick={() => void loadPreset(p)}
                 >
-                  {busy ? 'Загрузка…' : p.label}
+                  {busy ? 'Загрузка…' : `${p.label}${pagesHint}`}
                 </Button>
               );
             })}
@@ -295,9 +393,13 @@ export function MapToolbar() {
             id="set-scale"
             value={iframeScale}
             onChange={(e) =>
-              setIframeScale(Number(e.target.value) as 0.5 | 0.75 | 1)
+              setIframeScale(
+                Number(e.target.value) as 0.25 | 0.35 | 0.5 | 0.75 | 1,
+              )
             }
           >
+            <option value={0.25}>25% (карта)</option>
+            <option value={0.35}>35%</option>
             <option value={0.5}>50%</option>
             <option value={0.75}>75%</option>
             <option value={1}>100%</option>
@@ -307,14 +409,15 @@ export function MapToolbar() {
         <Field
           label="Макс. живых iframe"
           htmlFor="set-max"
-          hint="Сколько экранов одновременно держать «живыми»."
+          hint="Без лимита = все видимые и закреплённые. Слишком много тяжёлых iframe может просадить вкладку."
         >
           <Select
             id="set-max"
-            value={maxLiveIframes}
+            value={maxLiveIframes >= 9999 ? 9999 : maxLiveIframes}
             onChange={(e) => setMaxLiveIframes(Number(e.target.value))}
           >
-            {[1, 2, 4, 6, 8, 12, 16].map((n) => (
+            <option value={9999}>Без лимита</option>
+            {[8, 16, 32, 64, 128, 256].map((n) => (
               <option key={n} value={n}>
                 {n}
               </option>
@@ -353,10 +456,11 @@ export function MapToolbar() {
         </Field>
 
         <div className="sheet-block">
-          <div className="ui-field__label">Self-signed TLS</div>
+          <div className="ui-field__label">Iframe proxy (dogfood)</div>
           <p className="drawer__hint">
-            Miniapp на https://vite.localhost:5175. Proxy принимает self-signed
-            на стороне Vite (secure: false), iframe ходит same-origin.
+            Same-origin proxy: miniapp (TLS self-signed), admin :16002 и site
+            :16001 (снимает X-Frame-Options / CSP). Без proxy iframe часто
+            пустой или «отказ во фрейме».
           </p>
           <label className="ui-chip" style={{ cursor: 'pointer', width: 'fit-content' }}>
             <input
@@ -365,7 +469,7 @@ export function MapToolbar() {
               onChange={(e) => setUseTlsProxy(e.target.checked)}
               style={{ marginRight: 8 }}
             />
-            TLS-proxy для HTTPS dogfood
+            Proxy iframe (miniapp + admin + site)
           </label>
           <Button
             type="button"

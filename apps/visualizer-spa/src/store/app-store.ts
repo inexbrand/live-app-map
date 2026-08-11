@@ -30,14 +30,15 @@ import {
   type LiveAppMapDocument,
 } from '@live-app-map/schema';
 import { create } from 'zustand';
-import { applyDogfoodToUrl } from '../lib/dogfood-url';
+import { applyDogfoodToUrl, ensureMiniappHashRoute } from '../lib/dogfood-url';
 import {
   rewriteUrlThroughTlsProxy,
   shouldUseTlsProxyForUrl,
 } from '../lib/tls-proxy';
 import { clampViewport } from '../lib/viewport';
 
-export type IframeScale = 0.5 | 0.75 | 1;
+/** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
+export type IframeScale = 0.25 | 0.35 | 0.5 | 0.75 | 1;
 
 export type ActiveStateSel = {
   readonly pageId: string;
@@ -54,8 +55,9 @@ export type AppLogEntry = {
   readonly message: string;
 };
 
-const MIN_LIVE_IFRAMES = 1;
-const MAX_LIVE_IFRAMES_CAP = 16;
+const MIN_LIVE_IFRAMES = 0;
+/** 9999 = «без лимита» в UI и policy. */
+const MAX_LIVE_IFRAMES_CAP = 9999;
 const MAX_LOGS = 400;
 
 type AppStore = {
@@ -76,8 +78,13 @@ type AppStore = {
   interactPageId: string | null;
   /** Активный инжект стейта по page id */
   activeStates: ReadonlyMap<string, string>;
-  /** Runtime override размера окна (адаптив) */
+  /** Runtime override размера окна (адаптив / пресет ширины) */
   nodeViewports: ReadonlyMap<string, DeviceViewport>;
+  /**
+   * Измеренная высота document iframe (heightMode=auto).
+   * key = pageId, value = scrollHeight px.
+   */
+  contentHeights: ReadonlyMap<string, number>;
   /** Журнал системы и per-page load/error */
   logs: readonly AppLogEntry[];
   /** Панель логов </> открыта */
@@ -121,6 +128,8 @@ type AppStore = {
   openPageInNewTab: (id: string) => void;
   setNodeViewport: (pageId: string, viewport: DeviceViewport | null) => void;
   getNodeViewport: (pageId: string) => DeviceViewport | undefined;
+  /** Записать измеренную высоту контента (auto); no-op при шуме */
+  setContentHeight: (pageId: string, height: number) => void;
   pushLog: (
     entry: Omit<AppLogEntry, 'id' | 'ts'> & { readonly ts?: string },
   ) => void;
@@ -280,7 +289,12 @@ function clampMaxLive(n: number): number {
   if (!Number.isFinite(n)) {
     return DEFAULT_MAX_LIVE;
   }
-  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(MIN_LIVE_IFRAMES, Math.round(n)));
+  // 0 / 9999 = unlimited
+  const rounded = Math.round(n);
+  if (rounded <= 0 || rounded >= 9999) {
+    return 9999;
+  }
+  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(1, rounded));
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({
@@ -289,7 +303,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
   parseIssues: [],
   lastLoadError: null,
   mode: 'live',
-  iframeScale: 0.75,
+  // 50% — ряд экранов читаем без гигантского world
+  iframeScale: 0.5,
   maxLiveIframes: DEFAULT_MAX_LIVE,
   searchQuery: '',
   selectedPageId: null,
@@ -300,6 +315,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   interactPageId: null,
   activeStates: new Map(),
   nodeViewports: new Map(),
+  contentHeights: new Map(),
   logs: [],
   diagnosticsOpen: false,
   logFilterPageId: null,
@@ -344,6 +360,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       document: normalized,
       index: rebuildIndex(normalized),
       parseIssues,
+      // Сброс resize-override + measure — дефолты из layout JSON
+      nodeViewports: new Map(),
+      contentHeights: new Map(),
       // Успех всегда сбрасывает lastLoadError; ошибка base — явный message.
       lastLoadError: result.error,
       toast: result.error !== null ? result.error : get().toast,
@@ -351,7 +370,6 @@ export const useAppStore = create<AppStore>((set, get) => ({
       selectedPageId: null,
       highlightedPageIds: new Set(),
       activeStates: new Map(),
-      nodeViewports: new Map(),
       visiblePageIds: new Set(),
       livePageIds: new Set(),
       mode: 'live',
@@ -400,6 +418,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       livePageIds: new Set(),
       activeStates: new Map(),
       nodeViewports: new Map(),
+      contentHeights: new Map(),
       interactPageId: null,
       logFilterPageId: null,
     });
@@ -595,6 +614,20 @@ export const useAppStore = create<AppStore>((set, get) => ({
     return get().index?.nodesById.get(pageId)?.viewport;
   },
 
+  setContentHeight: (pageId, height) => {
+    if (!Number.isFinite(height) || height < 120) {
+      return;
+    }
+    const rounded = Math.round(height);
+    const prev = get().contentHeights.get(pageId);
+    if (prev !== undefined && Math.abs(prev - rounded) <= 4) {
+      return;
+    }
+    const next = new Map(get().contentHeights);
+    next.set(pageId, rounded);
+    set({ contentHeights: next });
+  },
+
   pushLog: (entry) => {
     const full: AppLogEntry = {
       id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -674,6 +707,9 @@ export const useAppStore = create<AppStore>((set, get) => ({
       adminAccessToken: dogfoodAdminAccessToken,
     });
 
+    // Miniapp HashRouter: /feed → /#/feed (query остаётся в search)
+    url = ensureMiniappHashRoute(url);
+
     // Self-signed HTTPS miniapp: same-origin proxy (secure:false на Vite)
     if (get().useTlsProxy && shouldUseTlsProxyForUrl(url)) {
       const origin =
@@ -681,6 +717,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
           ? globalThis.location.origin
           : 'http://localhost:4310';
       url = rewriteUrlThroughTlsProxy(url, origin);
+      // proxy path может снова «съесть» product path — нормализуем hash
+      url = ensureMiniappHashRoute(url);
     }
 
     return url;

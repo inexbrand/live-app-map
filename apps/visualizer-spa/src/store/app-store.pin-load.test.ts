@@ -116,13 +116,13 @@ describe('app-store pin / load / base', () => {
     if (url === null) {
       throw new Error('expected live URL');
     }
-    expect(url).toContain('/feed');
+    expect(url).toContain('#/feed');
     expect(url).toContain('lam_role=recruiter');
     expect(url).toContain('tab=mine');
     expect(url).toContain('filter=open');
     expect(url).not.toMatch(/lam_role=employer/);
     // openPageInNewTab открывает ровно resolveLiveUrl(id) — без DOM-window в unit
-    expect(url.startsWith('https://vite.localhost:5175/feed')).toBe(true);
+    expect(url.startsWith('https://vite.localhost:5175/')).toBe(true);
   });
 
   test('withBaseUrl: invalid base → lastLoadError + parseIssues, URL нод не silent-rewrite', () => {
