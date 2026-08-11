@@ -246,11 +246,14 @@ function attachFrameBypass(
     delete proxyRes.headers['X-Frame-Options'];
     delete proxyRes.headers['content-security-policy'];
     delete proxyRes.headers['Content-Security-Policy'];
-    // length пересчитаем после rewrite
+    // length пересчитаем после rewrite; chunked нельзя вместе с content-length
+    // (иначе ERR_INVALID_CHUNKED_ENCODING в Chrome)
     delete proxyRes.headers['content-length'];
     delete proxyRes.headers['Content-Length'];
     delete proxyRes.headers['content-encoding'];
     delete proxyRes.headers['Content-Encoding'];
+    delete proxyRes.headers['transfer-encoding'];
+    delete proxyRes.headers['Transfer-Encoding'];
 
     const ctRaw = proxyRes.headers['content-type'] ?? proxyRes.headers['Content-Type'];
     const ct = Array.isArray(ctRaw) ? ctRaw[0] : ctRaw;
@@ -286,6 +289,7 @@ function attachFrameBypass(
         if (
           lk === 'content-length' ||
           lk === 'content-encoding' ||
+          lk === 'transfer-encoding' ||
           lk === 'x-frame-options' ||
           lk === 'content-security-policy'
         ) {
@@ -293,10 +297,22 @@ function attachFrameBypass(
         }
         headers[k] = v;
       }
+      // Полный буфер → фиксированная длина, без chunked
       headers['content-length'] = buf.length;
       res.writeHead(proxyRes.statusCode ?? 200, headers);
       res.end(buf);
       void req;
+    });
+
+    // Если upstream упал mid-stream — не оставляем висящий response
+    proxyRes.on('error', (...errArgs: unknown[]) => {
+      const err = errArgs[0];
+      const message = err instanceof Error ? err.message : String(err);
+      console.warn(`[lam-proxy ${label}] proxyRes`, message);
+      if (!res.writableEnded) {
+        res.writeHead(502, { 'content-type': 'text/plain; charset=utf-8' });
+        res.end(`lam-proxy ${label}: upstream error`);
+      }
     });
   });
 }

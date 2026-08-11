@@ -46,7 +46,10 @@ export function MapToolbar(props: MapToolbarProps) {
   const setIframeScale = useAppStore((s) => s.setIframeScale);
   const maxLiveIframes = useAppStore((s) => s.maxLiveIframes);
   const setMaxLiveIframes = useAppStore((s) => s.setMaxLiveIframes);
-  const maxWarmIframes = useAppStore((s) => s.maxWarmIframes);
+  // maxWarm / warmCount — keep-alive; fallbacks на случай partial HMR store
+  const maxWarmIframes = useAppStore((s) =>
+    typeof s.maxWarmIframes === 'number' ? s.maxWarmIframes : 8,
+  );
   const setMaxWarmIframes = useAppStore((s) => s.setMaxWarmIframes);
   const searchQuery = useAppStore((s) => s.searchQuery);
   const setSearchQuery = useAppStore((s) => s.setSearchQuery);
@@ -67,7 +70,7 @@ export function MapToolbar(props: MapToolbarProps) {
   const setLastLoadError = useAppStore((s) => s.setLastLoadError);
   const document = useAppStore((s) => s.document);
   const liveCount = useAppStore((s) => s.livePageIds.size);
-  const warmCount = useAppStore((s) => s.warmPageIds.size);
+  const warmCount = useAppStore((s) => s.warmPageIds?.size ?? 0);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
 
   const [sheet, setSheet] = useState<SheetId>(null);
