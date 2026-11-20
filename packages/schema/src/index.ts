@@ -24,6 +24,7 @@ export {
 } from './types';
 export type {
   AppMapDocument,
+  AppMapDocumentV1,
   AppMapEdge,
   AppMapGroup,
   AppMapNode,
@@ -43,7 +44,26 @@ export type {
   ProjectMeta,
   SchemaDiagnosticCode,
   StateInjectSpec,
+  SupportedFormatVersion,
 } from './types';
+export type {
+  ApiRoute,
+  CodeComments,
+  CodeModel,
+  CodeService,
+  CodeSymbol,
+  CodeSymbolKind,
+  DbCall,
+  DbColumn,
+  DbOperation,
+  DbTable,
+  HttpMethod,
+  OrmKind,
+  RouteFramework,
+  SourceLocation,
+} from './code-model';
+export { codeModelSchema } from './code-model-zod';
+export { upgradeAppMapDocument } from './upgrade';
 
 export {
   appMapDocumentSchema,

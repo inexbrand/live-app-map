@@ -165,7 +165,7 @@ export function runDiff(
   const l = parseAppMapDocument(left);
   const r = parseAppMapDocument(right);
   if (!l.ok || !r.ok) {
-    throw new Error('diff: один из файлов не AppMapDocument formatVersion 1');
+    throw new Error('diff: один из файлов не AppMapDocument (formatVersion 1 или 2)');
   }
   return diffDocuments(l.document, r.document);
 }

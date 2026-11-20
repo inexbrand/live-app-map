@@ -1,6 +1,6 @@
 # `@live-app-map/schema`
 
-Типы, Zod-схемы, парсинг и конвертация документов **Live App Map** (`formatVersion` **1**).
+Типы, Zod-схемы, парсинг и конвертация документов **Live App Map** (`formatVersion` **2**; документы v1 читаются и поднимаются `upgradeAppMapDocument`).
 
 Канон продукта: [`docs/live-app-map-enterprise-tdd.md`](../../docs/live-app-map-enterprise-tdd.md) · viewer seed: [`docs/live-app-map-design.md`](../../docs/live-app-map-design.md).
 
@@ -11,7 +11,7 @@
 | **enterprise** | `AppMapDocument` | Полный граф сканера (nodes, edges, groups, layout, meta) | `maps/*.json` после `scan` |
 | **liveappmap** (viewer) | `LiveAppMapDocument` | Упрощённый граф для SPA (pages + navigation edges) | `*.liveappmap.json` |
 
-Оба формата живут на **`formatVersion: 1`** (`FORMAT_VERSION`). Enterprise — канон CLI/сканеров; liveappmap — то, что грузит visualizer.
+Enterprise — **`formatVersion: 2`** (`FORMAT_VERSION`): v1 + раздел `code` (сервисы, символы с комментариями, HTTP-роуты, вызовы БД, таблицы — `code-model.ts`) и нода `kind: 'service'`. Viewer-формат переносит `code` как есть. Enterprise — канон CLI/сканеров; liveappmap — то, что грузит visualizer.
 
 ### Конвертация
 

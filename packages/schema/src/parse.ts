@@ -1,7 +1,13 @@
 /**
  * Парсинг и валидация документов на границах.
  */
-import type { AppMapDocument, Diagnostic, LiveAppMapDocument } from './types';
+import type {
+  AppMapDocument,
+  AppMapDocumentV1,
+  Diagnostic,
+  LiveAppMapDocument,
+} from './types';
+import { upgradeAppMapDocument } from './upgrade';
 import { appMapDocumentSchema, liveAppMapDocumentSchema } from './zod';
 
 export type ParseOk<T> = {
@@ -31,7 +37,7 @@ function zodIssuesToDiagnostics(
 }
 
 /**
- * Валидирует enterprise AppMapDocument.
+ * Валидирует enterprise AppMapDocument; документ v1 поднимается до текущей версии.
  */
 export function parseAppMapDocument(input: unknown): ParseResult<AppMapDocument> {
   const result = appMapDocumentSchema.safeParse(input);
@@ -42,7 +48,7 @@ export function parseAppMapDocument(input: unknown): ParseResult<AppMapDocument>
       warnings: [],
     };
   }
-  const doc = result.data as AppMapDocument;
+  const doc = upgradeAppMapDocument(result.data as AppMapDocument | AppMapDocumentV1);
   const warnings: Diagnostic[] = [];
   const ids = new Set<string>();
   for (const node of doc.nodes) {
