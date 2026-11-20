@@ -145,8 +145,9 @@ describe('formatVersion 2', () => {
     const parsed = parseAppMapDocument({
       ...v1Document(),
       formatVersion: 2,
+      project: { root: '/repo/apps/web', framework: 'next' },
       nodes: [
-        { id: 'route:/', kind: 'page', title: 'Главная', pathPattern: '/' },
+        { id: 'route:/', kind: 'page', title: 'Главная', pathPattern: '/', source: { file: 'src/app/page.tsx' } },
         { id: 'service:api', kind: 'service', title: 'api', pathPattern: 'apps/api' },
       ],
       edges: [
@@ -175,6 +176,8 @@ describe('formatVersion 2', () => {
     const apiEdge = back.edges.find((e) => e.kind === 'api');
     expect(apiEdge?.to).toBe('service:api');
     expect(apiEdge?.metadata?.routeIds).toEqual(['route:GET /users']);
+    expect(back.project.root).toBe('/repo/apps/web');
+    expect(back.nodes.find((n) => n.id === 'route:/')?.source?.file).toBe('src/app/page.tsx');
     const service = back.nodes.find((n) => n.id === 'service:api');
     expect(service?.kind).toBe('service');
     expect(service?.iframePolicy?.enabled).toBe(false);

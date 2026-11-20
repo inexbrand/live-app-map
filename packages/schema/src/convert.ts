@@ -167,6 +167,8 @@ export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
         formatVersion: doc.formatVersion,
         revision: doc.revision,
         framework: doc.project.framework,
+        // Без корня проекта нельзя связать файл экрана с разделом code.
+        projectRoot: doc.project.root,
       },
     },
   };
@@ -238,7 +240,7 @@ export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
     revision,
     project: {
       name: doc.app?.name,
-      root: '.',
+      root: projectRootOf(doc) ?? '.',
       framework: 'manual',
     },
     baseUrl: doc.baseUrl ?? null,
@@ -318,6 +320,7 @@ function pageToNode(
     pathExample: p.path,
     url: p.url,
     groupIds: p.group ? [p.group] : undefined,
+    source: typeof p.metadata?.['sourceFile'] === 'string' ? { file: p.metadata['sourceFile'] } : undefined,
     metadata: p.metadata,
     position: p.position,
     viewport: pageViewportToDevice(p.viewport, layout),
@@ -330,6 +333,15 @@ function pageToNode(
     },
     presentation: p.type === 'modal' ? 'modal' : 'page',
   };
+}
+
+/** Корень проекта, сохранённый в extensions.liveAppMap при экспорте во viewer-формат. */
+function projectRootOf(doc: LiveAppMapDocument): string | undefined {
+  const lam = doc.extensions?.['liveAppMap'];
+  if (typeof lam !== 'object' || lam === null || !('projectRoot' in lam)) {
+    return undefined;
+  }
+  return typeof lam.projectRoot === 'string' ? lam.projectRoot : undefined;
 }
 
 function stripBase(url: string, baseUrl: string): string {

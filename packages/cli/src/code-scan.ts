@@ -4,7 +4,7 @@
 import path from 'node:path';
 import { assembleDocument } from '@live-app-map/scanner-core';
 import { codeServiceNodes, scanSource } from '@live-app-map/scanner-source';
-import { codeFileOfNode } from '@live-app-map/schema';
+import { codeFileOfNode, screenOf } from '@live-app-map/schema';
 import type { AppMapDocument, AppMapEdge, CodeModel, Diagnostic } from '@live-app-map/schema';
 import { writeMapFile, type MapFileFormat } from './write-map';
 
@@ -35,7 +35,14 @@ export function withSourceCode(
 ): { document: AppMapDocument; diagnostics: readonly Diagnostic[] } {
   const root = path.resolve(codeDir);
   const screens = screenFiles(doc, root);
-  const scan = scanSource({ root, entries: [...new Set(screens.values())] });
+  const routerPaths = doc.project.framework === 'react-router';
+  const nodes = new Map(doc.nodes.map((n) => [n.id, n]));
+  const entries = [...screens].map(([nodeId, file]) => ({
+    nodeId,
+    file,
+    ...(routerPaths ? { routePath: nodes.get(nodeId)?.pathPattern ?? '/' } : {}),
+  }));
+  const scan = scanSource({ root, entries });
   const ids = new Set(doc.nodes.map((n) => n.id));
   const services = codeServiceNodes(scan.code).filter((n) => !ids.has(n.id));
   return {
@@ -78,11 +85,10 @@ function screenFiles(doc: AppMapDocument, codeRoot: string): Map<string, string>
 export function apiEdges(code: CodeModel, screens: ReadonlyMap<string, string>): AppMapEdge[] {
   const calls = new Map((code.apiCalls ?? []).map((c) => [c.id, c]));
   const routes = new Map(code.routes.map((r) => [r.id, r]));
-  const byFile = new Map((code.screens ?? []).map((s) => [s.file, s]));
   const edges: AppMapEdge[] = [];
   for (const [nodeId, file] of screens) {
     const perService = new Map<string, Set<string>>();
-    for (const sc of byFile.get(file)?.calls ?? []) {
+    for (const sc of screenOf(code, nodeId, file)?.calls ?? []) {
       const routeId = calls.get(sc.callId)?.routeId;
       const route = routeId === undefined ? undefined : routes.get(routeId);
       if (route !== undefined) {

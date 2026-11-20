@@ -147,7 +147,9 @@ export type ScreenApiCall = {
 
 /** Экран (файл компонента страницы) и вызовы API, достижимые из него по вызовам и JSX. */
 export type ScreenApi = {
-  /** Файл экрана от CodeModel.root. */
+  /** Нода экрана; нет — экран определяется файлом (один экран на файл). */
+  readonly nodeId?: string;
+  /** Файл экрана от CodeModel.root (для React Router — файл конфига роутов). */
   readonly file: string;
   readonly calls: readonly ScreenApiCall[];
 };

@@ -11,11 +11,19 @@ const FIXTURE = path.resolve(import.meta.dir, '../../../fixtures/source-monorepo
 const USERS_SCREEN = 'apps/web/src/app/users/page.tsx';
 const ORDERS_SCREEN = 'apps/web/src/app/orders/page.tsx';
 const PROFILE_SCREEN = 'apps/miniapp/src/screens/Profile.tsx';
+const RR_CONFIG = 'apps/miniapp/src/routes.tsx';
+const RR_SCREENS = [
+  { file: RR_CONFIG, nodeId: 'route:/profile/:id', routePath: '/profile/:id' },
+  { file: RR_CONFIG, nodeId: 'route:/orders', routePath: '/orders' },
+];
 
 let code: CodeModel;
 
 beforeAll(() => {
-  code = scanSource({ root: FIXTURE, entries: [USERS_SCREEN, ORDERS_SCREEN, PROFILE_SCREEN] }).code;
+  code = scanSource({
+    root: FIXTURE,
+    entries: [{ file: USERS_SCREEN }, { file: ORDERS_SCREEN }, ...RR_SCREENS],
+  }).code;
 });
 
 /** Вызов строкой «МЕТОД путь клиент → роут» для сравнения целиком. */
@@ -31,10 +39,10 @@ function callsIn(file: string): string[] {
 }
 
 /** Вызовы экрана строками, с функцией-посредником. */
-function screenCalls(file: string): string[] {
-  const screen = code.screens?.find((s) => s.file === file);
+function screenCalls(key: string): string[] {
+  const screen = code.screens?.find((s) => s.nodeId === key) ?? code.screens?.find((s) => s.file === key);
   if (screen === undefined) {
-    throw new Error(`нет экрана ${file}`);
+    throw new Error(`нет экрана ${key}`);
   }
   const byId = new Map((code.apiCalls ?? []).map((c) => [c.id, c]));
   return screen.calls
@@ -102,6 +110,16 @@ describe('scanSource: экраны → вызовы', () => {
       'POST /orders',
       'POST /users ← createUser',
     ]);
+  });
+
+  test('React Router: element и lazy через карту загрузчиков ведут к компонентам экранов', () => {
+    expect(screenCalls('route:/profile/:id')).toEqual([
+      'GET /api/users ← Profile',
+      'GET /api/users/:id ← Profile',
+      'GET /health ← Profile',
+      'POST /orders ← Profile',
+    ]);
+    expect(screenCalls('route:/orders')).toEqual(['GET /v1/orders/count']);
   });
 
   test('без entries экранов нет', () => {

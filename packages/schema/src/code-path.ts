@@ -1,6 +1,7 @@
 /**
  * Пути между картой экранов и разделом `code`.
  */
+import type { CodeModel, ScreenApi } from './code-model';
 
 /**
  * Путь файла ноды экрана от корня скана исходников (POSIX).
@@ -20,4 +21,17 @@ export function codeFileOfNode(projectRoot: string, codeRoot: string, sourceFile
     return null;
   }
   return `${app.slice(code.length + 1)}/${sourceFile}`;
+}
+/**
+ * Экран раздела code для ноды: по id ноды (React Router — много экранов в одном файле),
+ * иначе по файлу.
+ *
+ * @param code - раздел code
+ * @param nodeId - id ноды экрана
+ * @param file - файл ноды от code.root
+ * @returns экран или undefined
+ */
+export function screenOf(code: CodeModel, nodeId: string, file: string): ScreenApi | undefined {
+  const screens = code.screens ?? [];
+  return screens.find((s) => s.nodeId === nodeId) ?? screens.find((s) => s.nodeId === undefined && s.file === file);
 }

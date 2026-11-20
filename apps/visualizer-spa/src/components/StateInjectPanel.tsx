@@ -156,7 +156,9 @@ export function StateInjectPanel() {
           </Button>
         </div>
 
-        {codeView !== null && codeView.symbols.length > 0 ? <CodePanel view={codeView} /> : null}
+        {codeView !== null && (codeView.symbols.length > 0 || (codeView.kind === 'page' && codeView.api.length + codeView.unmatched.length > 0)) ? (
+          <CodePanel view={codeView} />
+        ) : null}
       </PanelBody>
     </aside>
   );

@@ -79,6 +79,8 @@ type AppStore = {
   maxWarmIframes: number;
   searchQuery: string;
   selectedPageId: string | null;
+  /** Роут, к которому перешли из панели экрана: в панели сервиса он выделен и первым. */
+  codeFocusRouteId: string | null;
   highlightedPageIds: ReadonlySet<string>;
   pinnedPageIds: ReadonlySet<string>;
   visiblePageIds: ReadonlySet<string>;
@@ -136,6 +138,8 @@ type AppStore = {
   setMaxWarmIframes: (n: number) => void;
   setSearchQuery: (q: string) => void;
   selectPage: (id: string | null) => void;
+  /** Открыть сервис и выделить в его панели роут. */
+  focusRoute: (serviceId: string, routeId: string) => void;
   togglePin: (id: string) => void;
   setVisible: (ids: ReadonlySet<string>) => void;
   setBaseUrlOverride: (url: string) => void;
@@ -347,6 +351,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   maxWarmIframes: DEFAULT_MAX_WARM,
   searchQuery: '',
   selectedPageId: null,
+  codeFocusRouteId: null,
   highlightedPageIds: new Set(),
   pinnedPageIds: new Set(),
   visiblePageIds: new Set(),
@@ -494,8 +499,14 @@ export const useAppStore = create<AppStore>((set, get) => ({
 
   setSearchQuery: (searchQuery) => set({ searchQuery }),
 
+  focusRoute: (serviceId, routeId) => {
+    get().selectPage(serviceId);
+    set({ codeFocusRouteId: routeId });
+  },
+
   selectPage: (id) => {
     const index = get().index;
+    set({ codeFocusRouteId: null });
     if (!id || !index) {
       set({ selectedPageId: null, highlightedPageIds: new Set() });
       get().recomputeLive();

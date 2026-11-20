@@ -42,6 +42,7 @@ const apiCallSchema = z
 
 const screenApiSchema = z
   .object({
+    nodeId: z.string().min(1).optional(),
     file: z.string().min(1),
     calls: z.array(z.object({ callId: z.string().min(1), via: z.string().optional() }).strict()),
   })

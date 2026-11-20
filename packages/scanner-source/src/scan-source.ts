@@ -10,6 +10,7 @@ import { ApiCallFinder } from './api-calls';
 import { matchRoute } from './api-match';
 import { EnvFiles } from './env-files';
 import { RoutePaths } from './route-factories';
+import { rrScreenRoots } from './rr-screens';
 import { screenApiCalls } from './screen-calls';
 import { ValueEvaluator } from './value-evaluator';
 import { indexImplementations } from './implementations';
@@ -35,8 +36,18 @@ export type SourceScanRequest = {
   readonly exclude?: readonly string[];
   /** Предел числа .ts/.tsx файлов; сверх него файлы пропускаются с диагностикой. */
   readonly maxFiles?: number;
-  /** Файлы экранов (от root) — для них считаются достижимые вызовы API (`code.screens`). */
-  readonly entries?: readonly string[];
+  /** Экраны — для них считаются достижимые вызовы API (`code.screens`). */
+  readonly entries?: readonly ScreenEntry[];
+};
+
+/** Экран для поиска его вызовов API. */
+export type ScreenEntry = {
+  /** Файл экрана от root; у React Router — файл конфига роутов. */
+  readonly file: string;
+  /** Нода карты. */
+  readonly nodeId?: string;
+  /** Путь роута React Router: по нему в конфиге ищется объект роута. */
+  readonly routePath?: string;
 };
 
 /** Результат скана исходников. */
@@ -158,7 +169,7 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
       routes: sortedRoutes,
       tables: tables.sort(byLocation),
       apiCalls: api.calls,
-      ...(request.entries === undefined ? {} : { screens: screensOf(ctx, program, request.entries, api.idsByNode) }),
+      ...(request.entries === undefined ? {} : { screens: screensOf(ctx, program, request.entries, api.idsByNode, services) }),
     },
     diagnostics,
     stats: { files: projectFiles.length, ms: Date.now() - t0 },
@@ -216,22 +227,33 @@ function collectApiCalls(
  * @param program - программа TS
  * @param entries - файлы экранов от root
  * @param idsByNode - узел вызова → id
+ * @param services - сервисы
  * @returns экраны, найденные среди исходников
  */
 function screensOf(
   ctx: SourceContext,
   program: ts.Program,
-  entries: readonly string[],
+  entries: readonly ScreenEntry[],
   idsByNode: ReadonlyMap<ts.Node, readonly string[]>,
+  services: ServiceIndex,
 ): ScreenApi[] {
-  const files = [...new Set(entries)];
-  const abs = new Set(files.map((f) => path.join(ctx.root, f)));
+  const sameService = (a: string, b: string): boolean =>
+    services.serviceOf(relPath(ctx.root, a)).id === services.serviceOf(relPath(ctx.root, b)).id;
+  // В файлы других экранов (Next: page.tsx) обход по ссылкам не заходит.
+  const screenFiles = new Set(entries.filter((e) => e.routePath === undefined).map((e) => path.join(ctx.root, e.file)));
   const out: ScreenApi[] = [];
-  for (const file of files) {
-    const sf = program.getSourceFile(path.join(ctx.root, file));
-    if (sf !== undefined) {
-      out.push({ file, calls: screenApiCalls(ctx, sf, idsByNode, abs) });
+  for (const e of entries) {
+    const sf = program.getSourceFile(path.join(ctx.root, e.file));
+    if (sf === undefined) {
+      continue;
     }
+    const roots = e.routePath === undefined ? [sf] : rrScreenRoots(ctx, sf, e.routePath);
+    const skip = e.routePath === undefined ? screenFiles : new Set([...screenFiles].filter((f) => f !== sf.fileName));
+    out.push({
+      ...(e.nodeId === undefined ? {} : { nodeId: e.nodeId }),
+      file: e.file,
+      calls: screenApiCalls(ctx, roots, idsByNode, skip, sameService),
+    });
   }
   return out;
 }

@@ -72,7 +72,7 @@ export type {
   SourceLocation,
 } from './code-model';
 export { codeModelSchema } from './code-model-zod';
-export { codeFileOfNode } from './code-path';
+export { codeFileOfNode, screenOf } from './code-path';
 export { upgradeAppMapDocument } from './upgrade';
 
 export {
