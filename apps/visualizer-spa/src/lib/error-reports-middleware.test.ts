@@ -6,11 +6,8 @@ import { existsSync, mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { serveMiddleware, type TestServer } from './dev-http.test-helpers';
-import {
-  ERROR_REPORTS_FILE,
-  ErrorReportSource,
-  createErrorReportsMiddleware,
-} from './error-reports-middleware';
+import { ErrorReportSource } from './error-report';
+import { ERROR_REPORTS_FILE, createErrorReportsMiddleware } from './error-reports-middleware';
 
 let lamDir = '';
 let server: TestServer;

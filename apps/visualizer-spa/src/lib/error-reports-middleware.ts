@@ -8,6 +8,7 @@ import { appendFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 import { resolveLamDir } from '@live-app-map/mcp-server';
 import { z } from 'zod';
+import { ErrorReportSource, type ErrorReport } from './error-report';
 import {
   isLocalOrigin,
   parseJsonText,
@@ -25,15 +26,8 @@ export const ERROR_REPORTS_FILE = 'error-reports.jsonl';
 
 const MAX_BODY_BYTES = 64 * 1024;
 
-/** Откуда пришла ошибка. */
-export enum ErrorReportSource {
-  BOUNDARY = 'boundary',
-  WINDOW = 'window',
-  REJECTION = 'unhandledrejection',
-}
-
 /** Схема отчёта (граница: тело POST). */
-export const errorReportSchema = z.object({
+export const errorReportSchema: z.ZodType<ErrorReport> = z.object({
   source: z.nativeEnum(ErrorReportSource),
   message: z.string().min(1).max(4000),
   stack: z.string().max(20_000).nullable(),
@@ -41,9 +35,6 @@ export const errorReportSchema = z.object({
   url: z.string().max(2000),
   userAgent: z.string().max(1000),
 });
-
-/** Отчёт об ошибке клиента. */
-export type ErrorReport = z.infer<typeof errorReportSchema>;
 
 /** Настройки middleware. */
 export type ErrorReportsOptions = {

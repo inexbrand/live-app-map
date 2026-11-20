@@ -1,12 +1,17 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { App } from './App';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { createErrorReporter, installGlobalErrorReporting } from './lib/report-client-error';
 import { initPluginHost } from './plugin-host';
 import './styles/global.css';
 
 // Production-safe: пустой список плагинов — no-op registry, boot не ломается.
 // Реальные visualizer-плагины подключаются сюда, когда host wiring расширят.
 initPluginHost([]);
+
+const reportError = createErrorReporter();
+installGlobalErrorReporting(reportError);
 
 const rootEl = document.getElementById('root');
 if (!rootEl) {
@@ -15,6 +20,8 @@ if (!rootEl) {
 
 createRoot(rootEl).render(
   <StrictMode>
-    <App />
+    <ErrorBoundary report={reportError}>
+      <App />
+    </ErrorBoundary>
   </StrictMode>,
 );
