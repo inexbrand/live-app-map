@@ -11,64 +11,18 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { AppMapDocument, AppMapEdge, AppMapNode } from '@live-app-map/schema';
+import type { AppMapDocument } from '@live-app-map/schema';
 import { useMemo } from 'react';
+import { filterCanvasGraph } from './canvas-graph';
 import { computeNodeLayout, resolveNodeViewport } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
 import { layoutNodes } from './layout';
 import { PageNode, type PageNodeData } from './PageNode';
+import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
-const nodeTypes = { page: PageNode };
+const nodeTypes = { page: PageNode, service: ServiceNode };
 
-/**
- * Результат фильтрации графа для canvas (поиск + без orphan-рёбер).
- */
-export type CanvasGraphFilterResult = {
-  readonly filtered: readonly AppMapNode[];
-  readonly navEdges: readonly AppMapEdge[];
-  /** Нормализованный query (trim + lower); пустая строка = без фильтра. */
-  readonly normalizedQuery: string;
-};
-
-/**
- * Фильтрует page-ноды по searchQuery и оставляет только рёбра между ними.
- * Orphan edges (конец вне filtered) не попадают в результат.
- *
- * @param document - загруженный AppMap
- * @param searchQuery - строка поиска из store
- * @returns filtered-ноды, согласованные nav-рёбра и нормализованный query
- */
-export function filterCanvasGraph(
-  document: AppMapDocument,
-  searchQuery: string,
-): CanvasGraphFilterResult {
-  const pageNodes = document.nodes.filter(
-    (n) => n.kind === 'page' || n.kind === 'not-found' || n.kind === 'external',
-  );
-  const normalizedQuery = searchQuery.trim().toLowerCase();
-  const filtered =
-    normalizedQuery.length > 0
-      ? pageNodes.filter(
-          (n) =>
-            n.title.toLowerCase().includes(normalizedQuery) ||
-            n.id.toLowerCase().includes(normalizedQuery) ||
-            n.pathPattern.toLowerCase().includes(normalizedQuery),
-        )
-      : pageNodes;
-
-  const filteredIds = new Set(filtered.map((n) => n.id));
-  const navEdges = document.edges.filter((e) => {
-    if (e.to === null) {
-      return false;
-    }
-    if (e.kind === 'wraps' || e.kind === 'parent') {
-      return false;
-    }
-    return filteredIds.has(e.from) && filteredIds.has(e.to);
-  });
-
-  return { filtered, navEdges, normalizedQuery };
-}
+export { filterCanvasGraph, type CanvasGraphFilterResult } from './canvas-graph';
 
 /**
  * Холст React Flow: layout страниц, поиск, empty state при нуле совпадений.
@@ -111,6 +65,16 @@ export function AppMapCanvas() {
     const positions = layoutNodes(filtered, navEdges, 'LR');
     const nodes: Node[] = filtered.map((n) => {
       const pos = positions.get(n.id);
+      if (n.kind === 'service') {
+        return {
+          id: n.id,
+          type: 'service',
+          position: { x: pos?.x ?? 0, y: pos?.y ?? 0 },
+          ...SERVICE_NODE_SIZE,
+          style: { ...SERVICE_NODE_SIZE },
+          data: { node: n } satisfies ServiceNodeData,
+        };
+      }
       // Тот же расчёт, что в PageNode: размер ноды React Flow = размер DOM
       const vp = resolveNodeViewport({
         nodeViewport: n.viewport,

@@ -6,7 +6,7 @@ import type { AppMapDocument, AppMapPageState } from '@live-app-map/schema';
 import { useAppStore } from './app-store';
 
 const miniDoc: AppMapDocument = {
-  formatVersion: 1,
+  formatVersion: 2,
   kind: 'live-app-map',
   generatedAt: '2026-01-01T00:00:00.000Z',
   generator: { name: 'test', version: '0' },
@@ -162,5 +162,16 @@ describe('resolveLiveUrl', () => {
     expect(url).toContain('lam_role=recruiter');
     expect(url).toContain('view=grid');
     expect(url).not.toMatch(/lam_role=employer/);
+  });
+
+  test('у ноды сервиса нет живого URL — каталог сервиса не превращается в путь экрана', () => {
+    useAppStore.getState().loadDocument({
+      ...miniDoc,
+      nodes: [
+        ...miniDoc.nodes,
+        { id: 'service:@x/api', kind: 'service', title: '@x/api', pathPattern: 'apps/api' },
+      ],
+    });
+    expect(useAppStore.getState().resolveLiveUrl('service:@x/api')).toBeNull();
   });
 });

@@ -11,6 +11,7 @@ import type {
   LiveAppMapDocument,
   LiveAppMapEdge,
   LiveAppMapPage,
+  NodeKind,
 } from './types';
 import { DEVICE_HEIGHT_FALLBACK, FORMAT_VERSION } from './types';
 
@@ -42,6 +43,40 @@ const NAVIGATION_EDGE_KIND_SET: ReadonlySet<string> = new Set<string>([
   'deep-link',
   'unknown',
 ]);
+
+/** Виды нод, которые попадают во viewer-формат. */
+const VIEWER_NODE_KINDS: ReadonlySet<NodeKind> = new Set<NodeKind>([
+  'page',
+  'not-found',
+  'external',
+  'service',
+]);
+
+/**
+ * Тип viewer-страницы по enterprise-ноде.
+ *
+ * @param n - нода
+ * @returns `service | external | modal | route`
+ */
+function pageTypeOf(n: AppMapNode): string {
+  if (n.kind === 'service' || n.kind === 'external') {
+    return n.kind;
+  }
+  return n.presentation === 'modal' ? 'modal' : 'route';
+}
+
+/**
+ * Вид enterprise-ноды по типу viewer-страницы.
+ *
+ * @param p - страница viewer-формата
+ * @returns `service | external | page`
+ */
+function nodeKindOfPage(p: LiveAppMapPage): NodeKind {
+  if (p.type === 'service' || p.type === 'external') {
+    return p.type;
+  }
+  return 'page';
+}
 
 /** Дефолт kind при отсутствии/невалидном значении во viewer-документе. */
 const DEFAULT_EDGE_KIND: EdgeKind = 'unknown';
@@ -103,7 +138,7 @@ function isLiveNavigableEdge(e: AppMapEdge): e is AppMapEdgeWithTarget {
  */
 export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
   const pages: LiveAppMapPage[] = doc.nodes
-    .filter((n) => n.kind === 'page' || n.kind === 'not-found' || n.kind === 'external')
+    .filter((n) => VIEWER_NODE_KINDS.has(n.kind))
     .map((n) => nodeToPage(n));
 
   const edges: LiveAppMapEdge[] = doc.edges
@@ -123,6 +158,7 @@ export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
     edges,
     groups: doc.groups,
     layout: doc.layout,
+    code: doc.code,
     extensions: {
       ...doc.extensions,
       liveAppMap: {
@@ -156,7 +192,7 @@ function nodeToPage(n: AppMapNode): LiveAppMapPage {
     path: n.pathExample ?? n.pathPattern,
     url: n.url,
     group: n.groupIds?.[0],
-    type: n.kind === 'external' ? 'external' : n.presentation === 'modal' ? 'modal' : 'route',
+    type: pageTypeOf(n),
     states: n.states,
     screenshot: n.screenshot,
     metadata: {
@@ -168,7 +204,7 @@ function nodeToPage(n: AppMapNode): LiveAppMapPage {
     },
     position: n.position,
     viewport: n.viewport,
-    iframeDisabled: n.iframePolicy ? !n.iframePolicy.enabled : false,
+    iframeDisabled: n.kind === 'service' || (n.iframePolicy ? !n.iframePolicy.enabled : false),
     defaultPinned: n.defaultPinned,
   };
 }
@@ -209,6 +245,7 @@ export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
     groups: doc.groups,
     layout: doc.layout,
     extensions: doc.extensions,
+    code: doc.code,
   };
 }
 
@@ -273,7 +310,7 @@ function pageToNode(
   const enabled = !p.iframeDisabled;
   return {
     id: p.id,
-    kind: p.type === 'external' ? 'external' : 'page',
+    kind: nodeKindOfPage(p),
     title: p.title,
     pathPattern,
     pathExample: p.path,

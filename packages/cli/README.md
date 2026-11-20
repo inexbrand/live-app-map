@@ -80,3 +80,16 @@ bun test packages/cli
 # или из пакета:
 cd packages/cli && bun test
 ```
+
+## Исходный код: `code` и `scan --code-dir`
+
+```bash
+# карта только из исходников: ноды service + раздел code (роуты, БД, таблицы, символы)
+bun run packages/cli/src/bin.ts code --dir ../korbor -o maps/korbor-code.json
+
+# экраны приложения + исходники монорепо в одной карте (viewer-формат для визуализатора)
+bun run packages/cli/src/bin.ts scan --dir ../korbor/apps/miniapp --code-dir ../korbor \
+  --format liveappmap -o apps/visualizer-spa/public/maps/korbor-miniapp-code.generated.liveappmap.json
+```
+
+Сводка в stdout: `services`, `routes`, `routesWithDoc`, `routesWithDb`, `tables`, `symbols`. Сканер — `@live-app-map/scanner-source`.

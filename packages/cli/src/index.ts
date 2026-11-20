@@ -1,20 +1,21 @@
 /**
  * Программный API CLI: scan / diff / doctor.
  */
-import { writeFileSync, readFileSync, existsSync } from 'node:fs';
+import { readFileSync, existsSync } from 'node:fs';
 import path from 'node:path';
 import { diag, formatDiagnostic, sortDiagnostics } from '@live-app-map/diagnostics';
-import { diffDocuments, sortDocument } from '@live-app-map/graph';
+import { diffDocuments } from '@live-app-map/graph';
 import { detectFramework } from '@live-app-map/scanner-core';
 import { scanNextApp } from '@live-app-map/scanner-next';
 import { scanReactRouterApp } from '@live-app-map/scanner-react-router';
 import {
-  appMapToLiveAppMap,
   parseAppMapDocument,
   type AppMapDocument,
   type FrameworkKind,
 } from '@live-app-map/schema';
 import type { ScanRequest, ScanResult } from '@live-app-map/scanner-core';
+import { withSourceCode } from './code-scan';
+import { writeMapFile } from './write-map';
 
 export type ScanCliOptions = {
   readonly dir: string;
@@ -24,6 +25,8 @@ export type ScanCliOptions = {
   readonly format?: 'enterprise' | 'liveappmap';
   readonly exampleParams?: ScanRequest['exampleParams'];
   readonly includeRouteHandlers?: boolean;
+  /** Каталог исходников для раздела code (сервисы, роуты, БД); без него code нет. */
+  readonly codeDir?: string;
 };
 
 /** Кандидаты dual-scan при framework=unknown (порядок = tie-break priority). */
@@ -139,11 +142,17 @@ export async function runScan(opts: ScanCliOptions): Promise<ScanResult> {
     result = await scanUnknownWithDualHeuristic(request, abs);
   }
 
+  if (opts.codeDir !== undefined) {
+    const merged = withSourceCode(result.document, opts.codeDir);
+    result = {
+      ...result,
+      document: merged.document,
+      diagnostics: [...result.diagnostics, ...merged.diagnostics],
+    };
+  }
+
   if (opts.out) {
-    const sorted = sortDocument(result.document);
-    const payload =
-      opts.format === 'liveappmap' ? appMapToLiveAppMap(sorted) : sorted;
-    writeFileSync(opts.out, `${JSON.stringify(payload, null, 2)}\n`, 'utf8');
+    writeMapFile(result.document, opts.out, opts.format);
   }
 
   return result;
@@ -165,7 +174,7 @@ export function runDiff(
   const l = parseAppMapDocument(left);
   const r = parseAppMapDocument(right);
   if (!l.ok || !r.ok) {
-    throw new Error('diff: один из файлов не AppMapDocument formatVersion 1');
+    throw new Error('diff: один из файлов не AppMapDocument (formatVersion 1 или 2)');
   }
   return diffDocuments(l.document, r.document);
 }
@@ -224,5 +233,7 @@ export function runDoctor(dir: string): DoctorReport {
 }
 
 export { formatDiagnostic, sortDiagnostics };
+export { runCodeScan, withSourceCode } from './code-scan';
+export type { CodeScanOptions, CodeScanResult } from './code-scan';
 export type { AppMapDocument };
 export { defineConfig, type LiveAppMapConfig } from './define-config';

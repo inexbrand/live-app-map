@@ -751,7 +751,8 @@ export const useAppStore = create<AppStore>((set, get) => ({
       return null;
     }
     const node = index.nodesById.get(id);
-    if (!node) {
+    // Сервис бэкенда — не экран: pathPattern у него каталог в репо, а не URL.
+    if (!node || node.kind === 'service') {
       return null;
     }
     const base =

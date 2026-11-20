@@ -27,6 +27,7 @@
         "zustand": "^5.0.3",
       },
       "devDependencies": {
+        "@live-app-map/cli": "workspace:*",
         "@playwright/test": "^1.51.0",
         "@types/react": "^19.0.10",
         "@types/react-dom": "^19.0.4",
@@ -48,6 +49,7 @@
         "@live-app-map/scanner-core": "workspace:*",
         "@live-app-map/scanner-next": "workspace:*",
         "@live-app-map/scanner-react-router": "workspace:*",
+        "@live-app-map/scanner-source": "workspace:*",
         "@live-app-map/schema": "workspace:*",
       },
       "devDependencies": {
@@ -178,6 +180,16 @@
         "@live-app-map/schema": "workspace:*",
       },
       "devDependencies": {
+        "typescript": "^5.8.2",
+      },
+    },
+    "packages/scanner-source": {
+      "name": "@live-app-map/scanner-source",
+      "version": "0.1.0",
+      "dependencies": {
+        "@live-app-map/diagnostics": "workspace:*",
+        "@live-app-map/scanner-core": "workspace:*",
+        "@live-app-map/schema": "workspace:*",
         "typescript": "^5.8.2",
       },
     },
@@ -388,6 +400,8 @@
     "@live-app-map/scanner-next": ["@live-app-map/scanner-next@workspace:packages/scanner-next"],
 
     "@live-app-map/scanner-react-router": ["@live-app-map/scanner-react-router@workspace:packages/scanner-react-router"],
+
+    "@live-app-map/scanner-source": ["@live-app-map/scanner-source@workspace:packages/scanner-source"],
 
     "@live-app-map/schema": ["@live-app-map/schema@workspace:packages/schema"],
 

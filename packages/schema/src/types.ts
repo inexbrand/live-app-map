@@ -1,9 +1,15 @@
 /**
- * Канонические типы Live App Map (formatVersion 1).
+ * Канонические типы Live App Map (formatVersion 2).
  * Совместимы с enterprise TDD и viewer-форматом liveappmap.
+ * v2 = v1 + раздел `code` и нода `service`; v1 поднимается в `upgradeAppMapDocument`.
  */
+import type { CodeModel } from './code-model';
 
-export const FORMAT_VERSION = 1 as const;
+/** Текущая версия enterprise-формата. */
+export const FORMAT_VERSION: 2 = 2;
+
+/** Версии enterprise-формата, которые читает parseAppMapDocument. */
+export type SupportedFormatVersion = 1 | 2;
 
 export type FrameworkKind = 'next' | 'react-router' | 'hybrid' | 'unknown' | 'manual';
 
@@ -14,6 +20,7 @@ export type NodeKind =
   | 'intercept'
   | 'not-found'
   | 'external'
+  | 'service'
   | 'unknown';
 
 export type EdgeKind =
@@ -250,6 +257,13 @@ export type AppMapDocument = {
   readonly groups?: readonly AppMapGroup[];
   readonly layout?: LayoutHints;
   readonly extensions?: Readonly<Record<string, unknown>>;
+  /** Исходный код: сервисы, символы, роуты, БД (с formatVersion 2). */
+  readonly code?: CodeModel;
+};
+
+/** Документ formatVersion 1 — как его писали сканеры до раздела `code`. */
+export type AppMapDocumentV1 = Omit<AppMapDocument, 'formatVersion' | 'code'> & {
+  readonly formatVersion: 1;
 };
 
 /** Viewer-формат liveappmap (docs/live-app-map-design.md) */
@@ -305,6 +319,8 @@ export type LiveAppMapDocument = {
   readonly groups?: readonly AppMapGroup[];
   readonly layout?: LayoutHints;
   readonly extensions?: Readonly<Record<string, unknown>>;
+  /** Исходный код (переносится из enterprise-документа как есть). */
+  readonly code?: CodeModel;
 };
 
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';

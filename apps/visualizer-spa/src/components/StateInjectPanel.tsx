@@ -2,6 +2,9 @@
  * Панель стейтов / ролей / interact (UI kit).
  */
 import { Copy, MousePointer2, ExternalLink } from 'lucide-react';
+import { useMemo } from 'react';
+import { selectNodeCode } from '../lib/node-code';
+import { CodePanel } from './CodePanel';
 import { Button, Chip, Field, PanelBody, PanelHeader, Select } from '../ui';
 import { useAppStore } from '../store/app-store';
 
@@ -23,7 +26,12 @@ export function StateInjectPanel() {
   const interactPageId = useAppStore((s) => s.interactPageId);
   const setToast = useAppStore((s) => s.setToast);
 
+  const mapDocument = useAppStore((s) => s.document);
   const node = selectedPageId ? index?.nodesById.get(selectedPageId) : undefined;
+  const codeView = useMemo(
+    () => (mapDocument !== null && selectedPageId !== null ? selectNodeCode(mapDocument, selectedPageId) : null),
+    [mapDocument, selectedPageId],
+  );
   const activeStateName = selectedPageId
     ? activeStates.get(selectedPageId)
     : undefined;
@@ -43,6 +51,21 @@ export function StateInjectPanel() {
 
   if (!selectedPageId || !node) {
     return null;
+  }
+
+  if (node.kind === 'service') {
+    return (
+      <aside className="drawer ui-panel drawer--edge drawer--code" data-testid="service-drawer">
+        <PanelHeader title={node.title} description={node.pathPattern} />
+        <PanelBody>
+          {codeView === null ? (
+            <p className="drawer__hint">В карте нет раздела code для сервиса.</p>
+          ) : (
+            <CodePanel view={codeView} />
+          )}
+        </PanelBody>
+      </aside>
+    );
   }
 
   return (
@@ -132,6 +155,8 @@ export function StateInjectPanel() {
             Клики в iframe
           </Button>
         </div>
+
+        {codeView !== null && codeView.symbols.length > 0 ? <CodePanel view={codeView} /> : null}
       </PanelBody>
     </aside>
   );

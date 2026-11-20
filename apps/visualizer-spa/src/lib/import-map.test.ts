@@ -4,7 +4,7 @@ import { importMapFile, importMapJson, importMapValue } from './import-map';
 /** Минимальный валидный enterprise AppMapDocument. */
 function makeEnterpriseDoc(): Record<string, unknown> {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     kind: 'live-app-map',
     generatedAt: '2026-01-01T00:00:00.000Z',
     generator: { name: 'test-import', version: '0.0.1' },

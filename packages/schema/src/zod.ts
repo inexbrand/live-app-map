@@ -2,6 +2,7 @@
  * Zod-схемы границ документа Live App Map.
  */
 import { z } from 'zod';
+import { codeModelSchema } from './code-model-zod';
 
 export const stateInjectSpecSchema = z
   .object({
@@ -34,6 +35,7 @@ export const appMapNodeSchema = z
       'intercept',
       'not-found',
       'external',
+      'service',
       'unknown',
     ]),
     title: z.string(),
@@ -168,7 +170,7 @@ export const appMapGroupSchema = z
 
 export const appMapDocumentSchema = z
   .object({
-    formatVersion: z.literal(1),
+    formatVersion: z.union([z.literal(1), z.literal(2)]),
     kind: z.literal('live-app-map'),
     generatedAt: z.string(),
     generator: z.object({
@@ -194,6 +196,7 @@ export const appMapDocumentSchema = z
     groups: z.array(appMapGroupSchema).optional(),
     layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
+    code: codeModelSchema.optional(),
   })
   .passthrough();
 
@@ -259,5 +262,6 @@ export const liveAppMapDocumentSchema = z
     groups: z.array(appMapGroupSchema).optional(),
     layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
+    code: codeModelSchema.optional(),
   })
   .passthrough();

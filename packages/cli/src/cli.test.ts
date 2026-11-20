@@ -23,7 +23,7 @@ function minimalDoc(
     Pick<AppMapDocument, 'nodes' | 'edges' | 'revision'>,
 ): AppMapDocument {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     kind: 'live-app-map',
     generatedAt: '2026-01-01T00:00:00.000Z',
     generator: { name: 'cli-test', version: '0' },
