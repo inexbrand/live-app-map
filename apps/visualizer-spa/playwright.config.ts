@@ -38,7 +38,13 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
-      use: { ...devices['Desktop Chrome'] },
+      use: {
+        ...devices['Desktop Chrome'],
+        // snapshot.e2e: диалог выбора вкладки getDisplayMedia принимается сам
+        launchOptions: {
+          args: ['--auto-accept-this-tab-capture', '--use-fake-ui-for-media-stream'],
+        },
+      },
     },
   ],
   /* webServer поднимает Vite; если порт уже занят локальным dev — reuse */
