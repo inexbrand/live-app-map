@@ -1,7 +1,7 @@
 /**
  * Feedback: описание проблемы по выбранному экрану → copy prompt / export JSON для CLI.
  */
-import { Camera, ClipboardCopy, Download } from 'lucide-react';
+import { Camera, ClipboardCopy, Download, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
   buildFeedbackArtifact,
@@ -9,6 +9,7 @@ import {
 } from '../lib/build-feedback-prompt';
 import { Button, Field, PanelBody, PanelHeader, Select, Textarea } from '../ui';
 import { useAppStore } from '../store/app-store';
+import { useSnapshotStore } from '../store/snapshot-store';
 
 /**
  * Панель feedback / prompt builder.
@@ -27,9 +28,14 @@ export function FeedbackPanel() {
 
   const [note, setNote] = useState('');
   const [severity, setSeverity] = useState<FeedbackSeverity>('medium');
-  const [screenshotDataUrl, setScreenshotDataUrl] = useState<string | null>(
-    null,
-  );
+  const feedbackShot = useSnapshotStore((s) => s.feedbackShot);
+  const setFeedbackShot = useSnapshotStore((s) => s.setFeedbackShot);
+  const requestSnapshot = useSnapshotStore((s) => s.request);
+  // Снимок относится к экрану, для которого его сняли
+  const screenshotDataUrl =
+    feedbackShot !== null && feedbackShot.pageId === selectedPageId
+      ? feedbackShot.dataUrl
+      : null;
 
   const node = selectedPageId ? index?.nodesById.get(selectedPageId) : undefined;
   const stateName = selectedPageId
@@ -67,56 +73,10 @@ export function FeedbackPanel() {
     screenshotDataUrl,
   ]);
 
-  const captureNodeChrome = async () => {
-    if (!selectedPageId) {
-      setToast('Сначала выберите экран на карте');
-      return;
-    }
-    const el = window.document.querySelector(
-      `[data-lam-node="${CSS.escape(selectedPageId)}"]`,
-    );
-    if (!(el instanceof HTMLElement)) {
-      setToast('Нода не найдена в DOM');
-      return;
-    }
-    try {
-      // html2canvas optional — fallback to SVG foreignObject-free snapshot via draw
-      const rect = el.getBoundingClientRect();
-      const canvas = window.document.createElement('canvas');
-      const scale = 1;
-      canvas.width = Math.max(1, Math.floor(rect.width * scale));
-      canvas.height = Math.max(1, Math.floor(rect.height * scale));
-      const ctx = canvas.getContext('2d');
-      if (!ctx) {
-        setToast('Canvas недоступен');
-        return;
-      }
-      ctx.fillStyle = '#111111';
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = '#f5f5f5';
-      ctx.font = '600 14px Manrope, sans-serif';
-      ctx.fillText(node?.title ?? selectedPageId, 12, 28);
-      ctx.fillStyle = '#a3a3a3';
-      ctx.font = '12px ui-monospace, monospace';
-      ctx.fillText(node?.pathPattern ?? '', 12, 48);
-      if (liveUrl) {
-        ctx.fillText(liveUrl.slice(0, 64), 12, 68);
-      }
-      ctx.strokeStyle = '#404040';
-      ctx.strokeRect(8, 80, canvas.width - 16, canvas.height - 96);
-      ctx.fillStyle = '#737373';
-      ctx.font = '11px Manrope, sans-serif';
-      ctx.fillText(
-        'Chrome snapshot (iframe cross-origin не захватывается)',
-        16,
-        100,
-      );
-      const dataUrl = canvas.toDataURL('image/png');
-      setScreenshotDataUrl(dataUrl);
-      setToast('Снимок chrome ноды добавлен к feedback');
-    } catch (err) {
-      const message = err instanceof Error ? err.message : String(err);
-      setToast(`Снимок не удался: ${message}`);
+  /** Снимок области экрана (Screen Capture API, с iframe) — ведёт LamGrabHost. */
+  const captureSnapshot = (): void => {
+    if (!requestSnapshot({ kind: 'feedback', pageId: selectedPageId })) {
+      setToast('Снимок уже идёт');
     }
   };
 
@@ -203,19 +163,31 @@ export function FeedbackPanel() {
         ) : null}
 
         {screenshotDataUrl ? (
-          <img
-            src={screenshotDataUrl}
-            alt="Снимок chrome ноды"
-            style={{
-              width: '100%',
-              borderRadius: 8,
-              border: '1px solid var(--border)',
-            }}
-          />
+          <div className="feedback-shot">
+            <img
+              src={screenshotDataUrl}
+              alt="Снимок экрана к замечанию"
+              data-testid="feedback-shot"
+              style={{
+                width: '100%',
+                borderRadius: 8,
+                border: '1px solid var(--border)',
+              }}
+            />
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={() => setFeedbackShot(null)}
+            >
+              <X size={16} strokeWidth={1.75} />
+              Убрать снимок
+            </Button>
+          </div>
         ) : null}
 
         <div className="drawer__actions">
-          <Button type="button" variant="outline" size="sm" onClick={() => void captureNodeChrome()}>
+          <Button type="button" variant="outline" size="sm" onClick={captureSnapshot}>
             <Camera size={16} strokeWidth={1.75} />
             Снимок
           </Button>
