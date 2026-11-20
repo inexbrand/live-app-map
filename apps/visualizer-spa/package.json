@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 4310 --host",
-    "build": "vite build",
-    "preview": "vite preview --port 4310",
+    "dev": "bun --bun vite --port 4310 --host",
+    "build": "bun --bun vite build",
+    "preview": "bun --bun vite preview --port 4310",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test",
     "test:e2e": "playwright test",

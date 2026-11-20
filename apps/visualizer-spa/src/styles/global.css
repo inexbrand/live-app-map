@@ -96,10 +96,48 @@ code,
   background: var(--background);
 }
 
+/* Основная область под шапкой: баннеры сверху, холст забирает остаток */
+.app-main {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.app-shell--drag .app-main {
+  outline: 1px dashed var(--ring);
+  outline-offset: -8px;
+}
+
 .canvas-wrap {
   position: relative;
+  flex: 1 1 auto;
   min-height: 0;
   background: var(--background);
+}
+
+.toolbar-map-select {
+  display: flex;
+  min-width: 240px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.feedback-shot {
+  display: grid;
+  gap: 6px;
+  justify-items: start;
 }
 
 /* React Flow host: фон сцены — Background dots (world space) */
