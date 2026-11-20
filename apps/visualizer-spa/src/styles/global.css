@@ -1106,3 +1106,116 @@ code,
   color: var(--foreground);
   background: var(--accent);
 }
+
+/* Нода сервиса и панель кода (scanner-source) */
+.service-node {
+  width: 100%;
+  height: 100%;
+  box-sizing: border-box;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--background);
+  color: var(--foreground);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.service-node--selected {
+  border-color: var(--foreground);
+}
+
+.service-node__header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.service-node__title {
+  font-weight: 600;
+  font-size: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.service-node__path {
+  font-size: 12px;
+  color: var(--muted-foreground);
+}
+
+.service-node__stats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.drawer--code {
+  width: min(460px, 92vw);
+}
+
+.code-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.code-section__title {
+  margin: 0 0 6px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.code-section__list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.code-item {
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+
+.code-item__head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.code-item__name {
+  font-size: 13px;
+  overflow-wrap: anywhere;
+}
+
+.code-item__doc,
+.code-item__empty,
+.code-item__db,
+.code-item__where {
+  margin: 4px 0 0;
+  font-size: 12px;
+}
+
+.code-item__empty,
+.code-item__where {
+  color: var(--muted-foreground);
+}
+
+.code-item__more {
+  margin: 4px 0 0;
+  font-size: 12px;
+  white-space: pre-wrap;
+  font-family: inherit;
+}
+
+.code-item__columns {
+  margin: 4px 0 0;
+  padding-left: 16px;
+  font-size: 12px;
+}

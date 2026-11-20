@@ -25,6 +25,7 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@live-app-map/cli": "workspace:*",
     "@playwright/test": "^1.51.0",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
