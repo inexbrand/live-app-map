@@ -1,0 +1,14 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// Заказ покупателя.
+model Order {
+  id     Int     @id @default(autoincrement())
+  total  Int
+  note   String?
+  userId String  @map("user_id")
+
+  @@map("orders")
+}

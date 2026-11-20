@@ -178,6 +178,16 @@
         "typescript": "^5.8.2",
       },
     },
+    "packages/scanner-source": {
+      "name": "@live-app-map/scanner-source",
+      "version": "0.1.0",
+      "dependencies": {
+        "@live-app-map/diagnostics": "workspace:*",
+        "@live-app-map/scanner-core": "workspace:*",
+        "@live-app-map/schema": "workspace:*",
+        "typescript": "^5.8.2",
+      },
+    },
     "packages/schema": {
       "name": "@live-app-map/schema",
       "version": "0.1.0",
@@ -385,6 +395,8 @@
     "@live-app-map/scanner-next": ["@live-app-map/scanner-next@workspace:packages/scanner-next"],
 
     "@live-app-map/scanner-react-router": ["@live-app-map/scanner-react-router@workspace:packages/scanner-react-router"],
+
+    "@live-app-map/scanner-source": ["@live-app-map/scanner-source@workspace:packages/scanner-source"],
 
     "@live-app-map/schema": ["@live-app-map/schema@workspace:packages/schema"],
 
