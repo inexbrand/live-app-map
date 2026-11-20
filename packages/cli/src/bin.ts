@@ -281,6 +281,9 @@ function codeSummary(code: CodeModel): Record<string, number> {
     routesWithDbInLoop: code.routes.filter((r) => r.dbCalls.some((c) => c.inLoop === true)).length,
     tables: code.tables.length,
     symbols: code.symbols.length,
+    apiCalls: code.apiCalls?.length ?? 0,
+    apiCallsMatched: (code.apiCalls ?? []).filter((c) => c.routeId !== undefined).length,
+    screensWithApi: (code.screens ?? []).filter((s) => s.calls.length > 0).length,
   };
 }
 

@@ -120,6 +120,38 @@ export type DbTable = CodeComments & {
   readonly columns: readonly DbColumn[];
 };
 
+/** Чем фронтенд вызывает API. `wrapper` — функция проекта поверх fetch/axios/ky. */
+export type ApiClientKind = 'fetch' | 'axios' | 'ky' | 'eden' | 'hono-rpc' | 'wrapper';
+
+/** Вызов HTTP API из кода (обычно фронтенда). */
+export type ApiCall = {
+  readonly id: string;
+  readonly serviceId: string;
+  readonly method: HttpMethod;
+  /** Путь без origin и query; динамические сегменты — `:имя`: `/api/users/:id`. */
+  readonly path: string;
+  readonly client: ApiClientKind;
+  /** Обёртка проекта, через которую идёт вызов (`apiFetch`, `api.get`). */
+  readonly via?: string;
+  readonly location: SourceLocation;
+  /** Роут бэкенда, с которым сопоставлен вызов; нет — не сопоставлен. */
+  readonly routeId?: string;
+};
+
+/** Вызов API, достижимый из экрана. */
+export type ScreenApiCall = {
+  readonly callId: string;
+  /** Первая функция или компонент на пути от экрана к вызову; нет — вызов в самом файле экрана. */
+  readonly via?: string;
+};
+
+/** Экран (файл компонента страницы) и вызовы API, достижимые из него по вызовам и JSX. */
+export type ScreenApi = {
+  /** Файл экрана от CodeModel.root. */
+  readonly file: string;
+  readonly calls: readonly ScreenApiCall[];
+};
+
 /** Раздел `code` документа карты. */
 export type CodeModel = {
   /** Каталог, который сканировался; от него считаются все пути раздела. */
@@ -128,4 +160,8 @@ export type CodeModel = {
   readonly symbols: readonly CodeSymbol[];
   readonly routes: readonly ApiRoute[];
   readonly tables: readonly DbTable[];
+  /** Вызовы API из кода; нет в картах, снятых до появления поиска вызовов. */
+  readonly apiCalls?: readonly ApiCall[];
+  /** Экраны карты и их вызовы API; есть, когда скану переданы файлы экранов. */
+  readonly screens?: readonly ScreenApi[];
 };

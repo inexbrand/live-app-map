@@ -25,6 +25,28 @@ const dbCallSchema = z
   })
   .strict();
 
+const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL']);
+
+const apiCallSchema = z
+  .object({
+    id: z.string().min(1),
+    serviceId: z.string().min(1),
+    method: httpMethodSchema,
+    path: z.string().min(1),
+    client: z.enum(['fetch', 'axios', 'ky', 'eden', 'hono-rpc', 'wrapper']),
+    via: z.string().optional(),
+    location: sourceLocationSchema,
+    routeId: z.string().optional(),
+  })
+  .strict();
+
+const screenApiSchema = z
+  .object({
+    file: z.string().min(1),
+    calls: z.array(z.object({ callId: z.string().min(1), via: z.string().optional() }).strict()),
+  })
+  .strict();
+
 /** Схема раздела `code` документа карты. */
 export const codeModelSchema = z
   .object({
@@ -50,7 +72,7 @@ export const codeModelSchema = z
         .object({
           id: z.string().min(1),
           framework: z.enum(['elysia', 'hono', 'express']),
-          method: z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL']),
+          method: httpMethodSchema,
           path: z.string(),
           serviceId: z.string().min(1),
           location: sourceLocationSchema,
@@ -84,5 +106,7 @@ export const codeModelSchema = z
         })
         .strict(),
     ),
+    apiCalls: z.array(apiCallSchema).optional(),
+    screens: z.array(screenApiSchema).optional(),
   })
   .strict();

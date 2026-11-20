@@ -39,12 +39,26 @@ describe('scanSource: сервисы', () => {
     expect(code.root).toBe(FIXTURE);
   });
 
+  test('фабрика плагина: путь роута из опций в каждом месте вызова', () => {
+    const paths = code.routes
+      .filter((r) => r.location.file === 'apps/api/src/catalog.ts')
+      .map((r) => `${r.method} ${r.path}`)
+      .sort();
+    expect(paths).toEqual([
+      'GET /api/admin/colors',
+      'GET /api/admin/tags',
+      'PATCH /api/admin/colors/:id',
+      'PATCH /api/admin/tags/:id',
+    ]);
+  });
+
   test('сервис — пакет с package.json, у которого есть файлы', () => {
     expect(code.services.map((s) => s.name).sort()).toEqual([
       '@fx/api',
       '@fx/db',
       '@fx/express',
       '@fx/hono',
+      '@fx/miniapp',
       '@fx/web',
     ]);
     expect(code.services.find((s) => s.name === '@fx/api')?.root).toBe('apps/api');
@@ -54,7 +68,8 @@ describe('scanSource: сервисы', () => {
     const nodes = codeServiceNodes(code);
     const api = nodes.find((n) => n.title === '@fx/api');
     expect(api?.kind).toBe('service');
-    expect(api?.metadata?.['routes']).toBe(6);
+    expect(api?.metadata?.['routes']).toBe(code.routes.filter((r) => r.serviceId === api?.id).length);
+    expect(api?.metadata?.['routes']).toBe(10);
     expect(api?.iframePolicy?.enabled).toBe(false);
   });
 });
@@ -173,7 +188,7 @@ describe('scanSource: таблицы', () => {
 describe('scanSource: символы', () => {
   test('экспорт функций, компонентов, классов, интерфейсов с комментариями', () => {
     const web = code.symbols
-      .filter((s) => s.location.file.startsWith('apps/web/'))
+      .filter((s) => s.location.file === 'apps/web/src/UserCard.tsx')
       .map((s) => [s.kind, s.name, s.location.line, s.doc ?? s.comments?.[0] ?? '']);
     expect(web).toEqual([
       ['component', 'UserCard', 4, 'Карточка пользователя: имя и почта.'],

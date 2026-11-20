@@ -7,6 +7,7 @@ import type { ApiRoute, CodeComments, HttpMethod, RouteFramework } from '@live-a
 import { commentsAt, commentsOf, describe } from './comments';
 import { collectDbCalls } from './db-calls';
 import { locationOf, resolvedSymbol, type SourceContext } from './source-context';
+import type { RoutePaths } from './route-factories';
 
 const METHODS: ReadonlyMap<string, HttpMethod> = new Map<string, HttpMethod>([
   ['get', 'GET'],
@@ -294,21 +295,25 @@ type RawRoute = {
  *
  * @param ctx - контекст
  * @param sf - файл
+ * @param paths - пути, заданные не литералом (фабрики плагинов)
  * @returns найденные роуты
  */
-export function collectRoutes(ctx: SourceContext, sf: ts.SourceFile): FoundRoute[] {
+export function collectRoutes(ctx: SourceContext, sf: ts.SourceFile, paths: RoutePaths): FoundRoute[] {
   const st: ResolveState = { mounts: collectMounts(ctx, sf), visiting: new Set() };
   const raw: RawRoute[] = [];
   const visit = (node: ts.Node): void => {
     if (ts.isCallExpression(node) && ts.isPropertyAccessExpression(node.expression) && ts.isIdentifier(node.expression.name)) {
       const methodName = node.expression.name;
       const method = METHODS.get(methodName.text);
-      const routePath = method === undefined ? undefined : stringValue(ctx, node.arguments[0]);
-      if (method !== undefined && routePath !== undefined) {
+      const literal = method === undefined ? undefined : stringValue(ctx, node.arguments[0]);
+      const routePaths = literal !== undefined ? [literal] : method === undefined ? [] : paths.pathsOf(node.arguments[0]);
+      if (method !== undefined && routePaths.length > 0) {
         const app = resolveApp(ctx, node.expression.expression, st);
         const handler = app === undefined ? undefined : findHandler(ctx, node);
         if (app !== undefined && handler !== undefined) {
-          raw.push({ call: node, methodName, app, method, path: joinPath(app.prefix, routePath), handler });
+          for (const routePath of routePaths) {
+            raw.push({ call: node, methodName, app, method, path: joinPath(app.prefix, routePath), handler });
+          }
         }
       }
     }

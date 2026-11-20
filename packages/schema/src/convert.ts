@@ -30,6 +30,7 @@ const EDGE_KIND_SET: ReadonlySet<string> = new Set<EdgeKind>([
   'navigation',
   'deep-link',
   'back',
+  'api',
 ]);
 
 /** Виды рёбер, попадающие в viewer (навигация, не structure/composition). */
@@ -42,6 +43,7 @@ const NAVIGATION_EDGE_KIND_SET: ReadonlySet<string> = new Set<string>([
   'middleware',
   'deep-link',
   'unknown',
+  'api',
 ]);
 
 /** Виды нод, которые попадают во viewer-формат. */

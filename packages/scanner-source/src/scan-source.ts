@@ -3,14 +3,20 @@
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
-import type ts from 'typescript';
+import ts from 'typescript';
 import { DEFAULT_EXCLUDE, walkFiles } from '@live-app-map/scanner-core';
-import type { ApiRoute, CodeModel, CodeSymbol, DbTable, Diagnostic } from '@live-app-map/schema';
+import type { ApiCall, ApiRoute, CodeModel, CodeSymbol, DbTable, Diagnostic, ScreenApi } from '@live-app-map/schema';
+import { ApiCallFinder } from './api-calls';
+import { matchRoute } from './api-match';
+import { EnvFiles } from './env-files';
+import { RoutePaths } from './route-factories';
+import { screenApiCalls } from './screen-calls';
+import { ValueEvaluator } from './value-evaluator';
 import { indexImplementations } from './implementations';
-import { indexServices } from './services';
+import { indexServices, type ServiceIndex } from './services';
 import { createSourceProgram } from './program';
 import { collectRoutes } from './routes';
-import { relPath, type SourceContext } from './source-context';
+import { locationOf, relPath, type SourceContext } from './source-context';
 import { collectSymbols } from './symbols';
 import { collectDrizzleTables, mayDeclareDrizzleTables, type FoundTable } from './tables-drizzle';
 import { parsePrismaSchema } from './tables-prisma';
@@ -29,6 +35,8 @@ export type SourceScanRequest = {
   readonly exclude?: readonly string[];
   /** Предел числа .ts/.tsx файлов; сверх него файлы пропускаются с диагностикой. */
   readonly maxFiles?: number;
+  /** Файлы экранов (от root) — для них считаются достижимые вызовы API (`code.screens`). */
+  readonly entries?: readonly string[];
 };
 
 /** Результат скана исходников. */
@@ -113,6 +121,11 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
     ),
   };
 
+  const env = new EnvFiles();
+  const ev = new ValueEvaluator(ctx, (sf, name) =>
+    env.basePath(path.join(root, services.serviceOf(relPath(root, sf.fileName)).root), name),
+  );
+  const routePaths = new RoutePaths(ev, projectFiles);
   const symbolId = uniqueIds();
   const routeId = uniqueIds();
   const tableId = uniqueIds();
@@ -124,7 +137,7 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
     for (const s of collectSymbols(ctx, sf)) {
       symbols.push({ ...s, id: symbolId(`symbol:${rel}#${s.name}`), serviceId: service.id });
     }
-    for (const r of collectRoutes(ctx, sf)) {
+    for (const r of collectRoutes(ctx, sf, routePaths)) {
       routes.push({ ...r, id: routeId(`api:${service.name} ${r.method} ${r.path}`), serviceId: service.id });
     }
   }
@@ -134,18 +147,93 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
     serviceId: services.serviceOf(file).id,
   }));
 
+  const sortedRoutes = routes.sort(byLocation);
+  const api = collectApiCalls(ctx, ev, projectFiles, services, sortedRoutes);
   const usedServices = new Set(all.map((f) => services.serviceOf(f).id));
   return {
     code: {
       root,
       services: services.all.filter((s) => usedServices.has(s.id) && ownsFiles(s.root, all)),
       symbols: symbols.sort(byLocation),
-      routes: routes.sort(byLocation),
+      routes: sortedRoutes,
       tables: tables.sort(byLocation),
+      apiCalls: api.calls,
+      ...(request.entries === undefined ? {} : { screens: screensOf(ctx, program, request.entries, api.idsByNode) }),
     },
     diagnostics,
     stats: { files: projectFiles.length, ms: Date.now() - t0 },
   };
+}
+
+/**
+ * Вызовы API во всех файлах и их роуты.
+ *
+ * @param ctx - контекст
+ * @param ev - вычислитель значений
+ * @param files - исходники
+ * @param services - сервисы
+ * @param routes - роуты для сопоставления
+ * @returns вызовы и индекс «узел вызова → id»
+ */
+function collectApiCalls(
+  ctx: SourceContext,
+  ev: ValueEvaluator,
+  files: readonly ts.SourceFile[],
+  services: ServiceIndex,
+  routes: readonly ApiRoute[],
+): { calls: ApiCall[]; idsByNode: Map<ts.Node, string[]> } {
+  const finder = new ApiCallFinder(ev);
+  const callId = uniqueIds();
+  const calls: ApiCall[] = [];
+  const idsByNode = new Map<ts.Node, string[]>();
+  for (const sf of files) {
+    const rel = relPath(ctx.root, sf.fileName);
+    const serviceId = services.serviceOf(rel).id;
+    for (const found of finder.collect(sf)) {
+      const location = locationOf(ctx, found.node);
+      const id = callId(`call:${rel}:${location.line} ${found.method} ${found.path}`);
+      const route = matchRoute(found.method, found.path, routes);
+      calls.push({
+        id,
+        serviceId,
+        method: found.method,
+        path: found.path,
+        client: found.client,
+        ...(found.via === undefined ? {} : { via: found.via }),
+        location,
+        ...(route === undefined ? {} : { routeId: route.id }),
+      });
+      idsByNode.set(found.node, [...(idsByNode.get(found.node) ?? []), id]);
+    }
+  }
+  return { calls, idsByNode };
+}
+
+/**
+ * Экраны и их вызовы API.
+ *
+ * @param ctx - контекст
+ * @param program - программа TS
+ * @param entries - файлы экранов от root
+ * @param idsByNode - узел вызова → id
+ * @returns экраны, найденные среди исходников
+ */
+function screensOf(
+  ctx: SourceContext,
+  program: ts.Program,
+  entries: readonly string[],
+  idsByNode: ReadonlyMap<ts.Node, readonly string[]>,
+): ScreenApi[] {
+  const files = [...new Set(entries)];
+  const abs = new Set(files.map((f) => path.join(ctx.root, f)));
+  const out: ScreenApi[] = [];
+  for (const file of files) {
+    const sf = program.getSourceFile(path.join(ctx.root, file));
+    if (sf !== undefined) {
+      out.push({ file, calls: screenApiCalls(ctx, sf, idsByNode, abs) });
+    }
+  }
+  return out;
 }
 
 /**
