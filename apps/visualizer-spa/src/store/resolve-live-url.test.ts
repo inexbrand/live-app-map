@@ -163,4 +163,15 @@ describe('resolveLiveUrl', () => {
     expect(url).toContain('view=grid');
     expect(url).not.toMatch(/lam_role=employer/);
   });
+
+  test('у ноды сервиса нет живого URL — каталог сервиса не превращается в путь экрана', () => {
+    useAppStore.getState().loadDocument({
+      ...miniDoc,
+      nodes: [
+        ...miniDoc.nodes,
+        { id: 'service:@x/api', kind: 'service', title: '@x/api', pathPattern: 'apps/api' },
+      ],
+    });
+    expect(useAppStore.getState().resolveLiveUrl('service:@x/api')).toBeNull();
+  });
 });
