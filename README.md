@@ -8,16 +8,17 @@ Professional developer tool: сканирует Next.js / React Router прил�
 
 | Package | Role |
 |---------|------|
-| `@live-app-map/schema` | formatVersion 1, Zod, liveappmap convert |
+| `@live-app-map/schema` | formatVersion 2 (читает 1), раздел `code`, Zod, liveappmap convert |
 | `@live-app-map/graph` | index, search, diff, URL + state inject |
 | `@live-app-map/diagnostics` | codes + formatters |
 | `@live-app-map/scanner-core` | walk, materialize params |
 | `@live-app-map/scanner-next` | App/Pages Router |
 | `@live-app-map/scanner-react-router` | RR path configs |
+| `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, вызовы Drizzle/Prisma, таблицы, функции с JSDoc |
 | `@live-app-map/iframe-policy` | pure reconcile budget |
 | `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |
 | `@live-app-map/plugin-api` | контракты плагинов + `applyPlugins` |
-| `@live-app-map/cli` | `scan` / `diff` / `doctor` / `export` / `feedback` / `dev` |
+| `@live-app-map/cli` | `scan` (+ `--code-dir`) / `code` / `diff` / `doctor` / `export` / `feedback` / `dev` |
 | `@live-app-map/mcp-server` | stdio MCP: map pages + feedback |
 | `@live-app-map/react` | embed + Devtools shell |
 | `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |

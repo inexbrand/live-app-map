@@ -1,9 +1,9 @@
 # 05 — Шаги
 
-1. Этап А: этот разбор → коммит.
-2. `fix(visualizer)`: восстановить 9 отсутствующих модулей, починить экспорт типов и `convert.ts` → `bun run dev` стартует.
-3. schema v2: типы `CodeModel` (сервисы, символы, роуты, вызовы БД, таблицы), Zod, `upgradeAppMapDocument`, `NodeKind 'service'`, конверт viewer ↔ enterprise. Тесты.
-4. `packages/scanner-source`: фикстура → тест (красный) → сканер на TS compiler API.
-5. CLI: `scan --code-dir`, команда `code`. Тесты.
-6. Визуализатор: `ServiceNode` на холсте, `CodePanel` в правой панели. Тест + Reassure-замер, если встанет.
-7. Проверка на korbor и vpn-saas, примеры карт в `maps/`, отчёт 08, PR.
+1. Этап А: разбор → коммит. ✔
+2. ~~Восстановить модули SPA~~ — передано другому агенту (см. 01).
+3. schema v2: `CodeModel`, Zod, `upgradeAppMapDocument`, `NodeKind 'service'`, конверт viewer ↔ enterprise. ✔
+4. `packages/scanner-source`: фикстура → красный тест → сканер. ✔ (+ реализации интерфейсов, + `inLoop`)
+5. CLI: `scan --code-dir`, команда `code`. ✔
+6. Визуализатор: `ServiceNode`, `CodePanel`. ✔ Живая проверка — во временном слиянии с веткой другого агента и заглушками в scratchpad.
+7. Проверка на korbor и vpn-saas, отчёт 08, PR. ✔
