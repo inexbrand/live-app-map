@@ -2,14 +2,17 @@
  * Map-level adaptive: setMapDeviceViewport → resolveNodeViewport for pages.
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
-import type { AppMapDocument } from '@live-app-map/schema';
+import { FORMAT_VERSION, type AppMapDocument } from '@live-app-map/schema';
 import { resolveNodeViewport } from '../lib/viewport';
 import { useAppStore } from './app-store';
 
 const doc: AppMapDocument = {
-  schemaVersion: '1.0.0',
-  projectName: 'adaptive-test',
-  revision: 1,
+  formatVersion: FORMAT_VERSION,
+  kind: 'live-app-map',
+  generatedAt: '2026-01-01T00:00:00.000Z',
+  generator: { name: 'test', version: '0.0.0' },
+  revision: '1',
+  project: { name: 'adaptive-test', root: '.', framework: 'manual' },
   baseUrl: 'https://vite.localhost:5175',
   layout: {
     algorithm: 'row',
