@@ -81,6 +81,7 @@ export function AppMapCanvas() {
   const iframeScale = useAppStore((s) => s.iframeScale);
   const nodeViewports = useAppStore((s) => s.nodeViewports);
   const selectedPageId = useAppStore((s) => s.selectedPageId);
+  const contentHeights = useAppStore((s) => s.contentHeights);
 
   const { nodes, edges, isSearchMiss, displayQuery } = useMemo(() => {
     if (!document) {
@@ -110,7 +111,13 @@ export function AppMapCanvas() {
     const positions = layoutNodes(filtered, navEdges, 'LR');
     const nodes: Node[] = filtered.map((n) => {
       const pos = positions.get(n.id);
-      const vp = resolveNodeViewport(n.viewport, nodeViewports.get(n.id));
+      // Тот же расчёт, что в PageNode: размер ноды React Flow = размер DOM
+      const vp = resolveNodeViewport({
+        nodeViewport: n.viewport,
+        override: nodeViewports.get(n.id),
+        layout: document.layout,
+        measuredHeight: contentHeights.get(n.id),
+      });
       const layout = computeNodeLayout(vp, iframeScale, {
         selected: selectedPageId === n.id,
       });
@@ -148,7 +155,7 @@ export function AppMapCanvas() {
       isSearchMiss: false,
       displayQuery: searchQuery.trim(),
     };
-  }, [document, searchQuery, iframeScale, nodeViewports, selectedPageId]);
+  }, [document, searchQuery, iframeScale, nodeViewports, contentHeights, selectedPageId]);
 
   if (!document) {
     return null;
