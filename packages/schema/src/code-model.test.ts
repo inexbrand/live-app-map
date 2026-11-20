@@ -12,6 +12,7 @@ import {
 } from './index';
 
 const code: CodeModel = {
+  root: '/repo',
   services: [{ id: 'service:api', name: 'api', root: 'apps/api' }],
   symbols: [
     {

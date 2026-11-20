@@ -2,7 +2,7 @@
  * Модель исходного кода в карте (formatVersion 2): сервисы, символы с
  * комментариями, HTTP-роуты, вызовы БД и таблицы.
  *
- * Все пути — относительно `project.root`, в POSIX-виде; строки — с 1.
+ * Все пути — относительно `CodeModel.root` (каталог скана исходников), в POSIX-виде; строки — с 1.
  */
 
 /** Вид символа исходного кода. */
@@ -53,7 +53,7 @@ export type CodeComments = {
 export type CodeService = {
   readonly id: string;
   readonly name: string;
-  /** Каталог сервиса относительно project.root; `.` — сам корень. */
+  /** Каталог сервиса относительно CodeModel.root; `.` — сам корень. */
   readonly root: string;
 };
 
@@ -120,6 +120,8 @@ export type DbTable = CodeComments & {
 
 /** Раздел `code` документа карты. */
 export type CodeModel = {
+  /** Каталог, который сканировался; от него считаются все пути раздела. */
+  readonly root: string;
   readonly services: readonly CodeService[];
   readonly symbols: readonly CodeSymbol[];
   readonly routes: readonly ApiRoute[];

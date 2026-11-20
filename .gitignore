@@ -19,3 +19,6 @@ apps/visualizer-spa/playwright-report
 # accidental scratch paths
 UsersConcept*
 
+
+# сгенерированные карты для локального просмотра
+apps/visualizer-spa/public/maps/*.generated.liveappmap.json

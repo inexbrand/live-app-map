@@ -35,6 +35,10 @@ function dbOf(r: ApiRoute): string[] {
 }
 
 describe('scanSource: сервисы', () => {
+  test('root раздела — абсолютный каталог скана', () => {
+    expect(code.root).toBe(FIXTURE);
+  });
+
   test('сервис — пакет с package.json, у которого есть файлы', () => {
     expect(code.services.map((s) => s.name).sort()).toEqual([
       '@fx/api',

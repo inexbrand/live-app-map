@@ -46,6 +46,7 @@
         "@live-app-map/scanner-core": "workspace:*",
         "@live-app-map/scanner-next": "workspace:*",
         "@live-app-map/scanner-react-router": "workspace:*",
+        "@live-app-map/scanner-source": "workspace:*",
         "@live-app-map/schema": "workspace:*",
       },
       "devDependencies": {

@@ -3,13 +3,15 @@
  * CLI: live-app-map scan | diff | doctor | dev
  */
 import { formatDiagnostic, sortDiagnostics } from '@live-app-map/diagnostics';
-import { runDiff, runDoctor, runScan } from './index';
+import { runCodeScan, runDiff, runDoctor, runScan } from './index';
+import type { CodeModel } from '@live-app-map/schema';
 
 function usage(): never {
   console.log(`live-app-map — scanner & tools
 
 Usage:
-  live-app-map scan --dir <path> [-o out.json] [--base-url url] [--framework next|react-router|auto]
+  live-app-map scan --dir <path> [-o out.json] [--base-url url] [--framework next|react-router|auto] [--code-dir <path>] [--format enterprise|liveappmap]
+  live-app-map code --dir <path> [-o out.json] [--format enterprise|liveappmap]
   live-app-map diff <left.json> <right.json>
   live-app-map doctor [--dir <path>]
   live-app-map export <appmap.json> -o map.appmap
@@ -19,6 +21,8 @@ Usage:
 Examples:
   live-app-map scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/miniapp.json
   live-app-map doctor --dir ../korbor/apps/site
+  live-app-map code --dir ../korbor -o maps/korbor-code.json
+  live-app-map scan --dir ../korbor/apps/miniapp --code-dir ../korbor -o maps/miniapp-with-code.json
   live-app-map export maps/korbor-miniapp.json -o maps/korbor-miniapp.appmap
   live-app-map feedback --file lam-feedback-route_feed.json --print-prompt
 `);
@@ -42,12 +46,14 @@ async function main(argv: string[]): Promise<void> {
     const format = (flag(argv, '--format') ?? 'enterprise') as
       | 'enterprise'
       | 'liveappmap';
+    const codeDir = flag(argv, '--code-dir');
     const result = await runScan({
       dir,
       out: out ?? undefined,
       baseUrl: baseUrl ?? undefined,
       framework,
       format,
+      codeDir: codeDir ?? undefined,
     });
     const diagnostics = sortDiagnostics(result.diagnostics);
     for (const d of diagnostics) {
@@ -68,6 +74,7 @@ async function main(argv: string[]): Promise<void> {
           edges: result.document.edges.length,
           revision: result.document.revision,
           framework: result.document.project.framework,
+          ...(result.document.code === undefined ? {} : codeSummary(result.document.code)),
           out: out ?? null,
           timing: result.timing,
         },
@@ -79,6 +86,25 @@ async function main(argv: string[]): Promise<void> {
     if (hasError) {
       process.exit(1);
     }
+    return;
+  }
+
+  if (cmd === 'code') {
+    const dir = flag(argv, '--dir') ?? '.';
+    const out = flag(argv, '-o') ?? flag(argv, '--out');
+    const format = (flag(argv, '--format') ?? 'enterprise') as 'enterprise' | 'liveappmap';
+    const result = runCodeScan({ dir, out: out ?? undefined, format });
+    for (const d of sortDiagnostics(result.diagnostics)) {
+      console.error(formatDiagnostic(d));
+    }
+    const code = result.document.code;
+    console.log(
+      JSON.stringify(
+        { ok: true, ...(code === undefined ? {} : codeSummary(code)), out: out ?? null, ms: result.ms },
+        null,
+        2,
+      ),
+    );
     return;
   }
 
@@ -238,6 +264,23 @@ async function main(argv: string[]): Promise<void> {
   }
 
   usage();
+}
+
+/**
+ * Сводка раздела code для вывода CLI.
+ *
+ * @param code - раздел code
+ * @returns числа сервисов, роутов, таблиц, символов
+ */
+function codeSummary(code: CodeModel): Record<string, number> {
+  return {
+    services: code.services.length,
+    routes: code.routes.length,
+    routesWithDoc: code.routes.filter((r) => r.doc !== undefined).length,
+    routesWithDb: code.routes.filter((r) => r.dbCalls.length > 0).length,
+    tables: code.tables.length,
+    symbols: code.symbols.length,
+  };
 }
 
 function flag(argv: string[], name: string): string | null {

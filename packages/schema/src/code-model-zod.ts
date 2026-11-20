@@ -27,6 +27,7 @@ const dbCallSchema = z
 /** Схема раздела `code` документа карты. */
 export const codeModelSchema = z
   .object({
+    root: z.string().min(1),
     services: z.array(
       z.object({ id: z.string().min(1), name: z.string().min(1), root: z.string() }).strict(),
     ),

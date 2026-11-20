@@ -137,6 +137,7 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
   const usedServices = new Set(all.map((f) => services.serviceOf(f).id));
   return {
     code: {
+      root,
       services: services.all.filter((s) => usedServices.has(s.id) && ownsFiles(s.root, all)),
       symbols: symbols.sort(byLocation),
       routes: routes.sort(byLocation),
