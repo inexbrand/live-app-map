@@ -17,6 +17,7 @@
     "@live-app-map/export-appmap": "workspace:*",
     "@live-app-map/graph": "workspace:*",
     "@live-app-map/iframe-policy": "workspace:*",
+    "@live-app-map/mcp-server": "workspace:*",
     "@live-app-map/schema": "workspace:*",
     "@xyflow/react": "^12.6.0",
     "lucide-react": "^0.487.0",
