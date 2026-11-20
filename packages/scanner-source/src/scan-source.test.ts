@@ -54,7 +54,7 @@ describe('scanSource: сервисы', () => {
     const nodes = codeServiceNodes(code);
     const api = nodes.find((n) => n.title === '@fx/api');
     expect(api?.kind).toBe('service');
-    expect(api?.metadata?.['routes']).toBe(5);
+    expect(api?.metadata?.['routes']).toBe(6);
     expect(api?.iframePolicy?.enabled).toBe(false);
   });
 });
@@ -86,6 +86,20 @@ describe('scanSource: Elysia', () => {
     expect(r.handler.location.line).toBe(36);
     expect(r.doc).toBe('Создаёт пользователя.');
     expect(dbOf(r)).toEqual(['insert users']);
+  });
+});
+
+describe('scanSource: запросы в цикле', () => {
+  test('вызов БД внутри for и .map помечен inLoop, вне цикла — нет', () => {
+    const r = route('POST', '/users/batch');
+    const marks = r.dbCalls
+      .map((c) => `${c.operation} ${c.table}${c.via === undefined ? '' : ` via ${c.via}`}${c.inLoop === true ? ' [цикл]' : ''}`)
+      .sort();
+    expect(marks).toEqual([
+      'select posts',
+      'select users [цикл]',
+      'select users via findUserById [цикл]',
+    ]);
   });
 });
 

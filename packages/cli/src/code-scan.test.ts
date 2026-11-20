@@ -31,7 +31,7 @@ describe('runCodeScan', () => {
         throw new Error(parsed.errors.map((e) => e.message).join('\n'));
       }
       expect(parsed.document.formatVersion).toBe(2);
-      expect(parsed.document.code?.routes).toHaveLength(9);
+      expect(parsed.document.code?.routes).toHaveLength(10);
       expect(parsed.document.code?.root).toBe(SOURCE);
     }));
 });
@@ -54,7 +54,7 @@ describe('runScan --code-dir', () => {
       if (!live.ok) {
         throw new Error(live.errors.map((e) => e.message).join('\n'));
       }
-      expect(live.document.code?.routes).toHaveLength(9);
+      expect(live.document.code?.routes).toHaveLength(10);
       expect(live.document.pages.some((p) => p.type === 'service')).toBe(true);
     }));
 });
@@ -66,6 +66,6 @@ describe('bin code', () => {
       const proc = Bun.spawnSync(['bun', 'run', BIN, 'code', '--dir', SOURCE, '-o', out]);
       expect(proc.exitCode).toBe(0);
       const summary: unknown = JSON.parse(proc.stdout.toString());
-      expect(summary).toMatchObject({ ok: true, services: 5, routes: 9, tables: 4, out });
+      expect(summary).toMatchObject({ ok: true, services: 5, routes: 10, routesWithDbInLoop: 1, tables: 4, out });
     }));
 });

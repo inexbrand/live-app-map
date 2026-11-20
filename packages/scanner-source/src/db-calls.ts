@@ -10,6 +10,34 @@ import { isProjectNode, locationOf, resolvedSymbol, type SourceContext } from '.
 /** Глубина обхода вызываемых функций (обработчик → сервис → репозиторий → …). */
 const MAX_DEPTH = 4;
 
+/** Методы массива, колбэк которых выполняется на каждый элемент. */
+const LOOP_METHODS: ReadonlySet<string> = new Set(['map', 'forEach', 'flatMap', 'filter', 'reduce', 'some', 'every', 'find']);
+
+/**
+ * Выполняется ли дочерний узел многократно относительно родителя:
+ * тело for/while/do, тело for…of/for…in (но не итерируемое выражение),
+ * колбэк `.map/.forEach/…`.
+ *
+ * @param parent - родитель
+ * @param child - дочерний узел
+ * @returns true, если child внутри цикла
+ */
+function repeats(parent: ts.Node, child: ts.Node): boolean {
+  if (ts.isForOfStatement(parent) || ts.isForInStatement(parent)) {
+    return child === parent.statement;
+  }
+  if (ts.isForStatement(parent) || ts.isWhileStatement(parent) || ts.isDoStatement(parent)) {
+    return child !== (ts.isForStatement(parent) ? parent.initializer : undefined);
+  }
+  return (
+    ts.isCallExpression(parent) &&
+    ts.isPropertyAccessExpression(parent.expression) &&
+    LOOP_METHODS.has(parent.expression.name.text) &&
+    child !== parent.expression &&
+    (ts.isArrowFunction(child) || ts.isFunctionExpression(child))
+  );
+}
+
 /** Получатель, похожий на клиент БД или транзакцию. */
 const DB_RECEIVER = /(^|\.)(db|tx|trx|database|client|prisma)$/i;
 
@@ -192,9 +220,10 @@ function calledFunctions(ctx: SourceContext, call: ts.CallExpression): Callee[] 
 export function collectDbCalls(ctx: SourceContext, root: ts.Node): DbCall[] {
   const out: DbCall[] = [];
   const seen = new Set<string>();
-  const visitedBodies = new Set<ts.Node>([root]);
+  // Тело, обойдённое вне цикла и в цикле, — разные случаи: в цикле это N+1.
+  const visited = { inLoop: new Set<ts.Node>(), once: new Set<ts.Node>([root]) };
 
-  const walk = (node: ts.Node, via: string | undefined, depth: number): void => {
+  const walk = (node: ts.Node, via: string | undefined, depth: number, inLoop: boolean): void => {
     if (ts.isCallExpression(node)) {
       const drizzle = drizzleCall(ctx, node);
       const prisma = drizzle === undefined ? prismaCall(ctx, node) : undefined;
@@ -206,24 +235,26 @@ export function collectDbCalls(ctx: SourceContext, root: ts.Node): DbCall[] {
           table: found.table,
           location: locationOf(ctx, node),
           ...(via === undefined ? {} : { via }),
+          ...(inLoop ? { inLoop: true } : {}),
         };
-        const key = `${call.operation}|${call.table}|${call.via ?? ''}|${call.location.file}:${call.location.line}`;
+        const key = `${call.operation}|${call.table}|${call.via ?? ''}|${inLoop}|${call.location.file}:${call.location.line}`;
         if (!seen.has(key)) {
           seen.add(key);
           out.push(call);
         }
       } else if (depth < MAX_DEPTH) {
+        const seenBodies = inLoop ? visited.inLoop : visited.once;
         for (const fn of calledFunctions(ctx, node)) {
-          if (!visitedBodies.has(fn.node)) {
-            visitedBodies.add(fn.node);
-            walk(fn.node, via ?? fn.name, depth + 1);
+          if (!seenBodies.has(fn.node)) {
+            seenBodies.add(fn.node);
+            walk(fn.node, via ?? fn.name, depth + 1, inLoop);
           }
         }
       }
     }
-    ts.forEachChild(node, (child) => walk(child, via, depth));
+    ts.forEachChild(node, (child) => walk(child, via, depth, inLoop || repeats(node, child)));
   };
 
-  walk(root, undefined, 0);
+  walk(root, undefined, 0, false);
   return out;
 }

@@ -35,6 +35,8 @@ export type DbCallGroup = {
   readonly operation: DbOperation;
   readonly table: string;
   readonly count: number;
+  /** Хотя бы один вызов группы — в цикле (N+1). */
+  readonly inLoop: boolean;
 };
 
 /**
@@ -68,7 +70,12 @@ export function groupDbCalls(calls: readonly DbCall[]): DbCallGroup[] {
   for (const c of calls) {
     const key = `${c.table}|${c.operation}`;
     const prev = groups.get(key);
-    groups.set(key, { operation: c.operation, table: c.table, count: (prev?.count ?? 0) + 1 });
+    groups.set(key, {
+      operation: c.operation,
+      table: c.table,
+      count: (prev?.count ?? 0) + 1,
+      inLoop: (prev?.inLoop ?? false) || c.inLoop === true,
+    });
   }
   return [...groups.values()].sort((a, b) =>
     a.table === b.table ? a.operation.localeCompare(b.operation) : a.table.localeCompare(b.table),

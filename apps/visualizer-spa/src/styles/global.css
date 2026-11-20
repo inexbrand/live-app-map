@@ -1219,3 +1219,9 @@ code,
   padding-left: 16px;
   font-size: 12px;
 }
+
+.code-item__loop {
+  font-weight: 600;
+  color: var(--foreground);
+  text-decoration: underline;
+}

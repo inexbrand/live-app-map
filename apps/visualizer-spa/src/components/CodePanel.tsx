@@ -45,7 +45,20 @@ function RouteItem(props: { readonly route: ApiRoute }) {
       <Description text={r.doc} />
       {db.length > 0 ? (
         <p className="code-item__db">
-          БД: {db.map((g) => `${g.operation} ${g.table}${g.count > 1 ? ` ×${g.count}` : ''}`).join(', ')}
+          БД:{' '}
+          {db.map((g, i) => (
+            <span key={`${g.operation}-${g.table}`}>
+              {i > 0 ? ', ' : ''}
+              {g.operation} {g.table}
+              {g.count > 1 ? ` ×${g.count}` : ''}
+              {g.inLoop ? (
+                <strong className="code-item__loop" title="Запрос внутри цикла — N+1">
+                  {' '}
+                  в цикле
+                </strong>
+              ) : null}
+            </span>
+          ))}
         </p>
       ) : null}
       <p className="code-item__where font-mono">

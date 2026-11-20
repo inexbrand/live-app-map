@@ -77,6 +77,8 @@ export type DbCall = {
   readonly location: SourceLocation;
   /** Через какую функцию найден вызов, если не прямо в обработчике. */
   readonly via?: string;
+  /** Вызов выполняется в цикле (for/while, .map/.forEach) — признак N+1. */
+  readonly inLoop?: boolean;
 };
 
 /** HTTP-роут бэкенда. */

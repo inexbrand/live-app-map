@@ -64,8 +64,17 @@ describe('groupDbCalls', () => {
     const doc = await scannedMap();
     const del = doc.code?.routes.find((r) => r.method === 'DELETE' && r.path === '/api/admin/users/:id');
     expect(groupDbCalls(del?.dbCalls ?? [])).toEqual([
-      { operation: 'delete', table: 'posts', count: 1 },
-      { operation: 'delete', table: 'users', count: 1 },
+      { operation: 'delete', table: 'posts', count: 1, inLoop: false },
+      { operation: 'delete', table: 'users', count: 1, inLoop: false },
+    ]);
+  });
+
+  test('группа помечена inLoop, если хоть один вызов в цикле', async () => {
+    const doc = await scannedMap();
+    const batch = doc.code?.routes.find((r) => r.path === '/users/batch');
+    expect(groupDbCalls(batch?.dbCalls ?? [])).toEqual([
+      { operation: 'select', table: 'posts', count: 1, inLoop: false },
+      { operation: 'select', table: 'users', count: 2, inLoop: true },
     ]);
   });
 });

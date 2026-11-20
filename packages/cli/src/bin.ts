@@ -278,6 +278,7 @@ function codeSummary(code: CodeModel): Record<string, number> {
     routes: code.routes.length,
     routesWithDoc: code.routes.filter((r) => r.doc !== undefined).length,
     routesWithDb: code.routes.filter((r) => r.dbCalls.length > 0).length,
+    routesWithDbInLoop: code.routes.filter((r) => r.dbCalls.some((c) => c.inLoop === true)).length,
     tables: code.tables.length,
     symbols: code.symbols.length,
   };

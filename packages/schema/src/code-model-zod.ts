@@ -21,6 +21,7 @@ const dbCallSchema = z
     table: z.string().min(1),
     location: sourceLocationSchema,
     via: z.string().optional(),
+    inLoop: z.boolean().optional(),
   })
   .strict();
 
