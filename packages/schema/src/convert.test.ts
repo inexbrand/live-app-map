@@ -10,7 +10,7 @@ import {
   liveAppMapToAppMap,
 } from './convert';
 import type { AppMapDocument, LiveAppMapDocument } from './types';
-import { FORMAT_VERSION } from './types';
+import { DEVICE_HEIGHT_FALLBACK, FORMAT_VERSION } from './types';
 
 function sampleAppMap(overrides: Partial<AppMapDocument> = {}): AppMapDocument {
   return {
@@ -255,5 +255,50 @@ describe('roundtrip convert', () => {
     expect(appOut.edges).toHaveLength(1);
     expect(appOut.edges[0]?.kind).toBe('push');
     expect(appOut.edges[0]?.to).toBe('feed');
+  });
+});
+
+describe('liveAppMapToAppMap — viewport без height', () => {
+  const page = (viewport: LiveAppMapDocument['pages'][number]['viewport']) => ({
+    id: 'p',
+    title: 'P',
+    path: '/p',
+    viewport,
+  });
+
+  test('высота страницы сохраняется как есть', () => {
+    const doc = liveAppMapToAppMap(
+      sampleLive({ pages: [page({ width: 390, height: 700, heightMode: 'fixed' })] }),
+    );
+    expect(doc.nodes[0]?.viewport).toEqual({
+      width: 390,
+      height: 700,
+      label: undefined,
+      heightMode: 'fixed',
+    });
+  });
+
+  test('нет height у страницы → берётся из layout.defaultDeviceViewport', () => {
+    const doc = liveAppMapToAppMap(
+      sampleLive({
+        pages: [page({ width: 1280, label: 'desk' })],
+        layout: { defaultDeviceViewport: { width: 390, height: 900 } },
+      }),
+    );
+    expect(doc.nodes[0]?.viewport?.height).toBe(900);
+    expect(doc.nodes[0]?.viewport?.width).toBe(1280);
+    expect(doc.nodes[0]?.viewport?.label).toBe('desk');
+  });
+
+  test('нет height нигде → запасная высота и heightMode=auto (измерить)', () => {
+    const doc = liveAppMapToAppMap(
+      sampleLive({ pages: [page({ width: 480, heightMode: 'fixed' })], layout: undefined }),
+    );
+    expect(doc.nodes[0]?.viewport).toEqual({
+      width: 480,
+      height: DEVICE_HEIGHT_FALLBACK,
+      label: undefined,
+      heightMode: 'auto',
+    });
   });
 });

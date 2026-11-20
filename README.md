@@ -46,16 +46,24 @@ bun run dev          # visualizer :4310
 ### Feedback → CLI / MCP
 
 1. Клик по экрану на карте  
-2. Слева **Feedback / промпт**: severity + note + optional chrome snapshot  
-3. **Копировать промпт** или **JSON для CLI**
+2. Слева **Замечание**: важность + текст + **Снимок** (выделите область мышью; снимается настоящая картинка вкладки вместе с iframe, браузер спросит доступ к вкладке; Alt+Shift+S — то же с клавиатуры)  
+3. **Копировать промпт** или **Скачать JSON** для CLI
 
 ```bash
 bun run feedback -- --file ./lam-feedback-….json --print-prompt
 # пишет .lam-feedback/*.md + *.json
 
 bun run mcp
-# tools: list_map_pages, get_page, submit_feedback, list_feedback
+# tools: list_map_pages, get_page, submit_feedback, list_feedback,
+#        get_visualizer_state, request_snapshot, get_snapshot
 ```
+
+Те же tools отдаёт dev-сервер визуализатора по HTTP: `POST http://localhost:4310/mcp` (JSON-RPC 2.0).
+Агент видит, что открыто в визуализаторе (`get_visualizer_state`), и может попросить снимок
+(`request_snapshot`): в визуализаторе появится карточка «Агент просит снимок», пользователь
+выделит область, `get_snapshot` вернёт путь к PNG. Обмен идёт через `.lam-feedback/` в корне
+монорепо (или `$LAM_FEEDBACK_DIR`). Ошибки клиента визуализатора пишутся в
+`.lam-feedback/error-reports.jsonl`.
 
 ### Korbor ports (dev.local.env)
 

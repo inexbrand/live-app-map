@@ -79,6 +79,13 @@ export type StateInjectSpec = {
 export type ViewportHeightMode = 'auto' | 'fixed';
 
 /**
+ * Высота кадра, когда ни страница, ни layout её не задали (типичный телефон).
+ * Значение временное: такой viewport помечается heightMode=auto и
+ * переизмеряется visualizer-ом по контенту iframe.
+ */
+export const DEVICE_HEIGHT_FALLBACK = 844;
+
+/**
  * Размер «окна» устройства для live iframe (адаптив).
  * CSS px логического viewport; visualizer может масштабировать для карты.
  * Ширина задаётся в JSON; высота при heightMode=auto — из контента.

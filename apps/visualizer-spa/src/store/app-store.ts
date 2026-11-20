@@ -126,7 +126,8 @@ type AppStore = {
   useTlsProxy: boolean;
   toast: string | null;
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
-  loadUnknownJson: (raw: unknown) => void;
+  /** Разбирает liveappmap / enterprise JSON; false — ошибка уже в lastLoadError */
+  loadUnknownJson: (raw: unknown) => boolean;
   clearMap: () => void;
   clearLoadError: () => void;
   setMode: (mode: ViewMode) => void;
@@ -428,13 +429,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     const asApp = parseAppMapDocument(raw);
     if (asApp.ok) {
       get().loadDocument(asApp.document, asApp.warnings);
-      return;
+      return true;
     }
     const asLive = parseLiveAppMapDocument(raw);
     if (asLive.ok) {
       const enterprise = liveAppMapToAppMap(asLive.document);
       get().loadDocument(enterprise, asLive.warnings);
-      return;
+      return true;
     }
     const message = `Не удалось разобрать JSON: ${
       asLive.errors[0]?.message ?? asApp.errors[0]?.message ?? 'неизвестная ошибка'
@@ -444,6 +445,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       toast: message,
     });
     get().pushLog({ level: 'error', source: 'system', message });
+    return false;
   },
 
   clearMap: () => {

@@ -11,11 +11,8 @@ import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
 import { agentStateMiddleware } from './src/lib/agent-state-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
-import {
-  injectSameOriginApiShim,
-  rewriteProxiedAssetPaths,
-  shouldRewriteProxiedBody,
-} from './src/lib/proxy-path-rewrite';
+import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
+import { finalizeProxiedBody, sanitizeProxiedHeaders } from './src/lib/proxy-response';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
@@ -27,6 +24,7 @@ function errorReportsPlugin(): Plugin {
   return {
     name: 'lam-error-reports',
     configureServer(server) {
+      server.middlewares.use(httpsPathProxyMiddleware);
       server.middlewares.use(errorReportsMiddleware);
       server.middlewares.use(agentStateMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
@@ -235,29 +233,14 @@ function attachFrameBypass(
       on: (ev: string, fn: (chunk?: Buffer) => void) => void;
       pipe: (dest: unknown) => void;
     };
-    const req = args[1];
     const res = args[2] as {
       writeHead: (code: number, headers?: Record<string, unknown>) => void;
       end: (body?: string | Buffer) => void;
       writableEnded?: boolean;
     };
 
-    delete proxyRes.headers['x-frame-options'];
-    delete proxyRes.headers['X-Frame-Options'];
-    delete proxyRes.headers['content-security-policy'];
-    delete proxyRes.headers['Content-Security-Policy'];
-    // length пересчитаем после rewrite; chunked нельзя вместе с content-length
-    // (иначе ERR_INVALID_CHUNKED_ENCODING в Chrome)
-    delete proxyRes.headers['content-length'];
-    delete proxyRes.headers['Content-Length'];
-    delete proxyRes.headers['content-encoding'];
-    delete proxyRes.headers['Content-Encoding'];
-    delete proxyRes.headers['transfer-encoding'];
-    delete proxyRes.headers['Transfer-Encoding'];
-
-    const ctRaw = proxyRes.headers['content-type'] ?? proxyRes.headers['Content-Type'];
+    const ctRaw = proxyRes.headers['content-type'];
     const ct = Array.isArray(ctRaw) ? ctRaw[0] : ctRaw;
-    const rewriteText = shouldRewriteProxiedBody(ct);
 
     // selfHandleResponse: true → всегда сами пишем ответ
     const chunks: Buffer[] = [];
@@ -270,38 +253,13 @@ function attachFrameBypass(
       if (res.writableEnded) {
         return;
       }
-      let buf = Buffer.concat(chunks);
-      if (rewriteText) {
-        let text = rewriteProxiedAssetPaths(buf.toString('utf8'), pathPrefix);
-        // HTML: same-origin `/api` → path-prefix (miniapp VITE_API_BASE_URL="")
-        const ctLower = (ct ?? '').toLowerCase();
-        if (ctLower.includes('text/html')) {
-          text = injectSameOriginApiShim(text, pathPrefix);
-        }
-        buf = Buffer.from(text, 'utf8');
-      }
-      const headers: Record<string, string | number | string[]> = {};
-      for (const [k, v] of Object.entries(proxyRes.headers)) {
-        if (v === undefined) {
-          continue;
-        }
-        const lk = k.toLowerCase();
-        if (
-          lk === 'content-length' ||
-          lk === 'content-encoding' ||
-          lk === 'transfer-encoding' ||
-          lk === 'x-frame-options' ||
-          lk === 'content-security-policy'
-        ) {
-          continue;
-        }
-        headers[k] = v;
-      }
+      const buf = finalizeProxiedBody(Buffer.concat(chunks), ct, pathPrefix);
       // Полный буфер → фиксированная длина, без chunked
-      headers['content-length'] = buf.length;
-      res.writeHead(proxyRes.statusCode ?? 200, headers);
+      res.writeHead(proxyRes.statusCode ?? 200, {
+        ...sanitizeProxiedHeaders(proxyRes.headers),
+        'content-length': buf.length,
+      });
       res.end(buf);
-      void req;
     });
 
     // Если upstream упал mid-stream — не оставляем висящий response
@@ -370,43 +328,7 @@ export default defineConfig({
           attachFrameBypass(proxy, 'site', '/__lam_proxy/site');
         },
       },
-      '/__lam_proxy/https': {
-        target: 'https://127.0.0.1',
-        changeOrigin: true,
-        secure: false,
-        ws: true,
-        selfHandleResponse: true,
-        bypass() {
-          return undefined;
-        },
-        router: (req) => {
-          const url = req.url ?? '';
-          const m = url.match(/^\/__lam_proxy\/https\/([^/?#]+)/);
-          if (!m?.[1]) {
-            return 'https://127.0.0.1';
-          }
-          const hostPort = m[1];
-          const host = hostPort.split(':')[0]?.toLowerCase() ?? '';
-          if (
-            host !== 'localhost' &&
-            host !== '127.0.0.1' &&
-            host !== 'vite.localhost' &&
-            !host.endsWith('.localhost')
-          ) {
-            return 'https://127.0.0.1';
-          }
-          return `https://${hostPort}`;
-        },
-        rewrite: (p) => {
-          const m = p.match(/^\/__lam_proxy\/https\/[^/?#]+(.*)$/);
-          const rest = m?.[1];
-          return rest && rest.length > 0 ? rest : '/';
-        },
-        configure: (proxy) => {
-          // generic: prefix is full path base from request — use host segment
-          attachFrameBypass(proxy, 'https', '/__lam_proxy/https');
-        },
-      },
+      // '/__lam_proxy/https/<host:port>' — httpsPathProxyMiddleware (цель по запросу)
     },
   },
   optimizeDeps: {

@@ -7,6 +7,8 @@ coverage
 .env
 .env.local
 apps/visualizer-spa/dist
+# генерирует dev-сервер (build-map-catalog-fs)
+apps/visualizer-spa/public/maps/index.json
 packages/*/dist
 maps/*.generated.json
 maps/*.appmap

@@ -4,9 +4,9 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "vite --port 4310 --host",
-    "build": "vite build",
-    "preview": "vite preview --port 4310",
+    "dev": "bun --bun vite --port 4310 --host",
+    "build": "bun --bun vite build",
+    "preview": "bun --bun vite preview --port 4310",
     "typecheck": "tsc --noEmit -p tsconfig.json",
     "test": "bun test",
     "test:e2e": "playwright test",
@@ -17,11 +17,13 @@
     "@live-app-map/export-appmap": "workspace:*",
     "@live-app-map/graph": "workspace:*",
     "@live-app-map/iframe-policy": "workspace:*",
+    "@live-app-map/mcp-server": "workspace:*",
     "@live-app-map/schema": "workspace:*",
     "@xyflow/react": "^12.6.0",
     "lucide-react": "^0.487.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
+    "zod": "^3.24.2",
     "zustand": "^5.0.3"
   },
   "devDependencies": {

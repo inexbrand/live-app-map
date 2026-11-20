@@ -341,6 +341,17 @@ export function MapToolbar(props: MapToolbarProps) {
             <Search size={16} strokeWidth={1.75} />
           </Button>
         </div>
+        {/* Вне листа «Источники»: пункт «Открыть…» в селекте работает и при закрытом листе */}
+        <input
+          id="lam-file-input"
+          type="file"
+          accept=".json,.appmap,.zip,application/json"
+          hidden
+          onChange={(e) => {
+            void onFile(e.target.files?.[0] ?? null);
+            e.target.value = '';
+          }}
+        />
       </header>
 
       <EdgeSheet
@@ -350,16 +361,9 @@ export function MapToolbar(props: MapToolbarProps) {
         description="Файл, карта из каталога public/maps или очистка холста."
         onClose={() => setSheet(null)}
       >
-        <label className="ui-btn ui-btn--primary source-file-btn">
+        <label htmlFor="lam-file-input" className="ui-btn ui-btn--primary source-file-btn">
           <FolderOpen size={16} strokeWidth={1.75} aria-hidden={true} />
           Открыть JSON / .appmap
-          <input
-            id="lam-file-input"
-            type="file"
-            accept=".json,.appmap,.zip,application/json"
-            hidden
-            onChange={(e) => void onFile(e.target.files?.[0] ?? null)}
-          />
         </label>
 
         <div className="sheet-block">
