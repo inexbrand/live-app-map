@@ -60,6 +60,8 @@ export function useSnapshotSession(): void {
     if (session.phase === 'opening') {
       void grabber.open().then((res) => {
         if (useSnapshotStore.getState().session !== session) {
+          // Отменили, пока браузер спрашивал разрешение: поток не нужен
+          grabber.close();
           return;
         }
         if (res.ok) {
