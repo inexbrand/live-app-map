@@ -7,7 +7,7 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { KORBOR_PRESETS } from '../korbor-presets';
 import { mapSessionToInject } from '../lib/dogfood-api';
-import { applyLoadedKorborPreset } from '../lib/load-korbor-preset';
+import { applyLoadedMapPreset } from '../lib/load-map-preset';
 import { useAppStore } from './app-store';
 
 const allPath = path.resolve(
@@ -15,9 +15,9 @@ const allPath = path.resolve(
   '../../../../maps/korbor-all.liveappmap.json',
 );
 
-const allPreset = KORBOR_PRESETS.find((p) => p.id === 'korbor-all');
+const allPreset = KORBOR_PRESETS.find((p) => p.id === 'all');
 if (allPreset === undefined) {
-  throw new Error('KORBOR_PRESETS missing id=korbor-all');
+  throw new Error('KORBOR_PRESETS missing id=all');
 }
 
 function pageHosts(
@@ -46,12 +46,12 @@ describe('korbor-all multi-host via REAL UI load path', () => {
     s.setGlobalRole('');
   });
 
-  test('applyLoadedKorborPreset (MapToolbar path) keeps three surface hosts under override', () => {
+  test('applyLoadedMapPreset (MapToolbar path) keeps three surface hosts under override', () => {
     expect(existsSync(allPath)).toBe(true);
     const raw = JSON.parse(readFileSync(allPath, 'utf8')) as unknown;
 
     // Same order as MapToolbar/App: setBaseUrlOverride(preset.baseUrl) then load
-    applyLoadedKorborPreset(allPreset, raw, {
+    applyLoadedMapPreset(allPreset, raw, {
       setBaseUrlOverride: (url) => useAppStore.getState().setBaseUrlOverride(url),
       loadUnknownJson: (json) => useAppStore.getState().loadUnknownJson(json),
       setMode: (mode) => useAppStore.getState().setMode(mode),
@@ -121,7 +121,7 @@ describe('korbor-all multi-host via REAL UI load path', () => {
 
   test('session inject after UI-path load: admin + miniapp keys on correct hosts (dual run)', () => {
     const raw = JSON.parse(readFileSync(allPath, 'utf8')) as unknown;
-    applyLoadedKorborPreset(allPreset, raw, {
+    applyLoadedMapPreset(allPreset, raw, {
       setBaseUrlOverride: (url) => useAppStore.getState().setBaseUrlOverride(url),
       loadUnknownJson: (json) => useAppStore.getState().loadUnknownJson(json),
       setMode: (mode) => useAppStore.getState().setMode(mode),
@@ -190,7 +190,7 @@ describe('korbor-all multi-host via REAL UI load path', () => {
       '../../../../maps/korbor-admin.liveappmap.json',
     );
     expect(existsSync(adminPath)).toBe(true);
-    const adminPreset = KORBOR_PRESETS.find((p) => p.id === 'korbor-admin');
+    const adminPreset = KORBOR_PRESETS.find((p) => p.id === 'admin');
     expect(adminPreset).toBeTruthy();
     if (!adminPreset) {
       return;

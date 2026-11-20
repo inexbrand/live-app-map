@@ -18,6 +18,7 @@
  * Wire-тип: `Diagnostic` (`code: string`) — общий для обоих слоёв.
  */
 export {
+  DEVICE_HEIGHT_FALLBACK,
   FORMAT_VERSION,
   SCHEMA_DIAGNOSTIC_CODES,
   isSchemaDiagnosticCode,
@@ -29,6 +30,8 @@ export type {
   AppMapNode,
   AppMapPageState,
   Confidence,
+  ConnectorScreenSize,
+  DeviceViewport,
   Diagnostic,
   DiagnosticSeverity,
   EdgeKind,
@@ -39,10 +42,12 @@ export type {
   LiveAppMapDocument,
   LiveAppMapEdge,
   LiveAppMapPage,
+  MapViewportPreset,
   NodeKind,
   ProjectMeta,
   SchemaDiagnosticCode,
   StateInjectSpec,
+  ViewportHeightMode,
 } from './types';
 
 export {

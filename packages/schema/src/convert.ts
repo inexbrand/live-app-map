@@ -5,12 +5,14 @@ import type {
   AppMapDocument,
   AppMapEdge,
   AppMapNode,
+  DeviceViewport,
   EdgeKind,
+  LayoutHints,
   LiveAppMapDocument,
   LiveAppMapEdge,
   LiveAppMapPage,
 } from './types';
-import { FORMAT_VERSION } from './types';
+import { DEVICE_HEIGHT_FALLBACK, FORMAT_VERSION } from './types';
 
 /** Канонический набор EdgeKind для runtime-сужения на границе. */
 const EDGE_KIND_SET: ReadonlySet<string> = new Set<EdgeKind>([
@@ -176,7 +178,9 @@ function nodeToPage(n: AppMapNode): LiveAppMapPage {
  * kind сужается через coerceEdgeKind (дефолт unknown, без `as`).
  */
 export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
-  const nodes: AppMapNode[] = doc.pages.map((p) => pageToNode(p, doc.baseUrl));
+  const nodes: AppMapNode[] = doc.pages.map((p) =>
+    pageToNode(p, doc.baseUrl, doc.layout),
+  );
   const edges: AppMapEdge[] = doc.edges.map((e, i) => liveEdgeToAppEdge(e, i));
 
   const revision = stableHash([
@@ -224,7 +228,44 @@ function liveEdgeToAppEdge(e: LiveAppMapEdge, index: number): AppMapEdge {
   };
 }
 
-function pageToNode(p: LiveAppMapPage, baseUrl?: string): AppMapNode {
+/**
+ * Viewport viewer-страницы (height необязателен) → enterprise DeviceViewport.
+ * Высота: страница → layout.defaultDeviceViewport → layout.defaultHeight.
+ * Если высоты нет нигде — DEVICE_HEIGHT_FALLBACK и heightMode=auto, чтобы
+ * visualizer измерил настоящую высоту контента.
+ */
+function pageViewportToDevice(
+  viewport: LiveAppMapPage['viewport'],
+  layout: LayoutHints | undefined,
+): DeviceViewport | undefined {
+  if (viewport === undefined) {
+    return undefined;
+  }
+  const knownHeight =
+    viewport.height ??
+    layout?.defaultDeviceViewport?.height ??
+    layout?.defaultHeight;
+  if (knownHeight === undefined) {
+    return {
+      width: viewport.width,
+      height: DEVICE_HEIGHT_FALLBACK,
+      label: viewport.label,
+      heightMode: 'auto',
+    };
+  }
+  return {
+    width: viewport.width,
+    height: knownHeight,
+    label: viewport.label,
+    heightMode: viewport.heightMode,
+  };
+}
+
+function pageToNode(
+  p: LiveAppMapPage,
+  baseUrl: string | undefined,
+  layout: LayoutHints | undefined,
+): AppMapNode {
   const pathPattern =
     p.path ??
     (p.url && baseUrl ? stripBase(p.url, baseUrl) : p.url) ??
@@ -240,7 +281,7 @@ function pageToNode(p: LiveAppMapPage, baseUrl?: string): AppMapNode {
     groupIds: p.group ? [p.group] : undefined,
     metadata: p.metadata,
     position: p.position,
-    viewport: p.viewport,
+    viewport: pageViewportToDevice(p.viewport, layout),
     states: p.states,
     defaultPinned: p.defaultPinned,
     screenshot: p.screenshot,

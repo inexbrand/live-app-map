@@ -5,12 +5,25 @@
  * (см. `buildKorborDeepLinkQuery`).
  */
 
-/** Ожидаемые id dogfood-поверхностей (имя файла = korbor-{id}.liveappmap.json). */
-export const KORBOR_DOGFOOD_IDS = ['miniapp', 'admin', 'site'] as const;
+/** id dogfood-поверхности (имя файла = korbor-{id}.liveappmap.json). */
+export type KorborDogfoodId = 'miniapp' | 'admin' | 'site';
 
-export type KorborDogfoodId = (typeof KORBOR_DOGFOOD_IDS)[number];
+/** id пресета: поверхность или объединённая карта всех поверхностей. */
+export type KorborPresetId = KorborDogfoodId | 'all';
 
-export const KORBOR_PRESETS = [
+/** Пресет Korbor: карта в public/maps и dev-сервер поверхности. */
+export type KorborPreset = {
+  readonly id: KorborPresetId;
+  readonly label: string;
+  readonly path: string;
+  readonly baseUrl: string;
+};
+
+/** Ожидаемые dogfood-поверхности. */
+export const KORBOR_DOGFOOD_IDS: readonly KorborDogfoodId[] = ['miniapp', 'admin', 'site'];
+
+/** Пресеты Korbor в порядке показа. */
+export const KORBOR_PRESETS: readonly KorborPreset[] = [
   {
     id: 'all',
     label: 'Весь Korbor',
@@ -37,13 +50,7 @@ export const KORBOR_PRESETS = [
     path: '/maps/korbor-site.liveappmap.json',
     baseUrl: 'http://localhost:16001',
   },
-] as const;
-
-export type KorborPreset = (typeof KORBOR_PRESETS)[number];
-
-export type FetchPresetResult =
-  | { readonly ok: true; readonly json: unknown }
-  | { readonly ok: false; readonly error: string };
+];
 
 /**
  * Канонический path public map для dogfood id.
@@ -75,32 +82,4 @@ export function buildKorborDeepLinkQuery(
     params.set('role', role.trim());
   }
   return `?${params.toString()}`;
-}
-
-/**
- * Загружает JSON пресета с HTTP-проверкой (не silent fail на 404).
- *
- * @param preset - пресет с path под public/maps
- * @returns ok+json или ok:false с текстом ошибки
- */
-export async function fetchKorborPreset(
-  preset: KorborPreset,
-): Promise<FetchPresetResult> {
-  try {
-    const res = await fetch(preset.path);
-    if (!res.ok) {
-      return {
-        ok: false,
-        error: `Не удалось загрузить ${preset.path}: HTTP ${res.status}`,
-      };
-    }
-    const json = (await res.json()) as unknown;
-    return { ok: true, json };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return {
-      ok: false,
-      error: `Сеть: ${preset.path} — ${message}`,
-    };
-  }
 }
