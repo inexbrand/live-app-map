@@ -70,6 +70,12 @@ export const snapshotUploadSchema = z.object({
 /** Тело загрузки снимка (PNG в data URL). */
 export type SnapshotUpload = z.infer<typeof snapshotUploadSchema>;
 
+/**
+ * Сколько живёт просьба снимка. Старше — не всплывает в визуализаторе:
+ * агент мог давно уйти, а пользователь — закрыть вкладку.
+ */
+export const SNAPSHOT_REQUEST_TTL_MS = 10 * 60 * 1000;
+
 /** Пределы размера снимка (base64 PNG), чтобы не принять гигабайт. */
 export const MAX_SNAPSHOT_BYTES = 15 * 1024 * 1024;
 
@@ -154,16 +160,24 @@ export function readLatestSnapshot(lamDir: string): SnapshotRecord | null {
 }
 
 /**
- * Невыполненная просьба снимка или null.
+ * Невыполненная и не просроченная просьба снимка или null.
  *
  * @param lamDir - папка обмена
+ * @param now - текущее время (для тестов)
  */
-export function readPendingSnapshotRequest(lamDir: string): SnapshotRequest | null {
+export function readPendingSnapshotRequest(
+  lamDir: string,
+  now: Date = new Date(),
+): SnapshotRequest | null {
   const request = readJson(
     path.join(agentDir(lamDir), 'snapshot-request.json'),
     snapshotRequestSchema,
   );
   if (request === null) {
+    return null;
+  }
+  const age = now.getTime() - Date.parse(request.requestedAt);
+  if (!(age <= SNAPSHOT_REQUEST_TTL_MS)) {
     return null;
   }
   const latest = readLatestSnapshot(lamDir);

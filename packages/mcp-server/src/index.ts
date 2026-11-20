@@ -3,6 +3,7 @@
  */
 export {
   MAX_SNAPSHOT_BYTES,
+  SNAPSHOT_REQUEST_TTL_MS,
   readLatestSnapshot,
   readPendingSnapshotRequest,
   readVisualizerState,

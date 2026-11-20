@@ -7,6 +7,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
   readLatestSnapshot,
+  SNAPSHOT_REQUEST_TTL_MS,
   readPendingSnapshotRequest,
   readVisualizerState,
   saveSnapshot,
@@ -70,6 +71,13 @@ describe('snapshot request → snapshot', () => {
     expect(existsSync(rec.file)).toBe(true);
     // Файл — настоящий PNG (сигнатура)
     expect([...readFileSync(rec.file).subarray(1, 4)].map((c) => String.fromCharCode(c)).join('')).toBe('PNG');
+  });
+
+  test('просроченная просьба не висит', () => {
+    const t0 = new Date('2026-11-20T10:00:00.000Z');
+    writeSnapshotRequest(dir, null, t0);
+    expect(readPendingSnapshotRequest(dir, new Date(t0.getTime() + SNAPSHOT_REQUEST_TTL_MS))).not.toBeNull();
+    expect(readPendingSnapshotRequest(dir, new Date(t0.getTime() + SNAPSHOT_REQUEST_TTL_MS + 1))).toBeNull();
   });
 
   test('пустой PNG отклоняется', () => {

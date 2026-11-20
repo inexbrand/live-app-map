@@ -196,6 +196,8 @@ export function AppMapCanvas() {
   return (
     <div className="flow-host">
       <ReactFlow
+        // Новая карта — новый экземпляр: fitView кадрирует её, а не камера прошлой карты
+        key={document.revision}
         nodes={nodes}
         edges={edges}
         nodeTypes={nodeTypes}
