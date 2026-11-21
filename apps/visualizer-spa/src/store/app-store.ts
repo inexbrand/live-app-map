@@ -87,6 +87,8 @@ type AppStore = {
   highlightedPageIds: ReadonlySet<string>;
   pinnedPageIds: ReadonlySet<string>;
   visiblePageIds: ReadonlySet<string>;
+  /** Номер загрузки карты: после сброса видимости ноды сообщают её заново (одна и та же карта может загрузиться дважды). */
+  loadSeq: number;
   /** Активный live-бюджет (viewport/pin priority). */
   livePageIds: ReadonlySet<string>;
   /**
@@ -358,6 +360,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   highlightedPageIds: new Set(),
   pinnedPageIds: new Set(),
   visiblePageIds: new Set(),
+  loadSeq: 0,
   livePageIds: new Set(),
   warmPageIds: new Set(),
   warmLruOrder: [],
@@ -421,6 +424,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       highlightedPageIds: new Set(),
       activeStates: new Map(),
       visiblePageIds: new Set(),
+      loadSeq: get().loadSeq + 1,
       livePageIds: new Set(),
       mode: 'live',
     });

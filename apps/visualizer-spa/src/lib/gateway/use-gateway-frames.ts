@@ -3,6 +3,7 @@
  * старте и принимает отчёты страниц (высота, 401/403) по postMessage.
  */
 import { useEffect } from 'react';
+import { useAppStore } from '../../store/app-store';
 import { useGatewayStore } from '../../store/gateway-store';
 import { isLamPageMessage } from './inject-script';
 
@@ -40,6 +41,16 @@ export function useGatewayFrames(): void {
       }
     };
     window.addEventListener('message', onMessage);
-    return () => window.removeEventListener('message', onMessage);
+    // Порт и профили шлюза приходят позже, чем ноды узнают о своей видимости: адреса экранов
+    // меняются — живые ноды пересчитываются, иначе до первого движения холста их 0.
+    const unsubscribe = useGatewayStore.subscribe((s, prev) => {
+      if (s.port !== prev.port || s.profiles !== prev.profiles) {
+        useAppStore.getState().recomputeLive();
+      }
+    });
+    return () => {
+      window.removeEventListener('message', onMessage);
+      unsubscribe();
+    };
   }, []);
 }

@@ -161,6 +161,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const applyPageState = useAppStore((s) => s.applyPageState);
   const setInteract = useAppStore((s) => s.setInteract);
   const setVisible = useAppStore((s) => s.setVisible);
+  const loadSeq = useAppStore((s) => s.loadSeq);
   const setNodeViewport = useAppStore((s) => s.setNodeViewport);
   const setContentHeight = useAppStore((s) => s.setContentHeight);
   const pushLog = useAppStore((s) => s.pushLog);
@@ -239,7 +240,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [node.id, setVisible]);
+  }, [node.id, setVisible, loadSeq]);
 
   // Во всю высоту (heightMode=auto): высота из отчёта шлюза — страница кросс-доменная.
   const reportedHeight = status.contentHeight;
