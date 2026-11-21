@@ -17,6 +17,7 @@ import { useAppStore } from '../store/app-store';
 import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
 import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
+import { RevealSelected } from './RevealSelected';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
@@ -197,6 +198,7 @@ export function AppMapCanvas() {
           }
         }}
       >
+        <RevealSelected />
         {/* Точки в мировых координатах сцены: pan/zoom двигает их вместе с нодами */}
         <Background
           id="lam-scene-dots"

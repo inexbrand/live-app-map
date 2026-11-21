@@ -1422,3 +1422,12 @@ kbd,
 .db-view__screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
 /* Мини-карта левее кнопки журнала (.diag-fab: right 14 + 44 px) — не наезжают друг на друга. */
 .react-flow__panel.react-flow__minimap { margin-right: 70px; }
+/* Строка пути: значки состояния, путь (с многоточием), размер. */
+.page-node__path { display: flex; align-items: center; gap: 4px; }
+.page-node__path .ui-badge { flex: none; padding: 0 5px; font-size: 9px; line-height: 12px; }
+.page-node__path-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.page-node__size { flex: none; }
+/* Нода не прокручивается фокусом (clip, а не hidden); полоса размеров — одна строка с горизонтальной прокруткой, ровно в отведённую высоту. */
+.page-node { overflow: clip; }
+.page-node__viewport-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
+.page-node__vp-btn { flex: none; }

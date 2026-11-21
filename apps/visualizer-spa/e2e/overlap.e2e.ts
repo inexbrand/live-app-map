@@ -53,6 +53,21 @@ for (const [width, height] of [
     await page.locator('.page-node__title').first().click();
     await expect(page.locator('.drawer').first()).toBeVisible();
 
+    // Выбранная нода — не под панелями (холст сдвигается к ней).
+    await expect
+      .poll(async () => (await probe(page, [...OVERLAYS, '.react-flow__node.selected, .page-node--selected'])).overlaps.filter((o) => o.includes('selected')), { timeout: 5_000 })
+      .toEqual([]);
+
+    // Шапка выбранной ноды внутри ноды: полоса размеров не выдавливает её.
+    const sel = page.locator('.page-node--selected');
+    await sel.locator('[data-lam-full-height]').focus();
+    const inside = await sel.evaluate((n) => {
+      const h = n.querySelector('.page-node__header')?.getBoundingClientRect();
+      const r = n.getBoundingClientRect();
+      return h !== undefined && h.top >= r.top - 1 && n.scrollTop === 0;
+    });
+    expect(inside).toBe(true);
+
     const p = await probe(page, OVERLAYS);
     expect(p.shown).toEqual(expect.arrayContaining(['.toolbar[0]', '.drawer[0]', '.diag-fab[0]', '.react-flow__minimap[0]']));
     expect(p.overlaps).toEqual([]);

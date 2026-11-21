@@ -357,21 +357,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
         <div className="page-node__title" title={node.title}>{node.title}</div>
-        {status.unauthorized !== null ? (
-          <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
-            не авторизован
-          </Badge>
-        ) : null}
-        {status.cropped !== null ? (
-          <Badge className="ui-badge--warn" title={`${status.cropped}. Размер «auto» показывает страницу целиком`} data-lam-cropped="1">
-            обрезано
-          </Badge>
-        ) : null}
-        {isLive ? (
-          <Badge>live</Badge>
-        ) : isWarm ? (
-          <Badge>warm</Badge>
-        ) : null}
         <div className="page-node__actions">
           <button
             type="button"
@@ -417,8 +402,24 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
           </button>
         </div>
       </div>
+      {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
       <div className="page-node__path" title={url ?? node.pathPattern}>
-        {node.pathExample ?? node.pathPattern}
+        {status.unauthorized !== null ? (
+          <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
+            не авторизован
+          </Badge>
+        ) : null}
+        {status.cropped !== null ? (
+          <Badge className="ui-badge--warn" title={`${status.cropped}. Выберите ноду и нажмите «целиком» — она вырастет до высоты страницы`} data-lam-cropped="1">
+            обрезано
+          </Badge>
+        ) : null}
+        {isLive ? (
+          <Badge>live</Badge>
+        ) : isWarm ? (
+          <Badge>warm</Badge>
+        ) : null}
+        <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
         <span className="page-node__size">
           {' '}
           · {viewport.width}×{viewport.height}
@@ -553,6 +554,21 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               {p.label}
             </button>
           ))}
+          {/* Целиком — нода растёт до высоты страницы; окно — фиксированная высота, страница прокручивается внутри (двойной клик — взаимодействие). */}
+          <button
+            type="button"
+            className={`page-node__vp-btn${viewport.heightMode === 'auto' ? ' page-node__vp-btn--on' : ''}`}
+            aria-pressed={viewport.heightMode === 'auto'}
+            data-lam-full-height
+            title={viewport.heightMode === 'auto' ? 'Сейчас: страница целиком. Нажмите — окно с прокруткой' : 'Сейчас: окно с прокруткой. Нажмите — страница целиком'}
+            onClick={() => {
+              // Обратно в окно — высота без замера страницы (та, что была до «целиком»).
+              const windowHeight = resolveNodeViewport({ nodeViewport: node.viewport, override, layout: mapLayout, measuredHeight: undefined }).height;
+              setNodeViewport(node.id, viewport.heightMode === 'auto' ? { ...viewport, height: windowHeight, heightMode: 'fixed' } : { ...viewport, heightMode: 'auto' });
+            }}
+          >
+            целиком
+          </button>
         </div>
       ) : node.states && node.states.length > 0 ? (
         <div className="page-node__states">
