@@ -42,3 +42,11 @@ iframe в обзоре 7 → 5 (+44 снимка), кэш снимков 53 фа
   PageNode.tsx — не делил, чтобы не смешивать с задачей.
 - Ссылки через переменные (`to: path`, `ADMINS_CREATE_PATH`) TanStack-сканер не видит —
   в vpn-saas admin 12 экранов без переходов.
+
+## Вход мини-аппа после простоя, зум, старт живых экранов (2026-11-21)
+
+- Свежая загрузка, ожидание 20 с (auth2.ts): korbor-admin — live 6, iframe 6, «не авторизован» 0; korbor-miniapp — live 6, iframe 6, «не авторизован» 0. Скриншоты: screens/final-korbor-admin.png, screens/final-korbor-miniapp.png.
+- Истёкший access recruiter/employer: 401 → /auth/web/refresh 200 → данные, значка нет. Мёртвые access и refresh: 401 → /auth/telegram/miniapp 200, значка нет.
+- 16 свежих загрузок обеих карт подряд: 16 × 6 живых (до правки loadSeq — 4 из 16 с нулём). e2e live-start (2 × 4 загрузки) и overlap — проходят.
+- Зум (korbor-all, окно с GPU): Tandir на паузе — 59/60/59/60/60 FPS (без правки 56/60/60/40/59); под нагрузкой Tandir (load ≈30 на 10 ядрах) 49–56, пустой холст 56–59 — упор в CPU. Замеры: measurements/zoom-load.json.
+- Тесты: bun test inject-script, cookie-jar, gateway (28), flow+lib (177); tsc чистый.

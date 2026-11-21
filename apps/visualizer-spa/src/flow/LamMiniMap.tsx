@@ -48,6 +48,7 @@ export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps
       nodeBorderRadius={2}
       maskStrokeColor="#e5e5e5"
       maskStrokeWidth={1}
+      ariaLabel="Мини-карта: клик — перейти к месту"
       onClick={(_, at) => {
         void flow.setCenter(at.x, at.y, { zoom: flow.getZoom(), duration: 200 });
       }}
