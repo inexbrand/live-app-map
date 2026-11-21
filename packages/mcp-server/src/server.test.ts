@@ -159,6 +159,43 @@ describe('mcp: архитектура API и документация', () => {
     expect(out[2]).toMatchObject({ id: 3, result: { isError: true } });
   });
 
+  test('описание из кода рядом с авторским, экраны роута и причина «без экранов»', async () => {
+    const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-auto-'));
+    const out = await rpc(
+      [
+        call(1, 'get_route', { mapPath: allMap, route: 'GET /api/v1/admin/vacancies' }),
+        call(2, 'describe_api', { mapPath: allMap, noScreens: true }),
+        call(3, 'describe_api', { mapPath: allMap, undocumented: true }),
+      ],
+      lamDir,
+    );
+    const route = toolText(out[0]) as {
+      doc?: string;
+      autoDoc: { note: string; summary: string; lines: Array<{ label: string }> };
+      screens: Array<{ nodeId: string }>;
+      noScreens?: unknown;
+    };
+    expect(route.autoDoc.note).toBe('описание собрано из кода');
+    expect(route.autoDoc.summary).toStartWith('Чтение «vacancies»');
+    expect(route.autoDoc.lines.map((l) => l.label)).toContain('Читает');
+    // Экран админки находится по switch на раздел пути.
+    expect(route.screens.map((s) => s.nodeId)).toContain('admin:route:/vacancies');
+    expect(route.noScreens).toBeUndefined();
+
+    type Api = {
+      coverage: { routes: number; withScreens: number; gaps: { unreached: number; otherClient: number; noCaller: number } };
+      services: Array<{ sections: Array<{ modules: Array<{ routes: string[] }> }> }>;
+    };
+    const lines = (api: Api): string[] => api.services.flatMap((s) => s.sections.flatMap((x) => x.modules.flatMap((m) => m.routes)));
+    const gaps = toolText(out[1]) as Api;
+    expect(gaps.coverage.withScreens).toBe(0);
+    expect(gaps.coverage.gaps.unreached + gaps.coverage.gaps.otherClient + gaps.coverage.gaps.noCaller).toBe(gaps.coverage.routes);
+    expect(lines(gaps).every((l) => l.includes(' · без экранов: '))).toBe(true);
+    const undocumented = lines(toolText(out[2]) as Api);
+    expect(undocumented.length).toBeGreaterThan(0);
+    expect(undocumented.every((l) => l.includes(' · из кода: '))).toBe(true);
+  });
+
   test('list_epochs, get_epoch, search_docs по документации самого live-app-map', async () => {
     const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-docs-'));
     const out = await rpc(

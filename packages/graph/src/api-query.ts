@@ -16,8 +16,10 @@ export type ApiFilter = {
   readonly service?: string;
   /** Таблица, которую роут читает или пишет: имя в коде или в БД. */
   readonly table?: string;
-  /** Только роуты без описания. */
+  /** Только роуты без авторского описания. */
   readonly undocumented?: boolean;
+  /** Только роуты, которые не вызывает ни один экран. */
+  readonly noScreens?: boolean;
 };
 
 /** Модуль: роуты с общим префиксом из двух сегментов. */
@@ -113,6 +115,7 @@ export function filterRoutes(index: CodeIndex, filter: ApiFilter): ApiRoute[] {
       (methods.size === 0 || methods.has(r.method)) &&
       (filter.table === undefined || filter.table === '' || touchesTable(index, r, filter.table)) &&
       (filter.undocumented !== true || !hasDescription(r)) &&
+      (filter.noScreens !== true || (index.callersByRoute.get(r.id)?.length ?? 0) === 0) &&
       (q === '' ||
         [r.method, r.path, r.doc ?? '', ...(r.comments ?? []), r.handler.name ?? '', r.location.file].join('\n').toLowerCase().includes(q)),
   );
