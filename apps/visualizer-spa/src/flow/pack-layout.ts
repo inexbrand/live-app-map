@@ -47,6 +47,8 @@ export const GROUP_GAP = 160;
 export const GROUP_PAD = 40;
 /** Высота шапки группы (подпись). */
 export const GROUP_HEADER = 96;
+/** Желаемое отношение ширины группы к высоте: крупная группа — не столбец. */
+export const GROUP_ASPECT = 2;
 
 /** Кусок группы: ноды со смещениями от его левого верхнего угла. */
 type Piece = { readonly width: number; readonly height: number; readonly items: ReadonlyMap<string, { x: number; y: number }> };
@@ -75,22 +77,18 @@ function components(boxes: readonly LayoutBox[], links: readonly LayoutLink[]): 
 }
 
 /**
- * Кусок из связной компоненты: dagre LR; длинная цепочка, не влезающая в ряд, —
- * dagre TB; если и так шире ряда — ноды полками в порядке обхода.
+ * Кусок из связной компоненты: dagre LR, dagre TB или полки в порядке обхода —
+ * из влезающих в ряд берётся самый близкий к GROUP_ASPECT : 1. Звезда «меню → 30
+ * экранов» в LR — высокий столбец, полками она компактнее.
  */
 function piece(boxes: readonly LayoutBox[], links: readonly LayoutLink[], maxRowWidth: number): Piece {
-  const lr = dagrePiece(boxes, links, 'LR');
-  if (lr.width <= maxRowWidth) {
-    return lr;
-  }
-  const tb = dagrePiece(boxes, links, 'TB');
-  if (tb.width <= maxRowWidth) {
-    return tb;
-  }
-  return shelf(
+  const shelved = shelf(
     boxes.map((b) => ({ width: b.width, height: b.height, items: new Map([[b.id, { x: 0, y: 0 }]]) })),
     maxRowWidth,
   );
+  const fits = [dagrePiece(boxes, links, 'LR'), dagrePiece(boxes, links, 'TB')].filter((p) => p.width <= maxRowWidth);
+  const span = (p: Piece): number => Math.max(p.width, p.height * GROUP_ASPECT);
+  return [...fits, shelved].reduce((best, p) => (span(p) < span(best) ? p : best));
 }
 
 /** Раскладка компоненты dagre с настоящими размерами. */
@@ -148,6 +146,19 @@ function shelf(pieces: readonly Piece[], maxRowWidth: number): Piece {
 }
 
 /**
+ * Ширина ряда группы: не уже предела; у крупной группы — по площади нод, чтобы рамка
+ * была примерно GROUP_ASPECT : 1, а не узкий высокий столбец.
+ *
+ * @param members - ноды группы
+ * @param maxRowWidth - предел ширины ряда для обычных групп
+ * @returns ширина ряда
+ */
+function groupRowWidth(members: readonly LayoutBox[], maxRowWidth: number): number {
+  const area = members.reduce((s, b) => s + (b.width + NODE_GAP) * (b.height + NODE_GAP), 0);
+  return Math.max(maxRowWidth, Math.sqrt(area * GROUP_ASPECT));
+}
+
+/**
  * Раскладывает ноды по группам без наложений.
  *
  * @param boxes - ноды с размерами и группой
@@ -172,11 +183,11 @@ export function packLayout(boxes: readonly LayoutBox[], links: readonly LayoutLi
     const ids = new Set(members.map((m) => m.id));
     const inner = links.filter((l) => ids.has(l.from) && ids.has(l.to));
     // Крупные связные куски первыми, одиночки — следом в исходном порядке.
+    const rowWidth = groupRowWidth(members, opts.maxRowWidth);
     const pieces = components(members, inner)
-      .map((c) => piece(c, inner, opts.maxRowWidth))
+      .map((c) => piece(c, inner, rowWidth))
       .sort((a, b) => b.items.size - a.items.size);
-    const widest = Math.max(...pieces.map((p) => p.width));
-    const packed = shelf(pieces, Math.max(opts.maxRowWidth, widest));
+    const packed = shelf(pieces, Math.max(rowWidth, ...pieces.map((p) => p.width)));
     for (const [id, off] of packed.items) {
       positions.set(id, { x: GROUP_PAD + off.x, y: top + GROUP_HEADER + off.y });
     }

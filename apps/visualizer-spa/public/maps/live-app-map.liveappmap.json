@@ -4,24 +4,9 @@
     "name": "live-app-map",
     "platform": "web",
     "generator": "@live-app-map/scanner-source/0.1.0",
-    "generatedAt": "2026-11-21T18:04:37.624Z"
+    "generatedAt": "2026-11-21T18:09:55.348Z"
   },
   "pages": [
-    {
-      "id": "service:@demo/web",
-      "title": "@demo/web",
-      "path": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web",
-      "type": "service",
-      "metadata": {
-        "routes": 0,
-        "tables": 0,
-        "symbols": 1,
-        "pathPattern": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web",
-        "kind": "service",
-        "sourceFile": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web"
-      },
-      "iframeDisabled": true
-    },
     {
       "id": "service:@live-app-map/cli",
       "title": "@live-app-map/cli",
@@ -270,25 +255,10 @@
       "metadata": {
         "routes": 0,
         "tables": 0,
-        "symbols": 488,
+        "symbols": 489,
         "pathPattern": "apps/visualizer-spa",
         "kind": "service",
         "sourceFile": "apps/visualizer-spa"
-      },
-      "iframeDisabled": true
-    },
-    {
-      "id": "service:demo",
-      "title": "demo",
-      "path": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project",
-      "type": "service",
-      "metadata": {
-        "routes": 0,
-        "tables": 0,
-        "symbols": 0,
-        "pathPattern": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project",
-        "kind": "service",
-        "sourceFile": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project"
       },
       "iframeDisabled": true
     },
@@ -320,16 +290,6 @@
         "id": "service:@live-app-map/visualizer-spa",
         "name": "@live-app-map/visualizer-spa",
         "root": "apps/visualizer-spa"
-      },
-      {
-        "id": "service:@demo/web",
-        "name": "@demo/web",
-        "root": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web"
-      },
-      {
-        "id": "service:demo",
-        "name": "demo",
-        "root": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project"
       },
       {
         "id": "service:live-app-map",
@@ -1452,11 +1412,22 @@
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
+        "kind": "variable",
+        "name": "GROUP_ASPECT",
+        "location": {
+          "file": "apps/visualizer-spa/src/flow/pack-layout.ts",
+          "line": 51
+        },
+        "doc": "Желаемое отношение ширины группы к высоте: крупная группа — не столбец.",
+        "id": "symbol:apps/visualizer-spa/src/flow/pack-layout.ts#GROUP_ASPECT",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
         "kind": "function",
         "name": "packLayout",
         "location": {
           "file": "apps/visualizer-spa/src/flow/pack-layout.ts",
-          "line": 158
+          "line": 169
         },
         "signature": "(boxes: readonly LayoutBox[], links: readonly LayoutLink[], opts: PackOptions) => PackedLayout",
         "doc": "Раскладывает ноды по группам без наложений.\n\n@param boxes - ноды с размерами и группой\n@param links - рёбра (учитываются только внутри группы)\n@param opts - порядок и подписи групп, ширина ряда\n@returns позиции нод и рамки групп",
@@ -1468,7 +1439,7 @@
         "name": "findOverlaps",
         "location": {
           "file": "apps/visualizer-spa/src/flow/pack-layout.ts",
-          "line": 202
+          "line": 213
         },
         "signature": "(rects: ReadonlyArray<Rect & { readonly id: string }>) => Array<[string, string]>",
         "doc": "Пары пересекающихся прямоугольников (касание краями — не пересечение).\n\n@param rects - прямоугольники с id\n@returns пары id",
@@ -1480,7 +1451,7 @@
         "name": "startViewport",
         "location": {
           "file": "apps/visualizer-spa/src/flow/pack-layout.ts",
-          "line": 233
+          "line": 244
         },
         "signature": "(layout: PackedLayout, boxes: readonly LayoutBox[], canvas: { readonly width: number; readonly height: number }, zoomRange: { readonly min: number; readonly max: number }) => { x: number; y: number; …",
         "doc": "Стартовый вид: левый верхний угол первой группы в таком масштабе, чтобы\nподписи нод читались (не мельче minZoom), а в ширину влезло сколько получится.\n\n@param layout - раскладка\n@param boxes - ноды\n@param canvas - размер холста в px\n@param zoomRange - пределы масштаба\n@returns вид React Flow",
@@ -5986,16 +5957,6 @@
         "doc": "Тело панели.",
         "id": "symbol:apps/visualizer-spa/src/ui/panel.tsx#PanelBody",
         "serviceId": "service:@live-app-map/visualizer-spa"
-      },
-      {
-        "kind": "variable",
-        "name": "x",
-        "location": {
-          "file": "apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web/src/index.ts",
-          "line": 1
-        },
-        "id": "symbol:apps/visualizer-spa/test-results/docs-bugs.e2e.ts-закрыть-и-81f42-на-диске-и-готовность-эпохи-chromium/project/apps/web/src/index.ts#x",
-        "serviceId": "service:@demo/web"
       },
       {
         "kind": "type",
@@ -11323,7 +11284,7 @@
   "extensions": {
     "liveAppMap": {
       "formatVersion": 2,
-      "revision": "90d367562f220738",
+      "revision": "6343c51883a57712",
       "framework": "unknown",
       "projectRoot": "/Users/macbook/orca/workspaces/live-app-map/sauger"
     }

@@ -5,7 +5,7 @@
     "name": "Korbor (все поверхности)",
     "platform": "web",
     "generator": "scan-korbor+merge/0.2.0",
-    "generatedAt": "2026-11-21T18:04:36.592Z",
+    "generatedAt": "2026-11-21T18:09:54.287Z",
     "description": "Unified live graph: miniapp + admin + site (no god-root)"
   },
   "pages": [
@@ -2157,6 +2157,150 @@
         "baseUrl": "http://localhost:16001"
       },
       "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:docs",
+      "title": "Документы",
+      "path": "/docs",
+      "url": "http://localhost:16001/docs",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/docs",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:docs",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:contacts",
+      "title": "Контакты",
+      "path": "/contacts",
+      "url": "http://localhost:16001/contacts",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/contacts",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:contacts",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:faq",
+      "title": "Вопросы и ответы",
+      "path": "/faq",
+      "url": "http://localhost:16001/faq",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/faq",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:faq",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:about",
+      "title": "О платформе",
+      "path": "/about",
+      "url": "http://localhost:16001/about",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/about",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:about",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:guarantees",
+      "title": "Гарантии и споры",
+      "path": "/guarantees",
+      "url": "http://localhost:16001/guarantees",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/guarantees",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:guarantees",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:pricing",
+      "title": "Тарифы и выплаты",
+      "path": "/pricing",
+      "url": "http://localhost:16001/pricing",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/pricing",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:pricing",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:how-it-works",
+      "title": "Как это работает",
+      "path": "/how-it-works",
+      "url": "http://localhost:16001/how-it-works",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/how-it-works",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:how-it-works",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:recruiters",
+      "title": "Рекрутерам",
+      "path": "/recruiters",
+      "url": "http://localhost:16001/recruiters",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/recruiters",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:recruiters",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
+    },
+    {
+      "id": "site:site-cms:employers",
+      "title": "Работодателям",
+      "path": "/employers",
+      "url": "http://localhost:16001/employers",
+      "group": "site",
+      "type": "route",
+      "metadata": {
+        "pathPattern": "/employers",
+        "kind": "page",
+        "surface": "site",
+        "originalId": "site-cms:employers",
+        "baseUrl": "http://localhost:16001"
+      },
+      "iframeDisabled": false
     }
   ],
   "edges": [
@@ -3877,6 +4021,60 @@
       "from": "site:site-payload-admin",
       "to": "site:site-payload-collections",
       "label": "Collections",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:docs:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:docs",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:contacts:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:contacts",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:faq:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:faq",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:about:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:about",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:guarantees:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:guarantees",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:pricing:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:pricing",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:how-it-works:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:how-it-works",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:recruiters:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:recruiters",
+      "kind": "link"
+    },
+    {
+      "id": "edge:site-home->site-cms:employers:site",
+      "from": "site:site-home",
+      "to": "site:site-cms:employers",
       "kind": "link"
     },
     {

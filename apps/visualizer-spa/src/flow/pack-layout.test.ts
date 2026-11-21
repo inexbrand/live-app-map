@@ -51,8 +51,13 @@ describe('packLayout', () => {
     }
     expect(layout.groups.map((g) => g.id)).toEqual(['miniapp', 'admin', 'site', 'services']);
     expect(layout.groups[0]?.title).toBe('Мини-приложение');
-    // Ряд не шире предела (кроме куска, который сам шире).
-    expect(Math.max(...layout.groups.map((g) => g.width))).toBeLessThan(4200 + 2 * 40 + 1);
+  });
+
+  test('korbor-all: крупная группа не столбец — высота рамки не больше ширины вдвое', () => {
+    const { boxes, links } = korborBoxes();
+    const layout = packLayout(boxes, links, opts);
+    const tall = layout.groups.filter((g) => g.height > g.width * 2).map((g) => `${g.id} ${Math.round(g.width)}×${Math.round(g.height)}`);
+    expect(tall).toEqual([]);
   });
 
   test('findOverlaps ловит пересечение и не считает касание', () => {
