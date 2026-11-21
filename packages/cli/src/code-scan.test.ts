@@ -45,8 +45,10 @@ describe('runScan --code-dir', () => {
       expect(kinds.has('page')).toBe(true);
       expect(kinds.has('service')).toBe(true);
       expect(result.document.code?.tables.map((t) => t.exportName).sort()).toEqual([
+        'Customer',
         'Order',
         'comments',
+        'postTags',
         'posts',
         'users',
       ]);
@@ -95,7 +97,7 @@ describe('bin code', () => {
       const proc = Bun.spawnSync(['bun', 'run', BIN, 'code', '--dir', SOURCE, '-o', out]);
       expect(proc.exitCode).toBe(0);
       const summary: unknown = JSON.parse(proc.stdout.toString());
-      expect(summary).toMatchObject({ ok: true, services: 6, routes: 14, routesWithDbInLoop: 1, tables: 4, out });
+      expect(summary).toMatchObject({ ok: true, services: 6, routes: 14, routesWithDbInLoop: 1, tables: 6, out });
       const doc: unknown = JSON.parse(readFileSync(out, 'utf8'));
       const parsed = parseAppMapDocument(doc);
       if (!parsed.ok) {

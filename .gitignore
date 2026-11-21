@@ -24,3 +24,6 @@ UsersConcept*
 
 # сгенерированные карты для локального просмотра
 apps/visualizer-spa/public/maps/*.generated.liveappmap.json
+# Профили сессий шлюза: куки и токены — только локально
+.lam-sessions
+.lam-snapshots

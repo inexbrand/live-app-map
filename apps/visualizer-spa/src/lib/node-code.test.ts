@@ -37,8 +37,10 @@ describe('selectNodeCode', () => {
     const doc = await scannedMap();
     const view = selectNodeCode(doc, 'service:@fx/db');
     expect(view?.kind === 'service' ? view.tables.map((t) => t.exportName).sort() : []).toEqual([
+      'Customer',
       'Order',
       'comments',
+      'postTags',
       'posts',
       'users',
     ]);

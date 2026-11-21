@@ -26,8 +26,9 @@ describe('buildMapCatalog — public/maps', () => {
       label: 'Мини-приложение',
       path: '/maps/korbor-miniapp.liveappmap.json',
       baseUrl: 'https://vite.localhost:5175',
-      pageCount: 16,
+      pageCount: (JSON.parse(readFileSync(path.join(publicMaps, 'korbor-miniapp.liveappmap.json'), 'utf8')) as { pages: unknown[] }).pages.length,
     });
+    expect(mini?.pageCount).toBeGreaterThan(0);
     // Каталог проходит разбор браузерной стороны
     expect(parseMapCatalog(JSON.parse(JSON.stringify(catalog))).ok).toBe(true);
   });

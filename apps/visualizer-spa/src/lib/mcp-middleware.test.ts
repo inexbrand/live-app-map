@@ -2,7 +2,7 @@
  * POST /mcp — JSON-RPC MCP по HTTP на настоящем сервере.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { mkdtempSync } from 'node:fs';
+import { mkdtempSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { serveMiddleware, type TestServer } from './dev-http.test-helpers';
@@ -35,7 +35,9 @@ describe('mcp middleware', () => {
       await rpc({ jsonrpc: '2.0', id: 2, method: 'tools/call', params: { name: 'list_map_pages', arguments: { mapPath: siteMap } } })
     ).json()) as { result: { content: Array<{ text: string }> } };
     const pages = JSON.parse(call.result.content[0]?.text ?? '{}') as { pages: unknown[] };
-    expect(pages.pages).toHaveLength(35);
+    const inFile = (JSON.parse(readFileSync(siteMap, 'utf8')) as { pages: unknown[] }).pages.length;
+    expect(inFile).toBeGreaterThan(0);
+    expect(pages.pages).toHaveLength(inFile);
   });
 
   test('уведомление → 202 без тела; мусор → parse error; GET → 405', async () => {

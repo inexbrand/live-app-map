@@ -80,7 +80,7 @@ export function buildFeedbackPromptMarkdown(input: FeedbackPromptInput): string 
     input.note.trim() || '(описание не указано)',
     '',
     '## Ожидаемое поведение',
-    'Исправь root cause так, чтобы экран в Live App Map / target app вёл себя корректно при live-preview и user path. Сохрани monochrome UI kit, Manrope, без emoji — только иконки Lucide.',
+    'Исправь root cause так, чтобы экран в Live App Map / target app вёл себя корректно при live-preview и user path. Сохрани monochrome UI kit, Medeo Sans, без emoji — только иконки Lucide.',
     '',
     '## Acceptance',
     '- [ ] Проблема воспроизводится/закрыта на live URL',

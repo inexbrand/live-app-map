@@ -9,7 +9,7 @@ import { Badge } from '../ui';
 import { useAppStore } from '../store/app-store';
 
 /** Ширина и высота ноды сервиса в мировых координатах холста. */
-export const SERVICE_NODE_SIZE = { width: 300, height: 132 };
+export { SERVICE_NODE_SIZE } from './service-node-size';
 
 /** Данные ноды сервиса для React Flow. */
 export type ServiceNodeData = { readonly node: AppMapNode };

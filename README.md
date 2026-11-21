@@ -13,7 +13,7 @@ Professional developer tool: сканирует Next.js / React Router прил�
 | `@live-app-map/diagnostics` | codes + formatters |
 | `@live-app-map/scanner-core` | walk, materialize params |
 | `@live-app-map/scanner-next` | App/Pages Router |
-| `@live-app-map/scanner-react-router` | RR path configs |
+| `@live-app-map/scanner-react-router` | React Router и TanStack Router: экраны и переходы |
 | `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, вызовы Drizzle/Prisma, таблицы, функции с JSDoc, вызовы API фронтенда и связь экран → роут |
 | `@live-app-map/iframe-policy` | pure reconcile budget |
 | `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |
@@ -23,7 +23,7 @@ Professional developer tool: сканирует Next.js / React Router прил�
 | `@live-app-map/react` | embed + Devtools shell |
 | `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |
 | `@live-app-map/visualizer` | core utils (graph + iframe-policy re-export) |
-| `apps/visualizer-spa` | full UI on port **4310** (Manrope monochrome UI kit + Lucide) |
+| `apps/visualizer-spa` | full UI on port **4310** (Medeo Sans monochrome UI kit + Lucide) |
 
 ## Quick start
 
@@ -39,7 +39,7 @@ bun run dev          # visualizer :4310
 
 ### UI kit (канон)
 
-- **Manrope** + monochrome tokens (`--background` … `--border`)
+- **Medeo Sans** + monochrome tokens (`--background` … `--border`)
 - **Lucide** icons only (no emoji)
 - Primitives: `apps/visualizer-spa/src/ui/*` — Button, Field/Input/Select/Textarea, Chip/Badge, Panel
 
@@ -75,18 +75,49 @@ bun run mcp
 | Miniapp | https://vite.localhost:5175 (Vite TLS host) |
 | Visualizer | http://localhost:4310 |
 
-### State injection (роли miniapp)
+### Живые экраны: шлюз и профили входа
 
-В тулбаре visualizer:
+Dev-сервер визуализатора поднимает шлюз на **:4320** (`LAM_GATEWAY_PORT`). Экран открывается
+как `http://<профиль>--<цель>--<ячейка>.localhost:4320/…`: у каждой ноды свой origin, поэтому
+iframe одного приложения не делят sessionStorage и не уводят друг друга на чужие экраны.
+Шлюз подставляет куки профиля, кладёт значения sessionStorage до загрузки приложения, снимает
+X-Frame-Options/CSP и сообщает визуализатору высоту страницы и ответы API 401/403.
 
-- **Роль → Рекрутер** — `?lam_role=recruiter` на live URL
-- **Роль → Клиент (employer)** — `?lam_role=employer`
+- **Настройки → Профили входа**: вход один раз (dev-вход korbor или вставка кук / ключа
+  sessionStorage), роли recruiter / employer / admin. Профили лежат в `.lam-sessions/`
+  (права 600, в `.gitignore`); браузер видит только имена ключей, не значения.
+- Профиль экрана: роль стейта ноды → общая роль → первый профиль приложения → без входа.
+- Значки на ноде: **не авторизован** (API ответил 401/403, в подсказке — путь), **обрезано**
+  («Видно 844 из 5838 px»). Кнопка **целиком** в полосе размеров выбранной ноды растит ноду до
+  высоты страницы; повторное нажатие — окно прежней высоты с прокруткой внутри.
+- Токен админки korbor живёт ~15 минут — шлюз обновляет dev-вход сам.
 
-На нодах miniapp есть chips `recruiter` / `employer`. Выбранная нода открывает панель стейтов.
+### Память
 
-```text
-http://localhost:4310/?map=/maps/korbor-miniapp.liveappmap.json&baseUrl=https://vite.localhost:5175&role=recruiter
-```
+Живых iframe не больше 6 (+2 тёплых); остальные экраны — JPEG-снимки, которые делает
+headless Chromium в dev-процессе (`.lam-snapshots/`, в `.gitignore`). На korbor-all куча вкладки
+в обзоре 180 → 140 МБ, утечки после переключений карт нет — замеры в
+`docs/epoch/live-korbor-e2e#20261121-175119/measurements/`.
+
+### Вид «База данных»
+
+Кнопка в шапке (если в карте есть схема): таблицы с поиском, колонки (тип, PK, NOT NULL,
+default, enum, внешний ключ с переходом), кто ссылается, роуты чтения и записи и экраны,
+которые эти роуты вызывают (клик — экран на холсте).
+
+### MCP как база знаний
+
+`bun run mcp` и `POST /mcp` на dev-сервере, кроме страниц и замечаний, отдают код:
+`list_services`, `list_routes`, `get_route`, `list_tables`, `get_table` — роуты с
+комментариями, таблицы с колонками и связями, экраны, вызывающие роут.
+
+### Сканер экранов
+
+`scanner-react-router` понимает React Router (литералы `path`) и **TanStack Router**:
+`createRoute({ getParentRoute, path, component })` с полным путём по цепочке родителей,
+`createFileRoute('/…')`, переходы `Link to` / `navigate({ to })` / `redirect({ to })` из
+файла экрана и его локальных импортов (общие для многих экранов файлы — оболочка, меню —
+не считаются; переход через общий виджет помечен `confidence: low`).
 
 ## CLI
 

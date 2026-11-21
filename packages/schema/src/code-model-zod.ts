@@ -100,6 +100,16 @@ export const codeModelSchema = z
                 name: z.string().min(1),
                 sqlName: z.string().optional(),
                 type: z.string(),
+                primaryKey: z.boolean().optional(),
+                notNull: z.boolean().optional(),
+                unique: z.boolean().optional(),
+                default: z.string().optional(),
+                enumValues: z.array(z.string()).optional(),
+                references: z
+                  .object({ table: z.string().min(1), column: z.string().min(1), onDelete: z.string().optional() })
+                  .strict()
+                  .optional(),
+                doc: z.string().optional(),
               })
               .strict(),
           ),

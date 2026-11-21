@@ -3,7 +3,7 @@
  */
 import path from 'node:path';
 import { assembleDocument } from '@live-app-map/scanner-core';
-import { codeServiceNodes, scanSource } from '@live-app-map/scanner-source';
+import { codeServiceNodes, scanSource, type ScreenEntry } from '@live-app-map/scanner-source';
 import { codeFileOfNode, screenOf } from '@live-app-map/schema';
 import type { AppMapDocument, AppMapEdge, CodeModel, Diagnostic } from '@live-app-map/schema';
 import { writeMapFile, type MapFileFormat } from './write-map';
@@ -34,25 +34,46 @@ export function withSourceCode(
   codeDir: string,
 ): { document: AppMapDocument; diagnostics: readonly Diagnostic[] } {
   const root = path.resolve(codeDir);
-  const screens = screenFiles(doc, root);
+  const scan = scanSource({ root, entries: screenEntries(doc, root) });
+  return { document: attachCode(doc, scan.code), diagnostics: scan.diagnostics };
+}
+
+/**
+ * Экраны карты как входы скана исходников: файл от корня исходников,
+ * у React Router — ещё путь роута.
+ *
+ * @param doc - карта экранов
+ * @param codeRoot - абсолютный каталог исходников
+ * @param idPrefix - приставка к id ноды (для общей карты нескольких приложений)
+ * @returns входы для scanSource
+ */
+export function screenEntries(doc: AppMapDocument, codeRoot: string, idPrefix = ''): ScreenEntry[] {
   const routerPaths = doc.project.framework === 'react-router';
   const nodes = new Map(doc.nodes.map((n) => [n.id, n]));
-  const entries = [...screens].map(([nodeId, file]) => ({
-    nodeId,
+  return [...screenFiles(doc, codeRoot)].map(([nodeId, file]) => ({
+    nodeId: `${idPrefix}${nodeId}`,
     file,
     ...(routerPaths ? { routePath: nodes.get(nodeId)?.pathPattern ?? '/' } : {}),
   }));
-  const scan = scanSource({ root, entries });
+}
+
+/**
+ * Добавляет к карте раздел code: ноды сервисов и рёбра «экран → сервис».
+ * Экраны раздела code должны ссылаться на id нод этой карты.
+ *
+ * @param doc - карта экранов
+ * @param code - раздел code
+ * @returns карта с кодом
+ */
+export function attachCode(doc: AppMapDocument, code: CodeModel): AppMapDocument {
+  const screens = screenFiles(doc, code.root);
   const ids = new Set(doc.nodes.map((n) => n.id));
-  const services = codeServiceNodes(scan.code).filter((n) => !ids.has(n.id));
+  const services = codeServiceNodes(code).filter((n) => !ids.has(n.id));
   return {
-    document: {
-      ...doc,
-      nodes: [...doc.nodes, ...services],
-      edges: [...doc.edges, ...apiEdges(scan.code, screens)],
-      code: scan.code,
-    },
-    diagnostics: scan.diagnostics,
+    ...doc,
+    nodes: [...doc.nodes, ...services],
+    edges: [...doc.edges, ...apiEdges(code, screens)],
+    code,
   };
 }
 

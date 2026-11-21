@@ -25,7 +25,12 @@ import {
   resolveViewportPresets,
 } from '../lib/viewport';
 import { Badge, Chip } from '../ui';
+import { NODE_IFRAME_ATTR } from '../lib/gateway/use-gateway-frames';
+import { snapshotSrc } from '../lib/gateway/snapshot-url';
+import { pageStatus } from '../lib/gateway/page-status';
+import { MAX_CONTENT_HEIGHT } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
+import { useGatewayStore } from '../store/gateway-store';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
@@ -134,18 +139,21 @@ export function sandboxPresetLabel(preset: IframeSandboxPreset): string {
 
 function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const node = props.data.node;
-  const selectedPageId = useAppStore((s) => s.selectedPageId);
-  const highlighted = useAppStore((s) => s.highlightedPageIds);
-  const pinned = useAppStore((s) => s.pinnedPageIds);
-  const live = useAppStore((s) => s.livePageIds);
-  const warm = useAppStore((s) => s.warmPageIds);
-  const mounted = useAppStore((s) => s.mountedPageIds);
+  // Подписки — на признаки этой ноды, а не на целые наборы: смена live/visible
+  // у одной ноды не перерисовывает остальные сотни.
+  const isSelected = useAppStore((s) => s.selectedPageId === node.id);
+  const isDim = useAppStore((s) => s.highlightedPageIds.size > 0 && !s.highlightedPageIds.has(node.id) && s.selectedPageId !== node.id);
+  const isPinned = useAppStore((s) => s.pinnedPageIds.has(node.id));
+  const inLive = useAppStore((s) => s.livePageIds.has(node.id));
+  const inWarm = useAppStore((s) => s.warmPageIds.has(node.id));
+  const inMounted = useAppStore((s) => s.mountedPageIds.has(node.id));
+  const inViewport = useAppStore((s) => s.visiblePageIds.has(node.id));
   const mode = useAppStore((s) => s.mode);
   const scale = useAppStore((s) => s.iframeScale);
-  const interactPageId = useAppStore((s) => s.interactPageId);
-  const activeStates = useAppStore((s) => s.activeStates);
-  const nodeViewports = useAppStore((s) => s.nodeViewports);
-  const contentHeights = useAppStore((s) => s.contentHeights);
+  const isInteract = useAppStore((s) => s.interactPageId === node.id);
+  const activeStateName = useAppStore((s) => s.activeStates.get(node.id));
+  const override = useAppStore((s) => s.nodeViewports.get(node.id));
+  const measuredHeight = useAppStore((s) => s.contentHeights.get(node.id));
   const mapLayout = useAppStore((s) => s.document?.layout);
   const selectPage = useAppStore((s) => s.selectPage);
   const togglePin = useAppStore((s) => s.togglePin);
@@ -153,35 +161,35 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const applyPageState = useAppStore((s) => s.applyPageState);
   const setInteract = useAppStore((s) => s.setInteract);
   const setVisible = useAppStore((s) => s.setVisible);
+  const loadSeq = useAppStore((s) => s.loadSeq);
   const setNodeViewport = useAppStore((s) => s.setNodeViewport);
   const setContentHeight = useAppStore((s) => s.setContentHeight);
   const pushLog = useAppStore((s) => s.pushLog);
   const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
   const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
-  const visiblePageIds = useAppStore((s) => s.visiblePageIds);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
+  // Порт и профили шлюза входят в адрес: подписка перестраивает его при входе.
+  const gatewayPort = useGatewayStore((s) => s.port);
+  useGatewayStore((s) => s.profiles);
+  const report = useGatewayStore((s) => s.reports.get(node.id));
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeError, setIframeError] = useState(false);
-  const isSelected = selectedPageId === node.id;
-  const isDim =
-    highlighted.size > 0 && !highlighted.has(node.id) && !isSelected;
-  const isLive = live.has(node.id) && mode === 'live';
-  const isWarm = warm.has(node.id) && mode === 'live';
-  const isMounted = mounted.has(node.id) && mode === 'live';
-  const activeStateName = activeStates.get(node.id);
-  const isPinned = pinned.has(node.id);
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
+  const isLive = inLive && mode === 'live';
+  const isWarm = inWarm && mode === 'live';
+  const isMounted = inMounted && mode === 'live';
 
-  const override = nodeViewports.get(node.id);
   const viewport = resolveNodeViewport({
     nodeViewport: node.viewport,
     override,
     layout: mapLayout,
-    measuredHeight: contentHeights.get(node.id),
+    measuredHeight,
   });
+  const status = pageStatus(isMounted ? report : undefined, viewport.height);
   const layout = computeNodeLayout(viewport, scale, { selected: isSelected });
   const widthPresets = resolveViewportPresets(mapLayout);
 
@@ -232,7 +240,15 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [node.id, setVisible, visiblePageIds.size]);
+  }, [node.id, setVisible, loadSeq]);
+
+  // Во всю высоту (heightMode=auto): высота из отчёта шлюза — страница кросс-доменная.
+  const reportedHeight = status.contentHeight;
+  useEffect(() => {
+    if (viewport.heightMode === 'auto' && reportedHeight !== null && reportedHeight >= 120) {
+      setContentHeight(node.id, Math.min(MAX_CONTENT_HEIGHT, reportedHeight));
+    }
+  }, [node.id, reportedHeight, viewport.heightMode, setContentHeight]);
 
   const onState = (st: AppMapPageState) => {
     if (activeStateName === st.name) {
@@ -242,7 +258,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     }
   };
 
-  const inViewport = visiblePageIds.has(node.id);
   const placeholder = resolvePagePlaceholder({
     mode,
     hasUrl: Boolean(url),
@@ -255,6 +270,12 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   // Keep-alive: mounted = live ∪ warm — не unmount, state SPA сохраняется
   const showIframe = isMounted && url && !iframeError;
+  // Снимок есть только у адресов шлюза: его снимает сервер под тем же профилем.
+  const gatewaySnapshot =
+    mode === 'live' && url !== null && gatewayPort !== null && !snapshotFailed && url.includes(`.localhost:${gatewayPort}/`)
+      ? snapshotSrc(url, viewport.width, viewport.height)
+      : null;
+  const snapshot = showIframe ? null : gatewaySnapshot;
   /** Warm вне live: держим DOM, visually «приглушён» если не в кадре */
   const iframeDimmed = isWarm && !isLive;
 
@@ -337,13 +358,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     >
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
-        {node.groupIds?.[0] ? <Badge>{node.groupIds[0]}</Badge> : null}
-        <div className="page-node__title">{node.title}</div>
-        {isLive ? (
-          <Badge>live</Badge>
-        ) : isWarm ? (
-          <Badge>warm</Badge>
-        ) : null}
+        <div className="page-node__title" title={node.title}>{node.title}</div>
         <div className="page-node__actions">
           <button
             type="button"
@@ -389,8 +404,24 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
           </button>
         </div>
       </div>
+      {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
       <div className="page-node__path" title={url ?? node.pathPattern}>
-        {node.pathExample ?? node.pathPattern}
+        {status.unauthorized !== null ? (
+          <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
+            не авторизован
+          </Badge>
+        ) : null}
+        {status.cropped !== null ? (
+          <Badge className="ui-badge--warn" title={`${status.cropped}. Выберите ноду и нажмите «целиком» — она вырастет до высоты страницы`} data-lam-cropped="1">
+            обрезано
+          </Badge>
+        ) : null}
+        {isLive ? (
+          <Badge>live</Badge>
+        ) : isWarm ? (
+          <Badge>warm</Badge>
+        ) : null}
+        <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
         <span className="page-node__size">
           {' '}
           · {viewport.width}×{viewport.height}
@@ -420,21 +451,36 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               height: layout.contentHeight,
             }}
           >
+            {/* Под живым iframe — его снимок: во время зума iframe прячется (дорогой слой), виден снимок. */}
+            {gatewaySnapshot === null ? null : (
+              <img
+                className="page-node__snapshot page-node__snapshot--under"
+                src={gatewaySnapshot}
+                alt=""
+                aria-hidden={true}
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                onError={() => setSnapshotFailed(true)}
+                style={{ width: viewport.width, height: viewport.height, transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`, transformOrigin: '0 0' }}
+              />
+            )}
             <iframe
               ref={iframeRef}
               key={`${url}:${sandboxPreset}:${viewport.width}:${viewport.heightMode ?? 'auto'}`}
               title={node.title}
               src={url}
+              {...{ [NODE_IFRAME_ATTR]: node.id }}
               width={viewport.width}
               height={viewport.height}
               referrerPolicy="strict-origin-when-cross-origin"
               allow="clipboard-read; clipboard-write"
               className={
-                interactPageId === node.id
+                isInteract
                   ? 'page-node__iframe page-node__iframe--interact nodrag nopan nowheel'
                   : 'page-node__iframe nodrag nopan nowheel'
               }
-              data-lam-interact={interactPageId === node.id ? '1' : '0'}
+              data-lam-interact={isInteract ? '1' : '0'}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -445,8 +491,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
                 transformOrigin: '0 0',
                 /* Только explicit «Клики в iframe» — hover/click доходят в app */
-                pointerEvents: interactPageId === node.id ? 'auto' : 'none',
-                zIndex: interactPageId === node.id ? 2 : 0,
+                pointerEvents: isInteract ? 'auto' : 'none',
+                zIndex: isInteract ? 2 : 0,
                 /* Warm keep-alive: DOM жив; чуть тусклее если не live-слот */
                 opacity: iframeDimmed ? 0.92 : 1,
               }}
@@ -475,6 +521,24 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               }}
             />
           </div>
+        ) : snapshot !== null ? (
+          // Замороженная нода: снимок вместо живого iframe — память вкладки не растёт.
+          <img
+            data-lam-snapshot
+            className="page-node__snapshot"
+            src={snapshot}
+            alt={`Снимок: ${node.title}`}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={() => setSnapshotFailed(true)}
+            style={{
+              width: viewport.width,
+              height: viewport.height,
+              transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
+              transformOrigin: '0 0',
+            }}
+          />
         ) : (
           <div className="page-node__placeholder" role="status">
             {placeholder}
@@ -506,6 +570,21 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               {p.label}
             </button>
           ))}
+          {/* Целиком — нода растёт до высоты страницы; окно — фиксированная высота, страница прокручивается внутри (двойной клик — взаимодействие). */}
+          <button
+            type="button"
+            className={`page-node__vp-btn${viewport.heightMode === 'auto' ? ' page-node__vp-btn--on' : ''}`}
+            aria-pressed={viewport.heightMode === 'auto'}
+            data-lam-full-height
+            title={viewport.heightMode === 'auto' ? 'Сейчас: страница целиком. Нажмите — окно с прокруткой' : 'Сейчас: окно с прокруткой. Нажмите — страница целиком'}
+            onClick={() => {
+              // Обратно в окно — высота без замера страницы (та, что была до «целиком»).
+              const windowHeight = resolveNodeViewport({ nodeViewport: node.viewport, override, layout: mapLayout, measuredHeight: undefined }).height;
+              setNodeViewport(node.id, viewport.heightMode === 'auto' ? { ...viewport, height: windowHeight, heightMode: 'fixed' } : { ...viewport, heightMode: 'auto' });
+            }}
+          >
+            целиком
+          </button>
         </div>
       ) : node.states && node.states.length > 0 ? (
         <div className="page-node__states">

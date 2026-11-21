@@ -42,6 +42,9 @@ import {
   clampViewport,
   viewportFromPresetId,
 } from '../lib/viewport';
+import { cellOf, toGatewayUrl } from '../lib/gateway/gateway-host';
+import { pickProfile } from '../lib/gateway/profile-pick';
+import { useGatewayStore } from './gateway-store';
 
 /** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
 export type IframeScale = 0.25 | 0.35 | 0.5 | 0.75 | 1;
@@ -84,6 +87,8 @@ type AppStore = {
   highlightedPageIds: ReadonlySet<string>;
   pinnedPageIds: ReadonlySet<string>;
   visiblePageIds: ReadonlySet<string>;
+  /** Номер загрузки карты: после сброса видимости ноды сообщают её заново (одна и та же карта может загрузиться дважды). */
+  loadSeq: number;
   /** Активный live-бюджет (viewport/pin priority). */
   livePageIds: ReadonlySet<string>;
   /**
@@ -355,6 +360,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
   highlightedPageIds: new Set(),
   pinnedPageIds: new Set(),
   visiblePageIds: new Set(),
+  loadSeq: 0,
   livePageIds: new Set(),
   warmPageIds: new Set(),
   warmLruOrder: [],
@@ -418,6 +424,7 @@ export const useAppStore = create<AppStore>((set, get) => ({
       highlightedPageIds: new Set(),
       activeStates: new Map(),
       visiblePageIds: new Set(),
+      loadSeq: get().loadSeq + 1,
       livePageIds: new Set(),
       mode: 'live',
     });
@@ -803,6 +810,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
           },
           hash: pageState?.inject?.hash,
         });
+
+    // Шлюз: сессия профиля вместо query-токенов и TLS-прокси.
+    const gateway = useGatewayStore.getState();
+    if (gateway.port !== null) {
+      const hashed = ensureMiniappHashRoute(withState);
+      let appOrigin = '';
+      try {
+        appOrigin = new URL(hashed).origin;
+      } catch {
+        return hashed;
+      }
+      const profile = pickProfile({
+        profiles: gateway.profiles,
+        appOrigin,
+        ...(stateName === undefined ? {} : { stateName }),
+        ...(node.states?.[0] === undefined ? {} : { defaultStateName: node.states[0].name }),
+        globalRole,
+      });
+      return toGatewayUrl(hashed, profile, gateway.port, cellOf(id)) ?? hashed;
+    }
 
     // Dogfood inject: miniapp initData + admin token (Korbor читает query)
     let url = applyDogfoodToUrl(withState, {

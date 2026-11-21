@@ -1,0 +1,40 @@
+{
+ "note": "scanReactRouterApp на /Users/macbook/orca/vpn-saas (только чтение; git status до и после совпал)",
+ "admin": {
+  "pages": 56,
+  "edges": 136,
+  "confidence": {
+   "low": 106,
+   "medium": 29,
+   "high": 1
+  },
+  "before": {
+   "edges": 24,
+   "note": "без обхода импортов"
+  }
+ },
+ "miniapp": {
+  "pages": 18,
+  "edges": 13,
+  "confidence": {
+   "high": 4,
+   "medium": 7,
+   "low": 2
+  },
+  "edgeList": [
+   "redirect / → /form/[slug] [src/pages/routes.tsx:70]",
+   "redirect / → /tariff [src/pages/routes.tsx:70]",
+   "link /tariff → /tariff/connect [src/pages/tariff-route.tsx:27]",
+   "link /tariff → /tariff/device/[deviceId] [src/widgets/bound-device-row.tsx:43]",
+   "link /tariff/device/[deviceId] → /tariff [src/pages/device-page.tsx:62]",
+   "link /history → /support/new [src/widgets/refund-feedback-step.tsx:83]",
+   "link /support → /support/new [src/pages/support-page.tsx:67]",
+   "link /support → /support/[ticketId] [src/pages/support-page.tsx:128]",
+   "link /support/new → /support/[ticketId] [src/pages/support-create-page.tsx:31]",
+   "link /partner/withdrawals → /partner/withdrawals/[withdrawalId] [src/pages/partner-withdrawals-page.tsx:184]",
+   "link /refund/[paymentId] → /support/new [src/widgets/refund-feedback-step.tsx:83]",
+   "redirect /profile/partner → /partner [src/pages/routes.tsx:173]",
+   "redirect /profile/partner/[withdrawalId] → /partner/withdrawals/[withdrawalId] [src/pages/routes.tsx:181]"
+  ]
+ }
+}
