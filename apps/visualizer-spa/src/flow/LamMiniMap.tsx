@@ -42,11 +42,11 @@ export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps
       offsetScale={0}
       style={{ width: size.width, height: size.height }}
       nodeColor={(n) => minimapFill(kindOf(n, selectedPageId), groupOrder)}
-      nodeStrokeColor={(n) => (n.type === 'groupFrame' ? '#5c5c5c' : 'transparent')}
+      nodeStrokeColor={(n) => (n.type === 'groupFrame' ? 'var(--edge)' : 'transparent')}
       nodeStrokeWidth={2}
       nodeClassName={(n) => `lam-minimap-${kindOf(n, selectedPageId).kind}`}
       nodeBorderRadius={2}
-      maskStrokeColor="#e5e5e5"
+      maskStrokeColor="var(--foreground)"
       maskStrokeWidth={1}
       ariaLabel="Мини-карта: клик — перейти к месту"
       onClick={(_, at) => {
