@@ -54,6 +54,7 @@ describe('scanSource: сервисы', () => {
 
   test('сервис — пакет с package.json, у которого есть файлы', () => {
     expect(code.services.map((s) => s.name).sort()).toEqual([
+      '@fx/admin',
       '@fx/api',
       '@fx/db',
       '@fx/express',

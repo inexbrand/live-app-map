@@ -52,11 +52,18 @@ export function withSourceCode(
 export function screenEntries(doc: AppMapDocument, codeRoot: string, idPrefix = ''): ScreenEntry[] {
   const routerPaths = doc.project.framework === 'react-router';
   const nodes = new Map(doc.nodes.map((n) => [n.id, n]));
-  return [...screenFiles(doc, codeRoot)].map(([nodeId, file]) => ({
-    nodeId: `${idPrefix}${nodeId}`,
-    file,
-    ...(routerPaths ? { routePath: nodes.get(nodeId)?.pathPattern ?? '/' } : {}),
-  }));
+  const projectRoot = path.resolve(doc.project.root);
+  return [...screenFiles(doc, codeRoot)].map(([nodeId, file]) => {
+    const node = nodes.get(nodeId);
+    const routeFileRaw = node?.metadata?.['routeFile'];
+    const routeFile = typeof routeFileRaw === 'string' ? codeFileOfNode(projectRoot, codeRoot, routeFileRaw) : null;
+    return {
+      nodeId: `${idPrefix}${nodeId}`,
+      file,
+      ...(routerPaths ? { routePath: node?.pathPattern ?? '/' } : {}),
+      ...(routeFile === null || routeFile === file ? {} : { routeFile }),
+    };
+  });
 }
 
 /**

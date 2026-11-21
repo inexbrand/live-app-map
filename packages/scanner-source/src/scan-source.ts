@@ -10,8 +10,9 @@ import { ApiCallFinder } from './api-calls';
 import { matchRoute } from './api-match';
 import { EnvFiles } from './env-files';
 import { RoutePaths } from './route-factories';
-import { rrScreenRoots } from './rr-screens';
-import { screenApiCalls } from './screen-calls';
+import { routeSection, rrScreenRoots } from './rr-screens';
+import { screensApiCalls, type ScreenWalk } from './screen-calls';
+import { SectionDispatch } from './section-dispatch';
 import { ValueEvaluator } from './value-evaluator';
 import { indexImplementations } from './implementations';
 import { indexServices, type ServiceIndex } from './services';
@@ -48,6 +49,11 @@ export type ScreenEntry = {
   readonly nodeId?: string;
   /** Путь роута React Router: по нему в конфиге ищется объект роута. */
   readonly routePath?: string;
+  /**
+   * Файл конфига маршрутов, если экран в своём файле (TanStack Router): из объекта
+   * маршрута берутся `loader`/`beforeLoad` — данные экрана часто грузятся там.
+   */
+  readonly routeFile?: string;
 };
 
 /** Результат скана исходников. */
@@ -169,7 +175,7 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
       routes: sortedRoutes,
       tables: tables.sort(byLocation),
       apiCalls: api.calls,
-      ...(request.entries === undefined ? {} : { screens: screensOf(ctx, program, request.entries, api.idsByNode, services) }),
+      ...(request.entries === undefined ? {} : { screens: screensOf(ctx, projectFiles, request.entries, api.idsByNode, services) }),
     },
     diagnostics,
     stats: { files: projectFiles.length, ms: Date.now() - t0 },
@@ -220,11 +226,24 @@ function collectApiCalls(
   return { calls, idsByNode };
 }
 
+/** Счёт по ключу. */
+function countBy<T>(items: readonly T[], key: (t: T) => string): Map<string, number> {
+  const m = new Map<string, number>();
+  for (const it of items) {
+    m.set(key(it), (m.get(key(it)) ?? 0) + 1);
+  }
+  return m;
+}
+
 /**
  * Экраны и их вызовы API.
  *
+ * Откуда начинается экран: файл (Next), объект роута в конфиге RR, а если его нет —
+ * свой файл экрана (TanStack: файл страницы) или, для общего конфига-данных
+ * (админка korbor), ветка switch по разделу пути.
+ *
  * @param ctx - контекст
- * @param program - программа TS
+ * @param files - исходники проекта
  * @param entries - файлы экранов от root
  * @param idsByNode - узел вызова → id
  * @param services - сервисы
@@ -232,30 +251,56 @@ function collectApiCalls(
  */
 function screensOf(
   ctx: SourceContext,
-  program: ts.Program,
+  files: readonly ts.SourceFile[],
   entries: readonly ScreenEntry[],
   idsByNode: ReadonlyMap<ts.Node, readonly string[]>,
   services: ServiceIndex,
 ): ScreenApi[] {
-  const sameService = (a: string, b: string): boolean =>
-    services.serviceOf(relPath(ctx.root, a)).id === services.serviceOf(relPath(ctx.root, b)).id;
-  // В файлы других экранов (Next: page.tsx) обход по ссылкам не заходит.
-  const screenFiles = new Set(entries.filter((e) => e.routePath === undefined).map((e) => path.join(ctx.root, e.file)));
-  const out: ScreenApi[] = [];
+  const serviceOfAbs = (f: string): string => services.serviceOf(relPath(ctx.root, f)).id;
+  const sameService = (a: string, b: string): boolean => serviceOfAbs(a) === serviceOfAbs(b);
+  const byFile = new Map(files.map((sf) => [sf.fileName, sf]));
+  const perFile = countBy(entries, (e) => e.file);
+  // Свой файл экрана (один экран на файл) — в него обход других экранов не заходит.
+  const screenFiles = new Set(entries.filter((e) => perFile.get(e.file) === 1).map((e) => path.join(ctx.root, e.file)));
+  const sectionsByFile = new Map<string, Set<string>>();
   for (const e of entries) {
-    const sf = program.getSourceFile(path.join(ctx.root, e.file));
+    const s = e.routePath === undefined ? undefined : routeSection(e.routePath);
+    if (s !== undefined) {
+      sectionsByFile.set(e.file, (sectionsByFile.get(e.file) ?? new Set()).add(s));
+    }
+  }
+  let dispatch: SectionDispatch | undefined;
+  const found: { entry: ScreenEntry; walk: ScreenWalk }[] = [];
+  for (const e of entries) {
+    const sf = byFile.get(path.join(ctx.root, e.file));
     if (sf === undefined) {
       continue;
     }
-    const roots = e.routePath === undefined ? [sf] : rrScreenRoots(ctx, sf, e.routePath);
-    const skip = e.routePath === undefined ? screenFiles : new Set([...screenFiles].filter((f) => f !== sf.fileName));
-    out.push({
-      ...(e.nodeId === undefined ? {} : { nodeId: e.nodeId }),
-      file: e.file,
-      calls: screenApiCalls(ctx, roots, idsByNode, skip, sameService),
-    });
+    let roots: ts.Node[] = e.routePath === undefined ? [sf] : rrScreenRoots(ctx, sf, e.routePath);
+    if (roots.length === 0 && e.routePath !== undefined) {
+      const section = routeSection(e.routePath);
+      if ((perFile.get(e.file) ?? 0) > 1 && section !== undefined) {
+        dispatch ??= new SectionDispatch(files);
+        roots = dispatch.roots(section, sectionsByFile.get(e.file) ?? new Set(), (f) => sameService(f, sf.fileName));
+      }
+      // Свой файл экрана или файл страницы на несколько маршрутов без диспетчера.
+      if (roots.length === 0) {
+        roots = [sf];
+      }
+    }
+    const routeSf = e.routeFile === undefined || e.routeFile === e.file ? undefined : byFile.get(path.join(ctx.root, e.routeFile));
+    if (routeSf !== undefined && e.routePath !== undefined) {
+      roots = [...roots, ...rrScreenRoots(ctx, routeSf, e.routePath)];
+    }
+    const skipFiles = new Set([...screenFiles].filter((f) => f !== sf.fileName));
+    found.push({ entry: e, walk: { roots, skipFiles, serviceId: serviceOfAbs(sf.fileName) } });
   }
-  return out;
+  const calls = screensApiCalls(ctx, found.map((f) => f.walk), idsByNode, sameService);
+  return found.map(({ entry }, i) => ({
+    ...(entry.nodeId === undefined ? {} : { nodeId: entry.nodeId }),
+    file: entry.file,
+    calls: calls[i] ?? [],
+  }));
 }
 
 /**
