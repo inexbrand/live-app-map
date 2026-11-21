@@ -23,7 +23,7 @@ Professional developer tool: сканирует Next.js / React Router прил�
 | `@live-app-map/react` | embed + Devtools shell |
 | `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |
 | `@live-app-map/visualizer` | core utils (graph + iframe-policy re-export) |
-| `apps/visualizer-spa` | full UI on port **4310** (Manrope monochrome UI kit + Lucide) |
+| `apps/visualizer-spa` | full UI on port **4310** (Medeo Sans monochrome UI kit + Lucide) |
 
 ## Quick start
 
@@ -39,7 +39,7 @@ bun run dev          # visualizer :4310
 
 ### UI kit (канон)
 
-- **Manrope** + monochrome tokens (`--background` … `--border`)
+- **Medeo Sans** + monochrome tokens (`--background` … `--border`)
 - **Lucide** icons only (no emoji)
 - Primitives: `apps/visualizer-spa/src/ui/*` — Button, Field/Input/Select/Textarea, Chip/Badge, Panel
 
