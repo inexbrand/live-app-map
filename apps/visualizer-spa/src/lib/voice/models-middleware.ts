@@ -330,7 +330,7 @@ export function createModelsMiddleware(opts: ModelsMiddlewareOptions): DevMiddle
 /** Переменная окружения: своя папка моделей. */
 export const LAM_MODELS_DIR_ENV = 'LAM_MODELS_DIR';
 
-/** Переменная окружения: папка готовых моделей (общий диск команды, e2e). */
+/** Переменная окружения: папка готовых моделей (общий диск команды). */
 export const LAM_MODELS_MIRROR_ENV = 'LAM_MODELS_MIRROR';
 
 /**

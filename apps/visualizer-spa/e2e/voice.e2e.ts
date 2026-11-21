@@ -2,15 +2,17 @@
  * Голосовой ввод локальной моделью Whisper в браузере.
  * Микрофон Chromium читает e2e/fixtures/voice-ru.wav — фраза «Кнопка отклика
  * налезает на заголовок карточки» (проект voice в playwright.config).
- * Первый тест удаляет модель из папки моделей e2e (LAM_MODELS_DIR) и качает
- * заново — путь первого использования (предложение, размер, прогресс).
- * Источник загрузки — зеркало LAM_MODELS_MIRROR (модель разработчика), без
- * него — Hugging Face. Звук никуда не уходит: распознаёт браузер.
+ * Первое использование: браузерный контекст новый (кэша нет), а ответ /size
+ * подменяется на «на диске ничего» — окно предлагает скачать. Файлы при этом
+ * идут через dev-сервер как обычно: с диска (.lam-models — кэш между прогонами)
+ * или, в чистом checkout, с Hugging Face. Модель на сервере тест не удаляет.
+ * Звук никуда не уходит: распознаёт браузер.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { dragRegion, openMiniappAndSelectNode, startRegion } from './helpers';
 
-const REPO = 'onnx-community/whisper-base';
+/** Загрузка в чистом checkout (80 МБ с Hugging Face). */
+const DOWNLOAD_MS = 240_000;
 
 async function openComposer(page: Page): Promise<void> {
   await openMiniappAndSelectNode(page);
@@ -29,9 +31,21 @@ test.describe.configure({ mode: 'serial' });
 
 test.describe('голос', () => {
   test('первое использование: предложение скачать → прогресс → ⌥ держать и говорить → текст в поле', async ({ page }) => {
-    // Модели нет ни на диске, ни в кэше браузера (контекст новый)
-    const del = await page.request.delete(`/__lam_models/hf/${REPO}`);
-    expect(del.ok()).toBe(true);
+    test.setTimeout(DOWNLOAD_MS + 120_000);
+    // Для окна модели ещё нет: сервер отвечает «на диске 0 байт»
+    await page.route('**/__lam_models/size?*', async (route) => {
+      const res = await route.fetch();
+      const body = (await res.json()) as Record<string, unknown>;
+      await route.fulfill({ response: res, json: { ...body, bytesOnDisk: 0 } });
+    });
+    // Прогресс с диска может мелькнуть за кадр — запоминаем, что он появлялся
+    await page.addInitScript(() => {
+      new MutationObserver(() => {
+        if (document.querySelector('[data-testid=voice-progress]') !== null) {
+          document.documentElement.dataset['voiceProgressSeen'] = '1';
+        }
+      }).observe(document, { subtree: true, childList: true });
+    });
     await page.addInitScript(() => localStorage.setItem('lam-voice', JSON.stringify({ model: 'base', language: 'ru' })));
     await openComposer(page);
 
@@ -45,8 +59,21 @@ test.describe('голос', () => {
     await expect(dialog.getByRole('radiogroup', { name: 'Язык речи' }).getByRole('radio', { name: 'Русский' })).toHaveAttribute('aria-checked', 'true');
     await expect(dialog).toContainText('Звук не уходит');
     await dialog.getByTestId('voice-download').click();
-    await expect(dialog.getByTestId('voice-progress')).toBeVisible();
-    await expect(dialog.getByRole('button', { name: /Готово/ })).toBeVisible({ timeout: 300_000 });
+    // Готово или ошибка — что раньше; ошибка загрузки валит тест сразу, с её текстом
+    await expect
+      .poll(
+        async () => {
+          if (await dialog.getByRole('button', { name: /Готово/ }).isVisible()) {
+            return 'ready';
+          }
+          const alert = dialog.getByRole('alert');
+          // count() не ждёт: textContent() без элемента ждал бы до конца теста
+          return (await alert.count()) > 0 ? `ошибка: ${await alert.first().innerText()}` : 'loading';
+        },
+        { timeout: DOWNLOAD_MS, intervals: [500] },
+      )
+      .toBe('ready');
+    expect(await page.evaluate(() => document.documentElement.dataset['voiceProgressSeen'])).toBe('1');
     await expect(dialog.getByTestId('voice-remove')).toBeVisible();
     await dialog.getByRole('button', { name: /Готово/ }).click();
 
