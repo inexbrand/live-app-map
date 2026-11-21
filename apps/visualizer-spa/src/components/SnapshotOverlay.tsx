@@ -117,6 +117,14 @@ export function SnapshotOverlay() {
     );
   }
   if (session.phase === 'selecting') {
+    if (session.purpose.kind === 'comment' && session.purpose.pick === 'element') {
+      // Выбор идёт в самих страницах (пикер шлюза): слой поверх холста не нужен
+      return (
+        <div className="snapshot-overlay__hint" role="status" data-testid="pick-hint">
+          Наведите на компонент живого экрана и кликните · Esc — отмена
+        </div>
+      );
+    }
     return <SelectionLayer />;
   }
   return null;

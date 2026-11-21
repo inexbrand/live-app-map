@@ -32,6 +32,10 @@ import { pageStatus } from '../lib/gateway/page-status';
 import { MAX_CONTENT_HEIGHT } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
 import { useGatewayStore } from '../store/gateway-store';
+import { useCommentsStore } from '../store/comments-store';
+import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
+import { CommentMarkers } from '../components/comments/CommentMarkers';
+import { commentsLabel } from '../lib/comments/format';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
@@ -152,6 +156,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const mode = useAppStore((s) => s.mode);
   const scale = useAppStore((s) => s.iframeScale);
   const isInteract = useAppStore((s) => s.interactPageId === node.id);
+  // Выбор компонента для замечания: страница должна получать мышь
+  const picking = useSnapshotStore((s) => isElementPick(s.session));
+  const openComments = useCommentsStore((s) => s.threads.reduce((n, t) => (t.anchor.pageId === node.id && t.status === 'open' ? n + 1 : n), 0));
   const activeStateName = useAppStore((s) => s.activeStates.get(node.id));
   const override = useAppStore((s) => s.nodeViewports.get(node.id));
   const measuredHeight = useAppStore((s) => s.contentHeights.get(node.id));
@@ -442,6 +449,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             обрезано
           </Badge>
         ) : null}
+        {openComments > 0 ? (
+          <Badge className="ui-badge--comments" data-lam-comments={openComments} title="Открытые замечания к экрану">
+            {commentsLabel(openComments)}
+          </Badge>
+        ) : null}
         {isLive ? (
           <Badge>live</Badge>
         ) : isWarm ? (
@@ -517,8 +529,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
                 transformOrigin: '0 0',
                 /* Только explicit «Клики в iframe» — hover/click доходят в app */
-                pointerEvents: isInteract ? 'auto' : 'none',
-                zIndex: isInteract ? 2 : 0,
+                pointerEvents: isInteract || picking ? 'auto' : 'none',
+                zIndex: isInteract || picking ? 2 : 0,
                 /* Warm keep-alive: DOM жив; чуть тусклее если не live-слот */
                 opacity: iframeDimmed ? 0.92 : 1,
               }}
@@ -570,6 +582,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             {placeholder}
           </div>
         )}
+        {showIframe || snapshot !== null ? <CommentMarkers nodeId={node.id} scaleX={layout.iframeScaleX} scaleY={layout.iframeScaleY} /> : null}
         <div
           className="page-node__resize"
           title="Ширина (Shift — free height / fixed)"

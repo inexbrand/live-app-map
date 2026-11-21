@@ -4,7 +4,10 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import { DiagnosticsDock } from './components/DiagnosticsDock';
-import { FeedbackPanel } from './components/FeedbackPanel';
+import { CommentComposer } from './components/comments/CommentComposer';
+import { CommentsListPanel } from './components/comments/CommentsListPanel';
+import { ScreenCommentsPanel } from './components/comments/ScreenCommentsPanel';
+import { VoiceModelDialog } from './components/comments/VoiceModelDialog';
 import { LamGrabHost } from './components/LamGrabHost';
 import { MapToolbar } from './components/MapToolbar';
 import { SnapshotOverlay } from './components/SnapshotOverlay';
@@ -323,13 +326,16 @@ export function App() {
               </div>
             ) : null}
             {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : appView === 'compare' ? <CompareView key={loadSeq} /> : <AppMapCanvas />}
-            <FeedbackPanel />
+            {appView === 'screens' ? <ScreenCommentsPanel /> : null}
+            <CommentsListPanel />
             <StateInjectPanel />
             <SnapshotOverlay />
           </div>
         )}
         <DiagnosticsDock />
       </div>
+      <CommentComposer />
+      <VoiceModelDialog />
       <CommandPalette />
       <ShortcutsHelp />
       {toast ? (
