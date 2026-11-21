@@ -5,6 +5,7 @@
 import { create } from 'zustand';
 import type { LamPageMessage } from '../lib/gateway/inject-script';
 import type { ProfileSummary } from '../lib/gateway/session-store';
+import { SampleRequestLog } from '../lib/gateway/sample-retry';
 
 /** Состояние шлюза. */
 type GatewayState = {
@@ -33,8 +34,8 @@ function parseSamples(body: unknown): Record<string, string | null> | null {
   return Object.fromEntries(Object.entries(values).map(([k, v]): [string, string | null] => [k, typeof v === 'string' ? v : null]));
 }
 
-/** Запросы в полёте: профиль|список — второй раз не запрашиваем. */
-const requested = new Set<string>();
+/** Запросы списков: в полёте и прочитанные не повторяются, упавшие — после паузы. */
+const requested = new SampleRequestLog();
 
 /** Ответ GET /__lam_sessions. */
 function parseSessions(body: unknown): { port: number; profiles: ProfileSummary[] } | null {
@@ -58,12 +59,14 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
   error: null,
   samples: new Map(),
   loadSamples: async (profile, origin, lists) => {
-    const fresh = lists.filter((l) => !requested.has(`${profile}|${l}`));
+    const key = (l: string): string => `${profile}|${l}`;
+    const taken = new Set(requested.take(lists.map(key), Date.now()));
+    const fresh = lists.filter((l) => taken.has(key(l)));
     if (fresh.length === 0) {
       return;
     }
-    fresh.forEach((l) => requested.add(`${profile}|${l}`));
     let values: Record<string, string | null> = {};
+    let ok = false;
     try {
       const res = await fetch(`/__lam_sessions/${encodeURIComponent(profile)}/sample-ids`, {
         method: 'POST',
@@ -71,13 +74,24 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
         body: JSON.stringify({ origin, lists: fresh }),
       });
       const body: unknown = await res.json().catch(() => null);
-      values = (res.ok ? parseSamples(body) : null) ?? {};
+      const parsed = res.ok ? parseSamples(body) : null;
+      ok = parsed !== null;
+      values = parsed ?? {};
       if (!res.ok) {
         const msg = typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string' ? body.error : `HTTP ${res.status}`;
         set({ error: `параметры экранов (${profile}): ${msg}` });
       }
     } catch (err) {
       set({ error: `параметры экранов (${profile}): ${err instanceof Error ? err.message : String(err)}` });
+    }
+    if (ok) {
+      requested.succeeded(fresh.map(key));
+    } else {
+      // Сбой (сеть, 429, шлюз): повтор после паузы, а не только после перезагрузки страницы.
+      const delay = requested.failed(fresh.map(key), Date.now());
+      if (delay !== null) {
+        setTimeout(() => void get().loadSamples(profile, origin, fresh), delay);
+      }
     }
     const samples = new Map(get().samples);
     const forProfile = new Map(samples.get(profile) ?? []);
