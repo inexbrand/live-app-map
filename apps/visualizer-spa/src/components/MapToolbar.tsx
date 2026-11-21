@@ -3,8 +3,10 @@
  * Все подписи на русском.
  */
 import {
+  BookOpen,
   Eraser,
   FolderOpen,
+  Network,
   Search,
   Database,
   Settings2,
@@ -96,6 +98,8 @@ export function MapToolbar(props: MapToolbarProps) {
   const appView = useViewStore((s) => s.view);
   const setAppView = useViewStore((s) => s.setView);
   const hasDb = useAppStore((s) => (s.document?.code?.tables.length ?? 0) > 0);
+  const hasApi = useAppStore((s) => (s.document?.code?.routes.length ?? 0) > 0);
+  const hasDocs = useAppStore((s) => s.document?.docs !== undefined);
   const [dogfoodActors, setDogfoodActors] = useState<readonly DogfoodActor[]>(
     [],
   );
@@ -284,15 +288,29 @@ export function MapToolbar(props: MapToolbarProps) {
           </Select>
         </label>
 
-        {hasDb ? (
+        {hasApi || hasDb || hasDocs ? (
           <div className="toolbar__group" role="group" aria-label="Вид">
             <Button type="button" size="sm" variant={appView === 'screens' ? 'primary' : 'outline'} aria-pressed={appView === 'screens'} onClick={() => setAppView('screens')}>
               Экраны
             </Button>
-            <Button type="button" size="sm" variant={appView === 'database' ? 'primary' : 'outline'} aria-pressed={appView === 'database'} onClick={() => setAppView('database')}>
-              <Database size={16} strokeWidth={1.75} />
-              База данных
-            </Button>
+            {hasApi ? (
+              <Button type="button" size="sm" variant={appView === 'api' ? 'primary' : 'outline'} aria-pressed={appView === 'api'} onClick={() => setAppView('api')} data-testid="view-api">
+                <Network size={16} strokeWidth={1.75} />
+                API
+              </Button>
+            ) : null}
+            {hasDb ? (
+              <Button type="button" size="sm" variant={appView === 'database' ? 'primary' : 'outline'} aria-pressed={appView === 'database'} onClick={() => setAppView('database')}>
+                <Database size={16} strokeWidth={1.75} />
+                База данных
+              </Button>
+            ) : null}
+            {hasDocs ? (
+              <Button type="button" size="sm" variant={appView === 'docs' ? 'primary' : 'outline'} aria-pressed={appView === 'docs'} onClick={() => setAppView('docs')} data-testid="view-docs">
+                <BookOpen size={16} strokeWidth={1.75} />
+                Документация
+              </Button>
+            ) : null}
           </div>
         ) : null}
 

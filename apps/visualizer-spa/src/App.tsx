@@ -10,7 +10,9 @@ import { MapToolbar } from './components/MapToolbar';
 import { SnapshotOverlay } from './components/SnapshotOverlay';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
+import { ApiView } from './components/ApiView';
 import { DatabaseView } from './components/DatabaseView';
+import { DocsView } from './components/DocsView';
 import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
@@ -298,8 +300,8 @@ export function App() {
           </div>
         ) : (
           <div className="canvas-wrap">
-            {/* «База данных» снимает холст целиком: живые iframe не держат память. */}
-            {appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : <AppMapCanvas />}
+            {/* Виды «API», «База данных», «Документация» снимают холст целиком: живые iframe не держат память. */}
+            {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : <AppMapCanvas />}
             <FeedbackPanel />
             <StateInjectPanel />
             <SnapshotOverlay />
