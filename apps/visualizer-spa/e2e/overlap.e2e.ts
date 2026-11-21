@@ -68,6 +68,10 @@ for (const [width, height] of [
     });
     expect(inside).toBe(true);
 
+    // Шапка в одну строку: высокая шапка опускает панели на мини-карту и зум.
+    const toolbarHeight = await page.locator('.toolbar').evaluate((t) => t.getBoundingClientRect().height);
+    expect(toolbarHeight).toBeLessThan(70);
+
     const p = await probe(page, OVERLAYS);
     expect(p.shown).toEqual(expect.arrayContaining(['.toolbar[0]', '.drawer[0]', '.diag-fab[0]', '.react-flow__minimap[0]']));
     expect(p.overlaps).toEqual([]);

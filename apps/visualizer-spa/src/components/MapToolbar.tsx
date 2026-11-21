@@ -11,6 +11,7 @@ import {
   Database,
   Settings2,
   Layers,
+  LayoutGrid,
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import {
@@ -290,25 +291,26 @@ export function MapToolbar(props: MapToolbarProps) {
 
         {hasApi || hasDb || hasDocs ? (
           <div className="toolbar__group" role="group" aria-label="Вид">
-            <Button type="button" size="sm" variant={appView === 'screens' ? 'primary' : 'outline'} aria-pressed={appView === 'screens'} onClick={() => setAppView('screens')}>
-              Экраны
+            <Button type="button" size="sm" variant={appView === 'screens' ? 'primary' : 'outline'} aria-pressed={appView === 'screens'} onClick={() => setAppView('screens')} title="Экраны">
+              <LayoutGrid size={16} strokeWidth={1.75} />
+              <span className="toolbar__label">Экраны</span>
             </Button>
             {hasApi ? (
-              <Button type="button" size="sm" variant={appView === 'api' ? 'primary' : 'outline'} aria-pressed={appView === 'api'} onClick={() => setAppView('api')} data-testid="view-api">
+              <Button type="button" size="sm" variant={appView === 'api' ? 'primary' : 'outline'} aria-pressed={appView === 'api'} onClick={() => setAppView('api')} data-testid="view-api" title="API">
                 <Network size={16} strokeWidth={1.75} />
-                API
+                <span className="toolbar__label">API</span>
               </Button>
             ) : null}
             {hasDb ? (
-              <Button type="button" size="sm" variant={appView === 'database' ? 'primary' : 'outline'} aria-pressed={appView === 'database'} onClick={() => setAppView('database')}>
+              <Button type="button" size="sm" variant={appView === 'database' ? 'primary' : 'outline'} aria-pressed={appView === 'database'} onClick={() => setAppView('database')} title="База данных">
                 <Database size={16} strokeWidth={1.75} />
-                База данных
+                <span className="toolbar__label">База данных</span>
               </Button>
             ) : null}
             {hasDocs ? (
-              <Button type="button" size="sm" variant={appView === 'docs' ? 'primary' : 'outline'} aria-pressed={appView === 'docs'} onClick={() => setAppView('docs')} data-testid="view-docs">
+              <Button type="button" size="sm" variant={appView === 'docs' ? 'primary' : 'outline'} aria-pressed={appView === 'docs'} onClick={() => setAppView('docs')} data-testid="view-docs" title="Документация">
                 <BookOpen size={16} strokeWidth={1.75} />
-                Документация
+                <span className="toolbar__label">Документация</span>
               </Button>
             ) : null}
           </div>
