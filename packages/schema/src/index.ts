@@ -67,12 +67,19 @@ export type {
   DbTable,
   HttpMethod,
   OrmKind,
+  RouteAccess,
   RouteFramework,
+  RouteInput,
+  RouteInputSchema,
+  RouteSchemaField,
+  RouteSchemaKind,
   ScreenApi,
   ScreenApiCall,
   SourceLocation,
 } from './code-model';
 export { codeModelSchema } from './code-model-zod';
+export type { DocEpoch, DocFile, DocsModel, EpochReadiness } from './docs-model';
+export { docsModelSchema } from './docs-model-zod';
 export { codeFileOfNode, screenOf } from './code-path';
 export { upgradeAppMapDocument } from './upgrade';
 

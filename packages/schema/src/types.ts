@@ -4,6 +4,7 @@
  * v2 = v1 + раздел `code` и нода `service`; v1 поднимается в `upgradeAppMapDocument`.
  */
 import type { CodeModel } from './code-model';
+import type { DocsModel } from './docs-model';
 
 /** Текущая версия enterprise-формата. */
 export const FORMAT_VERSION: 2 = 2;
@@ -261,10 +262,12 @@ export type AppMapDocument = {
   readonly extensions?: Readonly<Record<string, unknown>>;
   /** Исходный код: сервисы, символы, роуты, БД (с formatVersion 2). */
   readonly code?: CodeModel;
+  /** Документация проекта: эпохи задач, заметки, руководства. */
+  readonly docs?: DocsModel;
 };
 
 /** Документ formatVersion 1 — как его писали сканеры до раздела `code`. */
-export type AppMapDocumentV1 = Omit<AppMapDocument, 'formatVersion' | 'code'> & {
+export type AppMapDocumentV1 = Omit<AppMapDocument, 'formatVersion' | 'code' | 'docs'> & {
   readonly formatVersion: 1;
 };
 
@@ -323,6 +326,8 @@ export type LiveAppMapDocument = {
   readonly extensions?: Readonly<Record<string, unknown>>;
   /** Исходный код (переносится из enterprise-документа как есть). */
   readonly code?: CodeModel;
+  /** Документация проекта (переносится как есть). */
+  readonly docs?: DocsModel;
 };
 
 export type DiagnosticSeverity = 'error' | 'warning' | 'info';

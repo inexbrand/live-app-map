@@ -161,6 +161,7 @@ export function appMapToLiveAppMap(doc: AppMapDocument): LiveAppMapDocument {
     groups: doc.groups,
     layout: doc.layout,
     code: doc.code,
+    docs: doc.docs,
     extensions: {
       ...doc.extensions,
       liveAppMap: {
@@ -250,6 +251,7 @@ export function liveAppMapToAppMap(doc: LiveAppMapDocument): AppMapDocument {
     layout: doc.layout,
     extensions: doc.extensions,
     code: doc.code,
+    docs: doc.docs,
   };
 }
 

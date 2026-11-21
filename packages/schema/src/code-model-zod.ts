@@ -25,6 +25,33 @@ const dbCallSchema = z
   })
   .strict();
 
+const routeInputSchemaSchema = z
+  .object({
+    kind: z.enum(['typebox', 'zod']),
+    name: z.string().optional(),
+    fields: z.array(z.object({ name: z.string().min(1), type: z.string(), optional: z.boolean().optional() }).strict()),
+    text: z.string().optional(),
+  })
+  .strict();
+
+const routeInputSchema = z
+  .object({
+    body: routeInputSchemaSchema.optional(),
+    query: routeInputSchemaSchema.optional(),
+    params: routeInputSchemaSchema.optional(),
+    headers: routeInputSchemaSchema.optional(),
+  })
+  .strict();
+
+const routeAccessSchema = z
+  .object({
+    auth: z.boolean().optional(),
+    roles: z.array(z.string()).optional(),
+    permissions: z.array(z.string()).optional(),
+    checks: z.array(z.string()).optional(),
+  })
+  .strict();
+
 const httpMethodSchema = z.enum(['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL']);
 
 const apiCallSchema = z
@@ -81,6 +108,8 @@ export const codeModelSchema = z
             .object({ name: z.string().optional(), location: sourceLocationSchema })
             .strict(),
           dbCalls: z.array(dbCallSchema),
+          input: routeInputSchema.optional(),
+          access: routeAccessSchema.optional(),
           ...commentFields,
         })
         .strict(),

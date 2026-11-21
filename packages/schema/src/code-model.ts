@@ -81,6 +81,51 @@ export type DbCall = {
   readonly inLoop?: boolean;
 };
 
+/** Поле схемы входа роута. */
+export type RouteSchemaField = {
+  readonly name: string;
+  /** Тип текстом: `string`, `number`, `string[]`, `'a' | 'b'`, `object`, имя схемы. */
+  readonly type: string;
+  readonly optional?: boolean;
+};
+
+/** Чем объявлена схема входа: Elysia `t.*` (TypeBox) или zod. */
+export type RouteSchemaKind = 'typebox' | 'zod';
+
+/** Схема одной части входа (body, query, params, headers). */
+export type RouteInputSchema = {
+  readonly kind: RouteSchemaKind;
+  /** Имя константы, если схема передана по имени. */
+  readonly name?: string;
+  /** Поля объекта; пусто — схема не объект или не разобрана (тогда есть text). */
+  readonly fields: readonly RouteSchemaField[];
+  /** Текст схемы, если поля не разобраны (до 200 символов). */
+  readonly text?: string;
+};
+
+/** Проверка входа роута: какие части запроса проверяются схемой. */
+export type RouteInput = {
+  readonly body?: RouteInputSchema;
+  readonly query?: RouteInputSchema;
+  readonly params?: RouteInputSchema;
+  readonly headers?: RouteInputSchema;
+};
+
+/**
+ * Доступ к роуту, найденный в коде обработчика и его цепочки:
+ * сравнения роли с литералом, проверки прав, функции-проверки.
+ */
+export type RouteAccess = {
+  /** Нужен вход: найдена проверка пользователя или ответ 401. */
+  readonly auth?: boolean;
+  /** Роли из сравнений `viewer.role === 'admin'`. */
+  readonly roles?: readonly string[];
+  /** Права из вызовов `requirePermission(user, 'admin.access')`. */
+  readonly permissions?: readonly string[];
+  /** Функции-проверки, вызванные обработчиком: `requireAdminAccess`, `requireEmployer`. */
+  readonly checks?: readonly string[];
+};
+
 /** HTTP-роут бэкенда. */
 export type ApiRoute = CodeComments & {
   readonly id: string;
@@ -95,6 +140,10 @@ export type ApiRoute = CodeComments & {
     readonly location: SourceLocation;
   };
   readonly dbCalls: readonly DbCall[];
+  /** Схемы входа из опций роута; нет — проверка входа не найдена. */
+  readonly input?: RouteInput;
+  /** Доступ; нет — проверок в коде не найдено. */
+  readonly access?: RouteAccess;
 };
 
 /** Внешний ключ колонки: на какую таблицу и колонку ссылается. */

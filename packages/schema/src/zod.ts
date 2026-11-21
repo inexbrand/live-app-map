@@ -3,6 +3,7 @@
  */
 import { z } from 'zod';
 import { codeModelSchema } from './code-model-zod';
+import { docsModelSchema } from './docs-model-zod';
 
 export const stateInjectSpecSchema = z
   .object({
@@ -197,6 +198,7 @@ export const appMapDocumentSchema = z
     layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
     code: codeModelSchema.optional(),
+    docs: docsModelSchema.optional(),
   })
   .passthrough();
 
@@ -263,5 +265,6 @@ export const liveAppMapDocumentSchema = z
     layout: layoutHintsSchema.optional(),
     extensions: z.record(z.unknown()).optional(),
     code: codeModelSchema.optional(),
+    docs: docsModelSchema.optional(),
   })
   .passthrough();
