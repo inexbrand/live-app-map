@@ -4,6 +4,8 @@
  */
 import {
   BookOpen,
+  Moon,
+  Sun,
   Eraser,
   FolderOpen,
   Network,
@@ -30,8 +32,11 @@ import { resolveViewportPresets } from '../lib/viewport';
 import { DEFAULT_MAX_PINNED, useAppStore } from '../store/app-store';
 import { Button, Field, Input, Select } from '../ui';
 import { EdgeSheet } from './EdgeSheet';
+import { Breadcrumbs } from './Breadcrumbs';
+import { currentTheme, toggleTheme, type Theme } from '../lib/theme';
+import { useUiStore } from '../store/ui-store';
 
-type SheetId = 'sources' | 'settings' | 'search' | null;
+type SheetId = 'sources' | 'settings' | null;
 
 /** Props шапки: каталог из App (fetch /maps/index.json). */
 export type MapToolbarProps = {
@@ -70,8 +75,6 @@ export function MapToolbar(props: MapToolbarProps) {
     typeof s.maxWarmIframes === 'number' ? s.maxWarmIframes : 8,
   );
   const setMaxWarmIframes = useAppStore((s) => s.setMaxWarmIframes);
-  const searchQuery = useAppStore((s) => s.searchQuery);
-  const setSearchQuery = useAppStore((s) => s.setSearchQuery);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const setBaseUrlOverride = useAppStore((s) => s.setBaseUrlOverride);
   const globalRole = useAppStore((s) => s.globalRole);
@@ -96,6 +99,25 @@ export function MapToolbar(props: MapToolbarProps) {
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
   /** Выбранная карта в шапке (id каталога). */
   const [activeMapId, setActiveMapId] = useState('');
+  const [theme, setTheme] = useState<Theme>(currentTheme);
+  const setPalette = useUiStore((s) => s.setPalette);
+  // Тема меняется и клавишей T — кнопка следит за атрибутом корня.
+  useEffect(() => {
+    const mo = new MutationObserver(() => setTheme(currentTheme()));
+    mo.observe(window.document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => mo.disconnect();
+  }, []);
+  // Карта открыта ссылкой (?map=…): селект показывает её, а не «Выберите карту…».
+  useEffect(() => {
+    if (activeMapId !== '' || catalog.length === 0) {
+      return;
+    }
+    const mapParam = new URLSearchParams(window.location.search).get('map');
+    const hit = mapParam === null ? undefined : catalog.find((c) => c.path === mapParam);
+    if (hit !== undefined) {
+      setActiveMapId(hit.id);
+    }
+  }, [catalog, activeMapId]);
   const appView = useViewStore((s) => s.view);
   const setAppView = useViewStore((s) => s.setView);
   const hasDb = useAppStore((s) => (s.document?.code?.tables.length ?? 0) > 0);
@@ -140,32 +162,12 @@ export function MapToolbar(props: MapToolbarProps) {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') {
         setSheet(null);
-        return;
-      }
-      if (
-        e.key === '/' &&
-        !(e.target instanceof HTMLInputElement) &&
-        !(e.target instanceof HTMLTextAreaElement)
-      ) {
-        e.preventDefault();
-        setSheet('search');
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, []);
 
-  useEffect(() => {
-    if (sheet !== 'search') {
-      return;
-    }
-    const t = window.setTimeout(() => {
-      window.document
-        .querySelector<HTMLInputElement>('input[data-lam-search]')
-        ?.focus();
-    }, 40);
-    return () => window.clearTimeout(t);
-  }, [sheet]);
 
   const onFile = async (file: File | null) => {
     if (!file) {
@@ -316,20 +318,8 @@ export function MapToolbar(props: MapToolbarProps) {
           </div>
         ) : null}
 
+        {document ? <Breadcrumbs /> : null}
         <div className="toolbar__spacer" />
-
-        <span
-          className="budget-pill"
-          title="live = активный бюджет; warm = keep-alive в DOM без перезагрузки; pin защищён"
-        >
-          live {liveCount}
-          {maxLiveIframes >= 9999 ? '' : `/${maxLiveIframes}`}
-          {' · '}
-          warm {warmCount}
-          {maxWarmIframes >= 9999 ? '' : `/${maxWarmIframes}`}
-          {' · '}
-          pin {pinCount}
-        </span>
 
         <div className="toolbar__group">
           <Button
@@ -354,13 +344,29 @@ export function MapToolbar(props: MapToolbarProps) {
           </Button>
           <Button
             type="button"
-            variant={sheet === 'search' ? 'primary' : 'outline'}
+            variant="outline"
             size="icon-sm"
-            onClick={() => setSheet(sheet === 'search' ? null : 'search')}
-            aria-label="Поиск экранов"
-            title="Поиск (/ )"
+            onClick={() => {
+              toggleTheme();
+            }}
+            aria-label={theme === 'light' ? 'Тёмная тема' : 'Светлая тема'}
+            title={theme === 'light' ? 'Тёмная тема (T)' : 'Светлая тема (T)'}
+            data-testid="theme-toggle"
+          >
+            {theme === 'light' ? <Moon size={16} strokeWidth={1.75} /> : <Sun size={16} strokeWidth={1.75} />}
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="sm"
+            onClick={() => setPalette(true)}
+            aria-label="Поиск по проекту"
+            title="Поиск по экранам, роутам, таблицам, эпохам, документам и файлам (⌘K, /)"
+            data-testid="open-palette"
           >
             <Search size={16} strokeWidth={1.75} />
+            <span className="toolbar__label">Поиск</span>
+            <kbd className="palette__kbd">⌘K</kbd>
           </Button>
         </div>
         {/* Вне листа «Источники»: пункт «Открыть…» в селекте работает и при закрытом листе */}
@@ -438,9 +444,14 @@ export function MapToolbar(props: MapToolbarProps) {
         open={sheet === 'settings'}
         side="right"
         title="Настройки просмотра"
-        description="Масштаб iframe, бюджет, роль и базовый URL."
+        description="Масштаб превью, сколько экранов живут одновременно, роль и базовый URL."
         onClose={() => setSheet(null)}
       >
+        <p className="drawer__hint" data-testid="iframe-budget">
+          Живых экранов {liveCount}
+          {maxLiveIframes >= 9999 ? '' : ` из ${maxLiveIframes}`} · на паузе {warmCount}
+          {maxWarmIframes >= 9999 ? '' : ` из ${maxWarmIframes}`} · закреплено {pinCount}
+        </p>
         <Field label="Масштаб превью" htmlFor="set-scale">
           <Select
             id="set-scale"
@@ -636,40 +647,6 @@ export function MapToolbar(props: MapToolbarProps) {
         <SessionProfilesPanel actors={dogfoodActors} actorsError={dogfoodActorsError} apiBase={getKorborApiBase()} />
       </EdgeSheet>
 
-      <EdgeSheet
-        open={sheet === 'search'}
-        side="top"
-        title="Поиск экранов"
-        description="По названию, пути или id. Клавиша / ."
-        onClose={() => setSheet(null)}
-      >
-        <Field label="Запрос" htmlFor="set-search">
-          <Input
-            id="set-search"
-            data-lam-search
-            value={searchQuery}
-            placeholder="например: feed, вакансии, /employer"
-            onChange={(e) => setSearchQuery(e.target.value)}
-          />
-        </Field>
-        {searchQuery.trim() ? (
-          <p className="drawer__hint">
-            Фильтр активен на холсте. Очистите поле, чтобы снова видеть все
-            экраны.
-          </p>
-        ) : null}
-        <Button
-          type="button"
-          variant="outline"
-          size="sm"
-          onClick={() => {
-            setSearchQuery('');
-            setSheet(null);
-          }}
-        >
-          Сбросить поиск
-        </Button>
-      </EdgeSheet>
     </>
   );
 }

@@ -16,6 +16,10 @@ import { DocsView } from './components/DocsView';
 import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { useRouteSamples } from './lib/use-route-samples';
+import { useNavHistory } from './lib/use-nav-history';
+import { useHotkeys } from './lib/use-hotkeys';
+import { CommandPalette } from './components/CommandPalette';
+import { ShortcutsHelp } from './components/ShortcutsHelp';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
 import { loadMapPresetIntoStore } from './lib/load-map-preset';
@@ -42,6 +46,10 @@ export function App() {
   const parseIssues = useAppStore((s) => s.parseIssues);
   useGatewayFrames();
   useRouteSamples();
+  useNavHistory();
+  useHotkeys(mapDocument !== null);
+  const canvasFilter = useAppStore((s) => s.searchQuery);
+  const setCanvasFilter = useAppStore((s) => s.setSearchQuery);
   const appView = useViewStore((s) => s.view);
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
@@ -244,15 +252,10 @@ export function App() {
         {!mapDocument ? (
           <div className="empty-state">
             <div className="empty-state__card">
-              <h1>Выберите карту</h1>
+              <h1>Выберите карту проекта</h1>
               <p>
-                Карта из каталога (файлы в <code>public/maps</code>), JSON /
-                .appmap или drag-and-drop на холст. В шапке — селект карт,
-                «Источники», «Настройки», поиск.
-              </p>
-              <p>
-                Выберите экран → слева замечание для агента, справа роли и
-                стейты (если есть в карте).
+                Карта показывает экраны приложения вживую, его API, базу данных и документацию задач.
+                Выберите проект ниже или перетащите файл карты в это окно.
               </p>
               {catalogError ? (
                 <p className="drawer__hint" role="status">
@@ -295,14 +298,23 @@ export function App() {
                 })}
               </div>
               <p className="drawer__hint">
-                Запуск: <code>bun run dev</code> → http://localhost:4310 ·
-                каталог: <code>/maps/index.json</code>
+                Поиск по всему проекту — ⌘K, все клавиши — ?
               </p>
             </div>
           </div>
         ) : (
           <div className="canvas-wrap">
             {/* Виды «API», «База данных», «Документация» снимают холст целиком: живые iframe не держат память. */}
+            {appView === 'screens' && canvasFilter.trim() !== '' ? (
+              <div className="canvas-filter" role="status" data-testid="canvas-filter">
+                <span>
+                  На холсте только экраны «{canvasFilter.trim()}»
+                </span>
+                <Button type="button" size="sm" variant="ghost" onClick={() => setCanvasFilter('')}>
+                  Показать все
+                </Button>
+              </div>
+            ) : null}
             {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : <AppMapCanvas />}
             <FeedbackPanel />
             <StateInjectPanel />
@@ -311,6 +323,8 @@ export function App() {
         )}
         <DiagnosticsDock />
       </div>
+      <CommandPalette />
+      <ShortcutsHelp />
       {toast ? (
         <div className="toast" role="status">
           {toast}

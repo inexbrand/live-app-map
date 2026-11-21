@@ -21,6 +21,8 @@ export type DocMarkdownProps = {
   /** Пути документов раздела docs — ссылки на них открываются внутри вида. */
   readonly knownDocs: ReadonlySet<string>;
   readonly onOpenDoc: (path: string) => void;
+  /** data-testid обёртки: у фрагментов (открытые пункты эпохи) — свой. */
+  readonly testId?: string;
 };
 
 /** Текст узла children, если это строка. */
@@ -41,7 +43,7 @@ export function DocMarkdown(props: DocMarkdownProps) {
   const nav = useMapNav();
   const { refs, docPath, root, knownDocs, onOpenDoc } = props;
   return (
-    <div className="md" data-testid="doc-markdown">
+    <div className="md" data-testid={props.testId ?? 'doc-markdown'}>
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
@@ -49,6 +51,15 @@ export function DocMarkdown(props: DocMarkdownProps) {
             const text = textOf(children);
             if (className !== undefined || text === null || text.includes('\n')) {
               return <code className={className}>{children}</code>;
+            }
+            // `docs/agent-notes/x.md` или `09-bugs.md` — документ раздела: открывается в виде.
+            const asDoc = knownDocs.has(text) ? text : resolveDocAsset(docPath, text);
+            if (asDoc !== null && knownDocs.has(asDoc)) {
+              return (
+                <button type="button" className="md__ref" title="Открыть документ" data-testid="doc-ref-doc" onClick={() => onOpenDoc(asDoc)}>
+                  <code>{children}</code>
+                </button>
+              );
             }
             const target = refs === null ? undefined : resolveDocRef(text, refs);
             if (target === undefined || target.kind === 'file') {

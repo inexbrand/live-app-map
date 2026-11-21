@@ -8,7 +8,7 @@ import type { DbColumn } from '@live-app-map/schema';
 import { dbIndexOf, tableRows, tableView, type RouteUse } from '../lib/db-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { Badge, Input } from '../ui';
+import { Badge, Button, Input } from '../ui';
 
 /** Признаки колонки одной строкой: PK, NOT NULL, UNIQUE, default, enum. */
 function columnFlags(c: DbColumn): string {
@@ -23,8 +23,29 @@ function columnFlags(c: DbColumn): string {
     .join(' · ');
 }
 
+/** Сколько роутов показать в списке сразу. */
+const ROUTES_SHOWN = 8;
+
+/** Описание таблицы: четыре строки, остальное по кнопке. */
+function TableDoc(props: { readonly text: string }) {
+  const [full, setFull] = useState(false);
+  const long = props.text.length > 360;
+  return (
+    <div className="db-view__doc-wrap">
+      <p className={`db-view__doc${long && !full ? ' db-view__doc--clamp' : ''}`}>{props.text}</p>
+      {long ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setFull(!full)}>
+          {full ? 'Свернуть' : 'Показать полностью'}
+        </Button>
+      ) : null}
+    </div>
+  );
+}
+
 /** Список роутов с экранами. */
 function RouteList(props: { readonly title: string; readonly uses: readonly RouteUse[] }) {
+  const [all, setAll] = useState(false);
+  const shown = all ? props.uses : props.uses.slice(0, ROUTES_SHOWN);
   const selectPage = useAppStore((s) => s.selectPage);
   const setView = useViewStore((s) => s.setView);
   const openRoute = useViewStore((s) => s.openRoute);
@@ -33,16 +54,16 @@ function RouteList(props: { readonly title: string; readonly uses: readonly Rout
       <h3>
         {props.title} <span className="db-view__count">{props.uses.length}</span>
       </h3>
-      {props.uses.length === 0 ? <p className="drawer__hint">Нет роутов.</p> : null}
+      {props.uses.length === 0 ? <p className="drawer__hint">Ни один роут не {props.title === 'Читают' ? 'читает' : 'пишет'} эту таблицу.</p> : null}
       <ul className="db-view__routes">
-        {props.uses.map(({ route, screens }) => (
+        {shown.map(({ route, screens }) => (
           <li key={route.id}>
             <button type="button" className="db-view__link" title="Открыть роут в виде «API»" onClick={() => openRoute(route.id)} data-testid="db-route-link">
               <code>
                 {route.method} {route.path}
               </code>
             </button>
-            {shortSummary(route.doc, route.comments) !== undefined ? <div className="drawer__hint">{shortSummary(route.doc, route.comments)}</div> : null}
+            {shortSummary(route.doc, route.comments) !== undefined ? <div className="db-view__route-doc">{shortSummary(route.doc, route.comments)}</div> : null}
             {screens.length > 0 ? (
               <div className="db-view__screens">
                 {screens.map((s) => (
@@ -67,6 +88,11 @@ function RouteList(props: { readonly title: string; readonly uses: readonly Rout
           </li>
         ))}
       </ul>
+      {props.uses.length > ROUTES_SHOWN ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => setAll(!all)}>
+          {all ? 'Свернуть' : `Показать ещё ${props.uses.length - ROUTES_SHOWN}`}
+        </Button>
+      ) : null}
     </section>
   );
 }
@@ -85,7 +111,7 @@ export function DatabaseView() {
   if (index === null) {
     return (
       <div className="db-view db-view--empty" data-testid="database-view">
-        <p>В карте нет схемы БД. Сканируйте с исходниками: <code>scan --code-dir</code>.</p>
+        <p>В карте нет схемы базы данных: карту сняли без исходников. Пересканируйте проект с параметром <code>--code-dir</code>.</p>
       </div>
     );
   }
@@ -125,7 +151,7 @@ export function DatabaseView() {
               {view.table.location.file}:{view.table.location.line}
             </span>
           </header>
-          {view.table.doc === undefined ? null : <p className="db-view__doc">{view.table.doc}</p>}
+          {view.table.doc === undefined ? null : <TableDoc key={view.table.id} text={view.table.doc} />}
 
           <section className="db-view__section">
             <h3>
@@ -166,7 +192,7 @@ export function DatabaseView() {
             <h3>
               На неё ссылаются <span className="db-view__count">{view.referencedBy.length}</span>
             </h3>
-            {view.referencedBy.length === 0 ? <p className="drawer__hint">Никто.</p> : null}
+            {view.referencedBy.length === 0 ? <p className="drawer__hint">Другие таблицы на неё не ссылаются.</p> : null}
             <div className="db-view__screens">
               {view.referencedBy.map((r) => (
                 <button key={`${r.table}.${r.column}`} type="button" className="ui-chip" onClick={() => openTable(r.table)}>
