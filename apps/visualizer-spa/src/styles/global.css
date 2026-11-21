@@ -1488,28 +1488,33 @@ kbd,
 .react-flow__minimap { contain: layout paint; }
 
 /* Вид «База данных» */
-.db-view { position: absolute; inset: 0; display: grid; grid-template-columns: 300px 1fr; background: var(--background); color: var(--foreground); z-index: 1; }
-.db-view--empty { display: flex; align-items: center; justify-content: center; }
-.db-view__list { border-right: 1px solid var(--border); padding: 72px 12px 12px; overflow: auto; }
-.db-view__list ul { list-style: none; margin: 8px 0 0; padding: 0; }
-.db-view__row { display: grid; width: 100%; text-align: left; gap: 2px; padding: 6px 8px; border-radius: 6px; background: none; border: 0; color: inherit; cursor: pointer; }
-.db-view__row:hover { background: var(--secondary); }
-.db-view__row--on { background: var(--secondary); outline: 1px solid var(--border); }
+/* ---------- вид «База данных»: шкала 4/8/12/16/24/32, радиус --radius ---------- */
+.db-view { position: absolute; inset: 0; display: grid; grid-template-columns: 300px minmax(0, 1fr); background: var(--background); color: var(--foreground); z-index: 1; }
+.db-view--empty { display: flex; align-items: center; justify-content: center; padding: 32px; color: var(--muted-foreground); }
+.db-view__list { border-right: 1px solid var(--border); padding: 24px 12px 16px; overflow: auto; display: grid; align-content: start; gap: 12px; }
+.db-view__list ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 2px; }
+.db-view__row { display: grid; width: 100%; text-align: left; gap: 2px; padding: 8px; border-radius: var(--radius); background: none; border: 0; color: inherit; cursor: pointer; font: inherit; }
+.db-view__row:hover, .db-view__row--on { background: var(--muted); }
 .db-view__name { font-weight: 600; }
-.db-view__meta { font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
-.db-view__detail { overflow: auto; padding: 72px 24px 24px; }
-.db-view__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
-.db-view__head h2 { margin: 0; font-size: 22px; }
-.db-view__doc { max-width: 760px; color: var(--muted-foreground); }
-.db-view__section { margin-top: 20px; }
-.db-view__section h3 { font-size: 15px; margin: 0 0 8px; }
+.db-view__meta { font-size: 12px; line-height: 16px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.db-view__detail { overflow: auto; padding: 24px 32px 48px; }
+.db-view__head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.db-view__head h2 { margin: 0 8px 0 0; font-size: 20px; line-height: 28px; font-weight: 600; }
+.db-view__doc-wrap { max-width: 720px; margin-top: 12px; display: grid; justify-items: start; gap: 4px; }
+.db-view__doc { margin: 0; color: var(--muted-foreground); font-size: 14px; line-height: 22px; white-space: pre-line; }
+.db-view__doc--clamp { display: -webkit-box; -webkit-line-clamp: 4; -webkit-box-orient: vertical; overflow: hidden; }
+.db-view__section { margin-top: 32px; display: grid; justify-items: start; gap: 8px; }
+.db-view__section h3 { font-size: 15px; line-height: 24px; font-weight: 600; margin: 0; }
 .db-view__count { color: var(--muted-foreground); font-weight: 400; font-variant-numeric: tabular-nums; }
-.db-view__columns { border-collapse: collapse; width: 100%; font-size: 13px; }
-.db-view__columns th, .db-view__columns td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
-.db-view__columns th { color: var(--muted-foreground); font-weight: 500; }
-.db-view__link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
-.db-view__routes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
-.db-view__screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+.db-view__columns { border-collapse: collapse; width: auto; max-width: 100%; font-size: 14px; line-height: 20px; }
+.db-view__columns th, .db-view__columns td { text-align: left; padding: 8px 24px 8px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.db-view__columns td:nth-child(3) { max-width: 520px; color: var(--muted-foreground); }
+.db-view__columns th { color: var(--muted-foreground); font-size: 12px; line-height: 16px; font-weight: 500; }
+.db-view__link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; text-decoration-color: var(--muted-foreground); text-underline-offset: 3px; cursor: pointer; font: inherit; text-align: left; }
+.db-view__link:hover { text-decoration-color: var(--foreground); }
+.db-view__routes { list-style: none; padding: 0; margin: 0; display: grid; gap: 12px; width: 100%; max-width: 860px; }
+.db-view__route-doc { margin-top: 2px; color: var(--muted-foreground); font-size: 13px; line-height: 20px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.db-view__screens { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; }
 /* Мини-карта левее кнопки журнала (.diag-fab: right 14 + 44 px) — не наезжают друг на друга. */
 .react-flow__panel.react-flow__minimap { margin-right: 70px; }
 /* Строка пути: значки состояния, путь (с многоточием), размер. */
@@ -1521,7 +1526,7 @@ kbd,
 .page-node { overflow: clip; }
 .page-node__viewport-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
 .page-node__vp-btn { flex: none; }
-.db-view__list-title { font-size: 15px; margin: 0 0 8px; }
+.db-view__list-title { font-size: 15px; line-height: 24px; margin: 0; padding: 0 8px; }
 /* Снимок под живым iframe; во время зума iframe скрыт — виден снимок. display:none, а не visibility:
    межпроцессный iframe под visibility всё равно перерисовывается на каждом новом масштабе. Окно и
    состояние страницы при этом сохраняются (проверено: innerWidth/innerHeight те же). */

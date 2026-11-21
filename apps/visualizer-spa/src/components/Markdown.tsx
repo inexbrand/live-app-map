@@ -50,6 +50,15 @@ export function DocMarkdown(props: DocMarkdownProps) {
             if (className !== undefined || text === null || text.includes('\n')) {
               return <code className={className}>{children}</code>;
             }
+            // `docs/agent-notes/x.md` или `09-bugs.md` — документ раздела: открывается в виде.
+            const asDoc = knownDocs.has(text) ? text : resolveDocAsset(docPath, text);
+            if (asDoc !== null && knownDocs.has(asDoc)) {
+              return (
+                <button type="button" className="md__ref" title="Открыть документ" data-testid="doc-ref-doc" onClick={() => onOpenDoc(asDoc)}>
+                  <code>{children}</code>
+                </button>
+              );
+            }
             const target = refs === null ? undefined : resolveDocRef(text, refs);
             if (target === undefined || target.kind === 'file') {
               return <code title={target === undefined ? undefined : targetTitle(target)}>{children}</code>;
