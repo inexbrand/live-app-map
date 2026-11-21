@@ -62,7 +62,14 @@ test.describe('голос', () => {
     // Готово или ошибка — что раньше; ошибка загрузки валит тест сразу, с её текстом
     await expect
       .poll(
-        async () => ((await dialog.getByRole('button', { name: /Готово/ }).isVisible()) ? 'ready' : ((await dialog.getByRole('alert').textContent().catch(() => null)) ?? 'loading')),
+        async () => {
+          if (await dialog.getByRole('button', { name: /Готово/ }).isVisible()) {
+            return 'ready';
+          }
+          const alert = dialog.getByRole('alert');
+          // count() не ждёт: textContent() без элемента ждал бы до конца теста
+          return (await alert.count()) > 0 ? `ошибка: ${await alert.first().innerText()}` : 'loading';
+        },
         { timeout: DOWNLOAD_MS, intervals: [500] },
       )
       .toBe('ready');
