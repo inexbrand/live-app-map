@@ -1420,3 +1420,5 @@ kbd,
 .db-view__link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
 .db-view__routes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
 .db-view__screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+/* Мини-карта левее кнопки журнала (.diag-fab: right 14 + 44 px) — не наезжают друг на друга. */
+.react-flow__panel.react-flow__minimap { margin-right: 70px; }

@@ -11,22 +11,17 @@ import {
   type Node,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
-import type { AppMapDocument } from '@live-app-map/schema';
 import { useMemo, useRef } from 'react';
 import { filterCanvasGraph } from './canvas-graph';
-import { computeNodeLayout, resolveNodeViewport } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
 import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
-import { packLayout, startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
+import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
+import { canvasNodeSize, layoutCanvas } from './canvas-layout';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
 const nodeTypes = { page: PageNode, service: ServiceNode, groupFrame: GroupFrameNode };
 
-/** Группа нод сервисов бэкенда. */
-const SERVICES_GROUP = 'services';
-/** Наибольшая ширина ряда группы в мировых координатах. */
-const MAX_ROW_WIDTH = 4200;
 /** Стартовый масштаб: не мельче — иначе подписи нод не читаются. */
 const START_ZOOM = { min: 0.75, max: 1 };
 
@@ -74,41 +69,7 @@ export function AppMapCanvas() {
       };
     }
 
-    // Размер под раскладку — с полосой выбранной ноды: выбор не наезжает на соседей.
-    const sizeOf = (n: (typeof filtered)[number], selected: boolean) => {
-      if (n.kind === 'service') {
-        return { outerWidth: SERVICE_NODE_SIZE.width, outerHeight: SERVICE_NODE_SIZE.height };
-      }
-      const vp = resolveNodeViewport({
-        nodeViewport: n.viewport,
-        override: nodeViewports.get(n.id),
-        layout: document.layout,
-        measuredHeight: contentHeights.get(n.id),
-      });
-      return computeNodeLayout(vp, iframeScale, { selected });
-    };
-    const boxes: LayoutBox[] = filtered.map((n) => {
-      const s = sizeOf(n, true);
-      return {
-        id: n.id,
-        width: s.outerWidth,
-        height: s.outerHeight,
-        group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? 'other',
-      };
-    });
-    const groupTitles = new Map<string, string>([
-      ...(document.groups ?? []).map((g) => [g.id, g.title] as const),
-      [SERVICES_GROUP, 'Сервисы бэкенда'],
-    ]);
-    const groupOrder = [
-      ...[...(document.groups ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((g) => g.id),
-      SERVICES_GROUP,
-    ];
-    const packed = packLayout(
-      boxes,
-      navEdges.flatMap((e) => (e.to === null ? [] : [{ from: e.from, to: e.to }])),
-      { groupOrder, groupTitles, maxRowWidth: MAX_ROW_WIDTH },
-    );
+    const { boxes, packed } = layoutCanvas(document, filtered, navEdges, { iframeScale, nodeViewports, contentHeights });
     const positions = packed.positions;
     const frames: Node[] = packed.groups.map((g) => ({
       id: `frame:${g.id}`,
@@ -136,15 +97,7 @@ export function AppMapCanvas() {
         };
       }
       // Тот же расчёт, что в PageNode: размер ноды React Flow = размер DOM
-      const vp = resolveNodeViewport({
-        nodeViewport: n.viewport,
-        override: nodeViewports.get(n.id),
-        layout: document.layout,
-        measuredHeight: contentHeights.get(n.id),
-      });
-      const layout = computeNodeLayout(vp, iframeScale, {
-        selected: selectedPageId === n.id,
-      });
+      const layout = canvasNodeSize(document, n, { iframeScale, nodeViewports, contentHeights }, selectedPageId === n.id);
       return {
         id: n.id,
         type: 'page',
