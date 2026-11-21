@@ -43,7 +43,8 @@ import {
   viewportFromPresetId,
 } from '../lib/viewport';
 import { cellOf, toGatewayUrl } from '../lib/gateway/gateway-host';
-import { pickProfile } from '../lib/gateway/profile-pick';
+import { pickNodeProfile } from '../lib/gateway/profile-pick';
+import { sampledPath, withPathname } from '../lib/route-samples';
 import { useGatewayStore } from './gateway-store';
 
 /** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
@@ -821,14 +822,11 @@ export const useAppStore = create<AppStore>((set, get) => ({
       } catch {
         return hashed;
       }
-      const profile = pickProfile({
-        profiles: gateway.profiles,
-        appOrigin,
-        ...(stateName === undefined ? {} : { stateName }),
-        ...(node.states?.[0] === undefined ? {} : { defaultStateName: node.states[0].name }),
-        globalRole,
-      });
-      return toGatewayUrl(hashed, profile, gateway.port, cellOf(id)) ?? hashed;
+      const profile = pickNodeProfile(node, { profiles: gateway.profiles, appOrigin, stateName, globalRole });
+      // Параметры маршрута — реальные id из API под этим профилем, если уже прочитаны.
+      const real = sampledPath(document, node, gateway.samples.get(profile));
+      const target = real === null ? hashed : ensureMiniappHashRoute(withPathname(withState, real));
+      return toGatewayUrl(target, profile, gateway.port, cellOf(id)) ?? target;
     }
 
     // Dogfood inject: miniapp initData + admin token (Korbor читает query)

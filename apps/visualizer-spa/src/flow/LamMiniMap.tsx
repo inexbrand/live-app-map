@@ -1,34 +1,56 @@
 /**
- * Мини-карта холста: экраны и сервисы видны, рамки групп — контуром (не
- * закрывают экраны), размер SVG = размер панели (рамка вьюпорта точная),
- * клик переносит центр холста в точку, перетаскивание и колесо — как в React Flow.
+ * Мини-карта холста: размер по пропорциям раскладки, рамки групп контуром,
+ * экраны цветом группы, клик центрирует холст в точке клика.
  */
 import { MiniMap, useReactFlow, type Node } from '@xyflow/react';
+import type { AppMapNode } from '@live-app-map/schema';
+import { minimapFill, type MinimapNodeKind, type MinimapSize } from './minimap';
 
-/** Размер мини-карты, px: SVG и панель одного размера. */
-export const MINIMAP_SIZE = { width: 168, height: 112 };
+/** Свойства мини-карты. */
+export type LamMiniMapProps = {
+  readonly size: MinimapSize;
+  /** id групп карты по порядку — цвет экрана. */
+  readonly groupOrder: readonly string[];
+  readonly selectedPageId: string | null;
+};
 
-function nodeClass(n: Node): string {
-  if (n.type === 'groupFrame') return 'lam-mm-frame';
-  if (n.type === 'service') return 'lam-mm-service';
-  return 'lam-mm-page';
+function hasMapNode(data: unknown): data is { node: AppMapNode } {
+  return typeof data === 'object' && data !== null && 'node' in data;
 }
 
-/** Мини-карта (внутри ReactFlow). */
-export function LamMiniMap() {
+function kindOf(n: Node, selectedPageId: string | null): MinimapNodeKind {
+  if (n.type === 'groupFrame') {
+    return { kind: 'frame' };
+  }
+  if (n.type === 'service') {
+    return { kind: 'service' };
+  }
+  const group = hasMapNode(n.data) ? n.data.node.groupIds?.[0] : undefined;
+  return { kind: 'page', group, selected: n.id === selectedPageId };
+}
+
+/**
+ * Мини-карта внутри ReactFlow.
+ */
+export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps) {
   const flow = useReactFlow();
   return (
     <MiniMap
       pannable
       zoomable
-      style={MINIMAP_SIZE}
-      nodeClassName={nodeClass}
-      nodeBorderRadius={4}
+      // Без полей вокруг нод: React Flow двигает холст по масштабу без учёта полей — рамка отставала бы от курсора на ~4 %.
+      offsetScale={0}
+      style={{ width: size.width, height: size.height }}
+      nodeColor={(n) => minimapFill(kindOf(n, selectedPageId), groupOrder)}
+      nodeStrokeColor={(n) => (n.type === 'groupFrame' ? '#5c5c5c' : 'transparent')}
+      nodeStrokeWidth={2}
+      nodeClassName={(n) => (n.type === 'groupFrame' ? 'lam-minimap-frame' : '')}
+      nodeBorderRadius={2}
       maskStrokeColor="#e5e5e5"
-      maskStrokeWidth={2}
+      maskStrokeWidth={1}
       ariaLabel="Мини-карта: клик — перейти к месту"
-      onClick={(_, pos) => {
-        void flow.setCenter(pos.x, pos.y, { zoom: flow.getZoom(), duration: 200 });
+      onClick={(_, at) => {
+        void flow.setCenter(at.x, at.y, { zoom: flow.getZoom(), duration: 200 });
       }}
     />
   );

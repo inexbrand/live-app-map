@@ -72,3 +72,35 @@ export async function mintKorbor(r: KorborRenewal): Promise<MintResult> {
   const role = data !== null && 'role' in data && typeof data.role === 'string' ? data.role : r.kind;
   return { ok: true, value, label, role };
 }
+/** Bearer для API Korbor или ошибка. */
+export type BearerResult = { ok: true; token: string } | { ok: false; error: string };
+
+/**
+ * Bearer API Korbor из dev-входа профиля: у админки это сам access-токен,
+ * у мини-аппа initData меняется на токен (`POST /api/v1/auth/telegram/miniapp`).
+ *
+ * @param r - тип входа и адрес API
+ * @param value - значение входа из профиля (initData или токен)
+ */
+export async function korborBearer(r: KorborRenewal, value: string): Promise<BearerResult> {
+  if (value === '') {
+    return { ok: false, error: 'у профиля нет dev-входа: войдите через «Профили»' };
+  }
+  if (r.kind === 'admin') {
+    return { ok: true, token: value };
+  }
+  const res = await fetch(`${r.apiBase.replace(/\/$/, '')}/api/v1/auth/telegram/miniapp`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ initData: value }),
+    signal: AbortSignal.timeout(15_000),
+  });
+  const token = res.ok ? accessTokenOf(await res.json().catch(() => null)) : '';
+  return token !== '' ? { ok: true, token } : { ok: false, error: `вход мини-аппа не выдан (HTTP ${res.status})` };
+}
+
+/** data.accessToken ответа входа или ''. */
+function accessTokenOf(body: unknown): string {
+  const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : null;
+  return typeof data === 'object' && data !== null && 'accessToken' in data && typeof data.accessToken === 'string' ? data.accessToken : '';
+}

@@ -3,6 +3,7 @@
  * первый профиль, у которого есть данные для этого приложения, иначе без входа.
  */
 import { ANON_PROFILE } from './gateway-host';
+import type { AppMapNode } from '@live-app-map/schema';
 import type { ProfileSummary } from './session-store';
 
 /** Что известно об экране. */
@@ -34,4 +35,23 @@ export function pickProfile(input: ProfilePickInput): string {
     byRole(input.defaultStateName) ??
     forApp[0]
   )?.id ?? ANON_PROFILE;
+}
+/**
+ * Профиль экрана карты: роль активного стейта, общая роль, первый стейт ноды.
+ *
+ * @param node - экран
+ * @param ctx - профили, origin приложения, активный стейт, общая роль
+ * @returns id профиля
+ */
+export function pickNodeProfile(
+  node: AppMapNode,
+  ctx: { readonly profiles: readonly ProfileSummary[]; readonly appOrigin: string; readonly stateName: string | undefined; readonly globalRole: string },
+): string {
+  return pickProfile({
+    profiles: ctx.profiles,
+    appOrigin: ctx.appOrigin,
+    ...(ctx.stateName === undefined ? {} : { stateName: ctx.stateName }),
+    ...(node.states?.[0] === undefined ? {} : { defaultStateName: node.states[0].name }),
+    globalRole: ctx.globalRole,
+  });
 }
