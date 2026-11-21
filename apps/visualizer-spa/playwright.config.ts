@@ -15,6 +15,16 @@ import { fileURLToPath } from 'node:url';
 /** Речь для voice.e2e: микрофон Chromium читает этот файл (macOS say, 16 кГц). */
 const VOICE_WAV = fileURLToPath(new URL('./e2e/fixtures/voice-ru.wav', import.meta.url));
 
+/**
+ * Модели речи для e2e: своя папка (тест «первое использование» её очищает,
+ * модель разработчика в .lam-models не трогается), а «скачивание» идёт из
+ * зеркала — .lam-models разработчика; файла там нет — с Hugging Face.
+ */
+export const E2E_MODELS = {
+  LAM_MODELS_DIR: fileURLToPath(new URL('../../.lam-models-e2e', import.meta.url)),
+  LAM_MODELS_MIRROR: fileURLToPath(new URL('../../.lam-models', import.meta.url)),
+};
+
 const PORT = 4310;
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -74,6 +84,7 @@ export default defineConfig({
     ? undefined
     : {
         command: 'bun run dev',
+        env: E2E_MODELS,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

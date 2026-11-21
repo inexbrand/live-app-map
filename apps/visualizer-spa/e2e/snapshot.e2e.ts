@@ -4,13 +4,13 @@
  * диалог выбора вкладки принимается сам.
  */
 import { expect, test } from '@playwright/test';
-import { dragRegion, mcpCall, openMiniappAndSelectNode } from './helpers';
+import { dragRegion, mcpCall, openMiniappAndSelectNode, startRegion } from './helpers';
 
 test.describe('snapshot', () => {
   test('замечание к области: выделение → PNG в поле → сохранено в ветке экрана', async ({ page }) => {
     await openMiniappAndSelectNode(page);
     const panel = page.getByTestId('screen-comments');
-    await panel.getByRole('button', { name: 'Область' }).click();
+    await startRegion(page);
     await dragRegion(page);
 
     const composer = page.getByTestId('comment-composer');
@@ -32,7 +32,7 @@ test.describe('snapshot', () => {
     await expect(thread.locator('img')).toBeVisible();
 
     // Esc отменяет новую сессию до захвата
-    await panel.getByRole('button', { name: 'Область' }).click();
+    await startRegion(page);
     await expect(page.getByTestId('snapshot-overlay')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('snapshot-overlay')).toHaveCount(0);

@@ -3,7 +3,7 @@
  * только разрешённые модели, wasm onnxruntime локально, размер, удаление.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, mkdtempSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { createServer, type Server } from 'node:http';
 import type { AddressInfo } from 'node:net';
 import { tmpdir } from 'node:os';
@@ -34,6 +34,12 @@ beforeEach(async () => {
       setTimeout(() => res.end(WEIGHTS.subarray(2048)), 60);
       return;
     }
+    if (req.url === `/${REPO}/resolve/main/onnx/decoder_model_merged_quantized.onnx`) {
+      // Зависший источник: начал отдавать и замолчал
+      res.setHeader('content-length', String(WEIGHTS.length));
+      res.write(WEIGHTS.subarray(0, 1024));
+      return;
+    }
     if (req.url === `/api/models/${REPO}/tree/main`) {
       res.end(JSON.stringify([{ path: 'config.json', size: 100 }]));
       return;
@@ -47,7 +53,11 @@ beforeEach(async () => {
   });
   await new Promise<void>((r) => upstream.listen(0, '127.0.0.1', r));
   upstreamUrl = `http://127.0.0.1:${(upstream.address() as AddressInfo).port}`;
-  server = await serveMiddleware(createModelsMiddleware({ dir: path.join(root, 'models'), ortDir: path.join(root, 'ort'), upstream: upstreamUrl, repos: [REPO] }));
+  mkdirSync(path.join(root, 'mirror', REPO), { recursive: true });
+  writeFileSync(path.join(root, 'mirror', REPO, 'config.json'), '{"mirror":true}');
+  server = await serveMiddleware(
+    createModelsMiddleware({ dir: path.join(root, 'models'), ortDir: path.join(root, 'ort'), upstream: upstreamUrl, mirror: path.join(root, 'mirror'), idleMs: 150, repos: [REPO] }),
+  );
 });
 
 afterEach(async () => {
@@ -86,6 +96,38 @@ describe('models middleware', () => {
     const bodies = await Promise.all([fetch(url), fetch(url)].map(async (p) => Buffer.from(await (await p).arrayBuffer())));
     expect(bodies.map((b) => b.equals(WEIGHTS))).toEqual([true, true]);
     expect(existsSync(path.join(root, 'models', REPO, 'onnx', 'encoder_model_quantized.onnx'))).toBe(true);
+  });
+
+  test('источник замолчал: загрузка обрывается, недокачанный файл не остаётся', async () => {
+    const got = await fetch(`${server.url}${fileUrl('onnx/decoder_model_merged_quantized.onnx')}`)
+      .then(async (r) => (await r.arrayBuffer()).byteLength)
+      .catch(() => -1);
+    expect(got).not.toBe(WEIGHTS.length);
+    await new Promise((r) => setTimeout(r, 50));
+    expect(readdirSync(path.join(root, 'models', REPO, 'onnx')).filter((f) => f.startsWith('decoder'))).toEqual([]);
+  });
+
+  test('клиент ушёл посреди загрузки: сервер жив, недокачанный файл удалён', async () => {
+    const ctrl = new AbortController();
+    const res = await fetch(`${server.url}${fileUrl('onnx/decoder_model_merged_quantized.onnx')}`, { signal: ctrl.signal });
+    expect(res.status).toBe(200);
+    ctrl.abort();
+    await new Promise((r) => setTimeout(r, 300));
+    expect(readdirSync(path.join(root, 'models', REPO, 'onnx')).filter((f) => f.startsWith('decoder'))).toEqual([]);
+    expect((await fetch(`${server.url}/__lam_models/status`)).status).toBe(200);
+  });
+
+  test('обычная загрузка не обрывается сама (GET без тела)', async () => {
+    const res = await fetch(`${server.url}${fileUrl('onnx/encoder_model_quantized.onnx')}`);
+    expect(Buffer.from(await res.arrayBuffer()).equals(WEIGHTS)).toBe(true);
+  });
+
+  test('зеркало: файл берётся из папки готовых моделей без сети и сохраняется', async () => {
+    const before = hits;
+    const res = await fetch(`${server.url}${fileUrl('config.json')}`);
+    expect(await res.text()).toBe('{"mirror":true}');
+    expect(hits).toBe(before);
+    expect(existsSync(path.join(root, 'models', REPO, 'config.json'))).toBe(true);
   });
 
   test('чужая модель — 403, выход из папки — 400, нет файла у источника — 404', async () => {

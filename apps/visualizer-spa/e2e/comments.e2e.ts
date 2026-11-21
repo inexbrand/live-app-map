@@ -4,23 +4,34 @@
  * Нужен живой korbor (страницы мини-приложения через шлюз).
  */
 import { expect, test, type Page } from '@playwright/test';
-import { mcpCall, openMiniappAndSelectNode } from './helpers';
+import { mcpCall, openMiniappAndSelectNode, startRegion } from './helpers';
 
-/** Центр первой целиком видимой живой страницы на холсте. */
-async function visibleFrame(page: Page): Promise<{ id: string; x: number; y: number }> {
-  await expect(page.locator('iframe[data-lam-node-iframe]').first()).toBeVisible({ timeout: 60_000 });
-  const f = await page.locator('iframe[data-lam-node-iframe]').evaluateAll((els) => {
-    for (const el of els) {
-      const r = el.getBoundingClientRect();
-      // Между левой панелью замечаний (~410) и правой панелью экрана (~400); верх страницы виден
-      if (r.x > 420 && r.right < window.innerWidth - 400 && r.y > 80 && r.y + 100 < window.innerHeight && r.width > 100) {
-        return { id: el.getAttribute('data-lam-node-iframe') ?? '', x: r.x + r.width / 2, y: r.y + 70 };
+/**
+ * Точка на компоненте приложения в живой странице выбранного экрана:
+ * первый элемент с data-testid, целиком видимый в окне и не под панелями.
+ */
+async function componentPoint(page: Page, nodeId: string): Promise<{ id: string; x: number; y: number }> {
+  const iframe = page.locator(`iframe[data-lam-node-iframe="${nodeId}"]`);
+  await expect(iframe).toBeVisible({ timeout: 60_000 });
+  const inFrame = page.frameLocator(`iframe[data-lam-node-iframe="${nodeId}"]`).locator('[data-testid]');
+  await expect(inFrame.first()).toBeAttached({ timeout: 60_000 });
+  const vp = page.viewportSize() ?? { width: 1280, height: 720 };
+  let point: { id: string; x: number; y: number } | null = null;
+  // Камера доезжает до выбранной ноды, страница дорисовывается — ждём устойчивую точку
+  await expect(async () => {
+    const drawers = await page.locator('.drawer').evaluateAll((els) => els.map((e) => ({ left: e.getBoundingClientRect().left, right: e.getBoundingClientRect().right })));
+    const rightEdge = Math.min(vp.width, ...drawers.filter((d) => d.left > vp.width / 2).map((d) => d.left));
+    const leftEdge = Math.max(0, ...drawers.filter((d) => d.left < vp.width / 2).map((d) => d.right));
+    const count = await inFrame.count();
+    for (let i = 0; i < count && point === null; i++) {
+      const b = await inFrame.nth(i).boundingBox();
+      if (b !== null && b.width > 20 && b.height > 10 && b.x > leftEdge && b.y > 80 && b.x + b.width < rightEdge && b.y + b.height < vp.height) {
+        point = { id: nodeId, x: b.x + b.width / 2, y: b.y + Math.min(b.height / 2, 12) };
       }
     }
-    return null;
-  });
-  expect(f).not.toBeNull();
-  return f ?? { id: '', x: 0, y: 0 };
+    expect(point, `в экране ${nodeId} нет видимого компонента с data-testid`).not.toBeNull();
+  }).toPass({ timeout: 20_000 });
+  return point ?? { id: nodeId, x: 0, y: 0 };
 }
 
 /**
@@ -42,10 +53,8 @@ async function startPick(page: Page): Promise<void> {
 test.describe('замечания к компонентам', () => {
   test('C → клик по компоненту → текст → MCP-агент отвечает → в UI ответ и статус → список и переход', async ({ page }) => {
     test.setTimeout(120_000);
-    await openMiniappAndSelectNode(page);
-    // Живые страницы должны прогрузиться: пикер ставит шлюз
-    await page.waitForTimeout(4000);
-    const frame = await visibleFrame(page);
+    const nodeId = await openMiniappAndSelectNode(page);
+    const frame = await componentPoint(page, nodeId);
 
     await startPick(page);
     await page.mouse.move(frame.x, frame.y, { steps: 4 });
@@ -106,7 +115,7 @@ test.describe('замечания к компонентам', () => {
 
   test('пустое замечание не сохраняется: подсказка, что вписать', async ({ page }) => {
     await openMiniappAndSelectNode(page);
-    await page.getByTestId('screen-comments').getByRole('button', { name: 'Область' }).click();
+    await startRegion(page);
     await expect(page.getByTestId('snapshot-overlay')).toBeVisible();
     await page.mouse.move(420, 140);
     await page.mouse.down();

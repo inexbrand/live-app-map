@@ -2,18 +2,19 @@
  * Голосовой ввод локальной моделью Whisper в браузере.
  * Микрофон Chromium читает e2e/fixtures/voice-ru.wav — фраза «Кнопка отклика
  * налезает на заголовок карточки» (проект voice в playwright.config).
- * Первый тест удаляет модель с диска и скачивает заново: это путь первого
- * использования (предложение, размер, прогресс). Модель идёт через dev-сервер
- * (/__lam_models), звук никуда не уходит.
+ * Первый тест удаляет модель из папки моделей e2e (LAM_MODELS_DIR) и качает
+ * заново — путь первого использования (предложение, размер, прогресс).
+ * Источник загрузки — зеркало LAM_MODELS_MIRROR (модель разработчика), без
+ * него — Hugging Face. Звук никуда не уходит: распознаёт браузер.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { dragRegion, openMiniappAndSelectNode } from './helpers';
+import { dragRegion, openMiniappAndSelectNode, startRegion } from './helpers';
 
 const REPO = 'onnx-community/whisper-base';
 
 async function openComposer(page: Page): Promise<void> {
   await openMiniappAndSelectNode(page);
-  await page.getByTestId('screen-comments').getByRole('button', { name: 'Область' }).click();
+  await startRegion(page);
   await dragRegion(page);
   await expect(page.getByTestId('comment-composer')).toBeVisible();
 }
@@ -34,7 +35,10 @@ test.describe('голос', () => {
     await page.addInitScript(() => localStorage.setItem('lam-voice', JSON.stringify({ model: 'base', language: 'ru' })));
     await openComposer(page);
 
-    await page.getByTestId('voice-button').dispatchEvent('pointerdown');
+    const vb = await page.getByTestId('voice-button').boundingBox();
+    await page.mouse.move((vb?.x ?? 0) + 8, (vb?.y ?? 0) + 8);
+    await page.mouse.down();
+    await page.mouse.up();
     const dialog = page.getByTestId('voice-dialog');
     await expect(dialog).toBeVisible();
     await expect(dialog.getByTestId('voice-size')).toHaveText(/\d+(,\d+)? МБ/);

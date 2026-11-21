@@ -14,6 +14,7 @@ import {
   PinOff,
   Smartphone,
   Terminal,
+  MessageSquarePlus,
 } from 'lucide-react';
 import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import {
@@ -36,6 +37,7 @@ import { useCommentsStore } from '../store/comments-store';
 import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
 import { CommentMarkers } from '../components/comments/CommentMarkers';
 import { commentsLabel } from '../lib/comments/format';
+import { startComment } from '../components/comments/start-comment';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
@@ -393,6 +395,19 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       <div className="page-node__header">
         <div className="page-node__title" title={node.title}>{node.title}</div>
         <div className="page-node__actions">
+          <button
+            type="button"
+            className="icon-btn"
+            title="Замечание к компоненту этого экрана (C)"
+            aria-label="Замечание к компоненту"
+            data-testid="node-comment"
+            onClick={(e) => {
+              e.stopPropagation();
+              startComment('element', node.id);
+            }}
+          >
+            <MessageSquarePlus size={15} strokeWidth={1.75} />
+          </button>
           <button
             type="button"
             className="icon-btn"

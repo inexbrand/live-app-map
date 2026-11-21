@@ -19,8 +19,14 @@ export async function openMiniappAndSelectNode(page: Page): Promise<string> {
   });
   expect(box).not.toBeNull();
   await page.mouse.click(box?.x ?? 0, box?.y ?? 0);
-  await expect(page.getByTestId('screen-comments')).toBeVisible();
+  await expect(page.locator('.page-node--selected [data-testid=node-comment]')).toBeVisible();
   return box?.id ?? '';
+}
+
+/** Замечание к области выбранного экрана: кнопка в шапке ноды → «Область» в подсказке. */
+export async function startRegion(page: Page): Promise<void> {
+  await page.locator('.page-node--selected [data-testid=node-comment]').click();
+  await page.getByTestId('pick-hint').getByRole('button', { name: 'Область' }).click();
 }
 
 /** Выделяет мышью область 400×300 в слое снимка. */

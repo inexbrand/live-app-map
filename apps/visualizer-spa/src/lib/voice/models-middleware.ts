@@ -1,8 +1,9 @@
 /**
  * Модели распознавания речи через dev-сервер: `/__lam_models/`.
  * - `GET hf/<repo>/resolve/<rev>/<file>` — файл модели: с диска
- *   (`.lam-models/`, вне git), а если его нет — один раз скачивается с
- *   Hugging Face и сохраняется. Модели — только из списка (не открытый прокси);
+ *   (`.lam-models/`, вне git), а если его нет — один раз копируется из
+ *   зеркала (LAM_MODELS_MIRROR) или скачивается с Hugging Face и
+ *   сохраняется. Модели — только из списка (не открытый прокси);
  * - `GET ort/<file>` — wasm onnxruntime из node_modules (без CDN);
  * - `GET size?repo=&files=` — сколько весят файлы (диск или каталог HF);
  * - `GET status` — что уже лежит на диске;
@@ -28,6 +29,10 @@ export type ModelsMiddlewareOptions = {
   readonly ortDir: string;
   /** Откуда качать: https://huggingface.co. */
   readonly upstream: string;
+  /** Папка готовых моделей (общий диск команды): файл берётся оттуда, к источнику — только при промахе. */
+  readonly mirror?: string;
+  /** Сколько ждать следующего куска от источника, мс; дольше — обрыв загрузки. */
+  readonly idleMs: number;
   /** Разрешённые репозитории. */
   readonly repos: readonly string[];
 };
@@ -84,8 +89,59 @@ function dirBytes(dir: string): { readonly bytes: number; readonly files: readon
   return { bytes, files: files.sort() };
 }
 
+/** Файл как поток кусков для того же пути, что и ответ источника. */
+function fileStream(file: string): ReadableStream<Uint8Array> {
+  const s = createReadStream(file);
+  return new ReadableStream<Uint8Array>({
+    start(c) {
+      s.on('data', (d) => c.enqueue(typeof d === 'string' ? new TextEncoder().encode(d) : new Uint8Array(d)));
+      s.on('end', () => c.close());
+      s.on('error', (e) => c.error(e));
+    },
+    cancel() {
+      s.destroy();
+    },
+  });
+}
+
+/** Источник файла: зеркало на диске или HTTP. */
+async function openSource(opts: ModelsMiddlewareOptions, repo: string, rev: string, file: string, signal: AbortSignal): Promise<Response> {
+  const mirrored = opts.mirror === undefined ? null : path.join(opts.mirror, repo, file);
+  if (mirrored !== null && existsSync(mirrored)) {
+    return new Response(fileStream(mirrored), { headers: { 'content-length': String(statSync(mirrored).size) } });
+  }
+  return fetch(`${opts.upstream}/${repo}/resolve/${rev}/${file}`, { signal });
+}
+
+/** Следующий кусок, но не дольше idleMs: зависший источник обрывается. */
+type Chunk = { readonly done: true } | { readonly done: false; readonly value: Uint8Array };
+
+function readWithin(reader: ReadableStreamDefaultReader<Uint8Array>, idleMs: number, file: string): Promise<Chunk> {
+  return new Promise((resolve, reject) => {
+    const t = setTimeout(() => reject(new Error(`модель: ${file} — источник молчит ${Math.round(idleMs / 1000)} с`)), idleMs);
+    reader.read().then(
+      (v) => {
+        clearTimeout(t);
+        resolve(v.done || v.value === undefined ? { done: true } : { done: false, value: v.value });
+      },
+      (e: unknown) => {
+        clearTimeout(t);
+        reject(e instanceof Error ? e : new Error(String(e)));
+      },
+    );
+  });
+}
+
 async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, rev: string, file: string, target: string): Promise<void> {
-  const up = await fetch(`${opts.upstream}/${repo}/resolve/${rev}/${file}`);
+  const ctrl = new AbortController();
+  // Клиент ушёл (закрыл вкладку, сменил модель) — качать дальше незачем.
+  // Слушаем ответ: «close» запроса у GET приходит сразу после заголовков.
+  res.on('close', () => {
+    if (!res.writableEnded) {
+      ctrl.abort();
+    }
+  });
+  const up = await openSource(opts, repo, rev, file, ctrl.signal);
   if (!up.ok || up.body === null) {
     sendJson(res, up.status === 404 ? 404 : 502, { ok: false, error: `модель: ${file} — HTTP ${up.status}` });
     return;
@@ -94,6 +150,10 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
   // Свой временный файл на запрос: одновременные загрузки одного файла не мешают друг другу
   const part = `${target}.${process.pid}.${randomUUID()}.part`;
   const disk = createWriteStream(part);
+  let diskError: Error | null = null;
+  disk.on('error', (e) => {
+    diskError = e;
+  });
   res.statusCode = 200;
   res.setHeader('content-type', contentType(file));
   // fetch уже распаковал gzip: длина сжатого тела клиенту не подходит
@@ -102,16 +162,23 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
     res.setHeader('content-length', len);
   }
   res.setHeader('cache-control', 'no-cache');
+  const reader = up.body.getReader();
   try {
     // Последний кусок уходит клиенту только после переноса файла на место:
     // получив ответ целиком, клиент уже найдёт модель на диске.
     let held: Uint8Array | null = null;
-    const reader = up.body.getReader();
     for (;;) {
-      const { done, value: chunk } = await reader.read();
-      if (done) {
+      if (ctrl.signal.aborted || res.destroyed) {
+        throw new Error(`модель: ${file} — клиент отменил загрузку`);
+      }
+      if (diskError !== null) {
+        throw diskError;
+      }
+      const next = await readWithin(reader, opts.idleMs, file);
+      if (next.done) {
         break;
       }
+      const chunk = next.value;
       disk.write(chunk);
       if (held !== null) {
         res.write(held);
@@ -122,7 +189,12 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
     renameSync(part, target);
     res.end(held ?? undefined);
   } catch (err) {
+    ctrl.abort();
+    void reader.cancel().catch(() => undefined);
     disk.destroy();
+    if (!disk.closed) {
+      await new Promise<void>((resolve) => disk.once('close', () => resolve()));
+    }
     rmSync(part, { force: true });
     res.destroy(err instanceof Error ? err : new Error(String(err)));
   }
@@ -258,6 +330,9 @@ export function createModelsMiddleware(opts: ModelsMiddlewareOptions): DevMiddle
 /** Переменная окружения: своя папка моделей. */
 export const LAM_MODELS_DIR_ENV = 'LAM_MODELS_DIR';
 
+/** Переменная окружения: папка готовых моделей (общий диск команды, e2e). */
+export const LAM_MODELS_MIRROR_ENV = 'LAM_MODELS_MIRROR';
+
 /**
  * Папка dist onnxruntime-web (зависимость transformers.js).
  */
@@ -277,10 +352,14 @@ export function resolveModelsDir(start: string): string {
   return env !== '' ? path.resolve(env) : path.join(path.dirname(resolveLamDir(start, '')), '.lam-models');
 }
 
+const mirrorEnv = process.env[LAM_MODELS_MIRROR_ENV]?.trim() ?? '';
+
 /** Middleware для vite.config. */
 export const modelsMiddleware: DevMiddleware = createModelsMiddleware({
   dir: resolveModelsDir(process.cwd()),
   ortDir: resolveOrtDir(),
   upstream: 'https://huggingface.co',
+  mirror: mirrorEnv === '' ? undefined : path.resolve(mirrorEnv),
+  idleMs: 60_000,
   repos: VOICE_MODELS.map((m) => m.repo),
 });

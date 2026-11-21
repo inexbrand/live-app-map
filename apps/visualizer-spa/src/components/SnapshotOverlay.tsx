@@ -7,6 +7,7 @@ import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'rea
 import { isUsableSelection, rectFromPoints, type Point, type Rect } from '../lib/snapshot/region';
 import { useSnapshotStore } from '../store/snapshot-store';
 import { Button } from '../ui';
+import { startComment } from './comments/start-comment';
 
 function SelectionLayer() {
   const beginCapture = useSnapshotStore((s) => s.beginCapture);
@@ -120,8 +121,11 @@ export function SnapshotOverlay() {
     if (session.purpose.kind === 'comment' && session.purpose.pick === 'element') {
       // Выбор идёт в самих страницах (пикер шлюза): слой поверх холста не нужен
       return (
-        <div className="snapshot-overlay__hint" role="status" data-testid="pick-hint">
-          Наведите на компонент живого экрана и кликните · Esc — отмена
+        <div className="snapshot-overlay__hint snapshot-overlay__hint--pick" role="status" data-testid="pick-hint">
+          <span>Наведите на компонент живого экрана и кликните · Esc — отмена</span>
+          <Button type="button" variant="outline" size="sm" onClick={() => startComment('region')} title="Выделить область мышью (⌥⇧S)">
+            Область
+          </Button>
         </div>
       );
     }

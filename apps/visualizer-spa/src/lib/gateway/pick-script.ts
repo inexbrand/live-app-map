@@ -312,15 +312,27 @@ export function reactComponentOf(el: Element): RawComponent | null {
   if (typeof fiber !== 'object' || fiber === null) {
     return null;
   }
-  type Fiber = { type?: unknown; return?: Fiber | null; _debugStack?: { stack?: unknown } | null; _debugSource?: { fileName?: unknown; lineNumber?: unknown } | null };
+  type Fiber = {
+    type?: unknown;
+    return?: Fiber | null;
+    _debugOwner?: Fiber | null;
+    _debugStack?: { stack?: unknown } | null;
+    _debugSource?: { fileName?: unknown; lineNumber?: unknown } | null;
+  };
   const host = fiber as Fiber;
   let source: StackSource | null = null;
   let frame: StackFrame | null = null;
-  const ds = host._debugSource;
-  if (ds !== undefined && ds !== null && typeof ds.fileName === 'string' && typeof ds.lineNumber === 'number') {
-    source = { file: ds.fileName, line: ds.lineNumber };
-  } else if (host._debugStack !== undefined && host._debugStack !== null && typeof host._debugStack.stack === 'string') {
-    frame = frameFromStack(host._debugStack.stack);
+  // Элемент из библиотеки (кнопка UI-кита) создан в её коде: поднимаемся по
+  // владельцам до места в коде приложения, где библиотечный компонент вызван
+  for (let f: Fiber | null | undefined = host, n = 0; f !== null && f !== undefined && n < 24 && source === null && frame === null; f = f._debugOwner ?? f.return, n++) {
+    const ds = f._debugSource;
+    if (ds !== undefined && ds !== null && typeof ds.fileName === 'string' && typeof ds.lineNumber === 'number') {
+      if (ds.fileName.indexOf('/node_modules/') === -1) {
+        source = { file: ds.fileName, line: ds.lineNumber };
+      }
+    } else if (f._debugStack !== undefined && f._debugStack !== null && typeof f._debugStack.stack === 'string') {
+      frame = frameFromStack(f._debugStack.stack);
+    }
   }
   const chain: string[] = [];
   for (let f: Fiber | null | undefined = host.return; f !== null && f !== undefined && chain.length < 8; f = f.return) {
