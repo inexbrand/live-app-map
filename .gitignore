@@ -28,3 +28,4 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 .lam-sessions
 .lam-snapshots
 .lam-models/
+*-probe.tmp.mjs
