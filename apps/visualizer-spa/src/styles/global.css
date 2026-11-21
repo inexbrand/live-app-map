@@ -1385,3 +1385,7 @@ kbd,
 .ui-badge--warn { background: #fdf3dc; color: #7a4b00; border-color: #f1d58c; }
 .ui-badge--alert, .ui-badge--warn { text-transform: none; letter-spacing: 0; white-space: nowrap; flex: 0 0 auto; }
 .page-node__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-profiles__list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.session-profiles__item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.session-form { display: grid; gap: 8px; margin-top: 8px; }
+.session-form__error { color: #f08a8a; }
