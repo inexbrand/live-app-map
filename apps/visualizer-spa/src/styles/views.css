@@ -1145,6 +1145,20 @@
   color: var(--foreground);
   font-weight: 600;
 }
+/* Ранние крошки не сжимаются в «Э.»: сжимается только текущая. */
+.crumbs__item:not(:last-child) {
+  flex: 0 0 auto;
+}
+/* Узкое окно: только «назад» и текущее место — путь целиком есть в адресе и в справке. */
+@media (max-width: 1439px) {
+  .crumbs__item:not(:last-child),
+  .crumbs__item:last-child .crumbs__sep {
+    display: none;
+  }
+  .crumbs__item + .crumbs__item {
+    margin-left: 0;
+  }
+}
 
 /* ---------- глобальный поиск и справка ---------- */
 .palette-backdrop {
