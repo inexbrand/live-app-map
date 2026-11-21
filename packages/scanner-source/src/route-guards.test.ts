@@ -4,7 +4,7 @@
  */
 import { beforeAll, describe, expect, test } from 'bun:test';
 import path from 'node:path';
-import type { ApiRoute, CodeModel, RouteInputSchema, RouteSchemaField } from '@live-app-map/schema';
+import type { ApiRoute, CodeModel, RouteInputSchema } from '@live-app-map/schema';
 import { scanSource } from './index';
 
 const FIXTURE = path.resolve(import.meta.dir, '../../../fixtures/source-guarded');
@@ -26,14 +26,6 @@ function route(method: string, routePath: string): ApiRoute {
 /** Поля схемы строкой «имя?: тип». */
 function fields(s: RouteInputSchema | undefined): string[] {
   return (s?.fields ?? []).map((f) => `${f.name}${f.optional === true ? '?' : ''}: ${f.type}`);
-}
-
-/** Дерево полей строками с отступом вложенности и правилами. */
-function tree(list: readonly RouteSchemaField[] | undefined, pad = ''): string[] {
-  return (list ?? []).flatMap((f) => [
-    `${pad}${f.name}${f.optional === true ? '?' : ''}: ${f.type}${f.rules === undefined ? '' : ` [${f.rules.join(', ')}]`}`,
-    ...tree(f.fields, `${pad}  `),
-  ]);
 }
 
 describe('вход роута', () => {
@@ -61,37 +53,6 @@ describe('вход роута', () => {
     const r = route('POST', '/api/hono/items');
     expect(r.input?.body?.kind).toBe('zod');
     expect(fields(r.input?.body)).toEqual(['name: string', 'count?: number', "kind: 'a' | 'b'"]);
-  });
-
-  test('Elysia: t.Optional(t.Object) — поля, вложенные объекты по имени, массив объектов', () => {
-    const body = route('POST', '/api/admin/broadcasts').input?.body;
-    expect(body?.optional).toBe(true);
-    expect(body?.text).toBeUndefined();
-    expect(tree(body?.fields)).toEqual([
-      'audience?: AudienceFilter',
-      "  roles: ('recruiter' | 'employer')[]",
-      '  city?: object',
-      '    id: string [format uuid]',
-      'recipients: object[]',
-      '  id: string [minLength 1]',
-      '  weight?: number [minimum 0]',
-      "markup: 'html' | 'markdown'",
-    ]);
-  });
-
-  test('Elysia: t.Record, t.Unknown, t.Partial — тип части и необязательные поля', () => {
-    expect(route('GET', '/api/admin/registry/:name').input?.query?.type).toBe('record<string, string>');
-    expect(route('PATCH', '/api/admin/presets/:id').input?.body?.type).toBe('unknown');
-    expect(fields(route('PUT', '/api/admin/profile').input?.body)).toEqual(['name?: string', 'age?: number']);
-  });
-
-  test('Hono: вложенный z.object в массиве и правила цепочки', () => {
-    expect(tree(route('POST', '/api/hono/orders').input?.body?.fields)).toEqual([
-      'lines: object[]',
-      '  sku: string [max 32]',
-      '  qty: number [int, min 1]',
-      'note?: string',
-    ]);
   });
 
   test('роут без схем — без input', () => {

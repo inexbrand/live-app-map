@@ -3,6 +3,7 @@
  * CLI: live-app-map scan | diff | doctor | dev
  */
 import { formatDiagnostic, sortDiagnostics } from '@live-app-map/diagnostics';
+import { diffChangeCount } from '@live-app-map/graph';
 import { runCodeScan, runDiff, runDoctor, runScan } from './index';
 import type { CodeModel } from '@live-app-map/schema';
 
@@ -116,13 +117,7 @@ async function main(argv: string[]): Promise<void> {
     }
     const d = runDiff(left, right);
     console.log(JSON.stringify(d, null, 2));
-    const changed =
-      d.nodes.added.length +
-      d.nodes.removed.length +
-      d.nodes.changed.length +
-      d.edges.added.length +
-      d.edges.removed.length;
-    process.exit(changed > 0 ? 1 : 0);
+    process.exit(diffChangeCount(d) > 0 ? 1 : 0);
   }
 
   if (cmd === 'doctor') {
