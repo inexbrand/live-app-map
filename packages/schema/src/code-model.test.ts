@@ -56,6 +56,18 @@ const code: CodeModel = {
       columns: [{ name: 'id', type: 'uuid' }],
     },
   ],
+  apiCalls: [
+    {
+      id: 'call:apps/web/src/users.ts:5',
+      serviceId: 'service:web',
+      method: 'GET',
+      path: '/users',
+      client: 'fetch',
+      location: { file: 'apps/web/src/users.ts', line: 5 },
+      routeId: 'route:GET /users',
+    },
+  ],
+  screens: [{ file: 'apps/web/src/page.tsx', calls: [{ callId: 'call:apps/web/src/users.ts:5', via: 'useUsers' }] }],
 };
 
 /** Документ v1 в том виде, в каком его писали старые сканеры. */
@@ -115,6 +127,15 @@ describe('formatVersion 2', () => {
     expect(res.ok).toBe(false);
   });
 
+  test('вызов API с неизвестным клиентом отклоняется на границе', () => {
+    const bad = {
+      ...v1Document(),
+      formatVersion: 2,
+      code: { ...code, apiCalls: [{ ...code.apiCalls?.[0], client: 'xhr' }] },
+    };
+    expect(parseAppMapDocument(bad).ok).toBe(false);
+  });
+
   test('неизвестная версия формата отклоняется', () => {
     const res = parseAppMapDocument({ ...v1Document(), formatVersion: 3 });
     expect(res.ok).toBe(false);
@@ -124,9 +145,21 @@ describe('formatVersion 2', () => {
     const parsed = parseAppMapDocument({
       ...v1Document(),
       formatVersion: 2,
+      project: { root: '/repo/apps/web', framework: 'next' },
       nodes: [
-        { id: 'route:/', kind: 'page', title: 'Главная', pathPattern: '/' },
+        { id: 'route:/', kind: 'page', title: 'Главная', pathPattern: '/', source: { file: 'src/app/page.tsx' } },
         { id: 'service:api', kind: 'service', title: 'api', pathPattern: 'apps/api' },
+      ],
+      edges: [
+        {
+          id: 'api:route:/->service:api',
+          from: 'route:/',
+          to: 'service:api',
+          kind: 'api',
+          confidence: 'high',
+          label: '1 роут',
+          metadata: { routeIds: ['route:GET /users'] },
+        },
       ],
       code,
     });
@@ -140,6 +173,11 @@ describe('formatVersion 2', () => {
     }
     const back = liveAppMapToAppMap(liveParsed.document);
     expect(back.code).toEqual(code);
+    const apiEdge = back.edges.find((e) => e.kind === 'api');
+    expect(apiEdge?.to).toBe('service:api');
+    expect(apiEdge?.metadata?.routeIds).toEqual(['route:GET /users']);
+    expect(back.project.root).toBe('/repo/apps/web');
+    expect(back.nodes.find((n) => n.id === 'route:/')?.source?.file).toBe('src/app/page.tsx');
     const service = back.nodes.find((n) => n.id === 'service:api');
     expect(service?.kind).toBe('service');
     expect(service?.iframePolicy?.enabled).toBe(false);

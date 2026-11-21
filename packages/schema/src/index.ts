@@ -52,6 +52,8 @@ export type {
   ViewportHeightMode,
 } from './types';
 export type {
+  ApiCall,
+  ApiClientKind,
   ApiRoute,
   CodeComments,
   CodeModel,
@@ -65,9 +67,12 @@ export type {
   HttpMethod,
   OrmKind,
   RouteFramework,
+  ScreenApi,
+  ScreenApiCall,
   SourceLocation,
 } from './code-model';
 export { codeModelSchema } from './code-model-zod';
+export { codeFileOfNode, screenOf } from './code-path';
 export { upgradeAppMapDocument } from './upgrade';
 
 export {

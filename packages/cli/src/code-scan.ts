@@ -4,7 +4,8 @@
 import path from 'node:path';
 import { assembleDocument } from '@live-app-map/scanner-core';
 import { codeServiceNodes, scanSource } from '@live-app-map/scanner-source';
-import type { AppMapDocument, Diagnostic } from '@live-app-map/schema';
+import { codeFileOfNode, screenOf } from '@live-app-map/schema';
+import type { AppMapDocument, AppMapEdge, CodeModel, Diagnostic } from '@live-app-map/schema';
 import { writeMapFile, type MapFileFormat } from './write-map';
 
 /** Опции команды `code`. */
@@ -32,13 +33,81 @@ export function withSourceCode(
   doc: AppMapDocument,
   codeDir: string,
 ): { document: AppMapDocument; diagnostics: readonly Diagnostic[] } {
-  const scan = scanSource({ root: codeDir });
+  const root = path.resolve(codeDir);
+  const screens = screenFiles(doc, root);
+  const routerPaths = doc.project.framework === 'react-router';
+  const nodes = new Map(doc.nodes.map((n) => [n.id, n]));
+  const entries = [...screens].map(([nodeId, file]) => ({
+    nodeId,
+    file,
+    ...(routerPaths ? { routePath: nodes.get(nodeId)?.pathPattern ?? '/' } : {}),
+  }));
+  const scan = scanSource({ root, entries });
   const ids = new Set(doc.nodes.map((n) => n.id));
   const services = codeServiceNodes(scan.code).filter((n) => !ids.has(n.id));
   return {
-    document: { ...doc, nodes: [...doc.nodes, ...services], code: scan.code },
+    document: {
+      ...doc,
+      nodes: [...doc.nodes, ...services],
+      edges: [...doc.edges, ...apiEdges(scan.code, screens)],
+      code: scan.code,
+    },
     diagnostics: scan.diagnostics,
   };
+}
+
+/**
+ * Файлы экранов от корня исходников: id ноды → файл.
+ *
+ * @param doc - карта экранов
+ * @param codeRoot - абсолютный каталог исходников
+ * @returns ноды, чей файл лежит внутри каталога исходников
+ */
+function screenFiles(doc: AppMapDocument, codeRoot: string): Map<string, string> {
+  const out = new Map<string, string>();
+  const projectRoot = path.resolve(doc.project.root);
+  for (const n of doc.nodes) {
+    const file = n.source?.file === undefined ? null : codeFileOfNode(projectRoot, codeRoot, n.source.file);
+    if (file !== null) {
+      out.set(n.id, file);
+    }
+  }
+  return out;
+}
+
+/**
+ * Рёбра «экран → сервис»: по одному на пару, в metadata — id вызываемых роутов.
+ *
+ * @param code - раздел code с экранами и вызовами
+ * @param screens - id ноды → файл экрана
+ * @returns рёбра kind 'api'
+ */
+export function apiEdges(code: CodeModel, screens: ReadonlyMap<string, string>): AppMapEdge[] {
+  const calls = new Map((code.apiCalls ?? []).map((c) => [c.id, c]));
+  const routes = new Map(code.routes.map((r) => [r.id, r]));
+  const edges: AppMapEdge[] = [];
+  for (const [nodeId, file] of screens) {
+    const perService = new Map<string, Set<string>>();
+    for (const sc of screenOf(code, nodeId, file)?.calls ?? []) {
+      const routeId = calls.get(sc.callId)?.routeId;
+      const route = routeId === undefined ? undefined : routes.get(routeId);
+      if (route !== undefined) {
+        perService.set(route.serviceId, (perService.get(route.serviceId) ?? new Set()).add(route.id));
+      }
+    }
+    for (const [serviceId, routeIds] of perService) {
+      edges.push({
+        id: `api:${nodeId}->${serviceId}`,
+        from: nodeId,
+        to: serviceId,
+        kind: 'api',
+        confidence: 'medium',
+        label: `API: ${routeIds.size}`,
+        metadata: { routeIds: [...routeIds].sort() },
+      });
+    }
+  }
+  return edges;
 }
 
 /**

@@ -1316,3 +1316,17 @@ code,
   color: var(--foreground);
   text-decoration: underline;
 }
+
+.code-item--focus {
+  border-color: var(--foreground);
+}
+
+.code-item__link {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}

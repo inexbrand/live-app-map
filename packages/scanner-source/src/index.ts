@@ -4,7 +4,7 @@
  * (Elysia, Hono, Express), вызовы БД (Drizzle, Prisma), таблицы.
  */
 export { scanSource } from './scan-source';
-export type { SourceScanRequest, SourceScanResult } from './scan-source';
+export type { ScreenEntry, SourceScanRequest, SourceScanResult } from './scan-source';
 export { codeServiceNodes } from './service-nodes';
 export { joinPath } from './routes';
 export { cleanBlockComment, commentsAt } from './comments';

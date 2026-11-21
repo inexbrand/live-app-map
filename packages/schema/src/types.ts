@@ -36,7 +36,9 @@ export type EdgeKind =
   | 'unknown'
   | 'navigation'
   | 'deep-link'
-  | 'back';
+  | 'back'
+  /** Экран вызывает роуты сервиса (from — экран, to — нода сервиса). */
+  | 'api';
 
 export type Confidence = 'high' | 'medium' | 'low';
 

@@ -14,7 +14,7 @@ Professional developer tool: сканирует Next.js / React Router прил�
 | `@live-app-map/scanner-core` | walk, materialize params |
 | `@live-app-map/scanner-next` | App/Pages Router |
 | `@live-app-map/scanner-react-router` | RR path configs |
-| `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, вызовы Drizzle/Prisma, таблицы, функции с JSDoc |
+| `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, вызовы Drizzle/Prisma, таблицы, функции с JSDoc, вызовы API фронтенда и связь экран → роут |
 | `@live-app-map/iframe-policy` | pure reconcile budget |
 | `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |
 | `@live-app-map/plugin-api` | контракты плагинов + `applyPlugins` |

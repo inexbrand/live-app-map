@@ -110,7 +110,8 @@ export function AppMapCanvas() {
         target,
         label: e.label,
         animated: e.kind === 'redirect',
-        style: { stroke: '#737373' },
+        // Вызовы API экрана — пунктиром, чтобы не путать с навигацией.
+        style: e.kind === 'api' ? { stroke: '#a3a3a3', strokeDasharray: '4 4' } : { stroke: '#737373' },
       };
     });
     return {

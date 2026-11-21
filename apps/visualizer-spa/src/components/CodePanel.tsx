@@ -1,66 +1,50 @@
 /**
- * Код ноды в правой панели: роуты сервиса с описанием и запросами в БД,
- * таблицы, функции и компоненты с комментариями.
+ * Код ноды в правой панели: роуты сервиса с описанием, запросами в БД и экранами-вызывающими,
+ * таблицы, функции и компоненты с комментариями; у экрана — вызовы API и переход к роуту.
  */
-import { useState, type ReactElement } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import type { ApiRoute, CodeSymbol, DbTable } from '@live-app-map/schema';
 import { Badge, Field, Input } from '../ui';
-import { groupDbCalls, type PageCodeView, type ServiceCodeView } from '../lib/node-code';
+import { groupDbCalls, type PageCodeView, type RouteCaller, type ScreenApiItem as Item, type ServiceCodeView } from '../lib/node-code';
 import { matchesCodeFilter } from '../lib/code-filter';
+import { useAppStore } from '../store/app-store';
+import { DbLine, Description, Section, where } from './code-parts';
+import { ScreenApiItem } from './ScreenApiItem';
 
-/** Сколько элементов списка показывать сразу. */
-const LIST_LIMIT = 100;
-
-/** Место в коде строкой `file:line`. */
-function where(loc: { readonly file: string; readonly line: number }): string {
-  return `${loc.file}:${loc.line}`;
-}
-
-/** Описание: первая строка сразу, остальное — по раскрытию. */
-function Description(props: { readonly text: string | undefined }) {
-  if (props.text === undefined) {
-    return <p className="code-item__empty">Без комментария</p>;
-  }
-  const [first, ...rest] = props.text.split('\n');
-  if (rest.length === 0) {
-    return <p className="code-item__doc">{first}</p>;
-  }
-  return (
-    <details className="code-item__details">
-      <summary className="code-item__doc">{first}</summary>
-      <pre className="code-item__more">{rest.join('\n').trim()}</pre>
-    </details>
-  );
-}
-
-function RouteItem(props: { readonly route: ApiRoute }) {
+function RouteItem(props: { readonly route: ApiRoute; readonly callers: readonly RouteCaller[]; readonly focused: boolean }) {
   const r = props.route;
-  const db = groupDbCalls(r.dbCalls);
+  const selectPage = useAppStore((s) => s.selectPage);
+  const ref = useRef<HTMLLIElement>(null);
+  useEffect(() => {
+    if (props.focused) {
+      ref.current?.scrollIntoView({ block: 'center' });
+    }
+  }, [props.focused]);
   return (
-    <li className="code-item" data-testid="code-route">
+    <li
+      ref={ref}
+      className={props.focused ? 'code-item code-item--focus' : 'code-item'}
+      data-testid={props.focused ? 'code-route-focused' : 'code-route'}
+    >
       <div className="code-item__head">
         <Badge className="code-item__method">{r.method}</Badge>
         <span className="code-item__name font-mono">{r.path}</span>
       </div>
       <Description text={r.doc} />
-      {db.length > 0 ? (
+      <DbLine groups={groupDbCalls(r.dbCalls)} />
+      {props.callers.length === 0 ? null : (
         <p className="code-item__db">
-          БД:{' '}
-          {db.map((g, i) => (
-            <span key={`${g.operation}-${g.table}`}>
+          Экраны:{' '}
+          {props.callers.map((c, i) => (
+            <span key={c.nodeId}>
               {i > 0 ? ', ' : ''}
-              {g.operation} {g.table}
-              {g.count > 1 ? ` ×${g.count}` : ''}
-              {g.inLoop ? (
-                <strong className="code-item__loop" title="Запрос внутри цикла — N+1">
-                  {' '}
-                  в цикле
-                </strong>
-              ) : null}
+              <button type="button" className="code-item__link" onClick={() => selectPage(c.nodeId)}>
+                {c.title}
+              </button>
             </span>
           ))}
         </p>
-      ) : null}
+      )}
       <p className="code-item__where font-mono">
         {r.handler.name === undefined ? '' : `${r.handler.name} · `}
         {where(r.location)}
@@ -109,40 +93,30 @@ function SymbolItem(props: { readonly symbol: CodeSymbol }) {
   );
 }
 
-/** Секция со счётчиком и пределом показа. */
-function Section<T>(props: {
-  readonly title: string;
-  readonly items: readonly T[];
-  readonly render: (item: T) => ReactElement;
-}) {
-  if (props.items.length === 0) {
-    return null;
-  }
-  const shown = props.items.slice(0, LIST_LIMIT);
-  return (
-    <section className="code-section">
-      <h3 className="code-section__title">
-        {props.title} · {props.items.length}
-      </h3>
-      <ul className="code-section__list">{shown.map(props.render)}</ul>
-      {props.items.length > shown.length ? (
-        <p className="drawer__hint">
-          Показаны первые {shown.length} из {props.items.length} — уточните фильтр.
-        </p>
-      ) : null}
-    </section>
-  );
+/** Роуты сервиса по фильтру; роут, к которому перешли, — первым. */
+function serviceRoutes(v: ServiceCodeView, query: string, focusId: string | null): ApiRoute[] {
+  const routes = v.routes.filter((r) => r.id === focusId || matchesCodeFilter(query, [r.method, r.path, r.doc]));
+  const focused = routes.find((r) => r.id === focusId);
+  return focused === undefined ? routes : [focused, ...routes.filter((r) => r !== focused)];
+}
+
+/** Вызов экрана подходит под фильтр. */
+function itemMatches(query: string, i: Item): boolean {
+  return matchesCodeFilter(query, [i.call.method, i.call.path, i.route?.path, i.route?.doc, i.service?.name, i.via]);
 }
 
 /**
- * Панель кода ноды: сервис (роуты, таблицы, функции) или экран (функции файла).
+ * Панель кода ноды: сервис (роуты, таблицы, функции) или экран (вызовы API, функции файла).
  */
 export function CodePanel(props: { readonly view: ServiceCodeView | PageCodeView }) {
   const [query, setQuery] = useState('');
+  const focusId = useAppStore((s) => s.codeFocusRouteId);
   const v = props.view;
-  const routes = v.kind === 'service' ? v.routes.filter((r) => matchesCodeFilter(query, [r.method, r.path, r.doc])) : [];
+  const routes = v.kind === 'service' ? serviceRoutes(v, query, focusId) : [];
   const tables = v.kind === 'service' ? v.tables.filter((t) => matchesCodeFilter(query, [t.name, t.exportName, t.doc])) : [];
   const symbols = v.symbols.filter((s) => matchesCodeFilter(query, [s.name, s.doc, ...(s.comments ?? [])]));
+  const api = v.kind === 'page' ? v.api.filter((i) => itemMatches(query, i)) : [];
+  const unmatched = v.kind === 'page' ? v.unmatched.filter((i) => itemMatches(query, i)) : [];
   return (
     <div className="code-panel" data-testid="code-panel">
       {v.kind === 'page' ? <p className="drawer__hint font-mono">{v.file}</p> : null}
@@ -154,7 +128,25 @@ export function CodePanel(props: { readonly view: ServiceCodeView | PageCodeView
           onChange={(e) => setQuery(e.target.value)}
         />
       </Field>
-      <Section title="Роуты" items={routes} render={(r) => <RouteItem key={r.id} route={r} />} />
+      <Section title="Вызовы API" testId="screen-api" items={api} render={(i) => <ScreenApiItem key={i.call.id} item={i} />} />
+      <Section
+        title="Не сопоставлены"
+        testId="screen-api-unmatched"
+        items={unmatched}
+        render={(i) => <ScreenApiItem key={i.call.id} item={i} />}
+      />
+      <Section
+        title="Роуты"
+        items={routes}
+        render={(r) => (
+          <RouteItem
+            key={r.id}
+            route={r}
+            focused={r.id === focusId}
+            callers={v.kind === 'service' ? (v.callers.get(r.id) ?? []) : []}
+          />
+        )}
+      />
       <Section title="Таблицы" items={tables} render={(t) => <TableItem key={t.id} table={t} />} />
       <Section title="Функции и компоненты" items={symbols} render={(s) => <SymbolItem key={s.id} symbol={s} />} />
     </div>

@@ -7,7 +7,7 @@ import { runScan } from '@live-app-map/cli';
 import type { AppMapDocument } from '@live-app-map/schema';
 import { filterCanvasGraph } from '../flow/canvas-graph';
 import { matchesCodeFilter } from './code-filter';
-import { codeFileOfNode, groupDbCalls, selectNodeCode } from './node-code';
+import { groupDbCalls, selectNodeCode } from './node-code';
 
 const FIXTURES = path.resolve(import.meta.dir, '../../../../fixtures');
 
@@ -51,11 +51,40 @@ describe('selectNodeCode', () => {
   });
 });
 
-describe('codeFileOfNode', () => {
-  test('файл экрана переводится в путь от корня скана исходников', () => {
-    expect(codeFileOfNode('/repo/apps/web', '/repo', 'src/App.tsx')).toBe('apps/web/src/App.tsx');
-    expect(codeFileOfNode('/repo', '/repo', 'src/App.tsx')).toBe('src/App.tsx');
-    expect(codeFileOfNode('/other', '/repo', 'src/App.tsx')).toBeNull();
+/** Карта: экраны apps/web внутри source-monorepo (настоящий скан, экраны вызывают API). */
+async function webMap(): Promise<AppMapDocument> {
+  const source = path.join(FIXTURES, 'source-monorepo');
+  const res = await runScan({ dir: path.join(source, 'apps/web'), codeDir: source });
+  return res.document;
+}
+
+describe('selectNodeCode: экран → роуты', () => {
+  test('экран: сопоставленные вызовы с роутом, сервисом и таблицами; несопоставленные отдельно', async () => {
+    const doc = await webMap();
+    const page = doc.nodes.find((n) => n.pathPattern === '/users');
+    const view = selectNodeCode(doc, page?.id ?? '');
+    if (view?.kind !== 'page') {
+      throw new Error('ожидался экран');
+    }
+    expect(
+      view.api.map((i) => `${i.call.method} ${i.call.path} → ${i.service?.name} ${i.route?.path} [${i.db.map((g) => `${g.operation} ${g.table}`).join(', ')}] ← ${i.via ?? '-'}`),
+    ).toEqual([
+      'DELETE /api/admin/users/:id → @fx/api /api/admin/users/:id [delete posts, delete users] ← UserRow',
+      'GET /api/users → @fx/api /api/users [select posts, select users] ← useUsers',
+    ]);
+    expect(view.unmatched.map((i) => `${i.call.method} ${i.call.path}`)).toEqual(['GET /api/unknown-thing']);
+  });
+
+  test('сервис: у роута видно, какие экраны его вызывают', async () => {
+    const doc = await webMap();
+    const view = selectNodeCode(doc, 'service:@fx/api');
+    if (view?.kind !== 'service') {
+      throw new Error('ожидался сервис');
+    }
+    const route = view.routes.find((r) => r.method === 'GET' && r.path === '/api/users');
+    expect(view.callers.get(route?.id ?? '')?.map((c) => c.title)).toEqual(
+      doc.nodes.filter((n) => n.pathPattern === '/users').map((n) => n.title),
+    );
   });
 });
 
