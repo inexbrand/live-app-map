@@ -63,7 +63,7 @@ describe('buildDocGraph на korbor-all', () => {
   test('эпоха содержит свои файлы; ссылка из текста ведёт к роуту, таблице и файлу кода', () => {
     const e = korbor.docs?.epochs[0];
     const contains = full.edges.filter((x) => x.kind === 'contains' && x.source === `epoch:${e?.id}`);
-    expect(contains.length).toBe(e?.files.length);
+    expect(contains.length).toBe(e?.files.length ?? -1);
     const kinds = new Set(full.nodes.map((n) => n.kind));
     expect(kinds.has('route')).toBe(true);
     expect(kinds.has('table')).toBe(true);
@@ -101,7 +101,7 @@ describe('свёртка, фильтры, соседи', () => {
   test('фильтр «не готово» оставляет только незакрытые эпохи и то, на что они ссылаются', () => {
     const notReady = filterGraph(collapseEpochs(full, new Set()), { readiness: 'not-ready' });
     const epochs = notReady.nodes.filter((n) => n.kind === 'epoch');
-    expect(epochs.length).toBe(korbor.docs?.epochs.filter((e) => e.readiness === 'not-ready').length);
+    expect(epochs.length).toBe(korbor.docs?.epochs.filter((e) => e.readiness === 'not-ready').length ?? -1);
     expect(epochs.every((n) => n.readiness === 'not-ready')).toBe(true);
     const ids = new Set(notReady.nodes.map((n) => n.id));
     for (const n of notReady.nodes.filter((x) => x.kind === 'route' || x.kind === 'table')) {

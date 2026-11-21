@@ -41,6 +41,12 @@
   --destructive: #fafafa;
   --destructive-foreground: #0a0a0a;
   --success: #d4d4d4;
+  /* Одно внимание на всю тему: «не готово», «обрезано». */
+  --attention: #f0b35a;
+  --graph-node: #e5e5e5;
+  --graph-node-muted: #8a8a8a;
+  --graph-edge: #333333;
+  --graph-edge-strong: #a3a3a3;
   --warning: #a3a3a3;
 
   --radius: 0.5rem;
