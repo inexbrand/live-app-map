@@ -19,6 +19,25 @@ export type {
   SnapshotUpload,
   VisualizerState,
 } from './agent-state';
+export {
+  addCommentEvent,
+  commentAnchorSchema,
+  commentShotPath,
+  commentStatusSchema,
+  createComment,
+  listComments,
+  newCommentId,
+  readComment,
+} from './comments-store';
+export type {
+  CommentAnchor,
+  CommentAuthor,
+  CommentEvent,
+  CommentFilter,
+  CommentStatus,
+  CommentThread,
+  NewComment,
+} from './comments-store';
 export { LAM_DIR_ENV, LAM_DIR_NAME, resolveLamDir } from './lam-dir';
 export { MCP_PROTOCOL_VERSION, RpcErrorCode, handleRpcMessage, handleRpcText, rpcError } from './rpc';
 export type { RpcResponse } from './rpc';

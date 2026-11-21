@@ -9,6 +9,7 @@ import {
   writeSnapshotRequest,
 } from './agent-state';
 import { CODE_HANDLERS, CODE_TOOLS } from './code-tools';
+import { COMMENT_HANDLERS, COMMENT_TOOLS } from './comment-tools';
 import { DOCS_HANDLERS, DOCS_TOOLS } from './docs-tools';
 import { listFeedback, saveFeedback } from './feedback-store';
 import { loadMap } from './map-tools';
@@ -87,6 +88,7 @@ export const TOOLS: readonly ToolDef[] = [
       properties: { requestId: { type: 'string', description: 'id из request_snapshot' } },
     },
   },
+  ...COMMENT_TOOLS,
   ...CODE_TOOLS,
   ...DOCS_TOOLS,
 ];
@@ -150,6 +152,7 @@ const HANDLERS: ReadonlyMap<string, Handler> = new Map<string, Handler>([
     return ok({ ok: true, request, hint: 'Пользователь выделит область в визуализаторе; затем get_snapshot' });
   }],
   ['get_snapshot', getSnapshot],
+  ...COMMENT_HANDLERS,
   ...CODE_HANDLERS,
   ...DOCS_HANDLERS,
 ]);
