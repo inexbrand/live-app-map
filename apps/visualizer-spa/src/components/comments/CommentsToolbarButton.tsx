@@ -20,10 +20,10 @@ export function CommentsToolbarButton() {
       aria-expanded={open}
       onClick={() => setOpen(!open)}
       title="Все замечания проекта (⇧C)"
+      aria-label={openCount > 0 ? `Замечания: открыто ${openCount}` : 'Замечания'}
       data-testid="open-comments"
     >
       <MessageSquare size={16} strokeWidth={1.75} />
-      <span className="toolbar__label">Замечания</span>
       {openCount > 0 ? <span className="toolbar__count" data-testid="open-comments-count">{openCount}</span> : null}
     </Button>
   );

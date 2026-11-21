@@ -4,7 +4,7 @@
 import { describe, expect, test } from 'bun:test';
 import type { CodeModel, CodeSymbol } from '@live-app-map/schema';
 import type { LamPickedMessage } from '../gateway/pick-script';
-import { buildAnchor, frameToView, padRect, repoPath, resolveComponentSource } from './build-anchor';
+import { buildAnchor, frameToView, padRect, resolveComponentSource } from './build-anchor';
 import { commentPrompt } from './comment-prompt';
 
 function symbol(name: string, file: string, line: number): CodeSymbol {
@@ -40,11 +40,11 @@ describe('привязка замечания', () => {
     });
   });
 
-  test('путь из стека без карты кода приводится к корню репозитория по файлу экрана', () => {
-    expect(repoPath('src/features/x.tsx', 'apps/miniapp/src/app/routes-config.tsx')).toBe('apps/miniapp/src/features/x.tsx');
-    expect(repoPath('src/features/x.tsx', 'src/app/routes.tsx')).toBe('src/features/x.tsx');
-    expect(repoPath('src/features/x.tsx', undefined)).toBe('src/features/x.tsx');
-    expect(resolveComponentSource({ name: 'Card', chain: ['Card'], stack: { file: 'src/a.tsx', line: 3 } }, undefined, 'apps/admin/src/routes.tsx')).toEqual({ file: 'apps/admin/src/a.tsx', line: 3, origin: 'react-stack' });
+  test('файла нет среди символов карты — путь из стека приводится к корню кода через project.root', () => {
+    const card = { name: 'Card', chain: ['Card'], stack: { file: 'src/a.tsx', line: 3 } };
+    expect(resolveComponentSource(card, code, '/repo/apps/admin')).toEqual({ file: 'apps/admin/src/a.tsx', line: 3, origin: 'react-stack' });
+    expect(resolveComponentSource(card, code, '/elsewhere')).toEqual({ file: 'src/a.tsx', line: 3, origin: 'react-stack' });
+    expect(resolveComponentSource(card, undefined, '/repo/apps/admin')).toEqual({ file: 'src/a.tsx', line: 3, origin: 'react-stack' });
   });
 
   test('без стека — определение ближайшего компонента цепочки из карты', () => {

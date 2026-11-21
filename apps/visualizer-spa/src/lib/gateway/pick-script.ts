@@ -348,9 +348,9 @@ export function installPicker(): void {
     }
     box = document.createElement('div');
     box.setAttribute('data-lam-pick-box', '');
-    box.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;border:2px solid #2563eb;background:rgba(37,99,235,.08);border-radius:4px;transition:all .06s ease-out;display:none';
+    box.style.cssText = 'position:fixed;z-index:2147483647;pointer-events:none;border:2px solid #0a0a0a;box-shadow:0 0 0 1px #fff;background:rgba(10,10,10,.06);border-radius:6px;transition:all .06s ease-out;display:none';
     label = document.createElement('div');
-    label.style.cssText = 'position:absolute;left:-2px;bottom:100%;margin-bottom:4px;padding:2px 8px;border-radius:4px;background:#2563eb;color:#fff;font:500 12px/20px system-ui,sans-serif;white-space:nowrap';
+    label.style.cssText = 'position:absolute;left:-2px;bottom:100%;margin-bottom:4px;padding:2px 8px;border-radius:6px;background:#0a0a0a;color:#fff;box-shadow:0 0 0 1px #fff;font-weight:500;font-size:12px;line-height:20px;white-space:nowrap';
     box.appendChild(label);
     document.documentElement.appendChild(box);
   };

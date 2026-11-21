@@ -91,7 +91,7 @@ export function useCommentPicker(): void {
       }
       const viewRect = frameToView(frame.getBoundingClientRect(), Number(frame.getAttribute('width')), e.data.client);
       const app = useAppStore.getState();
-      const anchor = buildAnchor({ picked: e.data, page, ...anchorContext(), code: app.document?.code, screenFile: app.index?.nodesById.get(page.id)?.source?.file });
+      const anchor = buildAnchor({ picked: e.data, page, ...anchorContext(), code: app.document?.code, projectRoot: app.document?.project.root });
       useCommentsStore.getState().startDraft({ anchor, viewRect, shot: 'pending' });
       snap.beginCapture(padRect(viewRect, 8, { width: window.innerWidth, height: window.innerHeight }));
     };

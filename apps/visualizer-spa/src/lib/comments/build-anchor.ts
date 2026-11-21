@@ -4,7 +4,7 @@
  * координат страницы в координаты окна визуализатора (для снимка и поля).
  */
 import type { CommentAnchor } from '@live-app-map/mcp-server/comments-schema';
-import type { CodeModel } from '@live-app-map/schema';
+import { codeFileOfNode, type CodeModel } from '@live-app-map/schema';
 import type { LamPickedMessage, PickedComponent, PickRect } from '../gateway/pick-script';
 
 /** Источник компонента в привязке. */
@@ -14,37 +14,21 @@ export type ComponentSource = { readonly file: string; readonly line: number | n
 export type AnchorPage = { readonly id: string; readonly title: string; readonly url: string | null };
 
 /**
- * Путь от корня приложения (как его видит dev-сервер: src/…) → путь от
- * корня репозитория по файлу экрана: apps/miniapp/src/app/routes.tsx +
- * src/features/x.tsx → apps/miniapp/src/features/x.tsx.
- *
- * @param file - путь из стека
- * @param screenFile - файл экрана из карты
- */
-export function repoPath(file: string, screenFile: string | undefined): string {
-  const head = file.split('/')[0] ?? '';
-  if (screenFile === undefined || head === '' || screenFile.startsWith(`${head}/`)) {
-    return file;
-  }
-  const at = screenFile.indexOf(`/${head}/`);
-  return at < 0 ? file : `${screenFile.slice(0, at + 1)}${file}`;
-}
-
-/**
- * Где в коде компонент: место JSX из стека React, приведённое к пути
- * карты кода (или к корню репозитория по файлу экрана); иначе определение
- * ближайшего компонента цепочки из карты.
+ * Где в коде компонент: место JSX из стека React (путь от корня приложения,
+ * как у source.file нод) — к корню кода карты; иначе определение ближайшего
+ * компонента цепочки из карты.
  *
  * @param component - компонент от пикера
  * @param code - раздел code карты (может отсутствовать)
- * @param screenFile - файл экрана (node.source.file)
+ * @param projectRoot - project.root карты (каталог приложения)
  */
-export function resolveComponentSource(component: PickedComponent, code: CodeModel | undefined, screenFile?: string): ComponentSource | null {
+export function resolveComponentSource(component: PickedComponent, code: CodeModel | undefined, projectRoot?: string): ComponentSource | null {
   const symbols = code?.symbols ?? [];
   const stack = component.stack;
   if (stack !== null) {
     const file = symbols.map((s) => s.location.file).find((f) => f === stack.file || f.endsWith(`/${stack.file}`));
-    return { file: file ?? repoPath(stack.file, screenFile), line: stack.line, origin: 'react-stack' };
+    const fromRoot = code === undefined || projectRoot === undefined ? null : codeFileOfNode(projectRoot, code.root, stack.file);
+    return { file: file ?? fromRoot ?? stack.file, line: stack.line, origin: 'react-stack' };
   }
   for (const name of component.chain) {
     const s = symbols.find((x) => x.kind === 'component' && x.name === name);
@@ -66,8 +50,8 @@ export function buildAnchor(args: {
   readonly mapName: string | null;
   readonly role: string | null;
   readonly code: CodeModel | undefined;
-  /** Файл экрана из карты: по нему путь из стека приводится к корню репозитория. */
-  readonly screenFile?: string;
+  /** project.root карты: путь из стека приводится к корню кода. */
+  readonly projectRoot?: string;
 }): CommentAnchor {
   const { picked, page } = args;
   const c = picked.component;
@@ -84,7 +68,7 @@ export function buildAnchor(args: {
       text: picked.text,
       rect: picked.rect,
       viewport: picked.viewport,
-      component: c === null ? null : { name: c.name, chain: [...c.chain], source: resolveComponentSource(c, args.code, args.screenFile) },
+      component: c === null ? null : { name: c.name, chain: [...c.chain], source: resolveComponentSource(c, args.code, args.projectRoot) },
     },
   };
 }

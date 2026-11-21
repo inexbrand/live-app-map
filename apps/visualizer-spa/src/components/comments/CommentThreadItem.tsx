@@ -5,7 +5,7 @@
 import type { CommentEvent, CommentThread } from '@live-app-map/mcp-server/comments-schema';
 import { ClipboardCopy, Crosshair, RotateCcw, Check } from 'lucide-react';
 import { commentPrompt } from '../../lib/comments/comment-prompt';
-import { timeAgo } from '../../lib/comments/format';
+import { timeAgo, quoteText } from '../../lib/comments/format';
 import { flashElement } from '../../lib/comments/use-comments';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
@@ -77,7 +77,7 @@ export function CommentThreadItem(props: { readonly thread: CommentThread; reado
       {el !== null ? (
         <p className="comment-thread__where" title={el.domPath}>
           {el.component !== null ? <strong>{el.component.name}</strong> : <strong>{el.tag || 'элемент'}</strong>}
-          {el.text !== '' ? <span> «{el.text}»</span> : null}
+          {el.text !== '' ? <span title={el.text}> «{quoteText(el.text, 48)}»</span> : null}
           {src !== null ? <span className="comment-thread__src">{src.file}{src.line === null ? '' : `:${src.line}`}</span> : null}
         </p>
       ) : (

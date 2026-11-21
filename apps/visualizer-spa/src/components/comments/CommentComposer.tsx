@@ -4,7 +4,7 @@
  */
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { composerPosition } from '../../lib/comments/format';
+import { composerPosition, quoteText } from '../../lib/comments/format';
 import { appendSpoken } from '../../lib/voice/models';
 import { useVoiceCapture } from '../../lib/voice/use-voice-capture';
 import { useAppStore } from '../../store/app-store';
@@ -32,7 +32,7 @@ function Target(props: { readonly draft: CommentDraft }) {
       <strong>{el.component?.name ?? el.tag}</strong>
       <span>
         {el.component !== null ? el.tag : ''}
-        {el.text !== '' ? ` «${el.text.slice(0, 48)}»` : ''}
+        {el.text !== '' ? ` «${quoteText(el.text, 48)}»` : ''}
       </span>
       {src !== null ? <span className="comment-composer__src">{src.file}{src.line === null ? '' : `:${src.line}`}</span> : null}
     </div>
@@ -151,7 +151,7 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
       {saveError !== null ? <p className="comment-composer__error" role="alert">{saveError}</p> : null}
       <div className="comment-composer__bar">
         <VoiceButton capture={voice} />
-        <span className="comment-composer__hint">Enter — сохранить · держите ⌥ — голос</span>
+        <span className="comment-composer__hint">Enter — сохранить, ⌥ — голос</span>
         <Button type="button" variant="primary" size="sm" disabled={saving || voice.finishing} onClick={() => void submit()}>
           Сохранить
         </Button>

@@ -2,7 +2,7 @@
  * Подписи и раскладка замечаний.
  */
 import { describe, expect, test } from 'bun:test';
-import { commentsLabel, composerPosition, timeAgo } from './format';
+import { commentsLabel, composerPosition, timeAgo, quoteText } from './format';
 
 describe('формат замечаний', () => {
   const now = new Date('2026-11-21T12:00:00.000Z');
@@ -23,5 +23,11 @@ describe('формат замечаний', () => {
 
   test('склонение', () => {
     expect([1, 2, 5, 11, 12, 21, 24].map(commentsLabel)).toEqual(['1 замечание', '2 замечания', '5 замечаний', '11 замечаний', '12 замечаний', '21 замечание', '24 замечания']);
+  });
+
+  test('цитата элемента: короткая как есть, длинная — по слову с многоточием', () => {
+    expect(quoteText('Откликнуться', 40)).toBe('Откликнуться');
+    expect(quoteText('Webhook handler fixture Начальный Вчера ВОЗНАГРАЖДЕНИЕ 4 920 UZS', 40)).toBe('Webhook handler fixture Начальный Вчера…');
+    expect(quoteText('ОченьДлинноеСловоБезПробеловВообщеНигде', 10)).toBe('ОченьДлинн…');
   });
 });

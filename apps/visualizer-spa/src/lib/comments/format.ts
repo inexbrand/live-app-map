@@ -56,3 +56,18 @@ export function commentsLabel(n: number): string {
   const word = d10 === 1 && d100 !== 11 ? 'замечание' : d10 >= 2 && d10 <= 4 && (d100 < 12 || d100 > 14) ? 'замечания' : 'замечаний';
   return `${n} ${word}`;
 }
+
+/**
+ * Короткая цитата текста элемента: не длиннее max, обрезка по слову с «…».
+ *
+ * @param text - текст элемента
+ * @param max - предел символов
+ */
+export function quoteText(text: string, max: number): string {
+  if (text.length <= max) {
+    return text;
+  }
+  const cut = text.slice(0, max);
+  const space = cut.lastIndexOf(' ');
+  return `${(space > max / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
+}
