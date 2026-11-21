@@ -3,6 +3,7 @@
  * секретов) и последние отчёты страниц (высота, 401).
  */
 import { create } from 'zustand';
+import { requestJson } from '../lib/dev-api';
 import type { LamPageMessage } from '../lib/gateway/inject-script';
 import type { ProfileSummary } from '../lib/gateway/session-store';
 import { SampleRequestLog } from '../lib/gateway/sample-retry';
@@ -67,22 +68,15 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
     }
     let values: Record<string, string | null> = {};
     let ok = false;
-    try {
-      const res = await fetch(`/__lam_sessions/${encodeURIComponent(profile)}/sample-ids`, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ origin, lists: fresh }),
-      });
-      const body: unknown = await res.json().catch(() => null);
-      const parsed = res.ok ? parseSamples(body) : null;
-      ok = parsed !== null;
-      values = parsed ?? {};
-      if (!res.ok) {
-        const msg = typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string' ? body.error : `HTTP ${res.status}`;
-        set({ error: `параметры экранов (${profile}): ${msg}` });
-      }
-    } catch (err) {
-      set({ error: `параметры экранов (${profile}): ${err instanceof Error ? err.message : String(err)}` });
+    const r = await requestJson(`/__lam_sessions/${encodeURIComponent(profile)}/sample-ids`, {
+      method: 'POST',
+      json: { origin, lists: fresh },
+    });
+    const parsed = r.ok ? parseSamples(r.value) : null;
+    ok = parsed !== null;
+    values = parsed ?? {};
+    if (!r.ok) {
+      set({ error: `параметры экранов (${profile}): ${r.error}` });
     }
     if (ok) {
       requested.succeeded(fresh.map(key));
@@ -102,17 +96,17 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
     set({ samples });
   },
   refresh: async () => {
-    try {
-      const res = await fetch('/__lam_sessions', { headers: { accept: 'application/json' } });
-      const parsed = res.ok ? parseSessions(await res.json()) : null;
-      if (parsed === null) {
-        set({ port: null, error: `шлюз не отвечает (HTTP ${res.status})` });
-        return;
-      }
-      set({ port: parsed.port, profiles: parsed.profiles, error: null });
-    } catch (err) {
-      set({ port: null, error: err instanceof Error ? err.message : String(err) });
+    const r = await requestJson('/__lam_sessions');
+    if (!r.ok && r.status === null) {
+      set({ port: null, error: r.error });
+      return;
     }
+    const parsed = r.ok ? parseSessions(r.value) : null;
+    if (parsed === null) {
+      set({ port: null, error: `шлюз не отвечает (HTTP ${r.status ?? ''})` });
+      return;
+    }
+    set({ port: parsed.port, profiles: parsed.profiles, error: null });
   },
   setReport: (nodeId, report) => {
     const prev = get().reports.get(nodeId);

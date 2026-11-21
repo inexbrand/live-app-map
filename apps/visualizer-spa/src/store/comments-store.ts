@@ -10,6 +10,7 @@ import {
 } from '@live-app-map/mcp-server/comments-schema';
 import { z } from 'zod';
 import { create } from 'zustand';
+import { anyBody, requestJson } from '../lib/dev-api';
 import type { Rect } from '../lib/snapshot/region';
 
 /** Черновик: привязка, где показать поле, снимок (pending — ещё снимается). */
@@ -52,15 +53,9 @@ type CommentsState = {
 
 const listSchema = z.object({ comments: z.array(commentThreadSchema) });
 const oneSchema = z.object({ comment: commentThreadSchema });
-const errorSchema = z.object({ error: z.string() });
 
 function signature(threads: readonly CommentThread[]): string {
   return threads.map((t) => `${t.id}@${t.updatedAt}`).join('|');
-}
-
-async function errorText(res: Response): Promise<string> {
-  const parsed = errorSchema.safeParse(await res.json().catch(() => null));
-  return parsed.success ? parsed.data.error : `HTTP ${res.status}`;
 }
 
 /** Store замечаний. */
@@ -85,18 +80,18 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
     if (mapName === null) {
       return;
     }
-    try {
-      const res = await fetch(`/api/comments?mapName=${encodeURIComponent(mapName)}`);
-      const parsed = listSchema.safeParse(await res.json());
-      if (!parsed.success) {
-        set({ loadError: 'ответ /api/comments не по схеме' });
-        return;
-      }
-      if (get().mapName === mapName && signature(parsed.data.comments) !== signature(get().threads)) {
-        set({ threads: parsed.data.comments, loadError: null });
-      }
-    } catch (err) {
-      set({ loadError: err instanceof Error ? err.message : String(err) });
+    const r = await requestJson(`/api/comments?mapName=${encodeURIComponent(mapName)}`);
+    if (!r.ok && r.status === null) {
+      set({ loadError: r.error });
+      return;
+    }
+    const parsed = listSchema.safeParse(anyBody(r));
+    if (!parsed.success) {
+      set({ loadError: 'ответ /api/comments не по схеме' });
+      return;
+    }
+    if (get().mapName === mapName && signature(parsed.data.comments) !== signature(get().threads)) {
+      set({ threads: parsed.data.comments, loadError: null });
     }
   },
   startDraft: (draft) => set({ draft, saveError: null }),
@@ -117,36 +112,30 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       return false;
     }
     set({ saving: true, saveError: null });
-    try {
-      const res = await fetch('/api/comments', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ id: crypto.randomUUID(), text, anchor: d.anchor, shotDataUrl: d.shot }),
-      });
-      if (!res.ok) {
-        set({ saveError: await errorText(res) });
-        return false;
-      }
-      const parsed = oneSchema.safeParse(await res.json());
-      if (parsed.success) {
-        set({ threads: [parsed.data.comment, ...get().threads.filter((t) => t.id !== parsed.data.comment.id)], focusId: parsed.data.comment.id });
-      }
-      set({ draft: null });
-      return true;
-    } catch (err) {
-      set({ saveError: err instanceof Error ? err.message : String(err) });
+    const r = await requestJson('/api/comments', {
+      method: 'POST',
+      json: { id: crypto.randomUUID(), text, anchor: d.anchor, shotDataUrl: d.shot },
+    });
+    if (!r.ok) {
+      set({ saveError: r.error, saving: false });
       return false;
-    } finally {
-      set({ saving: false });
     }
+    const parsed = oneSchema.safeParse(r.value);
+    if (parsed.success) {
+      set({ threads: [parsed.data.comment, ...get().threads.filter((t) => t.id !== parsed.data.comment.id)], focusId: parsed.data.comment.id });
+    }
+    set({ draft: null, saving: false });
+    return true;
   },
   setStatus: async (id, status) => {
-    const res = await fetch(`/api/comments/${encodeURIComponent(id)}/events`, {
+    const r = await requestJson(`/api/comments/${encodeURIComponent(id)}/events`, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
-      body: JSON.stringify({ type: 'status', status, note: null }),
+      json: { type: 'status', status, note: null },
     });
-    const parsed = oneSchema.safeParse(await res.json());
+    if (!r.ok && r.status === null) {
+      throw new Error(r.error);
+    }
+    const parsed = oneSchema.safeParse(anyBody(r));
     if (parsed.success) {
       set({ threads: get().threads.map((t) => (t.id === id ? parsed.data.comment : t)) });
     }

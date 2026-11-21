@@ -3,6 +3,7 @@
  * (открытая карта, файл на диске, коммит, свежий скан, файл с компьютера) в документ.
  */
 import type { AppMapDocument } from '@live-app-map/schema';
+import { requestJson } from './dev-api';
 import { documentFromJson } from './import-map';
 
 /** Коммит файла карты. */
@@ -19,11 +20,11 @@ export type VersionChoice =
 /** Документ или текст ошибки. */
 export type LoadedVersion = { readonly ok: true; readonly document: AppMapDocument } | { readonly ok: false; readonly error: string };
 
-/** Текст ошибки из JSON-ответа dev-сервера. */
-async function errorOf(res: Response): Promise<string> {
-  const body: unknown = await res.json().catch(() => null);
-  const msg = typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string' ? body.error : '';
-  return msg === '' ? `HTTP ${res.status}` : msg;
+/** Коммит из ответа или null. */
+function versionOf(v: unknown): MapVersionInfo | null {
+  return typeof v === 'object' && v !== null && 'ref' in v && typeof v.ref === 'string' && 'date' in v && typeof v.date === 'string' && 'subject' in v && typeof v.subject === 'string'
+    ? { ref: v.ref, date: v.date, subject: v.subject }
+    : null;
 }
 
 /**
@@ -33,32 +34,19 @@ async function errorOf(res: Response): Promise<string> {
  * @returns версии или ошибка
  */
 export async function fetchMapVersions(mapId: string): Promise<{ ok: true; versions: MapVersionInfo[] } | { ok: false; error: string }> {
-  try {
-    const res = await fetch(`/__lam_maps/versions?id=${encodeURIComponent(mapId)}`);
-    if (!res.ok) {
-      return { ok: false, error: await errorOf(res) };
-    }
-    const body: unknown = await res.json();
-    const list = typeof body === 'object' && body !== null && 'versions' in body && Array.isArray(body.versions) ? body.versions : [];
-    const versions = list.flatMap((v: unknown): MapVersionInfo[] =>
-      typeof v === 'object' && v !== null && 'ref' in v && typeof v.ref === 'string' && 'date' in v && typeof v.date === 'string' && 'subject' in v && typeof v.subject === 'string'
-        ? [{ ref: v.ref, date: v.date, subject: v.subject }]
-        : [],
-    );
-    return { ok: true, versions };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  const r = await requestJson(`/__lam_maps/versions?id=${encodeURIComponent(mapId)}`);
+  if (!r.ok) {
+    return { ok: false, error: r.error };
   }
+  const body = r.value;
+  const list: unknown[] = typeof body === 'object' && body !== null && 'versions' in body && Array.isArray(body.versions) ? body.versions : [];
+  return { ok: true, versions: list.flatMap((v) => versionOf(v) ?? []) };
 }
 
 /** JSON по адресу в документ. */
-async function fetchDocument(url: string, init?: RequestInit): Promise<LoadedVersion> {
-  try {
-    const res = await fetch(url, { cache: 'no-store', ...init });
-    return res.ok ? documentFromJson(await res.json()) : { ok: false, error: await errorOf(res) };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
-  }
+async function fetchDocument(url: string, method?: 'POST'): Promise<LoadedVersion> {
+  const r = await requestJson(url, { cache: 'no-store', ...(method === undefined ? {} : { method }) });
+  return r.ok ? documentFromJson(r.value) : { ok: false, error: r.error };
 }
 
 /**
@@ -86,7 +74,7 @@ export async function loadVersion(
         : { ok: false, error: 'карта открыта из файла — истории нет' };
     case 'scan':
       return need(ctx.mapId)
-        ? fetchDocument(`/__lam_maps/scan?id=${encodeURIComponent(ctx.mapId)}`, { method: 'POST' })
+        ? fetchDocument(`/__lam_maps/scan?id=${encodeURIComponent(ctx.mapId)}`, 'POST')
         : { ok: false, error: 'карта открыта из файла — сканировать нечего' };
   }
 }

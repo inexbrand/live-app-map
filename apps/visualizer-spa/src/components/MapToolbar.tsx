@@ -27,6 +27,7 @@ import {
 import { SessionProfilesPanel } from './SessionProfilesPanel';
 import { useViewStore } from '../store/view-store';
 import { useMapSourceStore } from '../store/map-source-store';
+import { anyBody, requestJson } from '../lib/dev-api';
 import { ensureDogfoodSessions as mintMissingDogfood } from '../lib/ensure-dogfood-sessions';
 import { importMapFile } from '../lib/import-map';
 import { loadMapPresetIntoStore } from '../lib/load-map-preset';
@@ -616,10 +617,13 @@ export function MapToolbar(props: MapToolbarProps) {
                 const target =
                   baseUrlOverride.trim() || 'https://vite.localhost:5175/';
                 try {
-                  const r = await fetch(
+                  const r = await requestJson(
                     `/__lam_tls_check?url=${encodeURIComponent(target)}`,
                   );
-                  const j = (await r.json()) as {
+                  if (!r.ok && r.status === null) {
+                    throw new Error(r.error);
+                  }
+                  const j = (anyBody(r) ?? {}) as {
                     ok?: boolean;
                     message?: string;
                     error?: string;
