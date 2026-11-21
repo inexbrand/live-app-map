@@ -31,6 +31,7 @@ import {
 } from '../packages/schema/src/index';
 import { runScan } from '../packages/cli/src/index';
 import type { AppMapDocument, AppMapNode, AppMapPageState, CodeModel } from '../packages/schema/src/types';
+import type { DocsModel } from '../packages/schema/src/docs-model';
 import { attachKorborCode, type KorborSurfaceDoc } from './korbor-code';
 import { fetchCmsPages, withCmsPages } from './korbor-site-pages';
 
@@ -281,7 +282,7 @@ async function main(): Promise<void> {
   // Один скан исходников на все поверхности: сервисы, роуты, БД, экран → роут.
   const withCode = attachKorborCode(KORBOR, surfaceDocs);
   for (const s of surfaceDocs) {
-    const doc = withCode.docs.get(s.id);
+    const doc = withCode.maps.get(s.id);
     if (doc === undefined) {
       throw new Error(`нет карты с кодом для ${s.id}`);
     }
@@ -289,7 +290,7 @@ async function main(): Promise<void> {
   }
 
   // Unified live graph: prefix ids per surface; no god-root ownership.
-  writeKorborAllLiveMap(withCode.allCode);
+  writeKorborAllLiveMap(withCode.allCode, withCode.docs);
   // Stale non-live dogfood zip
   const staleAppmap = path.join(OUT, 'korbor-miniapp.appmap');
   if (existsSync(staleAppmap)) {
@@ -303,7 +304,7 @@ async function main(): Promise<void> {
  * Корни продуктов остаются отдельными (miniapp:/, admin:/, site:/).
  * Cross-link edges только с label, без замены entry roots.
  */
-function writeKorborAllLiveMap(code: CodeModel): void {
+function writeKorborAllLiveMap(code: CodeModel, docs: DocsModel): void {
   const surfaces: Array<{
     id: string;
     title: string;
@@ -439,6 +440,7 @@ function writeKorborAllLiveMap(code: CodeModel): void {
     groups,
     layout: { algorithm: 'dagre', direction: 'LR' },
     code,
+    docs,
     extensions: {
       korbor: {
         surfaces: {

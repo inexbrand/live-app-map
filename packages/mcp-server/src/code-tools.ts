@@ -3,6 +3,9 @@
  * Читают раздел `code` карты (собирается `scan --code-dir`).
  */
 import {
+  apiArchitecture,
+  apiCoverage,
+  filterRoutes,
   findRoutes,
   findService,
   findTable,
@@ -10,9 +13,10 @@ import {
   serviceSummaries,
   shortSummary,
   tableDetail,
+  type ApiFilter,
   type CodeIndex,
 } from '@live-app-map/graph';
-import type { ApiRoute, DbTable } from '@live-app-map/schema';
+import type { ApiRoute, DbTable, HttpMethod } from '@live-app-map/schema';
 import { loadCodeIndex } from './map-tools';
 import type { ToolDef, ToolResult } from './tools';
 
@@ -53,6 +57,22 @@ export const CODE_TOOLS: readonly ToolDef[] = [
       type: 'object',
       required: ['mapPath', 'route'],
       properties: { mapPath: mapPathProp, route: { type: 'string', description: 'id роута или «GET /api/v1/…»' } },
+    },
+  },
+  {
+    name: 'describe_api',
+    description:
+      'Архитектура API: сервисы → разделы (/api/v1/admin) → модули (/api/v1/admin/vacancies) с роутами; покрытие описаниями, проверкой входа, доступом и экранами. Фильтр по сервису, методу, таблице, «без описания»',
+    inputSchema: {
+      type: 'object',
+      required: ['mapPath'],
+      properties: {
+        mapPath: mapPathProp,
+        service: { type: 'string', description: 'Имя сервиса (@korbor/api) или id' },
+        method: { type: 'string', description: 'HTTP-метод: GET, POST …' },
+        table: { type: 'string', description: 'Только роуты, которые читают или пишут таблицу' },
+        undocumented: { type: 'boolean', description: 'Только роуты без описания' },
+      },
     },
   },
   {
@@ -110,6 +130,7 @@ function routeLine(index: CodeIndex, r: ApiRoute): Record<string, unknown> {
     path: r.path,
     service: index.servicesById.get(r.serviceId)?.name ?? r.serviceId,
     ...(about === undefined ? {} : { summary: about }),
+    ...(r.access === undefined ? {} : { access: r.access }),
     reads: detail?.reads.map((t) => t.dbName ?? t.table) ?? [],
     writes: detail?.writes.map((t) => t.dbName ?? t.table) ?? [],
     screens: detail?.callers.length ?? 0,
@@ -172,10 +193,51 @@ function getRoute(args: Args): ToolResult {
     ...(route.comments === undefined ? {} : { comments: route.comments }),
     location: route.location,
     handler: route.handler,
+    ...(route.input === undefined ? {} : { input: route.input }),
+    ...(route.access === undefined ? {} : { access: route.access }),
     reads: detail.reads,
     writes: detail.writes,
     screens: detail.callers,
   });
+}
+
+const METHODS: readonly HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL'];
+
+function describeApi(args: Args): ToolResult {
+  const index = indexOf(args);
+  const service = str(args, 'service');
+  if (service !== '' && findService(index, service) === undefined) {
+    return fail(`сервис не найден: ${service}. Есть: ${index.code.services.map((s) => s.name).join(', ')}`);
+  }
+  const methodArg = str(args, 'method').toUpperCase();
+  const method = METHODS.find((m) => m === methodArg);
+  if (methodArg !== '' && method === undefined) {
+    return fail(`method: одно из ${METHODS.join(', ')}`);
+  }
+  const filter: ApiFilter = {
+    ...(service === '' ? {} : { service }),
+    ...(method === undefined ? {} : { methods: [method] }),
+    ...(str(args, 'table') === '' ? {} : { table: str(args, 'table') }),
+    ...(args['undocumented'] === true ? { undocumented: true } : {}),
+  };
+  const services = apiArchitecture(index, filter).map((s) => ({
+    service: s.service.name,
+    root: s.service.root,
+    routes: s.count,
+    coverage: apiCoverage(index, s.sections.flatMap((x) => x.modules.flatMap((m) => m.routes))),
+    sections: s.sections.map((sec) => ({
+      prefix: sec.prefix,
+      routes: sec.count,
+      modules: sec.modules.map((m) => ({
+        prefix: m.prefix,
+        routes: m.routes.map((r) => {
+          const about = shortSummary(r.doc, r.comments);
+          return `${r.method} ${r.path}${about === undefined ? '' : ` — ${about}`}`;
+        }),
+      })),
+    })),
+  }));
+  return ok({ ok: true, coverage: apiCoverage(index, filterRoutes(index, filter)), services });
 }
 
 function listTables(args: Args): ToolResult {
@@ -221,6 +283,7 @@ export const CODE_HANDLERS: ReadonlyMap<string, (args: Args) => ToolResult> = ne
   ['list_services', (args: Args) => ok({ ok: true, services: serviceSummaries(indexOf(args)) })],
   ['list_routes', listRoutes],
   ['get_route', getRoute],
+  ['describe_api', describeApi],
   ['list_tables', listTables],
   ['get_table', getTable],
 ]);

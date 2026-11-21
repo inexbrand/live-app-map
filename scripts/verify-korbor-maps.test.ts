@@ -59,7 +59,8 @@ describe('korbor maps single-writer (maps/ ↔ public/maps)', () => {
     if (!existsSync(pub)) {
       return;
     }
-    const pubLives = readdirSync(pub).filter((f) => f.endsWith('.liveappmap.json'));
+    // *.generated.liveappmap.json — локальные карты для просмотра (в .gitignore), канона у них нет.
+    const pubLives = readdirSync(pub).filter((f) => f.endsWith('.liveappmap.json') && !f.endsWith('.generated.liveappmap.json'));
     for (const name of pubLives) {
       expect(existsSync(path.join(mapsDir, name))).toBe(true);
     }

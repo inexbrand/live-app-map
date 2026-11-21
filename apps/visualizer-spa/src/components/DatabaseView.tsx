@@ -27,6 +27,7 @@ function columnFlags(c: DbColumn): string {
 function RouteList(props: { readonly title: string; readonly uses: readonly RouteUse[] }) {
   const selectPage = useAppStore((s) => s.selectPage);
   const setView = useViewStore((s) => s.setView);
+  const openRoute = useViewStore((s) => s.openRoute);
   return (
     <section className="db-view__section">
       <h3>
@@ -36,9 +37,11 @@ function RouteList(props: { readonly title: string; readonly uses: readonly Rout
       <ul className="db-view__routes">
         {props.uses.map(({ route, screens }) => (
           <li key={route.id}>
-            <code>
-              {route.method} {route.path}
-            </code>
+            <button type="button" className="db-view__link" title="Открыть роут в виде «API»" onClick={() => openRoute(route.id)} data-testid="db-route-link">
+              <code>
+                {route.method} {route.path}
+              </code>
+            </button>
             {shortSummary(route.doc, route.comments) !== undefined ? <div className="drawer__hint">{shortSummary(route.doc, route.comments)}</div> : null}
             {screens.length > 0 ? (
               <div className="db-view__screens">

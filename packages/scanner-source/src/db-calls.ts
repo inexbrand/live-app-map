@@ -173,7 +173,7 @@ function prismaCall(
 }
 
 /** Тело вызываемой функции и имя для `via`. */
-type Callee = { readonly name: string; readonly node: ts.Node };
+export type Callee = { readonly name: string; readonly node: ts.Node };
 
 /**
  * Тела функций проекта, на которые ссылается вызов: сама функция, либо
@@ -183,7 +183,7 @@ type Callee = { readonly name: string; readonly node: ts.Node };
  * @param call - вызов
  * @returns тела (пусто, если вызов ведёт вне проекта)
  */
-function calledFunctions(ctx: SourceContext, call: ts.CallExpression): Callee[] {
+export function calledFunctions(ctx: SourceContext, call: ts.CallExpression): Callee[] {
   const callee = ts.isPropertyAccessExpression(call.expression)
     ? call.expression.name
     : call.expression;

@@ -9,6 +9,7 @@ import type { Plugin } from 'vite';
 import { defineConfig } from 'vite';
 import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
+import { docsAssetMiddleware } from './src/lib/docs-asset-middleware';
 import { agentStateMiddleware } from './src/lib/agent-state-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
 import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
@@ -29,11 +30,13 @@ function errorReportsPlugin(): Plugin {
       server.middlewares.use(errorReportsMiddleware);
       server.middlewares.use(agentStateMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
+      server.middlewares.use(docsAssetMiddleware);
     },
     configurePreviewServer(server) {
       server.middlewares.use(errorReportsMiddleware);
       server.middlewares.use(agentStateMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
+      server.middlewares.use(docsAssetMiddleware);
     },
   };
 }

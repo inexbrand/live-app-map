@@ -9,6 +9,7 @@ import {
   parseAppMapDocument,
   parseLiveAppMapJson,
   type AppMapDocument,
+  type DocsModel,
 } from '@live-app-map/schema';
 
 /** Экран карты в ответе tools. */
@@ -91,6 +92,31 @@ export function loadMapDocument(mapPath: string): AppMapDocument {
 
 /** Индекс code последней прочитанной карты: путь + mtime → индекс. */
 const indexCache = new Map<string, { readonly mtimeMs: number; readonly index: CodeIndex }>();
+
+/** Раздел docs по пути карты и времени изменения файла. */
+const docsCache = new Map<string, { readonly mtimeMs: number; readonly docs: DocsModel }>();
+
+/**
+ * Раздел docs карты; перечитывает файл, только если он изменился.
+ *
+ * @param mapPath - путь к карте
+ * @returns раздел docs
+ * @throws Error если в карте нет раздела docs
+ */
+export function loadDocs(mapPath: string): DocsModel {
+  const abs = path.resolve(mapPath);
+  const mtimeMs = statSync(abs).mtimeMs;
+  const cached = docsCache.get(abs);
+  if (cached !== undefined && cached.mtimeMs === mtimeMs) {
+    return cached.docs;
+  }
+  const docs = loadMapDocument(abs).docs;
+  if (docs === undefined) {
+    throw new Error(`в карте нет раздела docs: ${mapPath}. Пересоберите её с --code-dir <корень репо> (scan или code)`);
+  }
+  docsCache.set(abs, { mtimeMs, docs });
+  return docs;
+}
 
 /**
  * Индекс раздела code карты; перечитывает файл, только если он изменился.

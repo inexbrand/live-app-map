@@ -33,6 +33,7 @@ describe('runCodeScan', () => {
       expect(parsed.document.formatVersion).toBe(2);
       expect(parsed.document.code?.routes).toHaveLength(14);
       expect(parsed.document.code?.root).toBe(SOURCE);
+      expect(parsed.document.project.name).toBe('fx-monorepo');
     }));
 });
 
@@ -58,6 +59,27 @@ describe('runScan --code-dir', () => {
       }
       expect(live.document.code?.routes).toHaveLength(14);
       expect(live.document.pages.some((p) => p.type === 'service')).toBe(true);
+    }));
+});
+
+describe('runScan --code-dir: документация', () => {
+  test('раздел docs того же каталога доходит до viewer-формата', () =>
+    withTmp(async (dir) => {
+      const out = path.join(dir, 'guarded.liveappmap.json');
+      await runScan({ dir: NEXT, codeDir: path.join(FIXTURES, 'source-guarded'), out, format: 'liveappmap' });
+      const live = parseLiveAppMapJson(readFileSync(out, 'utf8'));
+      if (!live.ok) {
+        throw new Error(live.errors.map((e) => e.message).join('\n'));
+      }
+      const docs = live.document.docs;
+      expect(docs?.epochs.map((e) => [e.id, e.readiness, e.openBugs])).toEqual([
+        ['guards#20261121-120000', 'not-ready', ['у `GET /api/admin/reports` нет описания']],
+      ]);
+      expect(docs?.guides.map((g) => g.path)).toEqual(['README.md']);
+      expect(live.document.code?.routes.find((r) => r.path === '/api/admin/vacancies')?.access?.permissions).toEqual([
+        'admin.access',
+        'admin.vacancies.write',
+      ]);
     }));
 });
 

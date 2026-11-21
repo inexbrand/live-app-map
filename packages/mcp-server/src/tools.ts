@@ -9,6 +9,7 @@ import {
   writeSnapshotRequest,
 } from './agent-state';
 import { CODE_HANDLERS, CODE_TOOLS } from './code-tools';
+import { DOCS_HANDLERS, DOCS_TOOLS } from './docs-tools';
 import { listFeedback, saveFeedback } from './feedback-store';
 import { loadMap } from './map-tools';
 
@@ -87,6 +88,7 @@ export const TOOLS: readonly ToolDef[] = [
     },
   },
   ...CODE_TOOLS,
+  ...DOCS_TOOLS,
 ];
 
 function ok(value: unknown): ToolResult {
@@ -149,6 +151,7 @@ const HANDLERS: ReadonlyMap<string, Handler> = new Map<string, Handler>([
   }],
   ['get_snapshot', getSnapshot],
   ...CODE_HANDLERS,
+  ...DOCS_HANDLERS,
 ]);
 
 /**

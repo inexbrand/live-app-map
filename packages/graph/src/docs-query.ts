@@ -1,0 +1,237 @@
+/**
+ * Запросы к разделу `docs` карты: эпохи, поиск по тексту документов и
+ * разбор ссылок из текста (`GET /api/x`, путь экрана, файл, таблица) на сущности карты.
+ */
+import { codeFileOfNode } from '@live-app-map/schema';
+import type { AppMapDocument, DocEpoch, DocFile, DocsModel, EpochReadiness, HttpMethod } from '@live-app-map/schema';
+import type { CodeIndex } from './code-query';
+
+/** Фильтр эпох. */
+export type EpochFilter = {
+  /** Подстрока имени, цели или открытых пунктов. */
+  readonly query?: string;
+  readonly readiness?: EpochReadiness;
+};
+
+/**
+ * Эпохи под фильтр (порядок раздела: новые первыми).
+ *
+ * @param docs - раздел docs
+ * @param filter - фильтр
+ * @returns эпохи
+ */
+export function epochList(docs: DocsModel, filter: EpochFilter = {}): DocEpoch[] {
+  const q = filter.query?.trim().toLowerCase() ?? '';
+  return docs.epochs.filter(
+    (e) =>
+      (filter.readiness === undefined || e.readiness === filter.readiness) &&
+      (q === '' || [e.id, e.summary ?? '', ...e.openBugs].join('\n').toLowerCase().includes(q)),
+  );
+}
+
+/**
+ * Эпоха по имени папки или по slug (самая новая с этим slug).
+ *
+ * @param docs - раздел docs
+ * @param ref - `api-docs-views#20261121-205636` или `api-docs-views`
+ * @returns эпоха или undefined
+ */
+export function findEpoch(docs: DocsModel, ref: string): DocEpoch | undefined {
+  const r = ref.trim();
+  return docs.epochs.find((e) => e.id === r) ?? docs.epochs.find((e) => e.slug === r);
+}
+
+/** Найденное место в документе. */
+export type DocHit = {
+  readonly path: string;
+  readonly title: string;
+  /** Эпоха, если документ из эпохи. */
+  readonly epochId?: string;
+  /** Строка с 1. */
+  readonly line: number;
+  /** Строка с совпадением (до 240 символов). */
+  readonly snippet: string;
+};
+
+/** Все документы раздела с эпохой. */
+function allDocs(docs: DocsModel): { file: DocFile; epochId?: string }[] {
+  return [
+    ...docs.epochs.flatMap((e) => e.files.map((file) => ({ file, epochId: e.id }))),
+    ...docs.notes.map((file) => ({ file })),
+    ...docs.guides.map((file) => ({ file })),
+  ];
+}
+
+const SNIPPET_MAX = 240;
+
+/**
+ * Поиск подстроки по тексту всех документов: одно попадание на строку,
+ * совпадение в заголовке или пути — первым.
+ *
+ * @param docs - раздел docs
+ * @param query - подстрока без учёта регистра
+ * @param limit - предел попаданий
+ * @returns попадания
+ */
+export function searchDocs(docs: DocsModel, query: string, limit = 50): DocHit[] {
+  const q = query.trim().toLowerCase();
+  if (q === '') {
+    return [];
+  }
+  const titled: DocHit[] = [];
+  const inText: DocHit[] = [];
+  for (const { file, epochId } of allDocs(docs)) {
+    const base = { path: file.path, title: file.title, ...(epochId === undefined ? {} : { epochId }) };
+    if (`${file.title}\n${file.path}`.toLowerCase().includes(q)) {
+      titled.push({ ...base, line: 1, snippet: file.title });
+    }
+    file.text.split('\n').forEach((text, i) => {
+      if (text.toLowerCase().includes(q)) {
+        const t = text.trim();
+        inText.push({ ...base, line: i + 1, snippet: t.length > SNIPPET_MAX ? `${t.slice(0, SNIPPET_MAX - 1)}…` : t });
+      }
+    });
+  }
+  return [...titled, ...inText].slice(0, limit);
+}
+
+/** Сущность карты, на которую указывает ссылка из документа. */
+export type DocTarget =
+  | { readonly kind: 'route'; readonly routeId: string }
+  | { readonly kind: 'table'; readonly table: string }
+  | { readonly kind: 'screen'; readonly nodeId: string }
+  | { readonly kind: 'file'; readonly file: string; readonly line?: number };
+
+/** Индекс для разбора ссылок из документов. */
+export type DocRefIndex = {
+  readonly code?: CodeIndex;
+  /** Нормализованный путь экрана → id ноды. */
+  readonly screensByPath: ReadonlyMap<string, string>;
+  /** Файл экрана от корня кода → id ноды. */
+  readonly screensByFile: ReadonlyMap<string, string>;
+  /** Файлы проекта, известные карте (роуты, таблицы, символы, экраны). */
+  readonly knownFiles: ReadonlySet<string>;
+};
+
+const METHODS: readonly HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL'];
+
+/** Строка — HTTP-метод. */
+function isHttpMethod(s: string | undefined): s is HttpMethod {
+  return METHODS.some((m) => m === s);
+}
+
+/** Путь без query, `[id]`/`{id}`/`$id` → `:id`, без завершающего слеша. */
+export function normalizeRoutePath(p: string): string {
+  const clean = p.split(/[?#]/)[0] ?? p;
+  const n = clean
+    .replace(/\[\.{3}([^\]]+)\]/g, '*$1')
+    .replace(/\[([^\]]+)\]/g, ':$1')
+    .replace(/\{([^}]+)\}/g, ':$1')
+    .replace(/\/\$([\w]+)/g, '/:$1');
+  return n.length > 1 && n.endsWith('/') ? n.slice(0, -1) : n;
+}
+
+/** Путь без имён параметров: `/a/:id` → `/a/:`, чтобы `:id` и `:vacancyId` совпадали. */
+function pathShape(p: string): string {
+  return normalizeRoutePath(p).replace(/:[^/]+/g, ':');
+}
+
+/**
+ * Строит индекс разбора ссылок по карте.
+ *
+ * @param doc - карта
+ * @param code - индекс кода (если в карте есть code)
+ * @returns индекс
+ */
+export function buildDocRefIndex(doc: AppMapDocument, code?: CodeIndex): DocRefIndex {
+  const screensByPath = new Map<string, string>();
+  const screensByFile = new Map<string, string>();
+  for (const n of doc.nodes) {
+    if (n.kind === 'service' || n.pathPattern === undefined) {
+      continue;
+    }
+    if (!screensByPath.has(pathShape(n.pathPattern))) {
+      screensByPath.set(pathShape(n.pathPattern), n.id);
+    }
+    const file = n.source?.file;
+    const rel = file === undefined || code === undefined ? file : (codeFileOfNode(doc.project.root, code.code.root, file) ?? file);
+    if (rel !== undefined && !screensByFile.has(rel)) {
+      screensByFile.set(rel, n.id);
+    }
+  }
+  const knownFiles = new Set<string>(screensByFile.keys());
+  if (code !== undefined) {
+    code.code.routes.forEach((r) => knownFiles.add(r.location.file));
+    code.code.tables.forEach((t) => knownFiles.add(t.location.file));
+    code.code.symbols.forEach((s) => knownFiles.add(s.location.file));
+  }
+  return { ...(code === undefined ? {} : { code }), screensByPath, screensByFile, knownFiles };
+}
+
+/** Роут по методу и пути с точностью до имён параметров. */
+function routeByPath(code: CodeIndex | undefined, method: HttpMethod | undefined, p: string): string | undefined {
+  const shape = pathShape(p);
+  return code?.code.routes.find((r) => (method === undefined || r.method === method) && pathShape(r.path) === shape)?.id;
+}
+
+/**
+ * Сущность карты по тексту ссылки из документа (`код` или текст ссылки):
+ * «METHOD /path» → роут; «/path» → роут или экран; «файл[:строка]» → роут, экран или файл;
+ * имя таблицы → таблица.
+ *
+ * @param ref - текст ссылки
+ * @param index - индекс разбора
+ * @returns цель или undefined
+ */
+export function resolveDocRef(ref: string, index: DocRefIndex): DocTarget | undefined {
+  const text = ref.trim().replace(/^`|`$/g, '');
+  const m = /^([A-Z]+)\s+(\/\S*)$/.exec(text);
+  if (m?.[2] !== undefined && isHttpMethod(m[1])) {
+    const routeId = routeByPath(index.code, m[1], m[2]);
+    return routeId === undefined ? undefined : { kind: 'route', routeId };
+  }
+  if (text.startsWith('/') && !/\s/.test(text)) {
+    const routeId = routeByPath(index.code, undefined, text);
+    if (routeId !== undefined) {
+      return { kind: 'route', routeId };
+    }
+    const nodeId = index.screensByPath.get(pathShape(text));
+    return nodeId === undefined ? undefined : { kind: 'screen', nodeId };
+  }
+  const fm = /^([\w@./-]+\.[a-z]{1,5})(?::(\d+))?$/i.exec(text);
+  if (fm?.[1] !== undefined) {
+    return fileTarget(fm[1], fm[2] === undefined ? undefined : Number(fm[2]), index);
+  }
+  const table = index.code === undefined ? undefined : findTableByName(index.code, text);
+  return table === undefined ? undefined : { kind: 'table', table };
+}
+
+/** Таблица по точному имени в коде или в БД. */
+function findTableByName(code: CodeIndex, name: string): string | undefined {
+  if (!/^[A-Za-z_][\w]*$/.test(name)) {
+    return undefined;
+  }
+  return (code.tablesByExport.get(name) ?? code.code.tables.find((t) => t.name === name))?.exportName;
+}
+
+/** Файл: известный карте по полному пути или по хвосту пути. */
+function fileTarget(file: string, line: number | undefined, index: DocRefIndex): DocTarget | undefined {
+  const known = index.knownFiles.has(file) ? file : [...index.knownFiles].find((f) => f.endsWith(`/${file}`));
+  if (known === undefined) {
+    return undefined;
+  }
+  const nodeId = index.screensByFile.get(known);
+  if (nodeId !== undefined) {
+    return { kind: 'screen', nodeId };
+  }
+  const routes = index.code?.code.routes.filter((r) => r.location.file === known) ?? [];
+  const exact = line === undefined ? undefined : routes.find((r) => r.location.line === line || r.handler.location.line === line);
+  if (exact !== undefined || routes.length === 1) {
+    return { kind: 'route', routeId: (exact ?? routes[0])?.id ?? '' };
+  }
+  const table = index.code?.code.tables.find((t) => t.location.file === known && (line === undefined || t.location.line === line));
+  if (table !== undefined) {
+    return { kind: 'table', table: table.exportName };
+  }
+  return { kind: 'file', file: known, ...(line === undefined ? {} : { line }) };
+}

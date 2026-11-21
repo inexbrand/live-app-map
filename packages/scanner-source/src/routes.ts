@@ -8,6 +8,17 @@ import { commentsAt, commentsOf, describe } from './comments';
 import { collectDbCalls } from './db-calls';
 import { locationOf, resolvedSymbol, type SourceContext } from './source-context';
 import type { RoutePaths } from './route-factories';
+import { routeAccess } from './route-access';
+import { routeInput } from './route-input';
+
+/** Поле объекта только со значением: `{}` для undefined. */
+function optional<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
+  const out: Partial<Record<K, V>> = {};
+  if (value !== undefined) {
+    out[key] = value;
+  }
+  return out;
+}
 
 const METHODS: ReadonlyMap<string, HttpMethod> = new Map<string, HttpMethod>([
   ['get', 'GET'],
@@ -348,6 +359,8 @@ export function collectRoutes(ctx: SourceContext, sf: ts.SourceFile, paths: Rout
       ...(doc === undefined ? {} : { doc }),
       ...(rest.length === 0 ? {} : { comments: rest }),
       dbCalls: collectDbCalls(ctx, r.handler.body),
+      ...optional('input', routeInput(ctx, r.call, r.app.framework)),
+      ...optional('access', routeAccess(ctx, r.call, r.handler.body)),
     };
   });
 }
