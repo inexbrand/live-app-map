@@ -215,7 +215,8 @@ export function drawGraph(
     if (x < -100 || y < -40 || x > size.w + 100 || y > size.h + 40) {
       continue;
     }
-    const text = n.label.length > 34 ? `${n.label.slice(0, 33)}…` : n.label;
+    const max = labelsAll ? 26 : 34;
+    const text = n.label.length > max ? `${n.label.slice(0, max - 1)}…` : n.label;
     const w = ctx.measureText(text).width;
     const box = { x: x - w / 2 - 2, y: y - 1, w: w + 4, h: 16 };
     if (!placed.tryPlace(box)) {

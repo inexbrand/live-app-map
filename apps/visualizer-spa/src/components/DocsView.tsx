@@ -65,7 +65,7 @@ const READINESS: readonly { value: EpochReadiness | null; label: string }[] = [
   { value: null, label: 'Все' },
   { value: 'not-ready', label: 'Не готово' },
   { value: 'ready', label: 'Готово' },
-  { value: 'no-bugs-file', label: 'Нет 09-bugs' },
+  { value: 'no-bugs-file', label: 'Без 09-bugs' },
 ];
 
 /** Сколько открытых пунктов показать в шапке сразу. */

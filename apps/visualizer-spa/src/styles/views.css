@@ -304,7 +304,11 @@
   line-height: 16px;
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
-  word-break: break-all;
+}
+/* Файл — своей строкой, переносится по слешам, номер строки не отрывается. */
+.api-card__file {
+  display: block;
+  overflow-wrap: anywhere;
 }
 .api-card__doc {
   margin: 0;
@@ -408,6 +412,9 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px;
+}
+.docs-list .docs-list__filters .ui-chip {
+  padding: 4px 8px;
 }
 .docs-group {
   display: grid;
@@ -821,6 +828,9 @@
   position: sticky;
   top: 0;
   display: grid;
+  /* Колонка не растёт по ширине canvas (его атрибут width = ширина колонки). */
+  grid-template-columns: minmax(0, 1fr);
+  min-width: 0;
   gap: 12px;
   max-height: calc(100vh - 120px);
   overflow: auto;
@@ -1014,6 +1024,8 @@
 .doc-graph__canvas {
   display: block;
   width: 100%;
+  max-width: 100%;
+  min-width: 0;
   height: 100%;
   cursor: grab;
   touch-action: none;

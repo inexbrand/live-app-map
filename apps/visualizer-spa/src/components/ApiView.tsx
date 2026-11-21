@@ -86,7 +86,10 @@ function Card(props: { readonly card: RouteCard }) {
           <Method method={r.method} /> <span className="api-card__path">{r.path}</span>
         </h2>
         <p className="api-card__meta">
-          {card.service?.name ?? r.serviceId} · {r.framework} · {r.location.file}:{r.location.line}
+          {card.service?.name ?? r.serviceId} · {r.framework}
+          <span className="api-card__file">
+            {r.location.file}:{r.location.line}
+          </span>
         </p>
       </header>
       {card.summary === undefined ? (
