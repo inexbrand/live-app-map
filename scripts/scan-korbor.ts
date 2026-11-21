@@ -30,9 +30,11 @@ import {
   type LiveAppMapEdge,
 } from '../packages/schema/src/index';
 import { runScan } from '../packages/cli/src/index';
-import type { AppMapDocument, AppMapNode, AppMapPageState } from '../packages/schema/src/types';
+import type { AppMapDocument, AppMapNode, AppMapPageState, CodeModel } from '../packages/schema/src/types';
+import { attachKorborCode, type KorborSurfaceDoc } from './korbor-code';
 
-const KORBOR = path.resolve(import.meta.dir, '../../korbor');
+/** Репозиторий Korbor: `KORBOR_DIR` или соседний каталог основного checkout (../korbor). */
+const KORBOR = path.resolve(process.env['KORBOR_DIR'] ?? path.join(import.meta.dir, '../../korbor'));
 /** Канонический каталог артефактов scan (single-writer source of truth). */
 const OUT = path.resolve(import.meta.dir, '../maps');
 /**
@@ -205,7 +207,7 @@ function writeMapsAndSyncPublic(name: string, doc: AppMapDocument): void {
 
 async function main(): Promise<void> {
   if (!existsSync(KORBOR)) {
-    throw new Error(`Korbor not found at ${KORBOR}`);
+    throw new Error(`Korbor не найден: ${KORBOR}. Укажите KORBOR_DIR=<путь к репозиторию korbor>`);
   }
 
   const targets = [
@@ -233,6 +235,7 @@ async function main(): Promise<void> {
     },
   ];
 
+  const surfaceDocs: KorborSurfaceDoc[] = [];
   for (const t of targets) {
     console.log(`\n=== scan ${t.name} ===`);
     const result = await runScan({
@@ -265,11 +268,21 @@ async function main(): Promise<void> {
     if (t.name === 'korbor-site') {
       doc = enrichSite(doc, t.baseUrl);
     }
-    writeMapsAndSyncPublic(t.name, doc);
+    surfaceDocs.push({ id: t.name.replace('korbor-', ''), doc });
+  }
+
+  // Один скан исходников на все поверхности: сервисы, роуты, БД, экран → роут.
+  const withCode = attachKorborCode(KORBOR, surfaceDocs);
+  for (const s of surfaceDocs) {
+    const doc = withCode.docs.get(s.id);
+    if (doc === undefined) {
+      throw new Error(`нет карты с кодом для ${s.id}`);
+    }
+    writeMapsAndSyncPublic(`korbor-${s.id}`, doc);
   }
 
   // Unified live graph: prefix ids per surface; no god-root ownership.
-  writeKorborAllLiveMap();
+  writeKorborAllLiveMap(withCode.allCode);
   // Stale non-live dogfood zip
   const staleAppmap = path.join(OUT, 'korbor-miniapp.appmap');
   if (existsSync(staleAppmap)) {
@@ -283,7 +296,7 @@ async function main(): Promise<void> {
  * Корни продуктов остаются отдельными (miniapp:/, admin:/, site:/).
  * Cross-link edges только с label, без замены entry roots.
  */
-function writeKorborAllLiveMap(): void {
+function writeKorborAllLiveMap(code: CodeModel): void {
   const surfaces: Array<{
     id: string;
     title: string;
@@ -328,6 +341,14 @@ function writeKorborAllLiveMap(): void {
     const idMap = new Map<string, string>();
 
     for (const p of doc.pages) {
+      // Сервисы общие для всех поверхностей: одна нода без приставки.
+      if (p.metadata?.['kind'] === 'service') {
+        idMap.set(p.id, p.id);
+        if (!pages.some((x) => x.id === p.id)) {
+          pages.push(p);
+        }
+        continue;
+      }
       // hygiene: absolute url must stay on this surface host
       let url = p.url;
       if (url) {
@@ -409,6 +430,7 @@ function writeKorborAllLiveMap(): void {
     edges,
     groups,
     layout: { algorithm: 'dagre', direction: 'LR' },
+    code,
     extensions: {
       korbor: {
         surfaces: {

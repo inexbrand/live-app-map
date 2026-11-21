@@ -233,7 +233,7 @@ export function runDoctor(dir: string): DoctorReport {
 }
 
 export { formatDiagnostic, sortDiagnostics };
-export { runCodeScan, withSourceCode } from './code-scan';
+export { attachCode, runCodeScan, screenEntries, withSourceCode } from './code-scan';
 export type { CodeScanOptions, CodeScanResult } from './code-scan';
 export type { AppMapDocument };
 export { defineConfig, type LiveAppMapConfig } from './define-config';
