@@ -1396,3 +1396,27 @@ kbd,
 .react-flow__viewport { will-change: transform; }
 .react-flow__node { contain: layout style paint; }
 .react-flow__minimap { contain: strict; }
+
+/* Вид «База данных» */
+.db-view { position: absolute; inset: 0; display: grid; grid-template-columns: 300px 1fr; background: var(--background); color: var(--foreground); z-index: 1; }
+.db-view--empty { display: flex; align-items: center; justify-content: center; }
+.db-view__list { border-right: 1px solid var(--border); padding: 72px 12px 12px; overflow: auto; }
+.db-view__list ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.db-view__row { display: grid; width: 100%; text-align: left; gap: 2px; padding: 6px 8px; border-radius: 6px; background: none; border: 0; color: inherit; cursor: pointer; }
+.db-view__row:hover { background: var(--secondary); }
+.db-view__row--on { background: var(--secondary); outline: 1px solid var(--border); }
+.db-view__name { font-weight: 600; }
+.db-view__meta { font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.db-view__detail { overflow: auto; padding: 72px 24px 24px; }
+.db-view__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.db-view__head h2 { margin: 0; font-size: 22px; }
+.db-view__doc { max-width: 760px; color: var(--muted-foreground); }
+.db-view__section { margin-top: 20px; }
+.db-view__section h3 { font-size: 15px; margin: 0 0 8px; }
+.db-view__count { color: var(--muted-foreground); font-weight: 400; font-variant-numeric: tabular-nums; }
+.db-view__columns { border-collapse: collapse; width: 100%; font-size: 13px; }
+.db-view__columns th, .db-view__columns td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.db-view__columns th { color: var(--muted-foreground); font-weight: 500; }
+.db-view__link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.db-view__routes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.db-view__screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }

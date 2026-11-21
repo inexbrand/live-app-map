@@ -6,6 +6,7 @@ import {
   Eraser,
   FolderOpen,
   Search,
+  Database,
   Settings2,
   Layers,
 } from 'lucide-react';
@@ -17,6 +18,7 @@ import {
   type DogfoodActor,
 } from '../lib/dogfood-api';
 import { SessionProfilesPanel } from './SessionProfilesPanel';
+import { useViewStore } from '../store/view-store';
 import { ensureDogfoodSessions as mintMissingDogfood } from '../lib/ensure-dogfood-sessions';
 import { importMapFile } from '../lib/import-map';
 import { loadMapPresetIntoStore } from '../lib/load-map-preset';
@@ -91,6 +93,9 @@ export function MapToolbar(props: MapToolbarProps) {
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
   /** Выбранная карта в шапке (id каталога). */
   const [activeMapId, setActiveMapId] = useState('');
+  const appView = useViewStore((s) => s.view);
+  const setAppView = useViewStore((s) => s.setView);
+  const hasDb = useAppStore((s) => (s.document?.code?.tables.length ?? 0) > 0);
   const [dogfoodActors, setDogfoodActors] = useState<readonly DogfoodActor[]>(
     [],
   );
@@ -278,6 +283,18 @@ export function MapToolbar(props: MapToolbarProps) {
             </option>
           </Select>
         </label>
+
+        {hasDb ? (
+          <div className="toolbar__group" role="group" aria-label="Вид">
+            <Button type="button" size="sm" variant={appView === 'screens' ? 'primary' : 'outline'} aria-pressed={appView === 'screens'} onClick={() => setAppView('screens')}>
+              Экраны
+            </Button>
+            <Button type="button" size="sm" variant={appView === 'database' ? 'primary' : 'outline'} aria-pressed={appView === 'database'} onClick={() => setAppView('database')}>
+              <Database size={16} strokeWidth={1.75} />
+              База данных
+            </Button>
+          </div>
+        ) : null}
 
         <div className="toolbar__spacer" />
 

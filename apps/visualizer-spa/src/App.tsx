@@ -10,6 +10,8 @@ import { MapToolbar } from './components/MapToolbar';
 import { SnapshotOverlay } from './components/SnapshotOverlay';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
+import { DatabaseView } from './components/DatabaseView';
+import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
@@ -36,6 +38,7 @@ export function App() {
   const setMode = useAppStore((s) => s.setMode);
   const parseIssues = useAppStore((s) => s.parseIssues);
   useGatewayFrames();
+  const appView = useViewStore((s) => s.view);
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<readonly MapCatalogEntry[]>([]);
@@ -295,7 +298,8 @@ export function App() {
           </div>
         ) : (
           <div className="canvas-wrap">
-            <AppMapCanvas />
+            {/* «База данных» снимает холст целиком: живые iframe не держат память. */}
+            {appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : <AppMapCanvas />}
             <FeedbackPanel />
             <StateInjectPanel />
             <SnapshotOverlay />
