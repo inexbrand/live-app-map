@@ -8,6 +8,7 @@ import path from 'node:path';
 
 const serverPath = path.join(import.meta.dir, 'server.ts');
 const miniappMap = path.resolve(import.meta.dir, '../../../maps/korbor-miniapp.liveappmap.json');
+const allMap = path.resolve(import.meta.dir, '../../../maps/korbor-all.liveappmap.json');
 
 async function rpc(lines: readonly unknown[], lamDir: string): Promise<unknown[]> {
   const proc = Bun.spawn(['bun', 'run', serverPath], {
@@ -76,5 +77,51 @@ describe('mcp stdio server', () => {
     expect(fb.jsonPath).toContain('route_feed');
     expect(await Bun.file(fb.mdPath).text()).toBe('# fix\n');
     expect(out[3]).toMatchObject({ id: 4, result: { isError: true } });
+  });
+
+  test('база знаний по коду на карте korbor: сервисы, роуты, роут → таблицы и экраны, схема таблицы', async () => {
+    const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-'));
+    const call = (id: number, name: string, args: Record<string, unknown>) => ({
+      jsonrpc: '2.0',
+      id,
+      method: 'tools/call',
+      params: { name, arguments: { mapPath: allMap, ...args } },
+    });
+    const out = await rpc(
+      [
+        call(1, 'list_services', {}),
+        call(2, 'list_routes', { service: '@korbor/api', query: '/api/v1/recruiter/vacancies/:vacancyId/applications' }),
+        call(3, 'get_route', { route: 'post /api/v1/recruiter/vacancies/:vacancyId/applications' }),
+        call(4, 'get_table', { table: 'vacancies' }),
+        call(5, 'get_route', { route: 'GET /api/v1/нет-такого' }),
+        call(6, 'list_tables', { query: 'vacanc' }),
+      ],
+      lamDir,
+    );
+    const services = toolText(out[0]) as { services: Array<{ name: string; routes: number; tables: number }> };
+    const api = services.services.find((s) => s.name === '@korbor/api');
+    const db = services.services.find((s) => s.name === '@korbor/db');
+    expect(api?.routes).toBeGreaterThan(200);
+    expect(db?.tables).toBeGreaterThan(50);
+    const routes = toolText(out[1]) as { routes: Array<{ method: string; summary?: string }> };
+    expect(routes.routes.map((r) => r.method)).toEqual(['POST']);
+    expect(routes.routes[0]?.summary ?? '').not.toMatch(/^`POST/);
+    const route = toolText(out[2]) as { doc: string; writes: Array<{ dbName: string }>; screens: Array<{ nodeId: string }> };
+    expect(route.doc.length).toBeGreaterThan(0);
+    expect(route.writes.map((w) => w.dbName)).toContain('idempotency_keys');
+    expect(route.screens.map((s) => s.nodeId)).toContain('miniapp:route:/vacancies/[id]');
+    const table = toolText(out[3]) as {
+      columns: Array<{ name: string; primaryKey?: boolean }>;
+      references: Array<{ column: string; table: string }>;
+      referencedBy: Array<{ table: string }>;
+      readBy: string[];
+    };
+    expect(table.columns.find((c) => c.name === 'id')?.primaryKey).toBe(true);
+    expect(table.references).toContainEqual(expect.objectContaining({ column: 'employerId', table: 'users' }));
+    expect(table.referencedBy.map((r) => r.table)).toContain('applications');
+    expect(table.readBy.length).toBeGreaterThan(0);
+    expect(out[4]).toMatchObject({ id: 5, result: { isError: true } });
+    const tables = toolText(out[5]) as { tables: Array<{ name: string }> };
+    expect(tables.tables.map((t) => t.name)).toContain('vacancy_favorites');
   });
 });

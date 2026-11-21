@@ -12,6 +12,7 @@
     "test": "bun test"
   },
   "dependencies": {
+    "@live-app-map/graph": "workspace:*",
     "@live-app-map/schema": "workspace:*",
     "zod": "^3.24.2"
   },
