@@ -1030,21 +1030,17 @@ code,
 }
 
 /* React Flow monochrome */
+/* Размер мини-карты — только пропсами MiniMap (LamMiniMap): по нему React Flow считает масштаб SVG и перетаскивания. */
 .react-flow__minimap {
-  background: #0c0c0c !important;
-  border: 1px solid var(--border) !important;
-  border-radius: var(--radius) !important;
-  width: 140px !important;
-  height: 100px !important;
+  background: #0c0c0c;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
 }
+.react-flow__minimap-svg { display: block; cursor: crosshair; }
 
 .react-flow__minimap-mask {
-  fill: rgba(255, 255, 255, 0.08) !important;
-}
-
-.react-flow__minimap-node {
-  fill: #a3a3a3 !important;
-  stroke: none !important;
+  fill: rgba(255, 255, 255, 0.08);
 }
 
 .react-flow__controls {
@@ -1395,7 +1391,7 @@ kbd,
    нода изолирует раскладку и отрисовку — изменения внутри не трогают соседей. */
 .react-flow__viewport { will-change: transform; }
 .react-flow__node { contain: layout style paint; }
-.react-flow__minimap { contain: strict; }
+.react-flow__minimap { contain: layout paint; }
 
 /* Вид «База данных» */
 .db-view { position: absolute; inset: 0; display: grid; grid-template-columns: 300px 1fr; background: var(--background); color: var(--foreground); z-index: 1; }

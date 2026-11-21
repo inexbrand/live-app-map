@@ -5,7 +5,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   type Edge,
   type Node,
@@ -18,6 +17,8 @@ import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
 import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
 import { RevealSelected } from './RevealSelected';
+import { LamMiniMap } from './LamMiniMap';
+import { layoutBounds, minimapSize } from './minimap';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
@@ -142,6 +143,12 @@ export function AppMapCanvas() {
     };
   }, [document, searchQuery, iframeScale, nodeViewports, contentHeights, selectedPageId]);
 
+  const miniSize = useMemo(
+    () => minimapSize(layoutBounds(nodes.map((n) => ({ x: n.position.x, y: n.position.y, width: n.width ?? 0, height: n.height ?? 0 })))),
+    [nodes],
+  );
+  const groupOrder = useMemo(() => (document?.groups ?? []).map((g) => g.id), [document]);
+
   if (!document) {
     return null;
   }
@@ -226,7 +233,7 @@ export function AppMapCanvas() {
           size={1.25}
           color="#2a2a2a"
         />
-        <MiniMap pannable zoomable />
+        <LamMiniMap size={miniSize} groupOrder={groupOrder} selectedPageId={selectedPageId} />
         <Controls />
       </ReactFlow>
     </div>
