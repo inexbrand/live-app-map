@@ -62,6 +62,7 @@ export type {
   CodeSymbolKind,
   DbCall,
   DbColumn,
+  DbReference,
   DbOperation,
   DbTable,
   HttpMethod,

@@ -97,14 +97,35 @@ export type ApiRoute = CodeComments & {
   readonly dbCalls: readonly DbCall[];
 };
 
-/** Колонка таблицы. */
+/** Внешний ключ колонки: на какую таблицу и колонку ссылается. */
+export type DbReference = {
+  /** Имя таблицы в коде (exportName): переменная Drizzle или модель Prisma. */
+  readonly table: string;
+  /** Колонка цели (имя свойства в коде). */
+  readonly column: string;
+  /** Поведение при удалении цели: `cascade`, `restrict`, `Cascade` … как в схеме. */
+  readonly onDelete?: string;
+};
+
+/** Колонка таблицы. Флаги пишутся только со значением true. */
 export type DbColumn = {
   /** Имя свойства в коде. */
   readonly name: string;
   /** Имя колонки в БД, если отличается. */
   readonly sqlName?: string;
-  /** Тип: `text`, `integer`, `timestamp`, `String`, `Int?` … */
+  /** Тип: `text`, `integer`, `timestamp`, `String`, `Int` … (без признака NULL). */
   readonly type: string;
+  readonly primaryKey?: boolean;
+  /** NOT NULL: Drizzle `.notNull()`/`.primaryKey()`, Prisma — поле без `?`. */
+  readonly notNull?: boolean;
+  readonly unique?: boolean;
+  /** Значение по умолчанию текстом схемы: `'draft'`, `now()`, `autoincrement()`. */
+  readonly default?: string;
+  /** Допустимые значения: Drizzle `{ enum: [...] }`, Prisma `enum`. */
+  readonly enumValues?: readonly string[];
+  readonly references?: DbReference;
+  /** JSDoc или `///` колонки. */
+  readonly doc?: string;
 };
 
 /** Таблица (Drizzle) или модель (Prisma). */

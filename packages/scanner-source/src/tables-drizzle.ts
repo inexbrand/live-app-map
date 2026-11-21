@@ -4,52 +4,13 @@
 import ts from 'typescript';
 import type { DbColumn, DbTable } from '@live-app-map/schema';
 import { commentsOf } from './comments';
+import { columnDoc, columnOf, factoryName, orderFlags, tableLevelKeys } from './drizzle-columns';
 import { locationOf, type SourceContext } from './source-context';
 
 const TABLE_FACTORIES: ReadonlySet<string> = new Set(['pgTable', 'mysqlTable', 'sqliteTable', 'table']);
 
 /** Таблица без id и serviceId. */
 export type FoundTable = Omit<DbTable, 'id' | 'serviceId'>;
-
-/** Имя фабрики таблицы: `pgTable` или `table` из `schema.table`. */
-function factoryName(call: ts.CallExpression): string | undefined {
-  const c = call.expression;
-  if (ts.isIdentifier(c)) {
-    return c.text;
-  }
-  if (ts.isPropertyAccessExpression(c)) {
-    return c.name.text;
-  }
-  return undefined;
-}
-
-/**
- * Колонка: идём по цепочке `uuid('id').primaryKey().notNull()` до корневого вызова.
- *
- * @param name - имя свойства
- * @param init - выражение колонки
- * @returns колонка или undefined
- */
-function columnOf(name: string, init: ts.Expression): DbColumn | undefined {
-  let cur: ts.Expression = init;
-  while (ts.isCallExpression(cur) && ts.isPropertyAccessExpression(cur.expression)) {
-    const inner = cur.expression.expression;
-    if (!ts.isCallExpression(inner)) {
-      break;
-    }
-    cur = inner;
-  }
-  if (!ts.isCallExpression(cur)) {
-    return undefined;
-  }
-  const type = factoryName(cur);
-  if (type === undefined) {
-    return undefined;
-  }
-  const first = cur.arguments[0];
-  const sqlName = first !== undefined && ts.isStringLiteral(first) ? first.text : undefined;
-  return { name, ...(sqlName === undefined || sqlName === name ? {} : { sqlName }), type };
-}
 
 /** Объект колонок: второй аргумент-объект или стрелка, возвращающая объект. */
 function columnsObject(arg: ts.Expression | undefined): ts.ObjectLiteralExpression | undefined {
@@ -93,12 +54,21 @@ export function collectDrizzleTables(ctx: SourceContext, sf: ts.SourceFile): Fou
       if (cols === undefined) {
         continue;
       }
+      const keys = tableLevelKeys(init.arguments[2]);
       const columns: DbColumn[] = [];
       for (const prop of cols.properties) {
         if (ts.isPropertyAssignment(prop)) {
-          const col = columnOf(prop.name.getText(sf).replace(/^['"]|['"]$/g, ''), prop.initializer);
+          const name = prop.name.getText(sf).replace(/^['"]|['"]$/g, '');
+          const col = columnOf(ctx, name, prop.initializer, sf);
           if (col !== undefined) {
-            columns.push(col);
+            const { enumValues, ...rest } = col;
+            const doc = columnDoc(prop, sf);
+            columns.push({
+              ...rest,
+              ...orderFlags({ ...rest, ...(keys.get(name) ?? {}) }),
+              ...(enumValues === undefined ? {} : { enumValues }),
+              ...(doc === undefined ? {} : { doc }),
+            });
           }
         }
       }

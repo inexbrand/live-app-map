@@ -150,19 +150,46 @@ describe('scanSource: Hono и Express + Prisma', () => {
 });
 
 describe('scanSource: таблицы', () => {
-  test('Drizzle pgTable: имя в БД, колонки с типом и именем колонки, JSDoc', () => {
+  test('Drizzle pgTable: имя в БД, колонки с типом, ключом, NOT NULL, unique, default, JSDoc', () => {
     const t = code.tables.find((x) => x.exportName === 'users');
     expect(t?.orm).toBe('drizzle');
     expect(t?.name).toBe('users');
     expect(t?.doc).toBe('Пользователи сервиса. Одна строка — один аккаунт.');
     expect(t?.columns).toEqual([
-      { name: 'id', type: 'uuid' },
-      { name: 'email', type: 'text' },
-      { name: 'createdAt', sqlName: 'created_at', type: 'timestamp' },
+      { name: 'id', type: 'uuid', primaryKey: true, notNull: true },
+      { name: 'email', type: 'text', notNull: true, unique: true },
+      { name: 'createdAt', sqlName: 'created_at', type: 'timestamp', default: 'now()' },
     ]);
     const posts = code.tables.find((x) => x.exportName === 'posts');
     expect(posts?.name).toBe('blog_posts');
     expect(posts?.comments).toEqual(['Посты пользователей.']);
+  });
+
+  test('Drizzle: внешний ключ .references(), enum из константы, описание колонки', () => {
+    const posts = code.tables.find((x) => x.exportName === 'posts');
+    expect(posts?.columns.find((c) => c.name === 'authorId')).toEqual({
+      name: 'authorId',
+      sqlName: 'author_id',
+      type: 'uuid',
+      notNull: true,
+      doc: 'Автор поста.',
+      references: { table: 'users', column: 'id', onDelete: 'cascade' },
+    });
+    expect(posts?.columns.find((c) => c.name === 'status')).toEqual({
+      name: 'status',
+      type: 'text',
+      notNull: true,
+      default: "'draft'",
+      enumValues: ['draft', 'published'],
+    });
+  });
+
+  test('Drizzle: составной первичный ключ в третьем аргументе', () => {
+    const tags = code.tables.find((x) => x.exportName === 'postTags');
+    expect(tags?.columns.map((c) => [c.name, c.primaryKey === true, c.references?.table ?? null])).toEqual([
+      ['postId', true, 'posts'],
+      ['tag', true, null],
+    ]);
   });
 
   test('таблица без своего JSDoc берёт шапку файла, если таблица в файле одна', () => {
@@ -170,18 +197,29 @@ describe('scanSource: таблицы', () => {
     expect(t?.doc).toBe('Таблица `comments` — комментарии к постам.');
   });
 
-  test('Prisma model: @@map, @map, /// описание', () => {
+  test('Prisma model: @@map, @map, /// описание, @id, @default, enum и связь @relation', () => {
     const t = code.tables.find((x) => x.exportName === 'Order');
     expect(t?.orm).toBe('prisma');
     expect(t?.name).toBe('orders');
     expect(t?.doc).toBe('Заказ покупателя.');
     expect(t?.serviceId).toBe('service:@fx/db');
     expect(t?.columns).toEqual([
-      { name: 'id', type: 'Int' },
-      { name: 'total', type: 'Int' },
-      { name: 'note', type: 'String?' },
-      { name: 'userId', sqlName: 'user_id', type: 'String' },
+      { name: 'id', type: 'Int', primaryKey: true, notNull: true, default: 'autoincrement()' },
+      { name: 'total', type: 'Int', notNull: true },
+      { name: 'note', type: 'String' },
+      { name: 'status', type: 'OrderStatus', notNull: true, default: 'NEW', enumValues: ['NEW', 'PAID'] },
+      {
+        name: 'userId',
+        sqlName: 'user_id',
+        type: 'String',
+        notNull: true,
+        references: { table: 'Customer', column: 'id', onDelete: 'Cascade' },
+      },
     ]);
+    const customer = code.tables.find((x) => x.exportName === 'Customer');
+    // Поле-связь `orders Order[]` — не колонка.
+    expect(customer?.columns.map((c) => c.name)).toEqual(['id', 'email']);
+    expect(customer?.columns[1]?.doc).toBe('Почта для чеков.');
   });
 });
 
