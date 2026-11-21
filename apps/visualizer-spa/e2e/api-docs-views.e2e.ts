@@ -91,7 +91,7 @@ test.describe('вид «API» на korbor', () => {
     const rows = page.getByTestId('api-route-row');
     await page.locator('#api-search').fill('/api/v1/admin/vacancies');
     await page.getByTestId('api-method-GET').click();
-    await rows.filter({ hasText: /GET\s*\/api\/v1\/admin\/vacancies$/ }).first().click();
+    await page.locator('[data-route-id="api:@korbor/api GET /api/v1/admin/vacancies"]').click();
     const card = page.getByTestId('api-route-card');
     await expect(card.getByTestId('api-auto-doc')).toContainText('описание собрано из кода');
     await expect(card.getByTestId('api-auto-doc')).toContainText('Чтение «vacancies»');

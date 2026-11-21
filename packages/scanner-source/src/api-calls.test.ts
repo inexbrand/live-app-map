@@ -193,7 +193,16 @@ describe('scanSource: экраны → вызовы', () => {
   test('админка без компонентов в конфиге: экран находится по switch на раздел пути', () => {
     expect(screenCalls('admin:/users')).toEqual(['GET /api/admin/activity ← UsersPage', 'GET /api/admin/users ← UsersPage']);
     expect(screenCalls('admin:/users/[id]')).toEqual(['GET /api/admin/activity ← UsersPage', 'GET /api/admin/users ← UsersPage']);
-    expect(screenCalls('admin:/audit')).toEqual(['GET /api/admin/audit ← AuditPage']);
+    expect(screenCalls('admin:/audit')).toEqual(expect.arrayContaining(['GET /api/admin/audit ← AuditPage']));
+  });
+
+  test('fetch, внедрённый параметром (fetchWithAuth), и api.getRaw(путь) — вызовы API; api.getUser(id) — нет', () => {
+    expect(screenCalls('admin:/audit')).toEqual([
+      'GET /api/admin/audit ← AuditPage',
+      'GET /api/admin/audit/events ← AuditPage',
+      'GET /api/admin/audit/export ← AuditPage',
+      'POST /api/admin/audit/events/:id/ack ← AuditPage',
+    ]);
   });
 
   test('без entries экранов нет', () => {

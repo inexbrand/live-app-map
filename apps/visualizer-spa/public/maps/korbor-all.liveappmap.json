@@ -5,7 +5,7 @@
     "name": "Korbor (все поверхности)",
     "platform": "web",
     "generator": "scan-korbor+merge/0.2.0",
-    "generatedAt": "2026-11-21T17:07:14.048Z",
+    "generatedAt": "2026-11-21T17:13:27.115Z",
     "description": "Unified live graph: miniapp + admin + site (no god-root)"
   },
   "pages": [
@@ -3143,10 +3143,11 @@
       "id": "api:route:/broadcasts->service:@korbor/api:admin",
       "from": "admin:route:/broadcasts",
       "to": "service:@korbor/api",
-      "label": "API: 13",
+      "label": "API: 14",
       "kind": "api",
       "metadata": {
         "routeIds": [
+          "api:@korbor/api GET /api/v1/admin/reports/broadcast-media/file",
           "api:@korbor/api GET /api/v1/admin/reports/broadcasts",
           "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id",
           "api:@korbor/api GET /api/v1/admin/reports/templates",
@@ -3167,10 +3168,11 @@
       "id": "api:route:/broadcasts/[...rest]->service:@korbor/api:admin",
       "from": "admin:route:/broadcasts/[...rest]",
       "to": "service:@korbor/api",
-      "label": "API: 13",
+      "label": "API: 14",
       "kind": "api",
       "metadata": {
         "routeIds": [
+          "api:@korbor/api GET /api/v1/admin/reports/broadcast-media/file",
           "api:@korbor/api GET /api/v1/admin/reports/broadcasts",
           "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id",
           "api:@korbor/api GET /api/v1/admin/reports/templates",
@@ -3335,12 +3337,13 @@
       "id": "api:route:/deals->service:@korbor/api:admin",
       "from": "admin:route:/deals",
       "to": "service:@korbor/api",
-      "label": "API: 6",
+      "label": "API: 7",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/deals",
           "api:@korbor/api GET /api/v1/admin/deals/:dealId",
+          "api:@korbor/api GET /api/v1/admin/deals/export.csv",
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
           "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund/tranche2/mark-done",
           "api:@korbor/api POST /api/v1/admin/deals/:dealId/replacement/open",
@@ -3352,12 +3355,13 @@
       "id": "api:route:/deals/[dealId]->service:@korbor/api:admin",
       "from": "admin:route:/deals/[dealId]",
       "to": "service:@korbor/api",
-      "label": "API: 6",
+      "label": "API: 7",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/deals",
           "api:@korbor/api GET /api/v1/admin/deals/:dealId",
+          "api:@korbor/api GET /api/v1/admin/deals/export.csv",
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
           "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund/tranche2/mark-done",
           "api:@korbor/api POST /api/v1/admin/deals/:dealId/replacement/open",
@@ -3369,11 +3373,15 @@
       "id": "api:route:/disputes->service:@korbor/api:admin",
       "from": "admin:route:/disputes",
       "to": "service:@korbor/api",
-      "label": "API: 1",
+      "label": "API: 5",
       "kind": "api",
       "metadata": {
         "routeIds": [
-          "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+          "api:@korbor/api GET /api/v1/admin/disputes",
+          "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
+          "api:@korbor/api POST /api/v1/admin/disputes/:id/resolve",
+          "api:@korbor/api POST /api/v1/admin/disputes/:id/take",
+          "api:@korbor/api POST /api/v1/admin/disputes/bulk-take"
         ]
       }
     },
@@ -3381,11 +3389,15 @@
       "id": "api:route:/disputes/[disputeId]->service:@korbor/api:admin",
       "from": "admin:route:/disputes/[disputeId]",
       "to": "service:@korbor/api",
-      "label": "API: 1",
+      "label": "API: 5",
       "kind": "api",
       "metadata": {
         "routeIds": [
-          "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+          "api:@korbor/api GET /api/v1/admin/disputes",
+          "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
+          "api:@korbor/api POST /api/v1/admin/disputes/:id/resolve",
+          "api:@korbor/api POST /api/v1/admin/disputes/:id/take",
+          "api:@korbor/api POST /api/v1/admin/disputes/bulk-take"
         ]
       }
     },
@@ -3464,12 +3476,13 @@
       "id": "api:route:/ledger->service:@korbor/api:admin",
       "from": "admin:route:/ledger",
       "to": "service:@korbor/api",
-      "label": "API: 3",
+      "label": "API: 4",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/ledger",
           "api:@korbor/api GET /api/v1/admin/ledger/:id",
+          "api:@korbor/api GET /api/v1/admin/ledger/export.csv",
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
         ]
       }
@@ -3478,12 +3491,13 @@
       "id": "api:route:/ledger/[ledgerId]->service:@korbor/api:admin",
       "from": "admin:route:/ledger/[ledgerId]",
       "to": "service:@korbor/api",
-      "label": "API: 3",
+      "label": "API: 4",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/ledger",
           "api:@korbor/api GET /api/v1/admin/ledger/:id",
+          "api:@korbor/api GET /api/v1/admin/ledger/export.csv",
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
         ]
       }
@@ -3724,12 +3738,20 @@
       "id": "api:route:/recruiters->service:@korbor/api:admin",
       "from": "admin:route:/recruiters",
       "to": "service:@korbor/api",
-      "label": "API: 2",
+      "label": "API: 10",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/activity",
-          "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+          "api:@korbor/api GET /api/v1/admin/recruiters",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/attachments/sign",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/documents",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages",
+          "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/messages",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/uploads",
+          "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification"
         ]
       }
     },
@@ -3737,12 +3759,20 @@
       "id": "api:route:/recruiters/[userId]->service:@korbor/api:admin",
       "from": "admin:route:/recruiters/[userId]",
       "to": "service:@korbor/api",
-      "label": "API: 2",
+      "label": "API: 10",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/activity",
-          "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+          "api:@korbor/api GET /api/v1/admin/recruiters",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/attachments/sign",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/documents",
+          "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages",
+          "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/messages",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/uploads",
+          "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification"
         ]
       }
     },
@@ -3914,13 +3944,14 @@
       "id": "api:route:/vacancies->service:@korbor/api:admin",
       "from": "admin:route:/vacancies",
       "to": "service:@korbor/api",
-      "label": "API: 4",
+      "label": "API: 5",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
           "api:@korbor/api GET /api/v1/admin/vacancies",
           "api:@korbor/api GET /api/v1/admin/vacancies/:id",
+          "api:@korbor/api GET /api/v1/admin/vacancies/export.csv",
           "api:@korbor/api PATCH /api/v1/admin/vacancies/:id"
         ]
       }
@@ -3929,13 +3960,14 @@
       "id": "api:route:/vacancies/[vacancyId]->service:@korbor/api:admin",
       "from": "admin:route:/vacancies/[vacancyId]",
       "to": "service:@korbor/api",
-      "label": "API: 4",
+      "label": "API: 5",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
           "api:@korbor/api GET /api/v1/admin/vacancies",
           "api:@korbor/api GET /api/v1/admin/vacancies/:id",
+          "api:@korbor/api GET /api/v1/admin/vacancies/export.csv",
           "api:@korbor/api PATCH /api/v1/admin/vacancies/:id"
         ]
       }
@@ -3959,11 +3991,14 @@
       "id": "api:route:/verification-requests->service:@korbor/api:admin",
       "from": "admin:route:/verification-requests",
       "to": "service:@korbor/api",
-      "label": "API: 1",
+      "label": "API: 4",
       "kind": "api",
       "metadata": {
         "routeIds": [
-          "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+          "api:@korbor/api GET /api/v1/admin/recruiters",
+          "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
+          "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification",
+          "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification"
         ]
       }
     },
@@ -90348,6 +90383,19 @@
         "routeId": "api:@korbor/api GET /api/v1/admin/users"
       },
       {
+        "id": "call:apps/admin/src/pages/communications/broadcasts/ui/use-media-previews.ts:46 GET /api/v1/admin/reports/broadcast-media/file",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/reports/broadcast-media/file",
+        "client": "wrapper",
+        "via": "api.getRaw",
+        "location": {
+          "file": "apps/admin/src/pages/communications/broadcasts/ui/use-media-previews.ts",
+          "line": 46
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/reports/broadcast-media/file"
+      },
+      {
         "id": "call:apps/admin/src/pages/communications/chats/model/chats-store.ts:135 GET /api/v1/admin/chat/threads",
         "serviceId": "service:@korbor/admin",
         "method": "GET",
@@ -90530,6 +90578,67 @@
         "routeId": "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund/tranche2/mark-done"
       },
       {
+        "id": "call:apps/admin/src/pages/deals/ui/DealsList.tsx:170 GET /api/v1/admin/deals/export.csv",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/deals/export.csv",
+        "client": "wrapper",
+        "via": "api.getRaw",
+        "location": {
+          "file": "apps/admin/src/pages/deals/ui/DealsList.tsx",
+          "line": 170
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/deals/export.csv"
+      },
+      {
+        "id": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:187 GET /api/v1/admin/disputes",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/disputes",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/disputes/model/disputes-store.ts",
+          "line": 187
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/disputes"
+      },
+      {
+        "id": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:207 POST /api/v1/admin/disputes/:disputeId/take",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/disputes/:disputeId/take",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/disputes/model/disputes-store.ts",
+          "line": 207
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/disputes/:id/take"
+      },
+      {
+        "id": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:229 POST /api/v1/admin/disputes/:disputeId/resolve",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/disputes/:disputeId/resolve",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/disputes/model/disputes-store.ts",
+          "line": 229
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/disputes/:id/resolve"
+      },
+      {
+        "id": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:257 POST /api/v1/admin/disputes/bulk-take",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/disputes/bulk-take",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/disputes/model/disputes-store.ts",
+          "line": 257
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/disputes/bulk-take"
+      },
+      {
         "id": "call:apps/admin/src/pages/ledger/model/ledger-store.ts:50 GET /api/v1/admin/ledger",
         "serviceId": "service:@korbor/admin",
         "method": "GET",
@@ -90554,6 +90663,19 @@
           "line": 61
         },
         "routeId": "api:@korbor/api GET /api/v1/admin/ledger/:id"
+      },
+      {
+        "id": "call:apps/admin/src/pages/ledger/ui/LedgerJournal.tsx:135 GET /api/v1/admin/ledger/export.csv",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/ledger/export.csv",
+        "client": "wrapper",
+        "via": "api.getRaw",
+        "location": {
+          "file": "apps/admin/src/pages/ledger/ui/LedgerJournal.tsx",
+          "line": 135
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/ledger/export.csv"
       },
       {
         "id": "call:apps/admin/src/pages/legal/model/legal-store.ts:99 GET /api/v1/admin/legal/documents",
@@ -90957,6 +91079,114 @@
           "line": 149
         },
         "routeId": "api:@korbor/api PUT /api/v1/admin/config/:key"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:107 GET /api/v1/admin/recruiters",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/recruiters",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/queue-store.ts",
+          "line": 107
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/recruiters"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:151 POST /api/v1/admin/recruiters/:userId/verification",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/recruiters/:userId/verification",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/queue-store.ts",
+          "line": 151
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:199 POST /api/v1/admin/recruiters/bulk-verification",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/recruiters/bulk-verification",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/queue-store.ts",
+          "line": 199
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:226 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 226
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:227 GET /api/v1/admin/recruiters/:recruiterUserId/verification/documents",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/documents",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 227
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/documents"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:274 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 274
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:314 POST /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 314
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/messages"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:358 POST /api/v1/admin/recruiters/:recruiterUserId/verification/uploads",
+        "serviceId": "service:@korbor/admin",
+        "method": "POST",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/uploads",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 358
+        },
+        "routeId": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/uploads"
+      },
+      {
+        "id": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:393 GET /api/v1/admin/recruiters/:recruiterUserId/verification/attachments/sign",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/recruiters/:recruiterUserId/verification/attachments/sign",
+        "client": "fetch",
+        "location": {
+          "file": "apps/admin/src/pages/recruiters/model/verification-support-store.ts",
+          "line": 393
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/attachments/sign"
       },
       {
         "id": "call:apps/admin/src/pages/registries/ui/RegistryDetail.tsx:52 GET /api/v1/admin/registry/:name/:id",
@@ -91439,6 +91669,19 @@
         "routeId": "api:@korbor/api GET /api/v1/admin/vacancies/:id"
       },
       {
+        "id": "call:apps/admin/src/pages/vacancies/ui/VacanciesList.tsx:186 GET /api/v1/admin/vacancies/export.csv",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/vacancies/export.csv",
+        "client": "wrapper",
+        "via": "api.getRaw",
+        "location": {
+          "file": "apps/admin/src/pages/vacancies/ui/VacanciesList.tsx",
+          "line": 186
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/vacancies/export.csv"
+      },
+      {
         "id": "call:apps/admin/src/widgets/activity-feed/model/activity-store.ts:49 GET /api/v1/admin/activity",
         "serviceId": "service:@korbor/admin",
         "method": "GET",
@@ -91473,6 +91716,30 @@
         "location": {
           "file": "apps/api/src/infra/llm/openrouter-call-assistant.ts",
           "line": 36
+        }
+      },
+      {
+        "id": "call:apps/api/src/infra/llm/openrouter-catalog.ts:75 GET /models",
+        "serviceId": "service:@korbor/api",
+        "method": "GET",
+        "path": "/models",
+        "client": "wrapper",
+        "via": "readJson",
+        "location": {
+          "file": "apps/api/src/infra/llm/openrouter-catalog.ts",
+          "line": 75
+        }
+      },
+      {
+        "id": "call:apps/api/src/infra/llm/openrouter-catalog.ts:86 GET /endpoints/zdr",
+        "serviceId": "service:@korbor/api",
+        "method": "GET",
+        "path": "/endpoints/zdr",
+        "client": "wrapper",
+        "via": "readJson",
+        "location": {
+          "file": "apps/api/src/infra/llm/openrouter-catalog.ts",
+          "line": 86
         }
       },
       {
@@ -93202,6 +93469,18 @@
           "line": 53
         },
         "routeId": "api:@korbor/api GET /api/v1/me"
+      },
+      {
+        "id": "call:apps/site/src/instrumentation-node.ts:50 POST /api/v1/error-reports",
+        "serviceId": "service:@korbor/site",
+        "method": "POST",
+        "path": "/api/v1/error-reports",
+        "client": "fetch",
+        "location": {
+          "file": "apps/site/src/instrumentation-node.ts",
+          "line": 50
+        },
+        "routeId": "api:@korbor/api POST /api/v1/error-reports"
       },
       {
         "id": "call:packages/call-core/src/api.ts:89 POST /api/v1/calls/join",
@@ -95010,6 +95289,10 @@
           {
             "callId": "call:apps/admin/src/pages/communications/broadcasts/model/broadcasts-api.ts:60 GET /api/v1/admin/reports/broadcasts/:id",
             "via": "BroadcastsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/communications/broadcasts/ui/use-media-previews.ts:46 GET /api/v1/admin/reports/broadcast-media/file",
+            "via": "BroadcastsRoute"
           }
         ]
       },
@@ -95075,6 +95358,10 @@
           },
           {
             "callId": "call:apps/admin/src/pages/communications/broadcasts/model/broadcasts-api.ts:60 GET /api/v1/admin/reports/broadcasts/:id",
+            "via": "BroadcastsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/communications/broadcasts/ui/use-media-previews.ts:46 GET /api/v1/admin/reports/broadcast-media/file",
             "via": "BroadcastsRoute"
           }
         ]
@@ -95316,6 +95603,10 @@
             "via": "DealsRoute"
           },
           {
+            "callId": "call:apps/admin/src/pages/deals/ui/DealsList.tsx:170 GET /api/v1/admin/deals/export.csv",
+            "via": "DealsRoute"
+          },
+          {
             "callId": "call:apps/admin/src/pages/deals/model/deals-store.ts:62 GET /api/v1/admin/deals",
             "via": "DealsRoute"
           },
@@ -95343,6 +95634,10 @@
         "calls": [
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
+            "via": "DealsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/deals/ui/DealsList.tsx:170 GET /api/v1/admin/deals/export.csv",
             "via": "DealsRoute"
           },
           {
@@ -95374,6 +95669,22 @@
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
             "via": "SectionWithAnalytics"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:187 GET /api/v1/admin/disputes",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:207 POST /api/v1/admin/disputes/:disputeId/take",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:229 POST /api/v1/admin/disputes/:disputeId/resolve",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:257 POST /api/v1/admin/disputes/bulk-take",
+            "via": "DisputesPage"
           }
         ]
       },
@@ -95384,6 +95695,22 @@
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
             "via": "SectionWithAnalytics"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:187 GET /api/v1/admin/disputes",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:207 POST /api/v1/admin/disputes/:disputeId/take",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:229 POST /api/v1/admin/disputes/:disputeId/resolve",
+            "via": "DisputesPage"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/disputes/model/disputes-store.ts:257 POST /api/v1/admin/disputes/bulk-take",
+            "via": "DisputesPage"
           }
         ]
       },
@@ -95506,6 +95833,10 @@
             "via": "LedgerRoute"
           },
           {
+            "callId": "call:apps/admin/src/pages/ledger/ui/LedgerJournal.tsx:135 GET /api/v1/admin/ledger/export.csv",
+            "via": "LedgerRoute"
+          },
+          {
             "callId": "call:apps/admin/src/pages/ledger/model/ledger-store.ts:50 GET /api/v1/admin/ledger",
             "via": "LedgerRoute"
           },
@@ -95521,6 +95852,10 @@
         "calls": [
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
+            "via": "LedgerRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/ledger/ui/LedgerJournal.tsx:135 GET /api/v1/admin/ledger/export.csv",
             "via": "LedgerRoute"
           },
           {
@@ -95970,6 +96305,42 @@
             "via": "RecruitersRoute"
           },
           {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:107 GET /api/v1/admin/recruiters",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:151 POST /api/v1/admin/recruiters/:userId/verification",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:199 POST /api/v1/admin/recruiters/bulk-verification",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:226 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:227 GET /api/v1/admin/recruiters/:recruiterUserId/verification/documents",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:274 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:314 POST /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:358 POST /api/v1/admin/recruiters/:recruiterUserId/verification/uploads",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:393 GET /api/v1/admin/recruiters/:recruiterUserId/verification/attachments/sign",
+            "via": "RecruitersRoute"
+          },
+          {
             "callId": "call:apps/admin/src/widgets/activity-feed/model/activity-store.ts:49 GET /api/v1/admin/activity",
             "via": "RecruitersRoute"
           }
@@ -95981,6 +96352,42 @@
         "calls": [
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:107 GET /api/v1/admin/recruiters",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:151 POST /api/v1/admin/recruiters/:userId/verification",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:199 POST /api/v1/admin/recruiters/bulk-verification",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:226 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:227 GET /api/v1/admin/recruiters/:recruiterUserId/verification/documents",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:274 GET /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:314 POST /api/v1/admin/recruiters/:recruiterUserId/verification/messages",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:358 POST /api/v1/admin/recruiters/:recruiterUserId/verification/uploads",
+            "via": "RecruitersRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/verification-support-store.ts:393 GET /api/v1/admin/recruiters/:recruiterUserId/verification/attachments/sign",
             "via": "RecruitersRoute"
           },
           {
@@ -96302,6 +96709,10 @@
             "via": "VacanciesRoute"
           },
           {
+            "callId": "call:apps/admin/src/pages/vacancies/ui/VacanciesList.tsx:186 GET /api/v1/admin/vacancies/export.csv",
+            "via": "VacanciesRoute"
+          },
+          {
             "callId": "call:apps/admin/src/pages/vacancies/model/vacancies-store.ts:103 GET /api/v1/admin/vacancies",
             "via": "VacanciesRoute"
           },
@@ -96325,6 +96736,10 @@
         "calls": [
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
+            "via": "VacanciesRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/vacancies/ui/VacanciesList.tsx:186 GET /api/v1/admin/vacancies/export.csv",
             "via": "VacanciesRoute"
           },
           {
@@ -96373,6 +96788,18 @@
         "calls": [
           {
             "callId": "call:apps/admin/src/widgets/section-analytics/ui/SectionAnalytics.tsx:153 GET /api/v1/admin/registry/:name/stats",
+            "via": "VerificationRequestsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:107 GET /api/v1/admin/recruiters",
+            "via": "VerificationRequestsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:151 POST /api/v1/admin/recruiters/:userId/verification",
+            "via": "VerificationRequestsRoute"
+          },
+          {
+            "callId": "call:apps/admin/src/pages/recruiters/model/queue-store.ts:199 POST /api/v1/admin/recruiters/bulk-verification",
             "via": "VerificationRequestsRoute"
           }
         ]
