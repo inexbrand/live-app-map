@@ -1,8 +1,12 @@
 /**
  * Smoke e2e: chrome без «Карта приложения»/«Живой», селект карт, load → nodes.
- * Full HD viewport 1920×1080 на нодах.
+ * Экран показывает вьюпорт раскладки карты (390×844).
+ *
+ * Холст рисует только видимые ноды (onlyRenderVisibleElements), поэтому число
+ * экранов карты считаем по мини-карте — она рисует все.
  */
 import { expect, test } from '@playwright/test';
+import { minimapPages } from './minimap-pages';
 
 test.describe('visualizer smoke', () => {
   test('toolbar: no brand/live, map select works, FHD viewport', async ({
@@ -60,8 +64,8 @@ test.describe('visualizer smoke', () => {
 
     await expect(page.locator('.empty-state')).toHaveCount(0);
 
-    // Первая нода: chrome показывает map layout default (390×844 fixed)
-    const firstNode = page.locator('.react-flow__node').first();
+    // Первый экран (не рамка группы): chrome показывает map layout default (390×844 fixed)
+    const firstNode = page.locator('.react-flow__node-page').first();
     await firstNode.click();
     await expect(firstNode).toContainText(/390\s*[×x]\s*844/);
 
@@ -103,11 +107,14 @@ test.describe('visualizer smoke', () => {
     );
     const site = optionValues.find((v) => v.includes('site'));
     expect(site).toBeTruthy();
+    // Каталог пишет число экранов в подписи: «Сайт · 33 экр.»
+    const label = await mapSelect.locator(`option[value="${site!}"]`).textContent();
+    const catalogPages = Number(/(\d+)\s*экр/.exec(label ?? '')?.[1]);
+    expect(catalogPages, `подпись: ${label}`).toBeGreaterThan(10);
     await mapSelect.selectOption(site!);
     await expect
-      .poll(async () => page.locator('.react-flow__node').count(), {
-        timeout: 45_000,
-      })
-      .toBeGreaterThan(10);
+      .poll(async () => minimapPages(page), { timeout: 45_000 })
+      .toBe(catalogPages);
+    await expect(page.locator('.react-flow__node-page').first()).toBeVisible();
   });
 });

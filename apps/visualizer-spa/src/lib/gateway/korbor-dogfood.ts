@@ -34,7 +34,12 @@ export function isDogfoodValueStale(kind: 'user' | 'admin', value: string | unde
     const authDate = Number(new URLSearchParams(value).get('auth_date'));
     return !Number.isFinite(authDate) || authDate === 0 || now - authDate * 1000 > INIT_DATA_MAX_AGE_MS;
   }
-  const payload = value.split('.')[1];
+  return isJwtStale(value, now);
+}
+
+/** Истекает ли JWT (с запасом {@link EXPIRY_MARGIN_MS}); нечитаемый — устарел. */
+function isJwtStale(token: string, now: number): boolean {
+  const payload = token.split('.')[1];
   if (payload === undefined) {
     return true;
   }
@@ -97,6 +102,44 @@ export async function korborBearer(r: KorborRenewal, value: string): Promise<Bea
   });
   const token = res.ok ? accessTokenOf(await res.json().catch(() => null)) : '';
   return token !== '' ? { ok: true, token } : { ok: false, error: `вход мини-аппа не выдан (HTTP ${res.status})` };
+}
+
+/** Bearer по входу профиля. */
+export type BearerSource = (r: KorborRenewal, value: string) => Promise<BearerResult>;
+
+/**
+ * {@link korborBearer} с памятью: токен мини-аппа живёт до своего exp, и
+ * каждый запрос списков не меняет initData заново — иначе korbor отвечает 429
+ * на частые входы. Одновременные запросы ждут один обмен; отказ не запоминается.
+ *
+ * @param now - текущее время, мс
+ */
+export function createBearerCache(now: () => number = Date.now): BearerSource {
+  const tokens = new Map<string, Promise<BearerResult>>();
+  return async (r, value) => {
+    if (r.kind === 'admin') {
+      return korborBearer(r, value);
+    }
+    const key = `${r.apiBase}|${value}`;
+    const cached = tokens.get(key);
+    if (cached !== undefined) {
+      const hit = await cached;
+      if (hit.ok && !isJwtStale(hit.token, now())) {
+        return hit;
+      }
+      if (tokens.get(key) === cached) {
+        tokens.delete(key);
+      }
+    }
+    // Промис кладётся сразу — одновременные запросы ждут его; отказ убирается.
+    const pending = tokens.get(key) ?? korborBearer(r, value);
+    tokens.set(key, pending);
+    const result = await pending;
+    if (!result.ok && tokens.get(key) === pending) {
+      tokens.delete(key);
+    }
+    return result;
+  };
 }
 
 /** data.accessToken ответа входа или ''. */

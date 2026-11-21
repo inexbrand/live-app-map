@@ -10,15 +10,23 @@ import { parseMapCatalog } from './map-catalog';
 
 const publicMaps = path.resolve(import.meta.dir, '../../public/maps');
 
+/** Экраны файла карты: сервисы и внешние ссылки экранами не считаются. */
+function screensIn(id: string): number {
+  const doc = JSON.parse(readFileSync(path.join(publicMaps, `${id}.liveappmap.json`), 'utf8')) as { pages: Array<{ type?: string }> };
+  return doc.pages.filter((p) => p.type !== 'service' && p.type !== 'external').length;
+}
+
 describe('buildMapCatalog — public/maps', () => {
   test('все карты Korbor в каталоге, пресеты первыми, подписи и baseUrl из пресетов', () => {
     const catalog = buildMapCatalog(publicMaps);
     expect(catalog.skipped).toEqual([]);
+    // Пресеты Korbor первыми, за ними прочие карты папки (live-app-map — карта самого репо).
     expect(catalog.maps.map((m) => m.id)).toEqual([
       'korbor-all',
       'korbor-miniapp',
       'korbor-admin',
       'korbor-site',
+      'live-app-map',
     ]);
     const mini = catalog.maps[1];
     expect(mini).toEqual({
@@ -26,9 +34,13 @@ describe('buildMapCatalog — public/maps', () => {
       label: 'Мини-приложение',
       path: '/maps/korbor-miniapp.liveappmap.json',
       baseUrl: 'https://vite.localhost:5175',
-      pageCount: (JSON.parse(readFileSync(path.join(publicMaps, 'korbor-miniapp.liveappmap.json'), 'utf8')) as { pages: unknown[] }).pages.length,
+      pageCount: screensIn('korbor-miniapp'),
     });
     expect(mini?.pageCount).toBeGreaterThan(0);
+    // В карте сайта рядом с экранами лежат сервисы монорепо — подпись «N экр.» их не считает.
+    const site = catalog.maps.find((m) => m.id === 'korbor-site');
+    expect(site?.pageCount).toBe(screensIn('korbor-site'));
+    expect(site?.pageCount).toBeLessThan((JSON.parse(readFileSync(path.join(publicMaps, 'korbor-site.liveappmap.json'), 'utf8')) as { pages: unknown[] }).pages.length);
     // Каталог проходит разбор браузерной стороны
     expect(parseMapCatalog(JSON.parse(JSON.stringify(catalog))).ok).toBe(true);
   });

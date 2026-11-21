@@ -1023,6 +1023,23 @@ code,
   background: var(--secondary);
 }
 
+/* Шапка в одну строку: счётчик не переносится, а в узком окне вкладки вида — только иконки
+   (подпись остаётся доступным именем кнопки). Иначе шапка растёт в высоту и толкает панели на мини-карту и зум. */
+.toolbar > * { flex: none; }
+.toolbar > .toolbar__spacer { flex: 1; }
+.budget-pill { white-space: nowrap; }
+@media (max-width: 1279px) {
+  .toolbar__label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
 .budget-pill--inline {
   border: 0;
   background: transparent;

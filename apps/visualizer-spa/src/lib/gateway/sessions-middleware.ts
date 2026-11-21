@@ -5,7 +5,7 @@
 import { isLocalOrigin, readBody, requestPath, sendJson, type DevMiddleware } from '../dev-http';
 import { parseSetCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
-import { KORBOR_DOGFOOD_STORAGE, korborBearer, mintKorbor, type KorborRenewal } from './korbor-dogfood';
+import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type KorborRenewal } from './korbor-dogfood';
 import { fetchSampleIds } from './sample-ids';
 import { summarize, type SessionStore } from './session-store';
 
@@ -47,6 +47,7 @@ function originOf(o: Record<string, unknown>): string | null {
  * @param gatewayPort - порт шлюза (отдаётся клиенту)
  */
 export function createSessionsMiddleware(store: SessionStore, gatewayPort: number): DevMiddleware {
+  const korborBearer = createBearerCache();
   return (req, res, next) => {
     const p = requestPath(req);
     if (p !== SESSIONS_PATH && !p.startsWith(`${SESSIONS_PATH}/`)) {

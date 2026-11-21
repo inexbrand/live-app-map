@@ -44,7 +44,7 @@ export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps
       nodeColor={(n) => minimapFill(kindOf(n, selectedPageId), groupOrder)}
       nodeStrokeColor={(n) => (n.type === 'groupFrame' ? '#5c5c5c' : 'transparent')}
       nodeStrokeWidth={2}
-      nodeClassName={(n) => (n.type === 'groupFrame' ? 'lam-minimap-frame' : '')}
+      nodeClassName={(n) => `lam-minimap-${kindOf(n, selectedPageId).kind}`}
       nodeBorderRadius={2}
       maskStrokeColor="#e5e5e5"
       maskStrokeWidth={1}
