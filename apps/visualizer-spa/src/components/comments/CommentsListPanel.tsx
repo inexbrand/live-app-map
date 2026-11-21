@@ -28,6 +28,8 @@ export function goToComment(t: CommentThread): void {
   useViewStore.getState().setView('screens');
   useAppStore.getState().selectPage(t.anchor.pageId);
   useCommentsStore.getState().focus(t.id);
+  // Список уступает место ветке экрана; фильтр сохранён — ⇧C вернёт его
+  useCommentsStore.getState().setListOpen(false);
   const el = t.anchor.element;
   if (el === null || el.rect.width === 0) {
     return;
@@ -60,7 +62,7 @@ export function CommentsListPanel() {
   const now = new Date();
 
   return (
-    <aside className="drawer ui-panel drawer--edge comments-list" data-testid="comments-list" aria-label="Все замечания">
+    <aside className="drawer drawer--left ui-panel drawer--edge comments-list" data-testid="comments-list" aria-label="Все замечания">
       <div className="ui-panel__header">
         <div>
           <h2 className="ui-panel__title">Все замечания</h2>

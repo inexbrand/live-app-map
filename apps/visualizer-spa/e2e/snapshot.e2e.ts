@@ -3,51 +3,18 @@
  * Chromium запускается с --auto-accept-this-tab-capture (playwright.config),
  * диалог выбора вкладки принимается сам.
  */
-import { expect, test, type Page } from '@playwright/test';
-
-async function openMiniappAndSelectNode(page: Page): Promise<void> {
-  await page.goto('/');
-  await page.getByTestId('map-select').selectOption('korbor-miniapp');
-  await expect.poll(async () => page.locator('.react-flow__node').count()).toBeGreaterThan(5);
-  // Первая нода, целиком видимая под шапкой
-  const box = await page.locator('.react-flow__node').evaluateAll((els) => {
-    for (const el of els) {
-      const r = el.getBoundingClientRect();
-      if (r.x >= 0 && r.y >= 70 && r.right < window.innerWidth && r.y + 20 < window.innerHeight) {
-        return { x: r.x + Math.min(20, r.width / 2), y: r.y + 12 };
-      }
-    }
-    return null;
-  });
-  expect(box).not.toBeNull();
-  await page.mouse.click(box?.x ?? 0, box?.y ?? 0);
-  await expect(page.getByRole('button', { name: 'Снимок', exact: true })).toBeVisible();
-}
-
-async function dragRegion(page: Page): Promise<void> {
-  await expect(page.getByTestId('snapshot-overlay')).toBeVisible();
-  await page.mouse.move(420, 140);
-  await page.mouse.down();
-  await page.mouse.move(820, 440, { steps: 6 });
-  await page.mouse.up();
-}
-
-async function mcpCall(page: Page, name: string, args: Record<string, unknown>): Promise<Record<string, unknown>> {
-  const res = await page.request.post('/mcp', {
-    data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } },
-  });
-  expect(res.ok()).toBe(true);
-  const body = (await res.json()) as { result: { content: Array<{ text: string }> } };
-  return JSON.parse(body.result.content[0]?.text ?? '{}') as Record<string, unknown>;
-}
+import { expect, test } from '@playwright/test';
+import { dragRegion, mcpCall, openMiniappAndSelectNode } from './helpers';
 
 test.describe('snapshot', () => {
-  test('замечание: выделение области → PNG в панели', async ({ page }) => {
+  test('замечание к области: выделение → PNG в поле → сохранено в ветке экрана', async ({ page }) => {
     await openMiniappAndSelectNode(page);
-    await page.getByRole('button', { name: 'Снимок', exact: true }).click();
+    const panel = page.getByTestId('screen-comments');
+    await panel.getByRole('button', { name: 'Область' }).click();
     await dragRegion(page);
 
-    const shot = page.getByTestId('feedback-shot');
+    const composer = page.getByTestId('comment-composer');
+    const shot = composer.getByTestId('comment-shot');
     await expect(shot).toBeVisible();
     const size = await shot.evaluate((img) => {
       const el = img as HTMLImageElement;
@@ -55,10 +22,17 @@ test.describe('snapshot', () => {
     });
     const dpr = await page.evaluate(() => window.devicePixelRatio);
     expect(size).toEqual({ w: 400 * dpr, h: 300 * dpr, png: true });
-    await expect(page.locator('.toast')).toContainText('добавлен к замечанию');
+
+    const text = `e2e область ${Date.now()}`;
+    await composer.getByRole('textbox', { name: 'Что не так' }).fill(text);
+    await page.keyboard.press('Enter');
+    await expect(page.locator('.toast')).toContainText('Замечание сохранено');
+    const thread = panel.getByTestId('comment-thread').filter({ hasText: text });
+    await expect(thread).toBeVisible();
+    await expect(thread.locator('img')).toBeVisible();
 
     // Esc отменяет новую сессию до захвата
-    await page.getByRole('button', { name: 'Снимок', exact: true }).click();
+    await panel.getByRole('button', { name: 'Область' }).click();
     await expect(page.getByTestId('snapshot-overlay')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('snapshot-overlay')).toHaveCount(0);

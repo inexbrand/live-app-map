@@ -91,14 +91,19 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
       void submit();
       return;
     }
-    if (e.key === 'Escape') {
-      e.preventDefault();
-      e.stopPropagation();
-      if (voice.recording) {
-        voice.cancel();
-      } else {
-        close();
-      }
+  };
+
+  // Esc из любого места поля (текст, кнопки): запись — отменить, иначе закрыть
+  const onRootKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
+    if (e.key !== 'Escape') {
+      return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    if (voice.recording) {
+      voice.cancel();
+    } else {
+      close();
     }
   };
 
@@ -117,7 +122,7 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
   };
 
   return (
-    <div className="comment-composer ui-panel" role="dialog" aria-label="Новое замечание" data-testid="comment-composer" style={{ left: pos.left, top: pos.top, width: SIZE.width }}>
+    <div className="comment-composer ui-panel" role="dialog" aria-label="Новое замечание" data-testid="comment-composer" style={{ left: pos.left, top: pos.top, width: SIZE.width }} onKeyDown={onRootKeyDown}>
       <div className="comment-composer__head">
         <Target draft={draft} />
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Закрыть" onClick={close}>

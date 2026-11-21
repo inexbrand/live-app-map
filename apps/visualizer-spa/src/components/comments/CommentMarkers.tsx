@@ -29,6 +29,7 @@ export const CommentMarkers = memo(function CommentMarkers(props: { readonly nod
             type="button"
             className={`comment-marker comment-marker--${t.status}${t.id === focusId ? ' comment-marker--focus' : ''}`}
             data-testid="comment-marker"
+            data-comment-id={t.id}
             data-status={t.status}
             title={t.text}
             aria-label={`Замечание: ${t.text}`}

@@ -19,9 +19,11 @@ export function ScreenCommentsPanel() {
   const node = useAppStore((s) => (s.selectedPageId === null ? undefined : s.index?.nodesById.get(s.selectedPageId)));
   const threads = useCommentsStore((s) => s.threads);
   const focusId = useCommentsStore((s) => s.focusId);
+  const listOpen = useCommentsStore((s) => s.listOpen);
   const mine = useMemo(() => threads.filter((t) => t.anchor.pageId === selectedPageId), [threads, selectedPageId]);
 
-  if (selectedPageId === null || node === undefined) {
+  // Левую сторону занимает общий список, пока он открыт
+  if (selectedPageId === null || node === undefined || listOpen) {
     return null;
   }
   const open = mine.filter((t) => t.status === 'open').length;
