@@ -325,7 +325,7 @@ export function installPicker(): void {
   addEventListener('mousedown', swallow, true);
   addEventListener('pointerdown', swallow, true);
   addEventListener('mouseup', swallow, true);
-  addEventListener('keydown', (e) => {
+  addEventListener('keydown', (e: KeyboardEvent) => {
     if (on && e.key === 'Escape') {
       on = false;
       hide();

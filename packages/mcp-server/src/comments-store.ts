@@ -10,119 +10,30 @@
 import { randomUUID } from 'node:crypto';
 import { existsSync, mkdirSync, readdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { z } from 'zod';
 import { MAX_SNAPSHOT_BYTES } from './agent-state';
+import {
+  commentAnchorSchema,
+  commentEventSchema,
+  compareEvents,
+  foldThread,
+  type CommentAuthor,
+  type CommentEvent,
+  type CommentStatus,
+  type CommentThread,
+  type NewCommentEvent,
+  type CommentAnchor,
+} from './comments-schema';
 
-const rectSchema = z.object({
-  x: z.number(),
-  y: z.number(),
-  width: z.number().nonnegative(),
-  height: z.number().nonnegative(),
-});
-
-const sourceSchema = z.object({
-  file: z.string().min(1),
-  line: z.number().int().positive().nullable(),
-  /** Откуда известен исходник: карта кода или стек React (dev). */
-  origin: z.enum(['code-map', 'react-stack']),
-});
-
-const componentSchema = z.object({
-  /** Ближайший компонент React над элементом. */
-  name: z.string().min(1),
-  /** Компоненты от элемента вверх (до 8). */
-  chain: z.array(z.string()),
-  source: sourceSchema.nullable(),
-});
-
-/** Схема элемента, к которому привязано замечание. */
-export const commentElementSchema = z.object({
-  selector: z.string().min(1),
-  domPath: z.string(),
-  tag: z.string(),
-  /** Видимый текст элемента (до 120 символов). */
-  text: z.string(),
-  /** Рамка в координатах документа страницы, CSS px. */
-  rect: rectSchema,
-  /** Окно страницы при выборе. */
-  viewport: z.object({ width: z.number().positive(), height: z.number().positive() }),
-  component: componentSchema.nullable(),
-});
-
-/** Схема привязки: экран и (если выбран) элемент. */
-export const commentAnchorSchema = z.object({
-  mapName: z.string().nullable(),
-  pageId: z.string().min(1),
-  pageTitle: z.string(),
-  pageUrl: z.string().nullable(),
-  role: z.string().nullable(),
-  element: commentElementSchema.nullable(),
-});
-
-/** Привязка замечания. */
-export type CommentAnchor = z.infer<typeof commentAnchorSchema>;
-
-/** Кто пишет. */
-export const commentAuthorSchema = z.enum(['user', 'agent']);
-/** Автор события. */
-export type CommentAuthor = z.infer<typeof commentAuthorSchema>;
-
-/** Статус ветки. */
-export const commentStatusSchema = z.enum(['open', 'fixed']);
-/** Статус: открыто или исправлено. */
-export type CommentStatus = z.infer<typeof commentStatusSchema>;
-
-const createdSchema = z.object({
-  type: z.literal('created'),
-  at: z.string().min(1),
-  author: commentAuthorSchema,
-  text: z.string().min(1),
-  anchor: commentAnchorSchema,
-  /** Имя файла снимка в папке ветки или null. */
-  shot: z.string().nullable(),
-});
-
-const replySchema = z.object({
-  type: z.literal('reply'),
-  at: z.string().min(1),
-  author: commentAuthorSchema,
-  text: z.string().min(1),
-  /** Изменённые файлы (от корня репозитория). */
-  files: z.array(z.string()),
-  commit: z.string().nullable(),
-});
-
-const statusSchema = z.object({
-  type: z.literal('status'),
-  at: z.string().min(1),
-  author: commentAuthorSchema,
-  status: commentStatusSchema,
-  note: z.string().nullable(),
-});
-
-const eventSchema = z.discriminatedUnion('type', [createdSchema, replySchema, statusSchema]);
-
-/** Событие ветки. */
-export type CommentEvent = z.infer<typeof eventSchema>;
-
-/** Новое событие (время ставит хранилище). */
-export type NewCommentEvent =
-  | Omit<z.infer<typeof replySchema>, 'at'>
-  | Omit<z.infer<typeof statusSchema>, 'at'>;
-
-/** Ветка замечания — свёртка событий. */
-export type CommentThread = {
-  readonly id: string;
-  readonly author: CommentAuthor;
-  readonly text: string;
-  readonly anchor: CommentAnchor;
-  readonly shot: string | null;
-  readonly status: CommentStatus;
-  readonly createdAt: string;
-  readonly updatedAt: string;
-  /** Все события по времени, первое — created. */
-  readonly events: readonly CommentEvent[];
-};
+export {
+  commentAnchorSchema,
+  commentAuthorSchema,
+  commentElementSchema,
+  commentEventSchema,
+  commentStatusSchema,
+  commentThreadSchema,
+  foldThread,
+} from './comments-schema';
+export type { CommentAnchor, CommentAuthor, CommentEvent, CommentStatus, CommentThread, NewCommentEvent } from './comments-schema';
 
 /** Что нужно для нового замечания. */
 export type NewComment = {
@@ -187,7 +98,7 @@ function readEvents(dir: string): CommentEvent[] {
       continue;
     }
     try {
-      const parsed = eventSchema.safeParse(JSON.parse(readFileSync(path.join(dir, name), 'utf8')));
+      const parsed = commentEventSchema.safeParse(JSON.parse(readFileSync(path.join(dir, name), 'utf8')));
       if (parsed.success) {
         events.push(parsed.data);
       }
@@ -196,41 +107,7 @@ function readEvents(dir: string): CommentEvent[] {
     }
   }
   // Одно время у двух событий — порядок записи сохраняет created первым.
-  return events.sort((a, b) => a.at.localeCompare(b.at) || rank(a) - rank(b));
-}
-
-function rank(e: CommentEvent): number {
-  return e.type === 'created' ? 0 : 1;
-}
-
-/**
- * Свёртка событий в ветку; null — нет события created.
- *
- * @param id - id ветки
- * @param events - события по времени
- */
-export function foldThread(id: string, events: readonly CommentEvent[]): CommentThread | null {
-  const created = events.find((e) => e.type === 'created');
-  if (created === undefined || created.type !== 'created') {
-    return null;
-  }
-  let status: CommentStatus = created.author === 'agent' ? 'fixed' : 'open';
-  for (const e of events) {
-    if (e.type === 'status') {
-      status = e.status;
-    }
-  }
-  return {
-    id,
-    author: created.author,
-    text: created.text,
-    anchor: created.anchor,
-    shot: created.shot,
-    status,
-    createdAt: created.at,
-    updatedAt: events[events.length - 1]?.at ?? created.at,
-    events,
-  };
+  return events.sort(compareEvents);
 }
 
 function saveShot(dir: string, dataUrl: string): string {
@@ -266,7 +143,7 @@ export function createComment(lamDir: string, input: NewComment, now: Date = new
   const anchor = commentAnchorSchema.parse(input.anchor);
   mkdirSync(dir, { recursive: true });
   const shot = input.shotDataUrl === null ? null : saveShot(dir, input.shotDataUrl);
-  const event: CommentEvent = { type: 'created', at: now.toISOString(), author: input.author, text, anchor, shot };
+  const event: CommentEvent = { type: 'created', seq: 0, at: now.toISOString(), author: input.author, text, anchor, shot };
   writeOnce(eventFile(dir, event), event);
   const thread = foldThread(input.id, [event]);
   if (thread === null) {
@@ -296,7 +173,8 @@ export function addCommentEvent(
   if (foldThread(id, events) === null) {
     throw new Error(`замечание ${id} не найдено`);
   }
-  const event = eventSchema.parse({ ...input, ...(input.type === 'reply' ? { text: input.text.trim() } : {}), at: now.toISOString() });
+  const seq = Math.max(...events.map((e) => e.seq)) + 1;
+  const event = commentEventSchema.parse({ ...input, ...(input.type === 'reply' ? { text: input.text.trim() } : {}), seq, at: now.toISOString() });
   writeOnce(eventFile(dir, event), event);
   const thread = foldThread(id, [...events, event]);
   if (thread === null) {

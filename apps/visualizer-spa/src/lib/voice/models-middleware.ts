@@ -94,7 +94,8 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
   const disk = createWriteStream(part);
   res.statusCode = 200;
   res.setHeader('content-type', contentType(file));
-  const len = up.headers.get('content-length');
+  // fetch уже распаковал gzip: длина сжатого тела клиенту не подходит
+  const len = up.headers.get('content-encoding') === null ? up.headers.get('content-length') : null;
   if (len !== null) {
     res.setHeader('content-length', len);
   }
@@ -103,7 +104,12 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
     // Последний кусок уходит клиенту только после переноса файла на место:
     // получив ответ целиком, клиент уже найдёт модель на диске.
     let held: Uint8Array | null = null;
-    for await (const chunk of up.body) {
+    const reader = up.body.getReader();
+    for (;;) {
+      const { done, value: chunk } = await reader.read();
+      if (done) {
+        break;
+      }
       disk.write(chunk);
       if (held !== null) {
         res.write(held);
