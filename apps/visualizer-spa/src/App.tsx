@@ -16,6 +16,7 @@ import { DocsView } from './components/DocsView';
 import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { useRouteSamples } from './lib/use-route-samples';
+import { useNavHistory } from './lib/use-nav-history';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
 import { loadMapPresetIntoStore } from './lib/load-map-preset';
@@ -42,6 +43,7 @@ export function App() {
   const parseIssues = useAppStore((s) => s.parseIssues);
   useGatewayFrames();
   useRouteSamples();
+  useNavHistory();
   const appView = useViewStore((s) => s.view);
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);

@@ -116,5 +116,7 @@ describe('вид «Документация»', () => {
     expect(resolveDocAsset('docs/epoch/a#1/08-verify-report.md', 'screens/x.png')).toBe('docs/epoch/a#1/screens/x.png');
     expect(resolveDocAsset('docs/epoch/a#1/proofs/r.md', '../screens/a%20b.png')).toBe('docs/epoch/a#1/screens/a b.png');
     expect(resolveDocAsset('docs/x.md', 'https://e.com/a.png')).toBeNull();
+    // Битый %-код (`100%` в тексте ссылки) не роняет разбор.
+    expect(resolveDocAsset('docs/x.md', 'p95-100%.md')).toBe('docs/p95-100%.md');
   });
 });
