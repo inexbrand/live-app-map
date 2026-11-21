@@ -67,6 +67,14 @@ const apiCallSchema = z
   })
   .strict();
 
+const routeResponseSchema = z
+  .object({
+    fields: z.array(z.string()).optional(),
+    values: z.array(z.string()).optional(),
+    statuses: z.array(z.number().int()).optional(),
+  })
+  .strict();
+
 const screenApiSchema = z
   .object({
     nodeId: z.string().min(1).optional(),
@@ -110,6 +118,7 @@ export const codeModelSchema = z
           dbCalls: z.array(dbCallSchema),
           input: routeInputSchema.optional(),
           access: routeAccessSchema.optional(),
+          response: routeResponseSchema.optional(),
           ...commentFields,
         })
         .strict(),

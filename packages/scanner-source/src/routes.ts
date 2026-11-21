@@ -10,6 +10,7 @@ import { locationOf, resolvedSymbol, type SourceContext } from './source-context
 import type { RoutePaths } from './route-factories';
 import { routeAccess } from './route-access';
 import { routeInput } from './route-input';
+import { routeResponse } from './route-response';
 
 /** Поле объекта только со значением: `{}` для undefined. */
 function optional<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
@@ -361,6 +362,7 @@ export function collectRoutes(ctx: SourceContext, sf: ts.SourceFile, paths: Rout
       dbCalls: collectDbCalls(ctx, r.handler.body),
       ...optional('input', routeInput(ctx, r.call, r.app.framework)),
       ...optional('access', routeAccess(ctx, r.call, r.handler.body)),
+      ...optional('response', routeResponse(r.handler.body)),
     };
   });
 }

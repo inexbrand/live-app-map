@@ -99,7 +99,7 @@ describe('scanSource: Elysia', () => {
   test('именованный обработчик: описание из его JSDoc', () => {
     const r = route('POST', '/users');
     expect(r.handler.name).toBe('createUser');
-    expect(r.handler.location.line).toBe(36);
+    expect(r.handler.location.line).toBe(43);
     expect(r.doc).toBe('Создаёт пользователя.');
     expect(dbOf(r)).toEqual(['insert users']);
   });

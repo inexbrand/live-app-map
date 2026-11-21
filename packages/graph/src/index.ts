@@ -3,6 +3,7 @@
  */
 export * from './code-query';
 export * from './api-query';
+export * from './route-auto-doc';
 export * from './docs-query';
 import type {
   AppMapDocument,

@@ -21,7 +21,14 @@ export const usersPlugin = new Elysia({ prefix: '/api' })
     return { rows, all };
   })
   /** Карточка пользователя по id. */
-  .get('/users/:id', ({ params }) => findUserById(params.id))
+  .get('/users/:id', async ({ params, set }) => {
+    const user = await findUserById(params.id);
+    if (user === undefined) {
+      set.status = 404;
+      return { error: 'not_found' };
+    }
+    return user;
+  })
   .group('/admin', (app) =>
     app.delete('/users/:id', async ({ params }) => {
       await purgePosts(params.id);
