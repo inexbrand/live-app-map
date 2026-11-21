@@ -1,7 +1,10 @@
 /**
- * Адреса шлюза: `<профиль>--<цель>.localhost:<порт>`. Каждая пара
- * «профиль сессии × приложение» — свой origin: куки, localStorage и
- * sessionStorage разных ролей не смешиваются.
+ * Адреса шлюза: `<профиль>--<цель>[--<ячейка>].localhost:<порт>`. Каждая
+ * пара «профиль сессии × приложение» — свой origin: куки и хранилища разных
+ * ролей не смешиваются. Ячейка (короткий хэш id ноды) даёт каждой ноде
+ * собственный origin: sessionStorage общий у всех iframe вкладки с одним
+ * origin, и приложение в одном iframe иначе уводит соседние (цель перехода
+ * после входа, последняя вкладка).
  *
  * Цель кодируется так: `h16002` — http://localhost:16002, `s5175-vite` —
  * https://vite.localhost:5175, `h16000-ip` — http://127.0.0.1:16000.
@@ -21,6 +24,21 @@ export type GatewayTarget = {
 };
 
 const PROFILE_RE = /^[a-z0-9][a-z0-9-]{0,30}$/;
+const CELL_RE = /^[a-z0-9]{1,12}$/;
+const LABEL_RE = /^([hs])(\d{1,5})(?:-([a-z0-9-]+))?$/;
+
+/**
+ * Ячейка ноды: короткий стабильный хэш её id (FNV-1a, base36).
+ *
+ * @param nodeId - id ноды карты
+ */
+export function cellOf(nodeId: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < nodeId.length; i++) {
+    h = Math.imul(h ^ nodeId.charCodeAt(i), 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
 
 /**
  * Профиль годится для имени хоста: строчные латинские буквы, цифры, дефис.
@@ -60,7 +78,7 @@ export function targetLabel(url: URL): string | null {
  * @param profile - id профиля сессии
  * @param gatewayPort - порт шлюза
  */
-export function toGatewayUrl(appUrl: string, profile: string, gatewayPort: number): string | null {
+export function toGatewayUrl(appUrl: string, profile: string, gatewayPort: number, cell?: string): string | null {
   let u: URL;
   try {
     u = new URL(appUrl);
@@ -68,10 +86,11 @@ export function toGatewayUrl(appUrl: string, profile: string, gatewayPort: numbe
     return null;
   }
   const label = targetLabel(u);
-  if (label === null || !isValidProfileId(profile)) {
+  if (label === null || !isValidProfileId(profile) || (cell !== undefined && !CELL_RE.test(cell))) {
     return null;
   }
-  return `http://${profile}--${label}.localhost:${gatewayPort}${u.pathname}${u.search}${u.hash}`;
+  const suffix = cell === undefined ? '' : `--${cell}`;
+  return `http://${profile}--${label}${suffix}.localhost:${gatewayPort}${u.pathname}${u.search}${u.hash}`;
 }
 
 /**
@@ -81,19 +100,20 @@ export function toGatewayUrl(appUrl: string, profile: string, gatewayPort: numbe
  * @returns цель или null
  */
 export function parseGatewayHost(host: string): GatewayTarget | null {
-  const m = /^([a-z0-9-]+?)--([hs])(\d{1,5})(?:-([a-z0-9-]+))?\.localhost(?::\d+)?$/.exec(host.toLowerCase());
-  if (m === null || m[1] === undefined || m[2] === undefined || m[3] === undefined) {
+  const name = /^([a-z0-9-]+)\.localhost(?::\d+)?$/.exec(host.toLowerCase())?.[1];
+  const [profile, label, cell, ...extra] = name === undefined ? [] : name.split('--');
+  if (profile === undefined || label === undefined || extra.length > 0 || !isValidProfileId(profile) || (cell !== undefined && !CELL_RE.test(cell))) {
     return null;
   }
-  const profile = m[1];
-  if (!isValidProfileId(profile)) {
+  const m = LABEL_RE.exec(label);
+  if (m === null || m[1] === undefined || m[2] === undefined) {
     return null;
   }
-  const port = Number(m[3]);
+  const port = Number(m[2]);
   if (port < 1 || port > 65535) {
     return null;
   }
-  const protocol = m[2] === 's' ? 'https:' : 'http:';
-  const hostname = m[4] === undefined ? 'localhost' : m[4] === 'ip' ? '127.0.0.1' : `${m[4]}.localhost`;
+  const protocol = m[1] === 's' ? 'https:' : 'http:';
+  const hostname = m[3] === undefined ? 'localhost' : m[3] === 'ip' ? '127.0.0.1' : `${m[3]}.localhost`;
   return { profile, origin: `${protocol}//${hostname}:${port}`, protocol, hostname, port };
 }

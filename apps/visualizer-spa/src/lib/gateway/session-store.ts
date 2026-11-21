@@ -7,6 +7,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { mergeSetCookies, type StoredCookie } from './cookie-jar';
+import { isDogfoodValueStale, KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal } from './korbor-dogfood';
 import { isValidProfileId } from './gateway-host';
 
 /** Переменная окружения с папкой профилей. */
@@ -22,6 +23,8 @@ export type SessionProfile = {
   readonly cookies: Readonly<Record<string, readonly StoredCookie[]>>;
   /** origin → значения sessionStorage, которые шлюз ставит до загрузки приложения. */
   readonly storage: Readonly<Record<string, Readonly<Record<string, string>>>>;
+  /** origin → как обновить dev-вход, когда он устареет. */
+  readonly renewals?: Readonly<Record<string, KorborRenewal>>;
   readonly updatedAt: string;
 };
 
@@ -67,6 +70,7 @@ export function summarize(p: SessionProfile): ProfileSummary {
 /** Хранилище профилей в файле. */
 export class SessionStore {
   private profiles = new Map<string, SessionProfile>();
+  private readonly renewing = new Map<string, Promise<string | null>>();
   private readonly file: string;
 
   /**
@@ -101,6 +105,7 @@ export class SessionStore {
     readonly origin?: string;
     readonly cookies?: readonly StoredCookie[];
     readonly storage?: Readonly<Record<string, string>>;
+    readonly renewal?: KorborRenewal;
   }): SessionProfile {
     if (!isValidProfileId(input.id)) {
       throw new Error('id профиля: строчные латинские буквы, цифры и дефис, например recruiter');
@@ -111,7 +116,11 @@ export class SessionStore {
     const prev = this.profiles.get(input.id);
     const cookies = { ...(prev?.cookies ?? {}) };
     const storage = { ...(prev?.storage ?? {}) };
+    const renewals = { ...(prev?.renewals ?? {}) };
     if (input.origin !== undefined) {
+      if (input.renewal !== undefined) {
+        renewals[input.origin] = input.renewal;
+      }
       if (input.cookies !== undefined) {
         cookies[input.origin] = input.cookies;
       }
@@ -125,6 +134,7 @@ export class SessionStore {
       ...(input.role === undefined || input.role.trim() === '' ? {} : { role: input.role.trim() }),
       cookies,
       storage,
+      ...(Object.keys(renewals).length === 0 ? {} : { renewals }),
       updatedAt: new Date().toISOString(),
     };
     this.profiles.set(next.id, next);
@@ -147,6 +157,43 @@ export class SessionStore {
     const jar = mergeSetCookies(prev.cookies[origin] ?? [], setCookies, Date.now());
     this.profiles.set(id, { ...prev, cookies: { ...prev.cookies, [origin]: jar }, updatedAt: new Date().toISOString() });
     this.save();
+  }
+
+  /**
+   * Обновляет dev-вход профиля для origin, если он устарел. Параллельные
+   * загрузки iframe ждут одно обновление.
+   *
+   * @param id - профиль
+   * @param origin - origin приложения
+   * @returns ошибка обновления или null
+   */
+  ensureFresh(id: string, origin: string): Promise<string | null> {
+    const key = `${id}|${origin}`;
+    const running = this.renewing.get(key);
+    if (running !== undefined) {
+      return running;
+    }
+    const p = this.renew(id, origin).finally(() => this.renewing.delete(key));
+    this.renewing.set(key, p);
+    return p;
+  }
+
+  private async renew(id: string, origin: string): Promise<string | null> {
+    const profile = this.profiles.get(id);
+    const renewal = profile?.renewals?.[origin];
+    if (profile === undefined || renewal === undefined) {
+      return null;
+    }
+    const storageKey = KORBOR_DOGFOOD_STORAGE[renewal.kind];
+    if (!isDogfoodValueStale(renewal.kind, profile.storage[origin]?.[storageKey], Date.now())) {
+      return null;
+    }
+    const minted = await mintKorbor(renewal).catch((err: unknown) => ({ ok: false as const, error: err instanceof Error ? err.message : String(err) }));
+    if (!minted.ok) {
+      return minted.error;
+    }
+    this.upsert({ id, label: profile.label, ...(profile.role === undefined ? {} : { role: profile.role }), origin, storage: { [storageKey]: minted.value } });
+    return null;
   }
 
   /** Удаляет профиль. */

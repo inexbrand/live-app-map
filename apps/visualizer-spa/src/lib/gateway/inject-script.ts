@@ -9,8 +9,11 @@
 export type LamPageMessage = {
   readonly lam: 'page';
   readonly href: string;
-  /** Полная высота документа и видимая высота окна iframe, px. */
-  readonly scrollHeight: number;
+  /**
+   * Высота контента (коробки html/body, а не scrollHeight — тот не меньше
+   * окна iframe) и высота окна iframe, px.
+   */
+  readonly contentHeight: number;
   readonly viewportHeight: number;
   /** Ответов API 401/403 с загрузки страницы. */
   readonly authFailures: number;
@@ -33,8 +36,8 @@ export function isLamPageMessage(data: unknown): data is LamPageMessage {
     data !== null &&
     'lam' in data &&
     data.lam === 'page' &&
-    'scrollHeight' in data &&
-    typeof data.scrollHeight === 'number' &&
+    'contentHeight' in data &&
+    typeof data.contentHeight === 'number' &&
     'viewportHeight' in data &&
     typeof data.viewportHeight === 'number'
   );
@@ -53,7 +56,7 @@ export function injectScript(storage: Readonly<Record<string, string>>, profile:
   return `<script data-lam-gateway>(function(){
 var S=${json(storage)};try{for(var k in S){sessionStorage.setItem(k,S[k]);}}catch(e){}
 var P=${json(profile)},H=${hasSession ? 'true' : 'false'},fails=0,last;
-function post(){try{var d=document.documentElement;parent.postMessage({lam:'page',href:location.href,scrollHeight:Math.max(d.scrollHeight,document.body?document.body.scrollHeight:0),viewportHeight:innerHeight,authFailures:fails,lastAuthFailure:last,profile:P,hasSession:H},'*');}catch(e){}}
+function post(){try{var d=document.documentElement;parent.postMessage({lam:'page',href:location.href,contentHeight:Math.ceil(Math.max(d.offsetHeight,document.body?document.body.scrollHeight:0,document.body?document.body.offsetHeight:0)),viewportHeight:innerHeight,authFailures:fails,lastAuthFailure:last,profile:P,hasSession:H},'*');}catch(e){}}
 var t;function soon(){clearTimeout(t);t=setTimeout(post,120);}
 function note(s,u){if(s===401||s===403){fails++;last=s+' '+String(u).replace(location.origin,'').slice(0,120);soon();}}
 var f=window.fetch;if(f){window.fetch=function(i,o){return f.apply(this,arguments).then(function(r){note(r.status,r.url);return r;});};}

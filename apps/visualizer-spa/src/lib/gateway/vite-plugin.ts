@@ -12,6 +12,23 @@ import { resolveSessionsDir, SessionStore } from './session-store';
 export const DEFAULT_GATEWAY_PORT = 4320;
 /** Сколько соседних портов пробовать, если занят (другой checkout визуализатора). */
 const PORT_TRIES = 10;
+/**
+ * Ключ globalThis с шлюзом этого процесса: при перезапуске vite модуль
+ * плагина грузится заново, а старый шлюз ещё держит порт — его надо закрыть
+ * до старта нового, иначе порт «уплывает» на соседний.
+ */
+const GLOBAL_KEY = '__lamGatewayServer';
+
+type Stoppable = { stop: (force: boolean) => unknown };
+
+function previousGateway(): Stoppable | undefined {
+  const v: unknown = Reflect.get(globalThis, GLOBAL_KEY);
+  if (typeof v !== 'object' || v === null || !('stop' in v)) {
+    return undefined;
+  }
+  const stop = v.stop;
+  return typeof stop === 'function' ? { stop: (f) => Reflect.apply(stop, v, [f]) } : undefined;
+}
 
 /**
  * Плагин шлюза.
@@ -20,6 +37,7 @@ export function lamGatewayPlugin(): Plugin {
   return {
     name: 'lam-gateway',
     configureServer(server) {
+      previousGateway()?.stop(true);
       const store = new SessionStore(resolveSessionsDir(resolveLamDir(process.cwd())));
       const wanted = Number(process.env['LAM_GATEWAY_PORT'] ?? DEFAULT_GATEWAY_PORT);
       let started: ReturnType<typeof startGateway> | undefined;
@@ -35,6 +53,7 @@ export function lamGatewayPlugin(): Plugin {
         return;
       }
       const gateway = started;
+      Reflect.set(globalThis, GLOBAL_KEY, gateway);
       server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
       server.middlewares.use(createSessionsMiddleware(store, gateway.port ?? wanted));
       server.httpServer?.on('close', () => {

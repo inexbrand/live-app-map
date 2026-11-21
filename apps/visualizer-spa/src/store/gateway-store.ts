@@ -57,7 +57,7 @@ export const useGatewayStore = create<GatewayState>((set, get) => ({
     const prev = get().reports.get(nodeId);
     if (
       prev !== undefined &&
-      prev.scrollHeight === report.scrollHeight &&
+      prev.contentHeight === report.contentHeight &&
       prev.viewportHeight === report.viewportHeight &&
       prev.authFailures === report.authFailures &&
       prev.href === report.href

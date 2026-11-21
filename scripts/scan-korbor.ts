@@ -376,7 +376,8 @@ function writeKorborAllLiveMap(code: CodeModel): void {
         ...p,
         id: nid,
         group: s.id,
-        title: `[${s.title}] ${p.title}`,
+        // Поверхность видна по рамке группы на холсте — без префикса в названии.
+        title: p.title,
         url,
         metadata: {
           ...p.metadata,

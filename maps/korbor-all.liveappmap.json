@@ -5,13 +5,13 @@
     "name": "Korbor (все поверхности)",
     "platform": "web",
     "generator": "scan-korbor+merge/0.2.0",
-    "generatedAt": "2026-11-21T13:15:18.528Z",
+    "generatedAt": "2026-11-21T13:50:20.386Z",
     "description": "Unified live graph: miniapp + admin + site (no god-root)"
   },
   "pages": [
     {
       "id": "miniapp:route:/",
-      "title": "[Мини-приложение] Главная",
+      "title": "Главная",
       "path": "/",
       "url": "https://vite.localhost:5175/",
       "type": "route",
@@ -61,7 +61,7 @@
     },
     {
       "id": "miniapp:route:/applications",
-      "title": "[Мини-приложение] applications",
+      "title": "applications",
       "path": "/applications",
       "url": "https://vite.localhost:5175/applications",
       "type": "route",
@@ -96,7 +96,7 @@
     },
     {
       "id": "miniapp:route:/applications/[id]/submit",
-      "title": "[Мини-приложение] applications / id / submit",
+      "title": "applications / id / submit",
       "path": "/applications/demo/submit",
       "url": "https://vite.localhost:5175/applications/demo/submit",
       "type": "route",
@@ -131,7 +131,7 @@
     },
     {
       "id": "miniapp:route:/board",
-      "title": "[Мини-приложение] board",
+      "title": "board",
       "path": "/board",
       "url": "https://vite.localhost:5175/board",
       "type": "route",
@@ -150,7 +150,7 @@
     },
     {
       "id": "miniapp:route:/call/[callId]",
-      "title": "[Мини-приложение] call / callId",
+      "title": "call / callId",
       "path": "/call/example",
       "url": "https://vite.localhost:5175/call/example",
       "type": "route",
@@ -169,7 +169,7 @@
     },
     {
       "id": "miniapp:route:/chat/[candidateId]",
-      "title": "[Мини-приложение] chat / candidateId",
+      "title": "chat / candidateId",
       "path": "/chat/cand-demo",
       "url": "https://vite.localhost:5175/chat/cand-demo",
       "type": "route",
@@ -204,7 +204,7 @@
     },
     {
       "id": "miniapp:route:/chats",
-      "title": "[Мини-приложение] chats",
+      "title": "chats",
       "path": "/chats",
       "url": "https://vite.localhost:5175/chats",
       "type": "route",
@@ -254,7 +254,7 @@
     },
     {
       "id": "miniapp:route:/employer/create",
-      "title": "[Мини-приложение] employer / create",
+      "title": "employer / create",
       "path": "/employer/create",
       "url": "https://vite.localhost:5175/employer/create",
       "type": "route",
@@ -290,7 +290,7 @@
     },
     {
       "id": "miniapp:route:/employer/price",
-      "title": "[Мини-приложение] employer / price",
+      "title": "employer / price",
       "path": "/employer/price",
       "url": "https://vite.localhost:5175/employer/price",
       "type": "route",
@@ -326,7 +326,7 @@
     },
     {
       "id": "miniapp:route:/employer/vacancies",
-      "title": "[Мини-приложение] employer / vacancies",
+      "title": "employer / vacancies",
       "path": "/employer/vacancies",
       "url": "https://vite.localhost:5175/employer/vacancies",
       "type": "route",
@@ -362,7 +362,7 @@
     },
     {
       "id": "miniapp:route:/employer/vacancies/[id]",
-      "title": "[Мини-приложение] employer / vacancies / id",
+      "title": "employer / vacancies / id",
       "path": "/employer/vacancies/demo",
       "url": "https://vite.localhost:5175/employer/vacancies/demo",
       "type": "route",
@@ -398,7 +398,7 @@
     },
     {
       "id": "miniapp:route:/feed",
-      "title": "[Мини-приложение] feed",
+      "title": "feed",
       "path": "/feed",
       "url": "https://vite.localhost:5175/feed",
       "type": "route",
@@ -448,7 +448,7 @@
     },
     {
       "id": "miniapp:route:/home",
-      "title": "[Мини-приложение] home",
+      "title": "home",
       "path": "/home",
       "url": "https://vite.localhost:5175/home",
       "type": "route",
@@ -467,7 +467,7 @@
     },
     {
       "id": "miniapp:route:/legal/[code]",
-      "title": "[Мини-приложение] legal / code",
+      "title": "legal / code",
       "path": "/legal/terms",
       "url": "https://vite.localhost:5175/legal/terms",
       "type": "route",
@@ -486,7 +486,7 @@
     },
     {
       "id": "miniapp:route:/marketmaker",
-      "title": "[Мини-приложение] marketmaker",
+      "title": "marketmaker",
       "path": "/marketmaker",
       "url": "https://vite.localhost:5175/marketmaker",
       "type": "route",
@@ -505,7 +505,7 @@
     },
     {
       "id": "miniapp:route:/register",
-      "title": "[Мини-приложение] register",
+      "title": "register",
       "path": "/register",
       "url": "https://vite.localhost:5175/register",
       "type": "route",
@@ -555,7 +555,7 @@
     },
     {
       "id": "miniapp:route:/register/[step]",
-      "title": "[Мини-приложение] register / step",
+      "title": "register / step",
       "path": "/register/profile",
       "url": "https://vite.localhost:5175/register/profile",
       "type": "route",
@@ -574,7 +574,7 @@
     },
     {
       "id": "miniapp:route:/vacancies/[id]",
-      "title": "[Мини-приложение] vacancies / id",
+      "title": "vacancies / id",
       "path": "/vacancies/demo",
       "url": "https://vite.localhost:5175/vacancies/demo",
       "type": "route",
@@ -609,7 +609,7 @@
     },
     {
       "id": "miniapp:route:/verification",
-      "title": "[Мини-приложение] verification",
+      "title": "verification",
       "path": "/verification",
       "url": "https://vite.localhost:5175/verification",
       "type": "route",
@@ -644,7 +644,7 @@
     },
     {
       "id": "miniapp:route:/wallet",
-      "title": "[Мини-приложение] wallet",
+      "title": "wallet",
       "path": "/wallet",
       "url": "https://vite.localhost:5175/wallet",
       "type": "route",
@@ -994,7 +994,7 @@
     },
     {
       "id": "admin:route:/",
-      "title": "[Админка] Главная",
+      "title": "Главная",
       "path": "/",
       "url": "http://localhost:16002/",
       "type": "route",
@@ -1012,7 +1012,7 @@
     },
     {
       "id": "admin:route:/admins",
-      "title": "[Админка] admins",
+      "title": "admins",
       "path": "/admins",
       "url": "http://localhost:16002/admins",
       "type": "route",
@@ -1031,7 +1031,7 @@
     },
     {
       "id": "admin:route:/admins/[adminId]",
-      "title": "[Админка] admins / adminId",
+      "title": "admins / adminId",
       "path": "/admins/example",
       "url": "http://localhost:16002/admins/example",
       "type": "route",
@@ -1050,7 +1050,7 @@
     },
     {
       "id": "admin:route:/audit",
-      "title": "[Админка] audit",
+      "title": "audit",
       "path": "/audit",
       "url": "http://localhost:16002/audit",
       "type": "route",
@@ -1069,7 +1069,7 @@
     },
     {
       "id": "admin:route:/audit/[entryId]",
-      "title": "[Админка] audit / entryId",
+      "title": "audit / entryId",
       "path": "/audit/ent-demo",
       "url": "http://localhost:16002/audit/ent-demo",
       "type": "route",
@@ -1088,7 +1088,7 @@
     },
     {
       "id": "admin:route:/broadcasts",
-      "title": "[Админка] broadcasts",
+      "title": "broadcasts",
       "path": "/broadcasts",
       "url": "http://localhost:16002/broadcasts",
       "type": "route",
@@ -1107,7 +1107,7 @@
     },
     {
       "id": "admin:route:/broadcasts/[...rest]",
-      "title": "[Админка] broadcasts / rest",
+      "title": "broadcasts / rest",
       "path": "/broadcasts/PLATFORM_COMMISSION_BPS",
       "url": "http://localhost:16002/broadcasts/PLATFORM_COMMISSION_BPS",
       "type": "route",
@@ -1126,7 +1126,7 @@
     },
     {
       "id": "admin:route:/calls",
-      "title": "[Админка] calls",
+      "title": "calls",
       "path": "/calls",
       "url": "http://localhost:16002/calls",
       "type": "route",
@@ -1145,7 +1145,7 @@
     },
     {
       "id": "admin:route:/calls/[callId]",
-      "title": "[Админка] calls / callId",
+      "title": "calls / callId",
       "path": "/calls/example",
       "url": "http://localhost:16002/calls/example",
       "type": "route",
@@ -1164,7 +1164,7 @@
     },
     {
       "id": "admin:route:/candidate-locks",
-      "title": "[Админка] candidate-locks",
+      "title": "candidate-locks",
       "path": "/candidate-locks",
       "url": "http://localhost:16002/candidate-locks",
       "type": "route",
@@ -1183,7 +1183,7 @@
     },
     {
       "id": "admin:route:/candidate-locks/[id]",
-      "title": "[Админка] candidate-locks / id",
+      "title": "candidate-locks / id",
       "path": "/candidate-locks/demo",
       "url": "http://localhost:16002/candidate-locks/demo",
       "type": "route",
@@ -1202,7 +1202,7 @@
     },
     {
       "id": "admin:route:/candidates",
-      "title": "[Админка] candidates",
+      "title": "candidates",
       "path": "/candidates",
       "url": "http://localhost:16002/candidates",
       "type": "route",
@@ -1221,7 +1221,7 @@
     },
     {
       "id": "admin:route:/candidates/[id]",
-      "title": "[Админка] candidates / id",
+      "title": "candidates / id",
       "path": "/candidates/demo",
       "url": "http://localhost:16002/candidates/demo",
       "type": "route",
@@ -1240,7 +1240,7 @@
     },
     {
       "id": "admin:route:/chats",
-      "title": "[Админка] chats",
+      "title": "chats",
       "path": "/chats",
       "url": "http://localhost:16002/chats",
       "type": "route",
@@ -1259,7 +1259,7 @@
     },
     {
       "id": "admin:route:/chats/[threadId]",
-      "title": "[Админка] chats / threadId",
+      "title": "chats / threadId",
       "path": "/chats/thr-demo",
       "url": "http://localhost:16002/chats/thr-demo",
       "type": "route",
@@ -1278,7 +1278,7 @@
     },
     {
       "id": "admin:route:/config",
-      "title": "[Админка] config",
+      "title": "config",
       "path": "/config",
       "url": "http://localhost:16002/config",
       "type": "route",
@@ -1297,7 +1297,7 @@
     },
     {
       "id": "admin:route:/config/[...rest]",
-      "title": "[Админка] config / rest",
+      "title": "config / rest",
       "path": "/config/PLATFORM_COMMISSION_BPS",
       "url": "http://localhost:16002/config/PLATFORM_COMMISSION_BPS",
       "type": "route",
@@ -1316,7 +1316,7 @@
     },
     {
       "id": "admin:route:/deals",
-      "title": "[Админка] deals",
+      "title": "deals",
       "path": "/deals",
       "url": "http://localhost:16002/deals",
       "type": "route",
@@ -1335,7 +1335,7 @@
     },
     {
       "id": "admin:route:/deals/[dealId]",
-      "title": "[Админка] deals / dealId",
+      "title": "deals / dealId",
       "path": "/deals/deal-demo",
       "url": "http://localhost:16002/deals/deal-demo",
       "type": "route",
@@ -1354,7 +1354,7 @@
     },
     {
       "id": "admin:route:/disputes",
-      "title": "[Админка] disputes",
+      "title": "disputes",
       "path": "/disputes",
       "url": "http://localhost:16002/disputes",
       "type": "route",
@@ -1373,7 +1373,7 @@
     },
     {
       "id": "admin:route:/disputes/[disputeId]",
-      "title": "[Админка] disputes / disputeId",
+      "title": "disputes / disputeId",
       "path": "/disputes/disp-demo",
       "url": "http://localhost:16002/disputes/disp-demo",
       "type": "route",
@@ -1392,7 +1392,7 @@
     },
     {
       "id": "admin:route:/feed-presets",
-      "title": "[Админка] feed-presets",
+      "title": "feed-presets",
       "path": "/feed-presets",
       "url": "http://localhost:16002/feed-presets",
       "type": "route",
@@ -1411,7 +1411,7 @@
     },
     {
       "id": "admin:route:/intake-sessions",
-      "title": "[Админка] intake-sessions",
+      "title": "intake-sessions",
       "path": "/intake-sessions",
       "url": "http://localhost:16002/intake-sessions",
       "type": "route",
@@ -1430,7 +1430,7 @@
     },
     {
       "id": "admin:route:/intake-sessions/[id]",
-      "title": "[Админка] intake-sessions / id",
+      "title": "intake-sessions / id",
       "path": "/intake-sessions/demo",
       "url": "http://localhost:16002/intake-sessions/demo",
       "type": "route",
@@ -1449,7 +1449,7 @@
     },
     {
       "id": "admin:route:/jobs",
-      "title": "[Админка] jobs",
+      "title": "jobs",
       "path": "/jobs",
       "url": "http://localhost:16002/jobs",
       "type": "route",
@@ -1468,7 +1468,7 @@
     },
     {
       "id": "admin:route:/jobs/[id]",
-      "title": "[Админка] jobs / id",
+      "title": "jobs / id",
       "path": "/jobs/demo",
       "url": "http://localhost:16002/jobs/demo",
       "type": "route",
@@ -1487,7 +1487,7 @@
     },
     {
       "id": "admin:route:/ledger",
-      "title": "[Админка] ledger",
+      "title": "ledger",
       "path": "/ledger",
       "url": "http://localhost:16002/ledger",
       "type": "route",
@@ -1506,7 +1506,7 @@
     },
     {
       "id": "admin:route:/ledger/[ledgerId]",
-      "title": "[Админка] ledger / ledgerId",
+      "title": "ledger / ledgerId",
       "path": "/ledger/led-demo",
       "url": "http://localhost:16002/ledger/led-demo",
       "type": "route",
@@ -1525,7 +1525,7 @@
     },
     {
       "id": "admin:route:/legal",
-      "title": "[Админка] legal",
+      "title": "legal",
       "path": "/legal",
       "url": "http://localhost:16002/legal",
       "type": "route",
@@ -1544,7 +1544,7 @@
     },
     {
       "id": "admin:route:/legal/[documentId]",
-      "title": "[Админка] legal / documentId",
+      "title": "legal / documentId",
       "path": "/legal/doc-demo",
       "url": "http://localhost:16002/legal/doc-demo",
       "type": "route",
@@ -1563,7 +1563,7 @@
     },
     {
       "id": "admin:route:/llm",
-      "title": "[Админка] llm",
+      "title": "llm",
       "path": "/llm",
       "url": "http://localhost:16002/llm",
       "type": "route",
@@ -1582,7 +1582,7 @@
     },
     {
       "id": "admin:route:/llm/knowledge/[documentId]",
-      "title": "[Админка] llm / knowledge / documentId",
+      "title": "llm / knowledge / documentId",
       "path": "/llm/knowledge/doc-demo",
       "url": "http://localhost:16002/llm/knowledge/doc-demo",
       "type": "route",
@@ -1601,7 +1601,7 @@
     },
     {
       "id": "admin:route:/llm/prompts/[category]",
-      "title": "[Админка] llm / prompts / category",
+      "title": "llm / prompts / category",
       "path": "/llm/prompts/system",
       "url": "http://localhost:16002/llm/prompts/system",
       "type": "route",
@@ -1620,7 +1620,7 @@
     },
     {
       "id": "admin:route:/marketmaker",
-      "title": "[Админка] marketmaker",
+      "title": "marketmaker",
       "path": "/marketmaker",
       "url": "http://localhost:16002/marketmaker",
       "type": "route",
@@ -1639,7 +1639,7 @@
     },
     {
       "id": "admin:route:/marketmaker/[vacancyId]",
-      "title": "[Админка] marketmaker / vacancyId",
+      "title": "marketmaker / vacancyId",
       "path": "/marketmaker/vac-demo",
       "url": "http://localhost:16002/marketmaker/vac-demo",
       "type": "route",
@@ -1658,7 +1658,7 @@
     },
     {
       "id": "admin:route:/metrics",
-      "title": "[Админка] metrics",
+      "title": "metrics",
       "path": "/metrics",
       "url": "http://localhost:16002/metrics",
       "type": "route",
@@ -1677,7 +1677,7 @@
     },
     {
       "id": "admin:route:/notifications",
-      "title": "[Админка] notifications",
+      "title": "notifications",
       "path": "/notifications",
       "url": "http://localhost:16002/notifications",
       "type": "route",
@@ -1696,7 +1696,7 @@
     },
     {
       "id": "admin:route:/notifications/[id]",
-      "title": "[Админка] notifications / id",
+      "title": "notifications / id",
       "path": "/notifications/demo",
       "url": "http://localhost:16002/notifications/demo",
       "type": "route",
@@ -1715,7 +1715,7 @@
     },
     {
       "id": "admin:route:/payments",
-      "title": "[Админка] payments",
+      "title": "payments",
       "path": "/payments",
       "url": "http://localhost:16002/payments",
       "type": "route",
@@ -1734,7 +1734,7 @@
     },
     {
       "id": "admin:route:/payments/[id]",
-      "title": "[Админка] payments / id",
+      "title": "payments / id",
       "path": "/payments/demo",
       "url": "http://localhost:16002/payments/demo",
       "type": "route",
@@ -1753,7 +1753,7 @@
     },
     {
       "id": "admin:route:/payout-requests",
-      "title": "[Админка] payout-requests",
+      "title": "payout-requests",
       "path": "/payout-requests",
       "url": "http://localhost:16002/payout-requests",
       "type": "route",
@@ -1772,7 +1772,7 @@
     },
     {
       "id": "admin:route:/price-categories",
-      "title": "[Админка] price-categories",
+      "title": "price-categories",
       "path": "/price-categories",
       "url": "http://localhost:16002/price-categories",
       "type": "route",
@@ -1791,7 +1791,7 @@
     },
     {
       "id": "admin:route:/recruiters",
-      "title": "[Админка] recruiters",
+      "title": "recruiters",
       "path": "/recruiters",
       "url": "http://localhost:16002/recruiters",
       "type": "route",
@@ -1810,7 +1810,7 @@
     },
     {
       "id": "admin:route:/recruiters/[userId]",
-      "title": "[Админка] recruiters / userId",
+      "title": "recruiters / userId",
       "path": "/recruiters/user-demo",
       "url": "http://localhost:16002/recruiters/user-demo",
       "type": "route",
@@ -1829,7 +1829,7 @@
     },
     {
       "id": "admin:route:/reports",
-      "title": "[Админка] reports",
+      "title": "reports",
       "path": "/reports",
       "url": "http://localhost:16002/reports",
       "type": "route",
@@ -1848,7 +1848,7 @@
     },
     {
       "id": "admin:route:/reviews",
-      "title": "[Админка] reviews",
+      "title": "reviews",
       "path": "/reviews",
       "url": "http://localhost:16002/reviews",
       "type": "route",
@@ -1867,7 +1867,7 @@
     },
     {
       "id": "admin:route:/reviews/[id]",
-      "title": "[Админка] reviews / id",
+      "title": "reviews / id",
       "path": "/reviews/demo",
       "url": "http://localhost:16002/reviews/demo",
       "type": "route",
@@ -1886,7 +1886,7 @@
     },
     {
       "id": "admin:route:/risk-events",
-      "title": "[Админка] risk-events",
+      "title": "risk-events",
       "path": "/risk-events",
       "url": "http://localhost:16002/risk-events",
       "type": "route",
@@ -1905,7 +1905,7 @@
     },
     {
       "id": "admin:route:/risk-events/[id]",
-      "title": "[Админка] risk-events / id",
+      "title": "risk-events / id",
       "path": "/risk-events/demo",
       "url": "http://localhost:16002/risk-events/demo",
       "type": "route",
@@ -1924,7 +1924,7 @@
     },
     {
       "id": "admin:route:/specializations",
-      "title": "[Админка] specializations",
+      "title": "specializations",
       "path": "/specializations",
       "url": "http://localhost:16002/specializations",
       "type": "route",
@@ -1943,7 +1943,7 @@
     },
     {
       "id": "admin:route:/support",
-      "title": "[Админка] support",
+      "title": "support",
       "path": "/support",
       "url": "http://localhost:16002/support",
       "type": "route",
@@ -1962,7 +1962,7 @@
     },
     {
       "id": "admin:route:/system-settings",
-      "title": "[Админка] system-settings",
+      "title": "system-settings",
       "path": "/system-settings",
       "url": "http://localhost:16002/system-settings",
       "type": "route",
@@ -1981,7 +1981,7 @@
     },
     {
       "id": "admin:route:/users",
-      "title": "[Админка] users",
+      "title": "users",
       "path": "/users",
       "url": "http://localhost:16002/users",
       "type": "route",
@@ -2000,7 +2000,7 @@
     },
     {
       "id": "admin:route:/users/[userId]",
-      "title": "[Админка] users / userId",
+      "title": "users / userId",
       "path": "/users/user-demo",
       "url": "http://localhost:16002/users/user-demo",
       "type": "route",
@@ -2019,7 +2019,7 @@
     },
     {
       "id": "admin:route:/vacancies",
-      "title": "[Админка] vacancies",
+      "title": "vacancies",
       "path": "/vacancies",
       "url": "http://localhost:16002/vacancies",
       "type": "route",
@@ -2038,7 +2038,7 @@
     },
     {
       "id": "admin:route:/vacancies/[vacancyId]",
-      "title": "[Админка] vacancies / vacancyId",
+      "title": "vacancies / vacancyId",
       "path": "/vacancies/vac-demo",
       "url": "http://localhost:16002/vacancies/vac-demo",
       "type": "route",
@@ -2057,7 +2057,7 @@
     },
     {
       "id": "admin:route:/vacancy-templates",
-      "title": "[Админка] vacancy-templates",
+      "title": "vacancy-templates",
       "path": "/vacancy-templates",
       "url": "http://localhost:16002/vacancy-templates",
       "type": "route",
@@ -2076,7 +2076,7 @@
     },
     {
       "id": "admin:route:/verification-requests",
-      "title": "[Админка] verification-requests",
+      "title": "verification-requests",
       "path": "/verification-requests",
       "url": "http://localhost:16002/verification-requests",
       "type": "route",
@@ -2095,7 +2095,7 @@
     },
     {
       "id": "site:site-home",
-      "title": "[Сайт] Marketing Home",
+      "title": "Marketing Home",
       "path": "/",
       "url": "http://localhost:16001/",
       "group": "site",
@@ -2112,7 +2112,7 @@
     },
     {
       "id": "site:site-payload-admin",
-      "title": "[Сайт] Payload Admin",
+      "title": "Payload Admin",
       "path": "/admin",
       "url": "http://localhost:16001/admin",
       "group": "site",
@@ -2128,7 +2128,7 @@
     },
     {
       "id": "site:site-payload-login",
-      "title": "[Сайт] Payload Login",
+      "title": "Payload Login",
       "path": "/admin/login",
       "url": "http://localhost:16001/admin/login",
       "group": "site",
@@ -2144,7 +2144,7 @@
     },
     {
       "id": "site:site-payload-collections",
-      "title": "[Сайт] Payload Collections",
+      "title": "Payload Collections",
       "path": "/admin/collections",
       "url": "http://localhost:16001/admin/collections",
       "group": "site",
@@ -2160,7 +2160,7 @@
     },
     {
       "id": "site:site-cms:docs",
-      "title": "[Сайт] Документы",
+      "title": "Документы",
       "path": "/docs",
       "url": "http://localhost:16001/docs",
       "group": "site",
@@ -2176,7 +2176,7 @@
     },
     {
       "id": "site:site-cms:contacts",
-      "title": "[Сайт] Контакты",
+      "title": "Контакты",
       "path": "/contacts",
       "url": "http://localhost:16001/contacts",
       "group": "site",
@@ -2192,7 +2192,7 @@
     },
     {
       "id": "site:site-cms:faq",
-      "title": "[Сайт] Вопросы и ответы",
+      "title": "Вопросы и ответы",
       "path": "/faq",
       "url": "http://localhost:16001/faq",
       "group": "site",
@@ -2208,7 +2208,7 @@
     },
     {
       "id": "site:site-cms:about",
-      "title": "[Сайт] О платформе",
+      "title": "О платформе",
       "path": "/about",
       "url": "http://localhost:16001/about",
       "group": "site",
@@ -2224,7 +2224,7 @@
     },
     {
       "id": "site:site-cms:guarantees",
-      "title": "[Сайт] Гарантии и споры",
+      "title": "Гарантии и споры",
       "path": "/guarantees",
       "url": "http://localhost:16001/guarantees",
       "group": "site",
@@ -2240,7 +2240,7 @@
     },
     {
       "id": "site:site-cms:pricing",
-      "title": "[Сайт] Тарифы и выплаты",
+      "title": "Тарифы и выплаты",
       "path": "/pricing",
       "url": "http://localhost:16001/pricing",
       "group": "site",
@@ -2256,7 +2256,7 @@
     },
     {
       "id": "site:site-cms:how-it-works",
-      "title": "[Сайт] Как это работает",
+      "title": "Как это работает",
       "path": "/how-it-works",
       "url": "http://localhost:16001/how-it-works",
       "group": "site",
@@ -2272,7 +2272,7 @@
     },
     {
       "id": "site:site-cms:recruiters",
-      "title": "[Сайт] Рекрутерам",
+      "title": "Рекрутерам",
       "path": "/recruiters",
       "url": "http://localhost:16001/recruiters",
       "group": "site",
@@ -2288,7 +2288,7 @@
     },
     {
       "id": "site:site-cms:employers",
-      "title": "[Сайт] Работодателям",
+      "title": "Работодателям",
       "path": "/employers",
       "url": "http://localhost:16001/employers",
       "group": "site",

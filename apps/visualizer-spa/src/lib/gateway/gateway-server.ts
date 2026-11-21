@@ -101,6 +101,10 @@ async function forward(req: Request, target: GatewayTarget, store: SessionStore)
   headers.set('x-lam-gateway', target.profile);
   const type = res.headers.get('content-type') ?? '';
   if (type.includes('text/html') && req.method === 'GET') {
+    const renewError = await store.ensureFresh(target.profile, target.origin);
+    if (renewError !== null) {
+      headers.set('x-lam-renew-error', encodeURIComponent(renewError.slice(0, 200)));
+    }
     const profile = store.get(target.profile);
     const storage = profile?.storage[target.origin] ?? {};
     const hasSession = Object.keys(storage).length > 0 || (profile?.cookies[target.origin] ?? []).length > 0;

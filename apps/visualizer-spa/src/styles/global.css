@@ -1379,3 +1379,9 @@ kbd,
   color: var(--muted-foreground);
   font-variant-numeric: tabular-nums;
 }
+
+/* Состояние живого экрана по отчёту шлюза */
+.ui-badge--alert { background: #fde8e8; color: #9b1c1c; border-color: #f5b5b5; }
+.ui-badge--warn { background: #fdf3dc; color: #7a4b00; border-color: #f1d58c; }
+.ui-badge--alert, .ui-badge--warn { text-transform: none; letter-spacing: 0; white-space: nowrap; flex: 0 0 auto; }
+.page-node__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }

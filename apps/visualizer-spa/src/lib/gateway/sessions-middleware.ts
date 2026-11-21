@@ -5,13 +5,12 @@
 import { isLocalOrigin, readBody, requestPath, sendJson, type DevMiddleware } from '../dev-http';
 import { parseSetCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
+import { KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal } from './korbor-dogfood';
 import { summarize, type SessionStore } from './session-store';
 
 /** Префикс маршрутов. */
 export const SESSIONS_PATH = '/__lam_sessions';
 
-/** Ключи sessionStorage, куда приложения Korbor кладут dev-вход (см. korbor dogfood). */
-export const KORBOR_DOGFOOD_STORAGE = { user: 'lam_init_data', admin: 'korbor.admin.accessToken' } as const;
 
 const MAX_BODY = 64 * 1024;
 
@@ -38,25 +37,6 @@ function originOf(o: Record<string, unknown>): string | null {
   } catch {
     return null;
   }
-}
-
-/** Вход через dev-API Korbor: actorId → initData или accessToken. */
-async function mintKorbor(apiBase: string, kind: 'user' | 'admin', actorId: string): Promise<{ ok: true; value: string; label: string; role: string } | { ok: false; error: string }> {
-  const res = await fetch(`${apiBase.replace(/\/$/, '')}/api/v1/dev/dogfood/session`, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ kind, actorId }),
-    signal: AbortSignal.timeout(15_000),
-  });
-  const body: unknown = await res.json().catch(() => null);
-  const data = typeof body === 'object' && body !== null && 'data' in body && typeof body.data === 'object' && body.data !== null ? body.data : null;
-  const value = data === null ? undefined : kind === 'user' ? ('initData' in data ? data.initData : undefined) : 'accessToken' in data ? data.accessToken : undefined;
-  if (!res.ok || typeof value !== 'string' || value === '') {
-    return { ok: false, error: `вход не выдан (HTTP ${res.status}): ${JSON.stringify(body).slice(0, 200)}` };
-  }
-  const label = data !== null && 'label' in data && typeof data.label === 'string' ? data.label : actorId;
-  const role = data !== null && 'role' in data && typeof data.role === 'string' ? data.role : kind;
-  return { ok: true, value, label, role };
 }
 
 /**
@@ -141,7 +121,8 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
           sendJson(res, 400, { ok: false, error: 'actorId и apiBase обязательны (apiBase — адрес API korbor, например http://127.0.0.1:16000)', field: actorId === '' ? 'actorId' : 'apiBase' });
           return;
         }
-        const minted = await mintKorbor(apiBase, kind, actorId);
+        const renewal: KorborRenewal = { kind, actorId, apiBase };
+        const minted = await mintKorbor(renewal);
         if (!minted.ok) {
           sendJson(res, 502, { ok: false, error: minted.error });
           return;
@@ -152,6 +133,7 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
           role: str(o, 'role') === '' ? minted.role : str(o, 'role'),
           origin,
           storage: { [KORBOR_DOGFOOD_STORAGE[kind]]: minted.value },
+          renewal,
         });
         sendJson(res, 200, { ok: true, actor: { label: minted.label, role: minted.role }, profile: summarize(saved) });
         return;

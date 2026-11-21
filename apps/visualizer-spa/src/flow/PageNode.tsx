@@ -25,7 +25,11 @@ import {
   resolveViewportPresets,
 } from '../lib/viewport';
 import { Badge, Chip } from '../ui';
+import { NODE_IFRAME_ATTR } from '../lib/gateway/use-gateway-frames';
+import { pageStatus } from '../lib/gateway/page-status';
+import { MAX_CONTENT_HEIGHT } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
+import { useGatewayStore } from '../store/gateway-store';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
@@ -134,18 +138,21 @@ export function sandboxPresetLabel(preset: IframeSandboxPreset): string {
 
 function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const node = props.data.node;
-  const selectedPageId = useAppStore((s) => s.selectedPageId);
-  const highlighted = useAppStore((s) => s.highlightedPageIds);
-  const pinned = useAppStore((s) => s.pinnedPageIds);
-  const live = useAppStore((s) => s.livePageIds);
-  const warm = useAppStore((s) => s.warmPageIds);
-  const mounted = useAppStore((s) => s.mountedPageIds);
+  // Подписки — на признаки этой ноды, а не на целые наборы: смена live/visible
+  // у одной ноды не перерисовывает остальные сотни.
+  const isSelected = useAppStore((s) => s.selectedPageId === node.id);
+  const isDim = useAppStore((s) => s.highlightedPageIds.size > 0 && !s.highlightedPageIds.has(node.id) && s.selectedPageId !== node.id);
+  const isPinned = useAppStore((s) => s.pinnedPageIds.has(node.id));
+  const inLive = useAppStore((s) => s.livePageIds.has(node.id));
+  const inWarm = useAppStore((s) => s.warmPageIds.has(node.id));
+  const inMounted = useAppStore((s) => s.mountedPageIds.has(node.id));
+  const inViewport = useAppStore((s) => s.visiblePageIds.has(node.id));
   const mode = useAppStore((s) => s.mode);
   const scale = useAppStore((s) => s.iframeScale);
-  const interactPageId = useAppStore((s) => s.interactPageId);
-  const activeStates = useAppStore((s) => s.activeStates);
-  const nodeViewports = useAppStore((s) => s.nodeViewports);
-  const contentHeights = useAppStore((s) => s.contentHeights);
+  const isInteract = useAppStore((s) => s.interactPageId === node.id);
+  const activeStateName = useAppStore((s) => s.activeStates.get(node.id));
+  const override = useAppStore((s) => s.nodeViewports.get(node.id));
+  const measuredHeight = useAppStore((s) => s.contentHeights.get(node.id));
   const mapLayout = useAppStore((s) => s.document?.layout);
   const selectPage = useAppStore((s) => s.selectPage);
   const togglePin = useAppStore((s) => s.togglePin);
@@ -158,30 +165,28 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const pushLog = useAppStore((s) => s.pushLog);
   const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
   const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
-  const visiblePageIds = useAppStore((s) => s.visiblePageIds);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
+  // Порт и профили шлюза входят в адрес: подписка перестраивает его при входе.
+  useGatewayStore((s) => s.port);
+  useGatewayStore((s) => s.profiles);
+  const report = useGatewayStore((s) => s.reports.get(node.id));
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeError, setIframeError] = useState(false);
-  const isSelected = selectedPageId === node.id;
-  const isDim =
-    highlighted.size > 0 && !highlighted.has(node.id) && !isSelected;
-  const isLive = live.has(node.id) && mode === 'live';
-  const isWarm = warm.has(node.id) && mode === 'live';
-  const isMounted = mounted.has(node.id) && mode === 'live';
-  const activeStateName = activeStates.get(node.id);
-  const isPinned = pinned.has(node.id);
+  const isLive = inLive && mode === 'live';
+  const isWarm = inWarm && mode === 'live';
+  const isMounted = inMounted && mode === 'live';
 
-  const override = nodeViewports.get(node.id);
   const viewport = resolveNodeViewport({
     nodeViewport: node.viewport,
     override,
     layout: mapLayout,
-    measuredHeight: contentHeights.get(node.id),
+    measuredHeight,
   });
+  const status = pageStatus(isMounted ? report : undefined, viewport.height);
   const layout = computeNodeLayout(viewport, scale, { selected: isSelected });
   const widthPresets = resolveViewportPresets(mapLayout);
 
@@ -232,7 +237,15 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     );
     io.observe(el);
     return () => io.disconnect();
-  }, [node.id, setVisible, visiblePageIds.size]);
+  }, [node.id, setVisible]);
+
+  // Во всю высоту (heightMode=auto): высота из отчёта шлюза — страница кросс-доменная.
+  const reportedHeight = status.contentHeight;
+  useEffect(() => {
+    if (viewport.heightMode === 'auto' && reportedHeight !== null && reportedHeight >= 120) {
+      setContentHeight(node.id, Math.min(MAX_CONTENT_HEIGHT, reportedHeight));
+    }
+  }, [node.id, reportedHeight, viewport.heightMode, setContentHeight]);
 
   const onState = (st: AppMapPageState) => {
     if (activeStateName === st.name) {
@@ -242,7 +255,6 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     }
   };
 
-  const inViewport = visiblePageIds.has(node.id);
   const placeholder = resolvePagePlaceholder({
     mode,
     hasUrl: Boolean(url),
@@ -337,8 +349,17 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     >
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
-        {node.groupIds?.[0] ? <Badge>{node.groupIds[0]}</Badge> : null}
-        <div className="page-node__title">{node.title}</div>
+        <div className="page-node__title" title={node.title}>{node.title}</div>
+        {status.unauthorized !== null ? (
+          <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
+            не авторизован
+          </Badge>
+        ) : null}
+        {status.cropped !== null ? (
+          <Badge className="ui-badge--warn" title={`${status.cropped}. Размер «auto» показывает страницу целиком`} data-lam-cropped="1">
+            обрезано
+          </Badge>
+        ) : null}
         {isLive ? (
           <Badge>live</Badge>
         ) : isWarm ? (
@@ -425,16 +446,17 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               key={`${url}:${sandboxPreset}:${viewport.width}:${viewport.heightMode ?? 'auto'}`}
               title={node.title}
               src={url}
+              {...{ [NODE_IFRAME_ATTR]: node.id }}
               width={viewport.width}
               height={viewport.height}
               referrerPolicy="strict-origin-when-cross-origin"
               allow="clipboard-read; clipboard-write"
               className={
-                interactPageId === node.id
+                isInteract
                   ? 'page-node__iframe page-node__iframe--interact nodrag nopan nowheel'
                   : 'page-node__iframe nodrag nopan nowheel'
               }
-              data-lam-interact={interactPageId === node.id ? '1' : '0'}
+              data-lam-interact={isInteract ? '1' : '0'}
               style={{
                 position: 'absolute',
                 top: 0,
@@ -445,8 +467,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
                 transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
                 transformOrigin: '0 0',
                 /* Только explicit «Клики в iframe» — hover/click доходят в app */
-                pointerEvents: interactPageId === node.id ? 'auto' : 'none',
-                zIndex: interactPageId === node.id ? 2 : 0,
+                pointerEvents: isInteract ? 'auto' : 'none',
+                zIndex: isInteract ? 2 : 0,
                 /* Warm keep-alive: DOM жив; чуть тусклее если не live-слот */
                 opacity: iframeDimmed ? 0.92 : 1,
               }}

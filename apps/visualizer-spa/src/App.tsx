@@ -10,6 +10,7 @@ import { MapToolbar } from './components/MapToolbar';
 import { SnapshotOverlay } from './components/SnapshotOverlay';
 import { StateInjectPanel } from './components/StateInjectPanel';
 import { AppMapCanvas } from './flow/AppMapCanvas';
+import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
 import { loadMapPresetIntoStore } from './lib/load-map-preset';
@@ -34,6 +35,7 @@ export function App() {
   const setBaseUrlOverride = useAppStore((s) => s.setBaseUrlOverride);
   const setMode = useAppStore((s) => s.setMode);
   const parseIssues = useAppStore((s) => s.parseIssues);
+  useGatewayFrames();
   const [dragging, setDragging] = useState(false);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
   const [catalog, setCatalog] = useState<readonly MapCatalogEntry[]>([]);
