@@ -14,6 +14,8 @@ import { monorepoScanRecipes } from './src/lib/map-scan-recipes';
 import { mapVersionsMiddleware } from './src/lib/map-versions-middleware';
 import { docsWriteMiddleware } from './src/lib/docs-write-middleware';
 import { agentStateMiddleware } from './src/lib/agent-state-middleware';
+import { commentsMiddleware } from './src/lib/comments-middleware';
+import { modelsMiddleware } from './src/lib/voice/models-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
 import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
 import { finalizeProxiedBody, sanitizeProxiedHeaders } from './src/lib/proxy-response';
@@ -34,6 +36,8 @@ function errorReportsPlugin(): Plugin {
       server.middlewares.use(httpsPathProxyMiddleware);
       server.middlewares.use(errorReportsMiddleware);
       server.middlewares.use(agentStateMiddleware);
+      server.middlewares.use(commentsMiddleware);
+      server.middlewares.use(modelsMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
       server.middlewares.use(docsAssetMiddleware);
       server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
@@ -42,6 +46,8 @@ function errorReportsPlugin(): Plugin {
     configurePreviewServer(server) {
       server.middlewares.use(errorReportsMiddleware);
       server.middlewares.use(agentStateMiddleware);
+      server.middlewares.use(commentsMiddleware);
+      server.middlewares.use(modelsMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
       server.middlewares.use(docsAssetMiddleware);
     },

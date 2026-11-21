@@ -1,3 +1,5 @@
+import { pickerScriptText } from './pick-script';
+
 /**
  * Скрипт, который шлюз ставит первым в <head> HTML-страниц приложения:
  * 1) кладёт значения sessionStorage профиля до загрузки приложения;
@@ -136,6 +138,7 @@ var X=XMLHttpRequest.prototype,op=X.open,sd=X.send;X.open=function(m,u){this.__l
 X.send=function(){var x=this;x.addEventListener('loadend',function(){note(x.status,x.__lamU,x.getResponseHeader('content-type'));});return sd.apply(this,arguments);};
 var ps=history.pushState,rs=history.replaceState;history.pushState=function(){var r=ps.apply(this,arguments);soon();return r;};history.replaceState=function(){var r=rs.apply(this,arguments);soon();return r;};
 addEventListener('popstate',soon);addEventListener('hashchange',soon);addEventListener('load',post);addEventListener('message',function(e){var d=e.data;if(!d||e.source!==parent)return;if(d.lam==='ping')post();if(d.lam==='wheel')wheel(+d.x,+d.y,+d.dx,+d.dy);});
+${pickerScriptText()}
 function watch(){if(!document.body){return setTimeout(watch,50);}try{new ResizeObserver(soon).observe(document.body);new MutationObserver(soon).observe(document.body,{childList:true,subtree:true});}catch(e){setInterval(post,1000);}post();}watch();
 })();</script>`;
 }
