@@ -26,9 +26,35 @@ const VERBS: ReadonlyMap<string, HttpMethod> = new Map<string, HttpMethod>([
 /** Имя получателя, похожее на HTTP-клиент проекта: `api`, `apiClient`, `http`, `adminApi`. */
 const CLIENT_NAME = /(^|[a-z])(api|Api|API|client|Client|http|Http|rest|Rest|fetcher|Fetcher)$/;
 
-/** Методы, которые могут быть вызовом HTTP: глаголы, `request`, `fetch`, `$get` у Hono. */
+/** Имя внедрённого fetch: `fetchWithAuth`, `authedFetch`, `apiFetch`. */
+const FETCH_NAME = /(^fetch[A-Z]|Fetch$|^fetch$)/;
+
+/**
+ * fetch, пришедший параметром (сессия, DI): `createStore(fetchWithAuth)` →
+ * `fetchWithAuth('/x', init)`. Объявленная функция с таким именем — не он.
+ */
+function injectedFetch(ev: ValueEvaluator, callee: ts.Expression, fn: Value): boolean {
+  if (!ts.isIdentifier(callee) || !FETCH_NAME.test(callee.text) || ev.functionsOf(callee) !== undefined) {
+    return false;
+  }
+  return fn.kind === 'str' && fn.parts.length === 1 && fn.parts[0]?.kind === 'param';
+}
+
+/** Метод клиента «глагол + уточнение»: `getRaw`, `postForm` → GET, POST. */
+function prefixedVerb(name: string): HttpMethod | undefined {
+  const m = /^(get|post|put|patch|delete)[A-Z]/.exec(name);
+  return m?.[1] === undefined ? undefined : VERBS.get(m[1]);
+}
+
+/** Методы, которые могут быть вызовом HTTP: глаголы, `request`, `fetch`, `$get` у Hono, `getRaw`. */
 function maySend(name: string): boolean {
-  return VERBS.has(name) || name === 'request' || name === 'fetch' || (name.startsWith('$') && VERBS.has(name.slice(1)));
+  return VERBS.has(name) || name === 'request' || name === 'fetch' || (name.startsWith('$') && VERBS.has(name.slice(1))) || prefixedVerb(name) !== undefined;
+}
+
+/** Значение начинается с литерала пути `/…`. */
+function startsWithPath(v: Value | undefined): boolean {
+  const head = v?.kind === 'str' ? v.parts[0] : undefined;
+  return head?.kind === 'lit' && head.text.startsWith('/');
 }
 
 /** Аргумент — функция (обработчик роута `app.get('/x', handler)`, а не запрос). */
@@ -121,7 +147,7 @@ export function sinkAt(ev: ValueEvaluator, call: ts.CallExpression, frame: Frame
     return namedClient(ev, call, callee, frame, origin);
   }
   const fn = ev.evaluate(callee, frame, origin);
-  if (fn.kind === 'fetch') {
+  if (fn.kind === 'fetch' || injectedFetch(ev, callee, fn)) {
     return { client: 'fetch', method: methodOf(prop(arg(1), 'method'), 'GET'), url: urlParts(arg(0), origin, call.arguments[0]) };
   }
   const lib = libOf(fn);
@@ -156,6 +182,11 @@ function namedClient(
   }
   const first = call.arguments[0];
   const value = first === undefined ? undefined : ev.evaluate(first, frame, origin);
+  const prefixed = prefixedVerb(name);
+  if (prefixed !== undefined) {
+    // `api.getUser(id)` — не путь; вызов, только если первый аргумент — путь.
+    return startsWithPath(value) ? { client: 'wrapper', method: prefixed, url: urlParts(value, origin, first) } : undefined;
+  }
   const verb = VERBS.get(name);
   if (value?.kind === 'obj') {
     const url = prop(value, 'path') ?? prop(value, 'url');

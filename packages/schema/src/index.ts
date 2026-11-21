@@ -68,6 +68,7 @@ export type {
   HttpMethod,
   OrmKind,
   RouteAccess,
+  RouteResponse,
   RouteFramework,
   RouteInput,
   RouteInputSchema,

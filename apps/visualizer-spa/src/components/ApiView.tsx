@@ -1,11 +1,12 @@
 /**
  * Вид «API»: архитектура API проекта — сервисы, разделы и модули роутов, фильтры
- * (поиск, метод, сервис, таблица, «без описания»), карточка роута: вход, доступ,
- * таблицы, экраны, файл:строка. Переходы роут ↔ таблица ↔ экран.
+ * (поиск, метод, сервис, таблица, «без описания», «без экранов»), карточка роута:
+ * авторское описание и собранное из кода, вход, доступ, таблицы, экраны (или почему
+ * их нет), файл:строка. Переходы роут ↔ таблица ↔ экран.
  */
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { KeyRound, Lock } from 'lucide-react';
-import { buildCodeIndex, type ApiFilter, type CodeIndex, type TableTouch } from '@live-app-map/graph';
+import { AUTO_DOC_NOTE, buildCodeIndex, type ApiFilter, type CodeIndex, type TableTouch } from '@live-app-map/graph';
 import type { ApiRoute, HttpMethod } from '@live-app-map/schema';
 import { apiViewState, routeCard, routeOneLine, type RouteCard } from '../lib/api-view-model';
 import { useMapNav } from '../lib/use-map-nav';
@@ -90,10 +91,21 @@ function Card(props: { readonly card: RouteCard }) {
         </p>
       </header>
       {card.summary === undefined ? (
-        <p className="api-card__empty">Описания нет — добавьте комментарий над обработчиком ({r.location.file}:{r.location.line}).</p>
+        <p className="api-card__empty">Авторского описания нет — добавьте комментарий над обработчиком ({r.location.file}:{r.location.line}).</p>
       ) : (
         <Summary key={r.id} text={card.summary} />
       )}
+      <div className="api-auto" data-testid="api-auto-doc">
+        <p className="api-auto__note">{AUTO_DOC_NOTE}</p>
+        <p className="api-auto__summary">{card.auto.summary}</p>
+        {card.auto.lines
+          .filter((l) => l.label === 'Ответ')
+          .map((l) => (
+            <p key={l.label} className="api-card__text" data-testid="api-response">
+              Ответ: {l.text}
+            </p>
+          ))}
+      </div>
 
       <section className="api-card__section">
         <h3>Вход</h3>
@@ -159,7 +171,12 @@ function Card(props: { readonly card: RouteCard }) {
 
       <section className="api-card__section">
         <h3>Экраны</h3>
-        {card.callers.length === 0 ? <p className="api-card__empty">Экраны карты этот роут не вызывают (или вызов не сопоставлен).</p> : null}
+        {card.gap === undefined ? null : (
+          <div className="api-card__empty" data-testid="api-screen-gap">
+            <p className="api-card__line">Экраны карты не вызывают: {card.gap.text}.</p>
+            {card.gap.files.length === 0 ? null : <p className="api-card__meta">{card.gap.files.join(', ')}</p>}
+          </div>
+        )}
         <span className="api-card__chips">
           {card.callers.map((c) => (
             <Chip
@@ -190,7 +207,14 @@ const EMPTY: ApiFilter = {};
 
 /** Число заданных условий фильтра. */
 function filterCount(f: ApiFilter): number {
-  return [f.query !== undefined && f.query !== '', (f.methods?.length ?? 0) > 0, f.service !== undefined && f.service !== '', f.table !== undefined && f.table !== '', f.undocumented === true].filter(Boolean).length;
+  return [
+    f.query !== undefined && f.query !== '',
+    (f.methods?.length ?? 0) > 0,
+    f.service !== undefined && f.service !== '',
+    f.table !== undefined && f.table !== '',
+    f.undocumented === true,
+    f.noScreens === true,
+  ].filter(Boolean).length;
 }
 
 /** Вид «API». */
@@ -249,10 +273,16 @@ export function ApiView() {
       <aside className="api-tree">
         <dl className="api-coverage" data-testid="api-coverage">
           {[
-            { label: 'Описания', value: cov.described, onClick: () => set({ undocumented: filter.undocumented !== true }), hint: 'Нажмите — только роуты без описания' },
+            { label: 'Описания авторов', value: cov.described, onClick: () => set({ undocumented: filter.undocumented !== true }), hint: 'Нажмите — только роуты без авторского описания' },
+            { label: 'Описания из кода', value: cov.autoDescribed, hint: `${AUTO_DOC_NOTE}: вход, таблицы, доступ или ответ` },
             { label: 'Проверка входа', value: cov.withInput },
             { label: 'Доступ', value: cov.withAccess },
-            { label: 'Вызываются экранами', value: cov.withScreens },
+            {
+              label: 'Вызываются экранами',
+              value: cov.withScreens,
+              onClick: () => set({ noScreens: filter.noScreens !== true }),
+              hint: `Нажмите — только роуты без экранов. Не доходит ни один экран: ${cov.gaps.unreached}, не из экранов: ${cov.gaps.otherClient}, никто не вызывает: ${cov.gaps.noCaller}`,
+            },
           ].map((c) => (
             <div key={c.label} className={`api-coverage__row${c.onClick === undefined ? '' : ' api-coverage__row--click'}`} onClick={c.onClick} title={c.hint}>
               <dt>{c.label}</dt>
@@ -339,8 +369,11 @@ export function ApiView() {
                 <option key={t.id} value={t.name} />
               ))}
             </datalist>
-            <Chip active={filter.undocumented === true} onClick={() => set({ undocumented: filter.undocumented !== true })} data-testid="api-undocumented">
+            <Chip active={filter.undocumented === true} onClick={() => set({ undocumented: filter.undocumented !== true })} data-testid="api-undocumented" title="Без авторского описания">
               Без описания
+            </Chip>
+            <Chip active={filter.noScreens === true} onClick={() => set({ noScreens: filter.noScreens !== true })} data-testid="api-no-screens">
+              Без экранов
             </Chip>
             {n === 0 ? null : (
               <Button type="button" size="sm" variant="ghost" onClick={() => setFilter(EMPTY)}>
@@ -374,7 +407,7 @@ export function ApiView() {
               </h3>
               <ul>
                 {m.routes.map((r) => {
-                  const line = routeOneLine(r);
+                  const line = routeOneLine(index, r);
                   return (
                     <li key={r.id}>
                       <button
@@ -389,7 +422,9 @@ export function ApiView() {
                           <span className="api-row__path">{r.path}</span>
                           <Marks route={r} />
                         </span>
-                        {line === undefined ? null : <span className="api-row__doc">{line}</span>}
+                        <span className={`api-row__doc${line.auto ? ' api-row__doc--auto' : ''}`} title={line.auto ? AUTO_DOC_NOTE : undefined}>
+                          {line.text}
+                        </span>
                       </button>
                     </li>
                   );

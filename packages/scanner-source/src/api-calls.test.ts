@@ -12,9 +12,24 @@ const USERS_SCREEN = 'apps/web/src/app/users/page.tsx';
 const ORDERS_SCREEN = 'apps/web/src/app/orders/page.tsx';
 const PROFILE_SCREEN = 'apps/miniapp/src/screens/Profile.tsx';
 const RR_CONFIG = 'apps/miniapp/src/routes.tsx';
+const ADMIN_CONFIG = 'apps/admin/src/route-config.ts';
 const RR_SCREENS = [
   { file: RR_CONFIG, nodeId: 'route:/profile/:id', routePath: '/profile/:id' },
   { file: RR_CONFIG, nodeId: 'route:/orders', routePath: '/orders' },
+  { file: RR_CONFIG, nodeId: 'route:/wallet', routePath: '/wallet' },
+  // TanStack Router: файл экрана — сам компонент, объекта роута в нём нет.
+  {
+    file: 'apps/miniapp/src/screens/Settings.tsx',
+    nodeId: 'route:/settings',
+    routePath: '/settings',
+    routeFile: 'apps/miniapp/src/tanstack-routes.tsx',
+  },
+  // Один файл страницы на два маршрута (`/plans/new` и `/plans/[code]`).
+  { file: 'apps/miniapp/src/screens/Settings.tsx', nodeId: 'route:/settings/advanced', routePath: '/settings/advanced' },
+  // Админка: конфиг — только данные, компонент выбирает switch по разделу пути.
+  { file: ADMIN_CONFIG, nodeId: 'admin:/users', routePath: '/users' },
+  { file: ADMIN_CONFIG, nodeId: 'admin:/users/[id]', routePath: '/users/[id]' },
+  { file: ADMIN_CONFIG, nodeId: 'admin:/audit', routePath: '/audit' },
 ];
 
 let code: CodeModel;
@@ -80,6 +95,10 @@ describe('scanSource: вызовы API', () => {
     ]);
   });
 
+  test('origin параметром функции перед литералом пути — вызов в этой функции', () => {
+    expect(callsIn('apps/miniapp/src/stores/cards.ts')).toEqual(['POST /api/cards/auto-renew fetch → нет роута']);
+  });
+
   test('вызов без роута остаётся несопоставленным', () => {
     expect(callsIn(USERS_SCREEN)).toEqual(['GET /api/unknown-thing fetch → нет роута']);
   });
@@ -117,9 +136,73 @@ describe('scanSource: экраны → вызовы', () => {
       'GET /api/users ← Profile',
       'GET /api/users/:id ← Profile',
       'GET /health ← Profile',
+      'GET /v1/me ← Profile',
       'POST /orders ← Profile',
     ]);
-    expect(screenCalls('route:/orders')).toEqual(['GET /v1/orders/count']);
+    expect(screenCalls('route:/orders')).toEqual([
+      'DELETE /v1/orders-store/:id ← createOrdersStore',
+      'GET /v1/orders-store ← load',
+      'GET /v1/orders/count',
+    ]);
+  });
+
+  test('таб без элемента: экран берётся из карты загрузчиков по id роута', () => {
+    expect(screenCalls('route:/wallet')).toContain('GET /v1/wallet ← createWalletStore');
+  });
+
+  test('стор-фабрика экрана обходится целиком, даже если тип стора не виден', () => {
+    expect(screenCalls('route:/wallet')).toEqual([
+      'GET /v1/me ← me',
+      'GET /v1/wallet ← createWalletStore',
+      'POST /v1/wallet/top-up ← createWalletStore',
+    ]);
+  });
+
+  test('общая фабрика многих экранов целиком не обходится: экрану — только его методы', () => {
+    for (const key of ['route:/profile/:id', 'route:/wallet', 'route:/settings']) {
+      expect(screenCalls(key).some((c) => c.startsWith('GET /v1/me'))).toBe(true);
+      expect(screenCalls(key).some((c) => c.startsWith('GET /v1/ping'))).toBe(false);
+    }
+  });
+
+  test('метод по имени (тип получателя не виден) не берётся из чужого стора', () => {
+    expect(screenCalls('route:/wallet').some((c) => c.includes('/v1/orders-store'))).toBe(false);
+  });
+
+  test('TanStack Router: файл экрана без объекта роута обходится сам', () => {
+    expect(screenCalls('route:/settings')).toContain('GET /v1/settings');
+  });
+
+  test('TanStack Router: loader маршрута в файле конфига — тоже вызовы экрана', () => {
+    expect(screenCalls('route:/settings')).toContain('GET /v1/settings/defaults ← loadSettings');
+  });
+
+  test('файл страницы на два маршрута без диспетчера обходится для обоих', () => {
+    expect(screenCalls('route:/settings/advanced')).toEqual(['GET /v1/me ← me', 'GET /v1/profile ← fetchProfile', 'GET /v1/settings']);
+  });
+
+  test('клиент из контекста (создан оболочкой): метод по имени берётся из него', () => {
+    expect(screenCalls('route:/settings')).toEqual([
+      'GET /v1/me ← me',
+      'GET /v1/profile ← fetchProfile',
+      'GET /v1/settings',
+      'GET /v1/settings/defaults ← loadSettings',
+    ]);
+  });
+
+  test('админка без компонентов в конфиге: экран находится по switch на раздел пути', () => {
+    expect(screenCalls('admin:/users')).toEqual(['GET /api/admin/activity ← UsersPage', 'GET /api/admin/users ← UsersPage']);
+    expect(screenCalls('admin:/users/[id]')).toEqual(['GET /api/admin/activity ← UsersPage', 'GET /api/admin/users ← UsersPage']);
+    expect(screenCalls('admin:/audit')).toEqual(expect.arrayContaining(['GET /api/admin/audit ← AuditPage']));
+  });
+
+  test('fetch, внедрённый параметром (fetchWithAuth), и api.getRaw(путь) — вызовы API; api.getUser(id) — нет', () => {
+    expect(screenCalls('admin:/audit')).toEqual([
+      'GET /api/admin/audit ← AuditPage',
+      'GET /api/admin/audit/events ← AuditPage',
+      'GET /api/admin/audit/export ← AuditPage',
+      'POST /api/admin/audit/events/:id/ack ← AuditPage',
+    ]);
   });
 
   test('без entries экранов нет', () => {

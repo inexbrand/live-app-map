@@ -4,6 +4,7 @@
  */
 import type { ApiRoute, CodeService, HttpMethod } from '@live-app-map/schema';
 import type { CodeIndex } from './code-query';
+import { routeAutoDoc, routeScreenGap } from './route-auto-doc';
 
 /** Фильтр роутов. */
 export type ApiFilter = {
@@ -15,8 +16,10 @@ export type ApiFilter = {
   readonly service?: string;
   /** Таблица, которую роут читает или пишет: имя в коде или в БД. */
   readonly table?: string;
-  /** Только роуты без описания. */
+  /** Только роуты без авторского описания. */
   readonly undocumented?: boolean;
+  /** Только роуты, которые не вызывает ни один экран. */
+  readonly noScreens?: boolean;
 };
 
 /** Модуль: роуты с общим префиксом из двух сегментов. */
@@ -112,6 +115,7 @@ export function filterRoutes(index: CodeIndex, filter: ApiFilter): ApiRoute[] {
       (methods.size === 0 || methods.has(r.method)) &&
       (filter.table === undefined || filter.table === '' || touchesTable(index, r, filter.table)) &&
       (filter.undocumented !== true || !hasDescription(r)) &&
+      (filter.noScreens !== true || (index.callersByRoute.get(r.id)?.length ?? 0) === 0) &&
       (q === '' ||
         [r.method, r.path, r.doc ?? '', ...(r.comments ?? []), r.handler.name ?? '', r.location.file].join('\n').toLowerCase().includes(q)),
   );
@@ -173,10 +177,15 @@ export function apiArchitecture(index: CodeIndex, filter: ApiFilter = {}): Servi
 /** Сводка покрытия роутов: описания, проверки входа, доступ. */
 export type ApiCoverage = {
   readonly routes: number;
+  /** С авторским описанием (JSDoc или комментарий). */
   readonly described: number;
+  /** С описанием из кода: найден хотя бы один факт кроме обработчика. */
+  readonly autoDescribed: number;
   readonly withInput: number;
   readonly withAccess: number;
   readonly withScreens: number;
+  /** Без экранов — по причинам. */
+  readonly gaps: { readonly unreached: number; readonly otherClient: number; readonly noCaller: number };
 };
 
 /**
@@ -187,11 +196,18 @@ export type ApiCoverage = {
  * @returns счётчики
  */
 export function apiCoverage(index: CodeIndex, routes: readonly ApiRoute[] = index.code.routes): ApiCoverage {
+  const gaps = routes.map((r) => routeScreenGap(index, r)?.kind);
   return {
     routes: routes.length,
     described: routes.filter(hasDescription).length,
+    autoDescribed: routes.filter((r) => routeAutoDoc(index, r).facts > 0).length,
     withInput: routes.filter((r) => r.input !== undefined).length,
     withAccess: routes.filter((r) => r.access !== undefined).length,
     withScreens: routes.filter((r) => (index.callersByRoute.get(r.id)?.length ?? 0) > 0).length,
+    gaps: {
+      unreached: gaps.filter((g) => g === 'unreached').length,
+      otherClient: gaps.filter((g) => g === 'other-client').length,
+      noCaller: gaps.filter((g) => g === 'no-caller').length,
+    },
   };
 }

@@ -25,7 +25,7 @@ describe('runCodeScan', () => {
       const out = path.join(dir, 'code.json');
       const result = runCodeScan({ dir: SOURCE, out });
       expect(result.document.nodes.every((n) => n.kind === 'service')).toBe(true);
-      expect(result.document.nodes).toHaveLength(6);
+      expect(result.document.nodes).toHaveLength(7);
       const parsed = parseAppMapDocument(JSON.parse(readFileSync(out, 'utf8')));
       if (!parsed.ok) {
         throw new Error(parsed.errors.map((e) => e.message).join('\n'));
@@ -119,7 +119,7 @@ describe('bin code', () => {
       const proc = Bun.spawnSync(['bun', 'run', BIN, 'code', '--dir', SOURCE, '-o', out]);
       expect(proc.exitCode).toBe(0);
       const summary: unknown = JSON.parse(proc.stdout.toString());
-      expect(summary).toMatchObject({ ok: true, services: 6, routes: 14, routesWithDbInLoop: 1, tables: 6, out });
+      expect(summary).toMatchObject({ ok: true, services: 7, routes: 14, routesWithDbInLoop: 1, tables: 6, out });
       const doc: unknown = JSON.parse(readFileSync(out, 'utf8'));
       const parsed = parseAppMapDocument(doc);
       if (!parsed.ok) {

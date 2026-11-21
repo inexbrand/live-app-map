@@ -21,6 +21,11 @@ const EXTERNAL = /^[a-z][\w+.-]*:\/\/(?!localhost\b|127\.0\.0\.1\b|0\.0\.0\.0\b)
 /** Строка пути с метками и имена меток по порядку. */
 type Marked = { readonly text: string; readonly names: readonly string[] };
 
+/** Часть — литерал, начинающийся с '/'. */
+function startsWithSlash(p: Part | undefined): boolean {
+  return p?.kind === 'lit' && p.text.startsWith('/');
+}
+
 /**
  * Склеивает части в строку с метками; undefined — путь задаёт не этот код.
  */
@@ -33,15 +38,21 @@ function mark(parts: readonly Part[]): Marked | undefined {
     } else if (p.kind === 'env' && i === 0) {
       text += p.base ?? '';
     } else if (p.kind === 'param') {
-      if (i === 0 || PATH_LIKE.test(p.name)) {
+      if (PATH_LIKE.test(p.name)) {
         return undefined;
+      }
+      if (text === '') {
+        // `${origin}/api/…`: параметр-адрес перед литералом пути — это origin, путь задан здесь.
+        if (!startsWithSlash(parts[i + 1])) {
+          return undefined;
+        }
+        continue;
       }
       text += PARAM;
       names.push(p.name);
-    } else if (i === 0) {
+    } else if (text === '') {
       // Неизвестное начало перед литералом '/…' — это origin (window.location.origin и т. п.).
-      const nextPart = parts[1];
-      if (nextPart?.kind !== 'lit' || !nextPart.text.startsWith('/')) {
+      if (!startsWithSlash(parts[i + 1])) {
         return undefined;
       }
     } else {

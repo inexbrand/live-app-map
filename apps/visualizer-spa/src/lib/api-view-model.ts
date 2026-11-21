@@ -6,12 +6,16 @@ import {
   apiArchitecture,
   apiCoverage,
   filterRoutes,
+  routeAutoDoc,
   routeDetail,
+  routeScreenGap,
   shortSummary,
   type ApiCoverage,
   type ApiFilter,
   type CodeIndex,
+  type RouteAutoDoc,
   type RouteDetail,
+  type ScreenGap,
   type ServiceApi,
 } from '@live-app-map/graph';
 import type { ApiRoute, HttpMethod, RouteInputSchema } from '@live-app-map/schema';
@@ -25,7 +29,12 @@ export type InputPart = {
 
 /** Карточка роута. */
 export type RouteCard = RouteDetail & {
+  /** Авторское описание (JSDoc, комментарии). */
   readonly summary?: string;
+  /** Описание, собранное из кода. */
+  readonly auto: RouteAutoDoc;
+  /** Почему роут не вызывает ни один экран; нет — экраны есть. */
+  readonly gap?: ScreenGap;
   readonly inputs: readonly InputPart[];
 };
 
@@ -86,12 +95,23 @@ export function routeCard(index: CodeIndex, routeId: string): RouteCard | null {
     return schema === undefined ? [] : [{ part, label, schema }];
   });
   const summary = d.route.doc ?? d.route.comments?.join('\n\n');
-  return { ...d, ...(summary === undefined ? {} : { summary }), inputs };
+  const gap = routeScreenGap(index, d.route);
+  return {
+    ...d,
+    ...(summary === undefined ? {} : { summary }),
+    auto: routeAutoDoc(index, d.route),
+    ...(gap === undefined ? {} : { gap }),
+    inputs,
+  };
 }
 
-/** Однострочное описание роута для списка. */
-export function routeOneLine(r: ApiRoute): string | undefined {
-  return shortSummary(r.doc, r.comments);
+/** Строка описания в списке: авторская или собранная из кода. */
+export type RouteLine = { readonly text: string; readonly auto: boolean };
+
+/** Однострочное описание роута для списка: авторское, иначе собранное из кода. */
+export function routeOneLine(index: CodeIndex, r: ApiRoute): RouteLine {
+  const own = shortSummary(r.doc, r.comments);
+  return own === undefined ? { text: routeAutoDoc(index, r).summary, auto: true } : { text: own, auto: false };
 }
 
 /** Схема одной строкой для подсказки: `{ title: string, salary?: number }`. */

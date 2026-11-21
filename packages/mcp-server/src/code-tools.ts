@@ -3,13 +3,16 @@
  * Читают раздел `code` карты (собирается `scan --code-dir`).
  */
 import {
+  AUTO_DOC_NOTE,
   apiArchitecture,
   apiCoverage,
   filterRoutes,
   findRoutes,
   findService,
   findTable,
+  routeAutoDoc,
   routeDetail,
+  routeScreenGap,
   serviceSummaries,
   shortSummary,
   tableDetail,
@@ -52,7 +55,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   {
     name: 'get_route',
     description:
-      'Роут целиком: что делает (комментарии), где обработчик, какие таблицы читает и пишет (с признаком N+1), какие экраны его вызывают',
+      'Роут целиком: авторское описание (комментарии) и описание, собранное из кода (вход, таблицы, доступ, ответ), где обработчик, какие таблицы читает и пишет (с признаком N+1), какие экраны его вызывают, а если ни один — почему',
     inputSchema: {
       type: 'object',
       required: ['mapPath', 'route'],
@@ -62,7 +65,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   {
     name: 'describe_api',
     description:
-      'Архитектура API: сервисы → разделы (/api/v1/admin) → модули (/api/v1/admin/vacancies) с роутами; покрытие описаниями, проверкой входа, доступом и экранами. Фильтр по сервису, методу, таблице, «без описания»',
+      'Архитектура API: сервисы → разделы (/api/v1/admin) → модули (/api/v1/admin/vacancies) с роутами; у роута — авторское описание и описание из кода; покрытие описаниями, проверкой входа, доступом и экранами (без экранов — по причинам). Фильтр по сервису, методу, таблице, «без описания» (авторского), «без экранов»',
     inputSchema: {
       type: 'object',
       required: ['mapPath'],
@@ -71,7 +74,8 @@ export const CODE_TOOLS: readonly ToolDef[] = [
         service: { type: 'string', description: 'Имя сервиса (@korbor/api) или id' },
         method: { type: 'string', description: 'HTTP-метод: GET, POST …' },
         table: { type: 'string', description: 'Только роуты, которые читают или пишут таблицу' },
-        undocumented: { type: 'boolean', description: 'Только роуты без описания' },
+        undocumented: { type: 'boolean', description: 'Только роуты без авторского описания' },
+        noScreens: { type: 'boolean', description: 'Только роуты, которые не вызывает ни один экран, с причиной' },
       },
     },
   },
@@ -119,7 +123,6 @@ function indexOf(args: Args): CodeIndex {
   return loadCodeIndex(mapPath);
 }
 
-
 /** Роут одной строкой для списков. */
 function routeLine(index: CodeIndex, r: ApiRoute): Record<string, unknown> {
   const detail = routeDetail(index, r.id);
@@ -130,6 +133,7 @@ function routeLine(index: CodeIndex, r: ApiRoute): Record<string, unknown> {
     path: r.path,
     service: index.servicesById.get(r.serviceId)?.name ?? r.serviceId,
     ...(about === undefined ? {} : { summary: about }),
+    autoSummary: routeAutoDoc(index, r).summary,
     ...(r.access === undefined ? {} : { access: r.access }),
     reads: detail?.reads.map((t) => t.dbName ?? t.table) ?? [],
     writes: detail?.writes.map((t) => t.dbName ?? t.table) ?? [],
@@ -195,10 +199,31 @@ function getRoute(args: Args): ToolResult {
     handler: route.handler,
     ...(route.input === undefined ? {} : { input: route.input }),
     ...(route.access === undefined ? {} : { access: route.access }),
+    ...(route.response === undefined ? {} : { response: route.response }),
+    autoDoc: { note: AUTO_DOC_NOTE, ...routeAutoDoc(index, route) },
     reads: detail.reads,
     writes: detail.writes,
     screens: detail.callers,
+    ...optionalGap(index, route),
   });
+}
+
+/** Причина «без экранов» для выдачи; у роута с экранами — ничего. */
+function optionalGap(index: CodeIndex, route: ApiRoute): { noScreens?: { kind: string; reason: string; files: readonly string[] } } {
+  const gap = routeScreenGap(index, route);
+  return gap === undefined ? {} : { noScreens: { kind: gap.kind, reason: gap.text, files: gap.files } };
+}
+
+/** Строка роута в describe_api: авторское описание, описание из кода, причина без экранов. */
+function apiRouteLine(index: CodeIndex, r: ApiRoute, withGap: boolean): string {
+  const about = shortSummary(r.doc, r.comments);
+  const auto = routeAutoDoc(index, r).summary;
+  const gap = withGap ? routeScreenGap(index, r) : undefined;
+  return [
+    `${r.method} ${r.path}${about === undefined ? '' : ` — ${about}`}`,
+    `из кода: ${auto}`,
+    ...(gap === undefined ? [] : [`без экранов: ${gap.text}`]),
+  ].join(' · ');
 }
 
 const METHODS: readonly HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL'];
@@ -219,7 +244,9 @@ function describeApi(args: Args): ToolResult {
     ...(method === undefined ? {} : { methods: [method] }),
     ...(str(args, 'table') === '' ? {} : { table: str(args, 'table') }),
     ...(args['undocumented'] === true ? { undocumented: true } : {}),
+    ...(args['noScreens'] === true ? { noScreens: true } : {}),
   };
+  const withGap = args['noScreens'] === true;
   const services = apiArchitecture(index, filter).map((s) => ({
     service: s.service.name,
     root: s.service.root,
@@ -230,14 +257,11 @@ function describeApi(args: Args): ToolResult {
       routes: sec.count,
       modules: sec.modules.map((m) => ({
         prefix: m.prefix,
-        routes: m.routes.map((r) => {
-          const about = shortSummary(r.doc, r.comments);
-          return `${r.method} ${r.path}${about === undefined ? '' : ` — ${about}`}`;
-        }),
+        routes: m.routes.map((r) => apiRouteLine(index, r, withGap)),
       })),
     })),
   }));
-  return ok({ ok: true, coverage: apiCoverage(index, filterRoutes(index, filter)), services });
+  return ok({ ok: true, note: `«из кода:» — ${AUTO_DOC_NOTE}`, coverage: apiCoverage(index, filterRoutes(index, filter)), services });
 }
 
 function listTables(args: Args): ToolResult {

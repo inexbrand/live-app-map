@@ -96,7 +96,16 @@ describe('архитектура API', () => {
   });
 
   test('покрытие: описания, вход, доступ', () => {
-    expect(apiCoverage(index)).toEqual({ routes: 5, described: 2, withInput: 3, withAccess: 3, withScreens: 0 });
+    expect(apiCoverage(index)).toEqual({
+      routes: 5,
+      described: 2,
+      // У /api/public/health нет ни входа, ни таблиц, ни доступа, ни ответа литералом.
+      autoDescribed: 4,
+      withInput: 3,
+      withAccess: 3,
+      withScreens: 0,
+      gaps: { unreached: 0, otherClient: 0, noCaller: 5 },
+    });
   });
 });
 

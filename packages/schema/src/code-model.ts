@@ -126,6 +126,16 @@ export type RouteAccess = {
   readonly checks?: readonly string[];
 };
 
+/** Ответ обработчика, найденный в коде. Поля пишутся, только если найдены. */
+export type RouteResponse = {
+  /** Поля возвращаемого объекта (`return { items, total }`, `c.json({…})`); `...x` — развёрнутый объект. */
+  readonly fields?: readonly string[];
+  /** Что возвращается, если не литерал: переменная (`user`) или вызов (`findUser()`). */
+  readonly values?: readonly string[];
+  /** HTTP-статусы, которые обработчик ставит явно (`set.status = 404`, `res.status(403)`). */
+  readonly statuses?: readonly number[];
+};
+
 /** HTTP-роут бэкенда. */
 export type ApiRoute = CodeComments & {
   readonly id: string;
@@ -144,6 +154,8 @@ export type ApiRoute = CodeComments & {
   readonly input?: RouteInput;
   /** Доступ; нет — проверок в коде не найдено. */
   readonly access?: RouteAccess;
+  /** Ответ обработчика; нет — в коде не найден. */
+  readonly response?: RouteResponse;
 };
 
 /** Внешний ключ колонки: на какую таблицу и колонку ссылается. */
