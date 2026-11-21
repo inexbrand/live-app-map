@@ -1,5 +1,4 @@
-# Epoch index
+# ux-overhaul
 
-- Status: research
-- Repo: /Users/macbook/orca/workspaces/live-app-map/octopus
-- Created: 2026-11-21T21:54:34
+Статус: готово, PR в master.
+Визуализатор: адрес и история, крошки, поиск ⌘K, горячие клавиши, граф документации на canvas, локальный граф, светлая тема, читаемость видов.
