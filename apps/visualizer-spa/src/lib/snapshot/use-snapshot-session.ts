@@ -6,8 +6,14 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useSnapshotStore, type SnapshotPurpose } from '../../store/snapshot-store';
+import type { Rect } from './region';
 import { uploadSnapshot } from '../agent-bridge';
+import { useCommentsStore } from '../../store/comments-store';
+import { anchorPage, screenAnchor } from '../comments/page-anchor';
 import { createTabGrabber, type GrabResult, type TabGrabber } from './tab-grabber';
+
+/** Сколько держать поток вкладки после замечания: следующее — без диалога браузера. */
+const KEEP_STREAM_MS = 5 * 60_000;
 
 /** Ждём два кадра: оверлей выделения должен исчезнуть из кадра. */
 function afterPaint(): Promise<void> {
@@ -16,13 +22,32 @@ function afterPaint(): Promise<void> {
   });
 }
 
-async function deliver(purpose: SnapshotPurpose, shot: GrabResult): Promise<string> {
+/** Снимок для замечания: элемент — в черновик, область — новый черновик экрана. */
+function deliverComment(purpose: Extract<SnapshotPurpose, { kind: 'comment' }>, shot: GrabResult, rect: Rect): string | null {
+  const comments = useCommentsStore.getState();
+  const dataUrl = shot.ok ? shot.dataUrl : null;
+  if (purpose.pick === 'element') {
+    comments.setDraftShot(dataUrl);
+    const pageId = comments.draft?.anchor.pageId ?? null;
+    if (pageId !== null) {
+      useAppStore.getState().selectPage(pageId);
+    }
+    return null;
+  }
+  const page = purpose.pageId === null ? null : anchorPage(purpose.pageId);
+  if (page === null) {
+    return 'Выберите экран, к которому относится область';
+  }
+  comments.startDraft({ anchor: screenAnchor(page), viewRect: rect, shot: dataUrl });
+  return shot.ok ? null : `Снимок не удался: ${shot.error}`;
+}
+
+async function deliver(purpose: SnapshotPurpose, shot: GrabResult, rect: Rect): Promise<string | null> {
+  if (purpose.kind === 'comment') {
+    return deliverComment(purpose, shot, rect);
+  }
   if (!shot.ok) {
     return `Снимок не удался: ${shot.error}`;
-  }
-  if (purpose.kind === 'feedback') {
-    useSnapshotStore.getState().setFeedbackShot({ dataUrl: shot.dataUrl, pageId: purpose.pageId });
-    return `Снимок ${shot.width}×${shot.height} добавлен к замечанию`;
   }
   const up = await uploadSnapshot({
     requestId: purpose.requestId,
@@ -39,6 +64,7 @@ export function useSnapshotSession(): void {
   const session = useSnapshotStore((s) => s.session);
   const hasMap = useAppStore((s) => s.document !== null);
   const grabberRef = useRef<TabGrabber | null>(null);
+  const keepUntil = useRef(0);
 
   useEffect(() => {
     // Карту закрыли посреди выделения — оверлея больше нет, сессию отменяем
@@ -54,8 +80,13 @@ export function useSnapshotSession(): void {
     const toast = useAppStore.getState().setToast;
 
     if (session.phase === 'idle' || session.phase === 'requested') {
-      grabber.close();
-      return;
+      const left = keepUntil.current - Date.now();
+      if (left <= 0) {
+        grabber.close();
+        return;
+      }
+      const t = window.setTimeout(() => grabber.close(), left);
+      return () => window.clearTimeout(t);
     }
     if (session.phase === 'opening') {
       void grabber.open().then((res) => {
@@ -66,6 +97,10 @@ export function useSnapshotSession(): void {
         }
         if (res.ok) {
           store.opened();
+        } else if (session.purpose.kind === 'comment' && session.purpose.pick === 'element') {
+          // Замечание важнее снимка: выбираем компонент и без него
+          store.opened();
+          toast(`Снимок недоступен (${res.error}) — замечание сохранится без него`);
         } else {
           store.cancel();
           toast(`Снимок: ${res.error}`);
@@ -77,11 +112,17 @@ export function useSnapshotSession(): void {
       void afterPaint()
         .then(() => grabber.grab(session.rect))
         .then((shot) => {
-          grabber.close();
-          return deliver(session.purpose, shot);
+          if (session.purpose.kind === 'comment') {
+            keepUntil.current = Date.now() + KEEP_STREAM_MS;
+          } else {
+            grabber.close();
+          }
+          return deliver(session.purpose, shot, session.rect);
         })
         .then((message) => {
-          toast(message);
+          if (message !== null) {
+            toast(message);
+          }
           useSnapshotStore.getState().finish();
         });
     }

@@ -9,9 +9,12 @@
 import { create } from 'zustand';
 import type { Rect } from '../lib/snapshot/region';
 
-/** Для чего снимаем. */
+/**
+ * Для чего снимаем. Замечание: выбор компонента курсором в живом экране
+ * (element) или выделение области мышью (region).
+ */
 export type SnapshotPurpose =
-  | { readonly kind: 'feedback'; readonly pageId: string | null }
+  | { readonly kind: 'comment'; readonly pick: 'element' | 'region'; readonly pageId: string | null }
   | { readonly kind: 'agent'; readonly requestId: string; readonly note: string | null };
 
 /** Фаза сессии; у каждой фазы ровно свои поля. */
@@ -24,15 +27,8 @@ export type SnapshotSession =
   | { readonly phase: 'selecting'; readonly purpose: SnapshotPurpose }
   | { readonly phase: 'capturing'; readonly purpose: SnapshotPurpose; readonly rect: Rect };
 
-/** Снимок, приложенный к замечанию. */
-export type FeedbackShot = {
-  readonly dataUrl: string;
-  readonly pageId: string | null;
-};
-
 type SnapshotStore = {
   readonly session: SnapshotSession;
-  readonly feedbackShot: FeedbackShot | null;
   /**
    * Начать сессию: замечание — сразу к доступу (клик уже был), агент — ждать
    * согласия. Если сессия уже идёт — false.
@@ -48,13 +44,11 @@ type SnapshotStore = {
   cancel: () => void;
   /** Захват закончился — сессия закрыта. */
   finish: () => void;
-  setFeedbackShot: (shot: FeedbackShot | null) => void;
 };
 
 /** Store сессии снимка. */
 export const useSnapshotStore = create<SnapshotStore>((set, get) => ({
   session: { phase: 'idle' },
-  feedbackShot: null,
   request: (purpose) => {
     if (get().session.phase !== 'idle') {
       return false;
@@ -86,5 +80,13 @@ export const useSnapshotStore = create<SnapshotStore>((set, get) => ({
     }
   },
   finish: () => set({ session: { phase: 'idle' } }),
-  setFeedbackShot: (shot) => set({ feedbackShot: shot }),
 }));
+
+/**
+ * Идёт выбор компонента курсором (iframe живых экранов принимают мышь).
+ *
+ * @param s - сессия
+ */
+export function isElementPick(s: SnapshotSession): boolean {
+  return s.phase === 'selecting' && s.purpose.kind === 'comment' && s.purpose.pick === 'element';
+}

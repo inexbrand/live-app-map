@@ -14,12 +14,12 @@ describe('snapshot session', () => {
 
   test('замечание: opening → selecting → capturing → idle', () => {
     const s = useSnapshotStore.getState();
-    expect(s.request({ kind: 'feedback', pageId: 'p' })).toBe(true);
+    expect(s.request({ kind: 'comment', pick: 'region', pageId: 'p' })).toBe(true);
     expect(phase()).toBe('opening');
     s.opened();
     expect(phase()).toBe('selecting');
     s.beginCapture(rect);
-    expect(useSnapshotStore.getState().session).toEqual({ phase: 'capturing', purpose: { kind: 'feedback', pageId: 'p' }, rect });
+    expect(useSnapshotStore.getState().session).toEqual({ phase: 'capturing', purpose: { kind: 'comment', pick: 'region', pageId: 'p' }, rect });
     s.finish();
     expect(phase()).toBe('idle');
   });
@@ -36,9 +36,9 @@ describe('snapshot session', () => {
 
   test('вторая сессия поверх идущей не начинается', () => {
     const s = useSnapshotStore.getState();
-    s.request({ kind: 'feedback', pageId: null });
+    s.request({ kind: 'comment', pick: 'element', pageId: null });
     expect(s.request({ kind: 'agent', requestId: 'r1', note: null })).toBe(false);
-    expect(useSnapshotStore.getState().session).toMatchObject({ purpose: { kind: 'feedback' } });
+    expect(useSnapshotStore.getState().session).toMatchObject({ purpose: { kind: 'comment' } });
   });
 
   test('отмена работает до захвата и не рвёт идущий захват', () => {
@@ -46,7 +46,7 @@ describe('snapshot session', () => {
     s.request({ kind: 'agent', requestId: 'r1', note: null });
     s.cancel();
     expect(phase()).toBe('idle');
-    s.request({ kind: 'feedback', pageId: null });
+    s.request({ kind: 'comment', pick: 'element', pageId: null });
     s.opened();
     s.beginCapture(rect);
     s.cancel();

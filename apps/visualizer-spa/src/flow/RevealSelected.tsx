@@ -6,6 +6,7 @@
 import { useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useAppStore } from '../store/app-store';
+import { useCommentsStore } from '../store/comments-store';
 import { revealShift, type DockedPanel, type ScreenRect } from './reveal';
 
 const GAP = 16;
@@ -26,6 +27,8 @@ function dockedPanels(): DockedPanel[] {
 /** Сдвигает холст к выбранной ноде (компонент внутри ReactFlow). */
 export function RevealSelected() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
+  // Левая панель веток экрана появляется после выбора (ветки грузятся) — сдвинуть ещё раз
+  const leftPanel = useCommentsStore((s) => !s.listOpen && s.threads.some((t) => t.anchor.pageId === selectedPageId));
   const flow = useReactFlow();
   useEffect(() => {
     if (selectedPageId === null) {
@@ -52,6 +55,6 @@ export function RevealSelected() {
       });
     });
     return () => cancelAnimationFrame(raf);
-  }, [selectedPageId, flow]);
+  }, [selectedPageId, leftPanel, flow]);
   return null;
 }

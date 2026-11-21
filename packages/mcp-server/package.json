@@ -24,6 +24,11 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./comments-schema": {
+      "types": "./src/comments-schema.ts",
+      "import": "./src/comments-schema.ts",
+      "default": "./src/comments-schema.ts"
     }
   }
 }

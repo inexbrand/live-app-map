@@ -16,6 +16,7 @@ import {
   Layers,
   LayoutGrid,
 } from 'lucide-react';
+import { CommentsToolbarButton } from './comments/CommentsToolbarButton';
 import { useEffect, useState } from 'react';
 import {
   fetchDogfoodActors,
@@ -337,6 +338,7 @@ export function MapToolbar(props: MapToolbarProps) {
         <div className="toolbar__spacer" />
 
         <div className="toolbar__group">
+          {document ? <CommentsToolbarButton /> : null}
           <Button
             type="button"
             variant={sheet === 'sources' ? 'primary' : 'outline'}

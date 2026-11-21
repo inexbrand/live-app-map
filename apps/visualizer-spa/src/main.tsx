@@ -7,6 +7,7 @@ import { initPluginHost } from './plugin-host';
 import { applyTheme, savedTheme } from './lib/theme';
 import './styles/global.css';
 import './styles/views.css';
+import './styles/comments.css';
 
 // Production-safe: пустой список плагинов — no-op registry, boot не ломается.
 // Реальные visualizer-плагины подключаются сюда, когда host wiring расширят.

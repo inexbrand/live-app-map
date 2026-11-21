@@ -33,13 +33,15 @@ function describeError(err: unknown): string {
   return err instanceof Error ? err.message : String(err);
 }
 
+/** Дольше нового кадра не ждём: неподвижная вкладка кадров не шлёт, берём последний. */
+const FRAME_WAIT_MS = 250;
+
 async function nextFrame(video: HTMLVideoElement): Promise<void> {
   await new Promise<void>((resolve) => {
+    window.setTimeout(resolve, 'requestVideoFrameCallback' in video ? FRAME_WAIT_MS : 120);
     if ('requestVideoFrameCallback' in video) {
       video.requestVideoFrameCallback(() => resolve());
-      return;
     }
-    window.setTimeout(resolve, 120);
   });
 }
 
