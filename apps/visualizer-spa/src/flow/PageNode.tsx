@@ -19,6 +19,7 @@ import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEve
 import {
   measureIframeContentHeight,
 } from '../lib/measure-iframe-height';
+import { wheelToPage } from '../lib/iframe-wheel';
 import {
   computeNodeLayout,
   resolveNodeViewport,
@@ -241,6 +242,30 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     io.observe(el);
     return () => io.disconnect();
   }, [node.id, setVisible, loadSeq]);
+
+  // Колесо над живым экраном, который длиннее своего окна, прокручивает страницу, а не холст.
+  // Нативный слушатель: d3-zoom холста ловит колесо раньше делегированных событий React.
+  const wheelTarget = useRef({ scrollable: false, pageWidth: viewport.width });
+  wheelTarget.current = { scrollable: status.cropped !== null, pageWidth: viewport.width };
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el) {
+      return;
+    }
+    const onWheel = (e: WheelEvent) => {
+      const frame = iframeRef.current;
+      const { scrollable, pageWidth } = wheelTarget.current;
+      const msg = frame === null || !scrollable ? null : wheelToPage(e, frame.getBoundingClientRect(), pageWidth);
+      if (msg === null || frame === null) {
+        return;
+      }
+      e.stopPropagation();
+      e.preventDefault();
+      frame.contentWindow?.postMessage(msg, '*');
+    };
+    el.addEventListener('wheel', onWheel, { passive: false });
+    return () => el.removeEventListener('wheel', onWheel);
+  }, []);
 
   // Во всю высоту (heightMode=auto): высота из отчёта шлюза — страница кросс-доменная.
   const reportedHeight = status.contentHeight;
