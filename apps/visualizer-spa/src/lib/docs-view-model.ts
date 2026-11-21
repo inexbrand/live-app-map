@@ -141,6 +141,15 @@ export function galleryImages(images: readonly string[], docPath: string, text: 
   return images.filter((img) => !embedded.has(img));
 }
 
+/** Сегмент пути без %-кодов; битый код (`100%`) остаётся как есть. */
+function safeDecode(seg: string): string {
+  try {
+    return decodeURIComponent(seg);
+  } catch {
+    return seg;
+  }
+}
+
 /**
  * Путь картинки от корня по ссылке из markdown-документа.
  *
@@ -158,7 +167,7 @@ export function resolveDocAsset(docPath: string, src: string): string | null {
     if (seg === '..') {
       parts.pop();
     } else if (seg !== '.' && seg !== '') {
-      parts.push(decodeURIComponent(seg));
+      parts.push(safeDecode(seg));
     }
   }
   return parts.join('/');
