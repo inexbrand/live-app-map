@@ -47,6 +47,14 @@
   --graph-node-muted: #8a8a8a;
   --graph-edge: #333333;
   --graph-edge-strong: #a3a3a3;
+  /* Третий уровень текста (размеры, мета): 5.6:1 на фоне. */
+  --text-faint: #8f8f8f;
+  --border-strong: #404040;
+  --primary-hover: #e0e0e0;
+  --overlay: rgba(0, 0, 0, 0.55);
+  --edge: #5c5c5c;
+  --edge-api: #8f8f8f;
+  --canvas-dot: #262626;
   --warning: #a3a3a3;
 
   --radius: 0.5rem;
@@ -68,6 +76,46 @@
   --text: var(--foreground);
   --text-muted: var(--muted-foreground);
   --primary-dim: #737373;
+}
+
+/* Светлая тема: те же роли, поверхности темнее фона на ступень, текст ≥ 4.5:1. */
+:root[data-theme='light'] {
+  color-scheme: light;
+  --background: #fafafa;
+  --foreground: #171717;
+  --muted: #efefef;
+  --muted-foreground: #5c5c5c;
+  --card: #ffffff;
+  --card-foreground: #171717;
+  --popover: #ffffff;
+  --popover-foreground: #171717;
+  --border: #e3e3e3;
+  --input: #e3e3e3;
+  --ring: #262626;
+  --primary: #171717;
+  --primary-foreground: #fafafa;
+  --secondary: #f0f0f0;
+  --secondary-foreground: #171717;
+  --accent: #ebebeb;
+  --accent-foreground: #171717;
+  --destructive: #171717;
+  --destructive-foreground: #fafafa;
+  --success: #404040;
+  --warning: #5c5c5c;
+  --attention: #b45309;
+  --graph-node: #262626;
+  --graph-node-muted: #8a8a8a;
+  --graph-edge: #d9d9d9;
+  --graph-edge-strong: #525252;
+  --text-faint: #6b6b6b;
+  --border-strong: #c7c7c7;
+  --primary-hover: #333333;
+  --overlay: rgba(0, 0, 0, 0.3);
+  --edge: #b3b3b3;
+  --edge-api: #8a8a8a;
+  --canvas-dot: #dedede;
+  --shadow: 0 8px 28px rgba(0, 0, 0, 0.1);
+  --primary-dim: #8a8a8a;
 }
 
 *,
@@ -231,39 +279,39 @@ code,
   overflow: auto;
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: #0c0c0c;
+  background: var(--card);
   font-family: var(--mono);
   font-size: 11px;
 }
 
 .diag-log-line {
   padding: 6px 10px;
-  border-bottom: 1px solid #1a1a1a;
+  border-bottom: 1px solid var(--secondary);
   display: flex;
   flex-direction: column;
   gap: 2px;
 }
 
 .diag-log-line__meta {
-  color: #737373;
+  color: var(--text-faint);
 }
 
 .diag-log-line__msg {
-  color: #e5e5e5;
+  color: var(--foreground);
   word-break: break-word;
 }
 
 .diag-log-line--error .diag-log-line__msg {
-  color: #f5f5f5;
+  color: var(--foreground);
   font-weight: 600;
 }
 
 .diag-log-line--warn .diag-log-line__msg {
-  color: #d4d4d4;
+  color: var(--foreground);
 }
 
 .page-node__size {
-  color: #737373;
+  color: var(--text-faint);
   font-size: 10px;
 }
 
@@ -276,8 +324,8 @@ code,
   cursor: nwse-resize;
   z-index: 3;
   background:
-    linear-gradient(135deg, transparent 50%, #525252 50%, #525252 60%, transparent 60%),
-    linear-gradient(135deg, transparent 70%, #525252 70%, #525252 80%, transparent 80%);
+    linear-gradient(135deg, transparent 50%, var(--border-strong) 50%, #525252 60%, transparent 60%),
+    linear-gradient(135deg, transparent 70%, var(--border-strong) 70%, #525252 80%, transparent 80%);
 }
 
 .page-node__viewport-bar {
@@ -303,7 +351,7 @@ code,
 .page-node__vp-btn--on,
 .page-node__vp-btn:hover {
   color: var(--foreground);
-  border-color: #525252;
+  border-color: var(--border-strong);
 }
 
 /* ——— Toolbar (slim) ——— */
@@ -392,7 +440,7 @@ code,
   border: 0;
   padding: 0;
   margin: 0;
-  background: rgba(0, 0, 0, 0.55);
+  background: var(--overlay);
   cursor: pointer;
   pointer-events: auto;
 }
@@ -529,7 +577,7 @@ code,
 
 .ui-btn:hover:not(:disabled) {
   background: var(--accent);
-  border-color: #404040;
+  border-color: var(--border-strong);
 }
 
 .ui-btn:focus-visible {
@@ -549,8 +597,8 @@ code,
 }
 
 .ui-btn--primary:hover:not(:disabled) {
-  background: #e5e5e5;
-  border-color: #e5e5e5;
+  background: var(--primary-hover);
+  border-color: var(--primary-hover);
   color: var(--primary-foreground);
 }
 
@@ -591,7 +639,7 @@ code,
 .ui-btn--active {
   border-color: var(--foreground);
   background: var(--accent);
-  box-shadow: inset 0 0 0 1px #404040;
+  box-shadow: inset 0 0 0 1px var(--border-strong);
 }
 
 /* ——— Field / Input / Select / Textarea ——— */
@@ -614,11 +662,11 @@ code,
   min-height: 40px;
 }
 
+/* Подпись поля — обычным регистром, без капса (правило владельца). */
 .ui-field__label {
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
+  font-size: 13px;
+  line-height: 20px;
+  font-weight: 500;
   color: var(--muted-foreground);
 }
 
@@ -648,8 +696,8 @@ code,
 .ui-input:focus,
 .ui-select:focus,
 .ui-textarea:focus {
-  border-color: #525252;
-  box-shadow: 0 0 0 1px #525252;
+  border-color: var(--border-strong);
+  box-shadow: 0 0 0 1px var(--border-strong);
 }
 
 .ui-textarea {
@@ -677,10 +725,9 @@ code,
   color: var(--muted-foreground);
   border-radius: 999px;
   padding: 2px 8px;
-  font-size: 11px;
-  font-weight: 600;
-  letter-spacing: 0.02em;
-  text-transform: uppercase;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
 }
 
 .ui-chip {
@@ -698,7 +745,7 @@ code,
 }
 
 .ui-chip:hover:not(:disabled) {
-  border-color: #404040;
+  border-color: var(--border-strong);
   color: var(--foreground);
 }
 
@@ -815,8 +862,8 @@ code,
 }
 
 .page-node--selected {
-  border-color: #737373;
-  box-shadow: 0 0 0 1px #737373, var(--shadow);
+  border-color: var(--text-faint);
+  box-shadow: 0 0 0 1px var(--text-faint), var(--shadow);
 }
 
 .page-node--dim {
@@ -863,7 +910,7 @@ code,
   margin: 0 auto 4px;
   border-radius: var(--radius);
   overflow: hidden;
-  background: #141414;
+  background: var(--card);
   border: 1px solid var(--border);
   flex: 0 0 auto;
   align-self: center;
@@ -879,7 +926,7 @@ code,
   color: var(--muted-foreground);
   padding: 12px;
   text-align: center;
-  background: #1a1a1a;
+  background: var(--secondary);
 }
 
 .page-node__iframe-shell {
@@ -910,8 +957,8 @@ code,
   z-index: 20;
   display: grid;
   place-items: center;
-  background: rgba(10, 10, 10, 0.78);
-  border: 2px dashed #525252;
+  background: color-mix(in srgb, var(--background) 78%, transparent);
+  border: 2px dashed var(--border-strong);
   pointer-events: none;
   font-size: 16px;
   font-weight: 600;
@@ -980,7 +1027,7 @@ code,
 }
 
 .error-banner {
-  border-color: #525252;
+  border-color: var(--border-strong);
 }
 
 .warnings-banner {
@@ -1055,7 +1102,7 @@ code,
 /* React Flow monochrome */
 /* Размер мини-карты — только пропсами MiniMap (LamMiniMap): по нему React Flow считает масштаб SVG и перетаскивания. */
 .react-flow__minimap {
-  background: #0c0c0c;
+  background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   overflow: hidden;
@@ -1063,7 +1110,7 @@ code,
 .react-flow__minimap-svg { display: block; cursor: crosshair; }
 
 .react-flow__minimap-mask {
-  fill: rgba(255, 255, 255, 0.08);
+  fill: color-mix(in srgb, var(--foreground) 8%, transparent);
 }
 
 .react-flow__controls {
@@ -1080,7 +1127,7 @@ code,
 }
 
 .react-flow__edge-path {
-  stroke: #525252 !important;
+  stroke: var(--edge) !important;
 }
 
 .react-flow__attribution {
@@ -1196,7 +1243,7 @@ code,
 .snapshot-overlay__rect {
   position: absolute;
   border: 1px solid var(--ring);
-  background: rgb(255 255 255 / 0.06);
+  background: color-mix(in srgb, var(--foreground) 6%, transparent);
   box-shadow: 0 0 0 9999px rgb(0 0 0 / 0.25);
   pointer-events: none;
 }
@@ -1380,7 +1427,7 @@ kbd,
   height: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
-  background: rgba(255, 255, 255, 0.015);
+  background: color-mix(in srgb, var(--foreground) 2%, transparent);
   pointer-events: none;
 }
 .group-frame__title {
@@ -1457,3 +1504,16 @@ kbd,
 .page-node__snapshot--under { position: absolute; top: 0; left: 0; z-index: 0; }
 .page-node__iframe { background: #fff; }
 .flow-host--zooming .page-node__iframe { display: none; }
+
+
+/* Подписи рёбер холста: тихие, как вторичный текст, а не белые плашки. */
+.react-flow__edge-textbg {
+  fill: var(--background);
+}
+.react-flow__edge-text {
+  fill: var(--muted-foreground);
+  font-size: 11px;
+}
+.react-flow__edge-path {
+  stroke: var(--edge);
+}

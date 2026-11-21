@@ -130,7 +130,7 @@ export function AppMapCanvas() {
         label: e.label,
         animated: e.kind === 'redirect',
         // Вызовы API экрана — пунктиром, чтобы не путать с навигацией.
-        style: e.kind === 'api' ? { stroke: '#a3a3a3', strokeDasharray: '4 4' } : { stroke: '#737373' },
+        style: e.kind === 'api' ? { stroke: 'var(--edge-api)', strokeDasharray: '4 4' } : { stroke: 'var(--edge)' },
       };
     });
     return {
@@ -167,7 +167,7 @@ export function AppMapCanvas() {
             По запросу <strong>«{displayQuery}»</strong> страниц нет.
           </p>
           <p className="drawer__hint">
-            Сбросьте поиск или измените запрос в поле «Поиск» на панели сверху.
+            Сбросьте фильтр холста или найдите экран через поиск (⌘K).
           </p>
           <div className="empty-state__actions">
             <button
@@ -231,7 +231,7 @@ export function AppMapCanvas() {
           variant={BackgroundVariant.Dots}
           gap={18}
           size={1.25}
-          color="#2a2a2a"
+          color="var(--canvas-dot)"
         />
         <LamMiniMap size={miniSize} groupOrder={groupOrder} selectedPageId={selectedPageId} />
         <Controls />

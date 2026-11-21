@@ -28,7 +28,7 @@ export const MINIMAP_GROUP_COLORS: readonly string[] = ['#7ea6d8', '#8cc48a', '#
 
 /** Цвет сервиса бэкенда и выбранного экрана. */
 export const MINIMAP_SERVICE_COLOR = '#8a8a8a';
-export const MINIMAP_SELECTED_COLOR = '#ffffff';
+export const MINIMAP_SELECTED_COLOR = 'var(--foreground)';
 
 /**
  * Общие границы прямоугольников.

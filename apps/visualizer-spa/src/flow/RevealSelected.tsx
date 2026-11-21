@@ -1,6 +1,7 @@
 /**
  * Выбранная нода не остаётся под панелями: после выбора холст сдвигается
- * так, чтобы она легла в просвет между ними (масштаб не меняется).
+ * так, чтобы она легла в просвет между ними (масштаб не меняется). Нода вне экрана
+ * (холст рисует только видимые) — сначала в центр, по её координатам на сцене.
  */
 import { useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
@@ -35,6 +36,12 @@ export function RevealSelected() {
       raf = requestAnimationFrame(() => {
         const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(selectedPageId)}"]`);
         if (el === null) {
+          const node = flow.getNode(selectedPageId);
+          if (node !== undefined) {
+            const w = node.measured?.width ?? node.width ?? 0;
+            const h = node.measured?.height ?? node.height ?? 0;
+            void flow.setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: flow.getViewport().zoom, duration: 300 });
+          }
           return;
         }
         const { dx, dy } = revealShift(rectOf(el), dockedPanels(), GAP);
