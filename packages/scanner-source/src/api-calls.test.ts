@@ -95,6 +95,10 @@ describe('scanSource: вызовы API', () => {
     ]);
   });
 
+  test('origin параметром функции перед литералом пути — вызов в этой функции', () => {
+    expect(callsIn('apps/miniapp/src/stores/cards.ts')).toEqual(['POST /api/cards/auto-renew fetch → нет роута']);
+  });
+
   test('вызов без роута остаётся несопоставленным', () => {
     expect(callsIn(USERS_SCREEN)).toEqual(['GET /api/unknown-thing fetch → нет роута']);
   });
