@@ -53,6 +53,8 @@ describe('полная схема входа', () => {
     expect(route('GET', '/api/admin/registry/:name').input?.query?.type).toBe('record<string, string>');
     expect(route('PATCH', '/api/admin/presets/:id').input?.body?.type).toBe('unknown');
     expect(tree(route('PUT', '/api/admin/profile').input?.body?.fields)).toEqual(['name?: string', 'age?: number']);
+    const take = route('POST', '/api/admin/take').input?.body;
+    expect([take?.name, take?.optional, take?.type, take?.text]).toEqual(['TakeBody', true, '{}', undefined]);
   });
 
   test('Hono: вложенный z.object в массиве и правила цепочки', () => {

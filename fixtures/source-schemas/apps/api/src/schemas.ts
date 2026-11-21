@@ -11,6 +11,9 @@ const AudienceFilter = t.Object({
 
 const MarkupKind = t.Union([t.Literal('html'), t.Literal('markdown')]);
 
+/** Тело без полей: запрос без данных. */
+const TakeBody = t.Optional(t.Object({}));
+
 export const app = new Elysia({ prefix: '/api' })
   // Рассылка: необязательное тело, вложенный объект по имени константы, массив объектов.
   .post('/admin/broadcasts', ({ body }) => body, {
@@ -24,7 +27,8 @@ export const app = new Elysia({ prefix: '/api' })
   })
   .get('/admin/registry/:name', ({ query }) => query, { query: t.Record(t.String(), t.String()) })
   .patch('/admin/presets/:id', ({ body }) => body, { body: t.Unknown() })
-  .put('/admin/profile', ({ body }) => body, { body: t.Partial(t.Object({ name: t.String(), age: t.Integer() })) });
+  .put('/admin/profile', ({ body }) => body, { body: t.Partial(t.Object({ name: t.String(), age: t.Integer() })) })
+  .post('/admin/take', ({ body }) => body, { body: TakeBody });
 
 export const hono = new Hono().post(
   '/api/hono/orders',

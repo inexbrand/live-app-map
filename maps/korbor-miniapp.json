@@ -1,7 +1,7 @@
 {
   "formatVersion": 2,
   "kind": "live-app-map",
-  "generatedAt": "2026-11-21T17:13:23.326Z",
+  "generatedAt": "2026-11-21T18:04:33.244Z",
   "generator": {
     "name": "@live-app-map/scanner-react-router",
     "version": "0.1.0"
@@ -1838,6 +1838,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "OpenDisputeBodySchema",
             "fields": [
               {
                 "name": "type",
@@ -1860,15 +1861,17 @@
               },
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "evidenceUrls",
                 "type": "string[]",
                 "optional": true
               }
-            ],
-            "name": "OpenDisputeBodySchema"
+            ]
           }
         },
         "access": {
@@ -2168,13 +2171,17 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "BulkTakeBodySchema",
             "fields": [
               {
                 "name": "ids",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               }
-            ],
-            "name": "BulkTakeBodySchema"
+            ]
           }
         },
         "access": {
@@ -2303,6 +2310,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ResolveDisputeBodySchema",
             "fields": [
               {
                 "name": "outcome",
@@ -2315,15 +2323,17 @@
               },
               {
                 "name": "note",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "force",
                 "type": "boolean",
                 "optional": true
               }
-            ],
-            "name": "ResolveDisputeBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -2443,7 +2453,48 @@
             "fields": [
               {
                 "name": "events",
-                "type": "object[]"
+                "type": "object[]",
+                "rules": [
+                  "maxItems ACTIVITY_BATCH_MAX_EVENTS"
+                ],
+                "fields": [
+                  {
+                    "name": "type",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 64"
+                    ]
+                  },
+                  {
+                    "name": "at",
+                    "type": "string",
+                    "optional": true,
+                    "rules": [
+                      "maxLength 40"
+                    ]
+                  },
+                  {
+                    "name": "route",
+                    "type": "string | null",
+                    "optional": true
+                  },
+                  {
+                    "name": "target",
+                    "type": "string | null",
+                    "optional": true
+                  },
+                  {
+                    "name": "sessionId",
+                    "type": "string | null",
+                    "optional": true
+                  },
+                  {
+                    "name": "meta",
+                    "type": "record<string, unknown>",
+                    "optional": true
+                  }
+                ]
               }
             ]
           }
@@ -2637,13 +2688,16 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -2714,14 +2768,21 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateBodySchema",
             "fields": [
               {
                 "name": "email",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 3"
+                ]
               },
               {
                 "name": "password",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength MIN_PASSWORD_LENGTH"
+                ]
               },
               {
                 "name": "displayName",
@@ -2730,10 +2791,12 @@
               },
               {
                 "name": "roleId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "CreateBodySchema"
+            ]
           }
         },
         "access": {
@@ -2804,16 +2867,20 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "PatchBodySchema",
             "fields": [
               {
                 "name": "displayName",
@@ -2828,15 +2895,20 @@
               {
                 "name": "roleId",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "password",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength MIN_PASSWORD_LENGTH"
+                ]
               }
-            ],
-            "name": "PatchBodySchema"
+            ]
           }
         },
         "access": {
@@ -3214,17 +3286,24 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "BulkBanBodySchema",
             "fields": [
               {
                 "name": "ids",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               },
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "BulkBanBodySchema"
+            ]
           }
         },
         "access": {
@@ -3343,17 +3422,24 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "BulkBanBodySchema",
             "fields": [
               {
                 "name": "ids",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               },
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "BulkBanBodySchema"
+            ]
           }
         },
         "access": {
@@ -3432,23 +3518,26 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ReasonBodySchema",
             "fields": [
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "ReasonBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "UserIdParamsSchema",
             "fields": [
               {
                 "name": "id",
                 "type": "string"
               }
-            ],
-            "name": "UserIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -3508,23 +3597,26 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ReasonBodySchema",
             "fields": [
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "ReasonBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "UserIdParamsSchema",
             "fields": [
               {
                 "name": "id",
                 "type": "string"
               }
-            ],
-            "name": "UserIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -3860,7 +3952,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -3916,6 +4011,7 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "QuerySchema",
             "fields": [
               {
                 "name": "phone",
@@ -3947,8 +4043,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "QuerySchema"
+            ]
           }
         },
         "access": {
@@ -4215,7 +4310,10 @@
             "fields": [
               {
                 "name": "documentId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -4300,18 +4398,31 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "UpsertChunkBody",
             "fields": [
               {
                 "name": "documentId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 120"
+                ]
               },
               {
                 "name": "chunkKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 120"
+                ]
               },
               {
                 "name": "text",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 50_000"
+                ]
               },
               {
                 "name": "tags",
@@ -4331,10 +4442,13 @@
               {
                 "name": "documentTitle",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1",
+                  "maxLength 300"
+                ]
               }
-            ],
-            "name": "UpsertChunkBody"
+            ]
           }
         },
         "access": {
@@ -4491,7 +4605,10 @@
             "fields": [
               {
                 "name": "category",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -4569,17 +4686,25 @@
             "fields": [
               {
                 "name": "category",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           },
           "body": {
             "kind": "typebox",
+            "name": "PutPromptBody",
             "fields": [
               {
                 "name": "version",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1",
+                  "maxLength 40"
+                ]
               },
               {
                 "name": "description",
@@ -4588,11 +4713,19 @@
               },
               {
                 "name": "instructions",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 100_000"
+                ]
               },
               {
                 "name": "userTemplate",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 0",
+                  "maxLength 100_000"
+                ]
               },
               {
                 "name": "temperature",
@@ -4609,8 +4742,7 @@
                 "type": "boolean",
                 "optional": true
               }
-            ],
-            "name": "PutPromptBody"
+            ]
           }
         },
         "access": {
@@ -4784,7 +4916,11 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 80"
+                ]
               }
             ]
           }
@@ -4912,6 +5048,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "AssignBodySchema",
             "fields": [
               {
                 "name": "vacancyId",
@@ -4924,10 +5061,12 @@
               {
                 "name": "note",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
               }
-            ],
-            "name": "AssignBodySchema"
+            ]
           }
         },
         "access": {
@@ -4971,6 +5110,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "DismissBodySchema",
             "fields": [
               {
                 "name": "vacancyId",
@@ -4978,10 +5118,13 @@
               },
               {
                 "name": "note",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 1000"
+                ]
               }
-            ],
-            "name": "DismissBodySchema"
+            ]
           }
         },
         "access": {
@@ -5089,7 +5232,11 @@
             "fields": [
               {
                 "name": "vacancyIds",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               },
               {
                 "name": "recruiterId",
@@ -5098,7 +5245,10 @@
               {
                 "name": "note",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
               }
             ]
           }
@@ -5205,11 +5355,19 @@
             "fields": [
               {
                 "name": "vacancyIds",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               },
               {
                 "name": "note",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 1000"
+                ]
               }
             ]
           }
@@ -5283,6 +5441,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "VerificationBodySchema",
             "fields": [
               {
                 "name": "level",
@@ -5293,18 +5452,17 @@
                 "type": "unknown",
                 "optional": true
               }
-            ],
-            "name": "VerificationBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "VerificationParamsSchema",
             "fields": [
               {
                 "name": "userId",
                 "type": "string"
               }
-            ],
-            "name": "VerificationParamsSchema"
+            ]
           }
         },
         "access": {
@@ -5435,10 +5593,15 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "BulkVerificationBodySchema",
             "fields": [
               {
                 "name": "userIds",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems MAX_BULK_IDS"
+                ]
               },
               {
                 "name": "level",
@@ -5449,8 +5612,7 @@
                 "type": "unknown",
                 "optional": true
               }
-            ],
-            "name": "BulkVerificationBodySchema"
+            ]
           }
         },
         "access": {
@@ -5631,14 +5793,17 @@
             "fields": [
               {
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 40"
+                ]
               }
             ]
           },
           "query": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Record(t.String(), t.String())"
+            "type": "record<string, string>"
           }
         },
         "access": {
@@ -5717,7 +5882,10 @@
             "fields": [
               {
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 40"
+                ]
               }
             ]
           },
@@ -5732,7 +5900,10 @@
               {
                 "name": "status",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 64"
+                ]
               }
             ]
           }
@@ -5793,11 +5964,18 @@
             "fields": [
               {
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 40"
+                ]
               },
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 80"
+                ]
               }
             ]
           }
@@ -5848,15 +6026,25 @@
             "fields": [
               {
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 40"
+                ]
               },
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 80"
+                ]
               },
               {
                 "name": "action",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 40"
+                ]
               }
             ]
           },
@@ -5866,7 +6054,10 @@
               {
                 "name": "reason",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 500"
+                ]
               }
             ]
           }
@@ -5906,15 +6097,24 @@
             "fields": [
               {
                 "name": "kind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "exclusiveMinimum 0"
+                ]
               },
               {
                 "name": "fileName",
@@ -5967,11 +6167,17 @@
             "fields": [
               {
                 "name": "kind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -6018,7 +6224,10 @@
             "fields": [
               {
                 "name": "ref",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -6321,10 +6530,14 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "KindQuery",
             "fields": [
               {
                 "name": "kind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "q",
@@ -6336,8 +6549,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "KindQuery"
+            ]
           }
         },
         "access": {
@@ -6478,17 +6690,23 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "EntityQuery",
             "fields": [
               {
                 "name": "kind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "EntityQuery"
+            ]
           }
         },
         "access": {
@@ -6613,17 +6831,23 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "EntityQuery",
             "fields": [
               {
                 "name": "kind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "EntityQuery"
+            ]
           },
           "body": {
             "kind": "typebox",
@@ -6708,17 +6932,23 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "CommentsQuery",
             "fields": [
               {
                 "name": "entityKind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "entityId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "CommentsQuery"
+            ]
           }
         },
         "access": {
@@ -6782,15 +7012,24 @@
             "fields": [
               {
                 "name": "entityKind",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "entityId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "body",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -6846,7 +7085,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -6947,11 +7189,17 @@
             "fields": [
               {
                 "name": "title",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "body",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "bodyUz",
@@ -6960,7 +7208,7 @@
               },
               {
                 "name": "markup",
-                "type": "MarkupLiteral",
+                "type": "'rich_blocks' | 'markdown_v2'",
                 "optional": true
               }
             ]
@@ -7027,7 +7275,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           },
@@ -7037,12 +7288,18 @@
               {
                 "name": "title",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "body",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "bodyUz",
@@ -7051,7 +7308,7 @@
               },
               {
                 "name": "markup",
-                "type": "MarkupLiteral",
+                "type": "'rich_blocks' | 'markdown_v2'",
                 "optional": true
               }
             ]
@@ -7108,7 +7365,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -7219,7 +7479,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -7276,11 +7539,17 @@
             "fields": [
               {
                 "name": "title",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "body",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "bodyUz",
@@ -7289,7 +7558,7 @@
               },
               {
                 "name": "markup",
-                "type": "MarkupLiteral",
+                "type": "'rich_blocks' | 'markdown_v2'",
                 "optional": true
               },
               {
@@ -7304,7 +7573,47 @@
               {
                 "name": "audienceFilter",
                 "type": "AudienceFilterBody",
-                "optional": true
+                "optional": true,
+                "fields": [
+                  {
+                    "name": "op",
+                    "type": "'or'"
+                  },
+                  {
+                    "name": "groups",
+                    "type": "object[]",
+                    "rules": [
+                      "maxItems 20"
+                    ],
+                    "fields": [
+                      {
+                        "name": "op",
+                        "type": "'and' | 'or'"
+                      },
+                      {
+                        "name": "rules",
+                        "type": "object[]",
+                        "rules": [
+                          "maxItems 20"
+                        ],
+                        "fields": [
+                          {
+                            "name": "field",
+                            "type": "одно из AUDIENCE_FILTER_FIELDS"
+                          },
+                          {
+                            "name": "op",
+                            "type": "одно из AUDIENCE_FILTER_OPS"
+                          },
+                          {
+                            "name": "value",
+                            "type": "unknown"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           }
@@ -7380,7 +7689,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           },
@@ -7390,12 +7702,18 @@
               {
                 "name": "title",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "body",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "bodyUz",
@@ -7404,7 +7722,7 @@
               },
               {
                 "name": "markup",
-                "type": "MarkupLiteral",
+                "type": "'rich_blocks' | 'markdown_v2'",
                 "optional": true
               },
               {
@@ -7420,7 +7738,47 @@
               {
                 "name": "audienceFilter",
                 "type": "AudienceFilterBody",
-                "optional": true
+                "optional": true,
+                "fields": [
+                  {
+                    "name": "op",
+                    "type": "'or'"
+                  },
+                  {
+                    "name": "groups",
+                    "type": "object[]",
+                    "rules": [
+                      "maxItems 20"
+                    ],
+                    "fields": [
+                      {
+                        "name": "op",
+                        "type": "'and' | 'or'"
+                      },
+                      {
+                        "name": "rules",
+                        "type": "object[]",
+                        "rules": [
+                          "maxItems 20"
+                        ],
+                        "fields": [
+                          {
+                            "name": "field",
+                            "type": "одно из AUDIENCE_FILTER_FIELDS"
+                          },
+                          {
+                            "name": "op",
+                            "type": "одно из AUDIENCE_FILTER_OPS"
+                          },
+                          {
+                            "name": "value",
+                            "type": "unknown"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
               }
             ]
           }
@@ -7496,7 +7854,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -7559,8 +7920,54 @@
         "input": {
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ audienceFilter: t.Optional(AudienceFilterBody), }), )"
+            "optional": true,
+            "fields": [
+              {
+                "name": "audienceFilter",
+                "type": "AudienceFilterBody",
+                "optional": true,
+                "fields": [
+                  {
+                    "name": "op",
+                    "type": "'or'"
+                  },
+                  {
+                    "name": "groups",
+                    "type": "object[]",
+                    "rules": [
+                      "maxItems 20"
+                    ],
+                    "fields": [
+                      {
+                        "name": "op",
+                        "type": "'and' | 'or'"
+                      },
+                      {
+                        "name": "rules",
+                        "type": "object[]",
+                        "rules": [
+                          "maxItems 20"
+                        ],
+                        "fields": [
+                          {
+                            "name": "field",
+                            "type": "одно из AUDIENCE_FILTER_FIELDS"
+                          },
+                          {
+                            "name": "op",
+                            "type": "одно из AUDIENCE_FILTER_OPS"
+                          },
+                          {
+                            "name": "value",
+                            "type": "unknown"
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
           }
         },
         "access": {
@@ -7674,14 +8081,23 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ userIds: t.Optional(t.Array(t.String({ minLength: 1 }))), }), )"
+            "optional": true,
+            "fields": [
+              {
+                "name": "userIds",
+                "type": "string[]",
+                "optional": true
+              }
+            ]
           }
         },
         "access": {
@@ -7725,14 +8141,48 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ telegramId: t.Optional(t.Number()), locale: t.Optional(t.Union([t.Literal(\"ru\"), t.Literal(\"uz\")])), role: t.Optional(t.Union([t.Literal(\"recruiter\"), t.Literal(\"employer\")])),…"
+            "optional": true,
+            "fields": [
+              {
+                "name": "telegramId",
+                "type": "number",
+                "optional": true
+              },
+              {
+                "name": "locale",
+                "type": "'ru' | 'uz'",
+                "optional": true
+              },
+              {
+                "name": "role",
+                "type": "'recruiter' | 'employer'",
+                "optional": true
+              },
+              {
+                "name": "displayName",
+                "type": "string",
+                "optional": true
+              },
+              {
+                "name": "organizationName",
+                "type": "string",
+                "optional": true
+              },
+              {
+                "name": "contactName",
+                "type": "string",
+                "optional": true
+              }
+            ]
           }
         },
         "access": {
@@ -8679,6 +9129,7 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "ListQuerySchema",
             "fields": [
               {
                 "name": "status",
@@ -8700,8 +9151,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "ListQuerySchema"
+            ]
           }
         },
         "access": {
@@ -8862,19 +9312,20 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "TakeBodySchema",
+            "optional": true,
             "fields": [],
-            "text": "t.Optional(t.Object({}))",
-            "name": "TakeBodySchema"
+            "type": "{}"
           },
           "params": {
             "kind": "typebox",
+            "name": "TakeParamsSchema",
             "fields": [
               {
                 "name": "vacancyId",
                 "type": "string"
               }
-            ],
-            "name": "TakeParamsSchema"
+            ]
           }
         },
         "access": {
@@ -8910,19 +9361,28 @@
         "input": {
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ reason: t.Optional(t.String({ maxLength: 500 })), }), )",
-            "name": "WithdrawBodySchema"
+            "name": "WithdrawBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "reason",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 500"
+                ]
+              }
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "WithdrawParamsSchema",
             "fields": [
               {
                 "name": "applicationId",
                 "type": "string"
               }
-            ],
-            "name": "WithdrawParamsSchema"
+            ]
           }
         },
         "access": {
@@ -12956,28 +13416,31 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "OpenClaimBodySchema",
             "fields": [
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "maxLength 2000"
+                ]
               },
               {
                 "name": "evidenceUrls",
                 "type": "string[]",
                 "optional": true
               }
-            ],
-            "name": "OpenClaimBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "OpenClaimParamsSchema",
             "fields": [
               {
                 "name": "lockId",
                 "type": "string"
               }
-            ],
-            "name": "OpenClaimParamsSchema"
+            ]
           }
         },
         "access": {
@@ -13036,6 +13499,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ResolveClaimBodySchema",
             "fields": [
               {
                 "name": "outcome",
@@ -13048,20 +13512,22 @@
               },
               {
                 "name": "note",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "ResolveClaimBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "ResolveClaimParamsSchema",
             "fields": [
               {
                 "name": "id",
                 "type": "string"
               }
-            ],
-            "name": "ResolveClaimParamsSchema"
+            ]
           }
         },
         "access": {
@@ -13131,19 +13597,36 @@
         "input": {
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ comment: t.Optional(t.String({ maxLength: 1000 })), scheduledAt: t.Optional(t.String({ format: \"date-time\" })), }), )",
-            "name": "InterviewBodySchema"
+            "name": "InterviewBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "comment",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
+              },
+              {
+                "name": "scheduledAt",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "format date-time"
+                ]
+              }
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "InterviewParamsSchema",
             "fields": [
               {
                 "name": "candidateId",
                 "type": "string"
               }
-            ],
-            "name": "InterviewParamsSchema"
+            ]
           }
         },
         "access": {
@@ -13490,14 +13973,23 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "SubmitBodySchema",
             "fields": [
               {
                 "name": "fio",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 200"
+                ]
               },
               {
                 "name": "phone",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 32"
+                ]
               },
               {
                 "name": "resumeUrl",
@@ -13519,18 +14011,17 @@
                 "type": "boolean",
                 "optional": true
               }
-            ],
-            "name": "SubmitBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "SubmitParamsSchema",
             "fields": [
               {
                 "name": "applicationId",
                 "type": "string"
               }
-            ],
-            "name": "SubmitParamsSchema"
+            ]
           }
         },
         "access": {
@@ -13584,19 +14075,36 @@
         "input": {
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ reasonCode: t.Optional(t.String({ maxLength: 100 })), comment: t.Optional(t.String({ maxLength: 1000 })), }), )",
-            "name": "RejectBodySchema"
+            "name": "RejectBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "reasonCode",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 100"
+                ]
+              },
+              {
+                "name": "comment",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
+              }
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "RejectParamsSchema",
             "fields": [
               {
                 "name": "candidateId",
                 "type": "string"
               }
-            ],
-            "name": "RejectParamsSchema"
+            ]
           }
         },
         "access": {
@@ -14329,7 +14837,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -14392,7 +14900,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -14552,7 +15060,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -14835,7 +15343,11 @@
               {
                 "name": "limit",
                 "type": "number",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minimum 1",
+                  "maximum 100"
+                ]
               },
               {
                 "name": "cursor",
@@ -14900,21 +15412,32 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PresignBodySchema",
             "fields": [
               {
                 "name": "fileName",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
-            ],
-            "name": "PresignBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -14977,21 +15500,32 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PresignBodySchema",
             "fields": [
               {
                 "name": "fileName",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
-            ],
-            "name": "PresignBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -15066,7 +15600,10 @@
             "fields": [
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -15133,7 +15670,10 @@
             "fields": [
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -15602,23 +16142,33 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateReportBodySchema",
             "fields": [
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 64"
+                ]
               },
               {
                 "name": "comment",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 2000"
+                ]
               },
               {
                 "name": "messageId",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 64"
+                ]
               }
-            ],
-            "name": "CreateReportBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -15702,23 +16252,33 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateReportBodySchema",
             "fields": [
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 64"
+                ]
               },
               {
                 "name": "comment",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 2000"
+                ]
               },
               {
                 "name": "messageId",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 64"
+                ]
               }
-            ],
-            "name": "CreateReportBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -15796,7 +16356,11 @@
               {
                 "name": "limit",
                 "type": "number",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minimum 1",
+                  "maximum 100"
+                ]
               }
             ]
           }
@@ -15869,6 +16433,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ResolveReportBodySchema",
             "fields": [
               {
                 "name": "status",
@@ -15877,10 +16442,12 @@
               {
                 "name": "resolutionNote",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 2000"
+                ]
               }
-            ],
-            "name": "ResolveReportBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16030,22 +16597,34 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "SanctionBodySchema",
             "fields": [
               {
                 "name": "type",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 64"
+                ]
               },
               {
                 "name": "reason",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 2000"
+                ]
               },
               {
                 "name": "targetUserId",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1",
+                  "maxLength 64"
+                ]
               }
-            ],
-            "name": "SanctionBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16219,23 +16798,66 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "SendChatMessageBodySchema",
             "fields": [
               {
                 "name": "body",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 4000"
+                ]
               },
               {
                 "name": "clientMessageId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "attachments",
                 "type": "object[]",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxItems 3"
+                ],
+                "fields": [
+                  {
+                    "name": "objectKey",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 1024"
+                    ]
+                  },
+                  {
+                    "name": "fileName",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 255"
+                    ]
+                  },
+                  {
+                    "name": "contentType",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 255"
+                    ]
+                  },
+                  {
+                    "name": "sizeBytes",
+                    "type": "number",
+                    "rules": [
+                      "minimum 1"
+                    ]
+                  }
+                ]
               }
-            ],
-            "name": "SendChatMessageBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16406,23 +17028,66 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "SendChatMessageBodySchema",
             "fields": [
               {
                 "name": "body",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 4000"
+                ]
               },
               {
                 "name": "clientMessageId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "attachments",
                 "type": "object[]",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxItems 3"
+                ],
+                "fields": [
+                  {
+                    "name": "objectKey",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 1024"
+                    ]
+                  },
+                  {
+                    "name": "fileName",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 255"
+                    ]
+                  },
+                  {
+                    "name": "contentType",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1",
+                      "maxLength 255"
+                    ]
+                  },
+                  {
+                    "name": "sizeBytes",
+                    "type": "number",
+                    "rules": [
+                      "minimum 1"
+                    ]
+                  }
+                ]
               }
-            ],
-            "name": "SendChatMessageBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16543,11 +17208,16 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "ListQuerySchema",
             "fields": [
               {
                 "name": "limit",
                 "type": "number",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minimum 1",
+                  "maximum 100"
+                ]
               },
               {
                 "name": "cursor",
@@ -16559,8 +17229,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "ListQuerySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16680,11 +17349,16 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "ListQuerySchema",
             "fields": [
               {
                 "name": "limit",
                 "type": "number",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minimum 1",
+                  "maximum 100"
+                ]
               },
               {
                 "name": "cursor",
@@ -16696,8 +17370,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "ListQuerySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -16817,11 +17490,16 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "ListQuerySchema",
             "fields": [
               {
                 "name": "limit",
                 "type": "number",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minimum 1",
+                  "maximum 100"
+                ]
               },
               {
                 "name": "cursor",
@@ -16833,8 +17511,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "ListQuerySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -17071,23 +17748,27 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PutConfigBodySchema",
             "fields": [
               {
                 "name": "value",
                 "type": "unknown"
               }
-            ],
-            "name": "PutConfigBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "ConfigKeyParamsSchema",
             "fields": [
               {
                 "name": "key",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 200"
+                ]
               }
-            ],
-            "name": "ConfigKeyParamsSchema"
+            ]
           }
         },
         "access": {
@@ -17203,7 +17884,10 @@
               },
               {
                 "name": "actorId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -17298,17 +17982,21 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateCompanyBodySchema",
             "fields": [
               {
                 "name": "name",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "contacts",
-                "type": "ContactsBodySchema"
+                "type": "object | null",
+                "optional": true
               }
-            ],
-            "name": "CreateCompanyBodySchema"
+            ]
           }
         },
         "access": {
@@ -17367,18 +18055,22 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "UpdateCompanyBodySchema",
             "fields": [
               {
                 "name": "name",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "contacts",
-                "type": "ContactsBodySchema"
+                "type": "object | null",
+                "optional": true
               }
-            ],
-            "name": "UpdateCompanyBodySchema"
+            ]
           }
         },
         "access": {
@@ -17468,19 +18160,25 @@
         "input": {
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ bountyTiyin: t.Optional(t.Number()), }), )",
-            "name": "ConfirmBodySchema"
+            "name": "ConfirmBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "bountyTiyin",
+                "type": "number",
+                "optional": true
+              }
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "ConfirmParamsSchema",
             "fields": [
               {
                 "name": "vacancyId",
                 "type": "string"
               }
-            ],
-            "name": "ConfirmParamsSchema"
+            ]
           }
         },
         "access": {
@@ -17549,6 +18247,7 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "ListQuerySchema",
             "fields": [
               {
                 "name": "cursor",
@@ -17560,8 +18259,7 @@
                 "type": "number",
                 "optional": true
               }
-            ],
-            "name": "ListQuerySchema"
+            ]
           }
         },
         "access": {
@@ -17799,23 +18497,23 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "BountyBodySchema",
             "fields": [
               {
                 "name": "bountyTiyin",
                 "type": "number"
               }
-            ],
-            "name": "BountyBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "BountyParamsSchema",
             "fields": [
               {
                 "name": "vacancyId",
                 "type": "string"
               }
-            ],
-            "name": "BountyParamsSchema"
+            ]
           }
         },
         "access": {
@@ -17884,13 +18582,13 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "StartBodySchema",
             "fields": [
               {
                 "name": "locale",
                 "type": "'ru' | 'uz'"
               }
-            ],
-            "name": "StartBodySchema"
+            ]
           }
         },
         "access": {
@@ -17953,13 +18651,13 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "StartBodySchema",
             "fields": [
               {
                 "name": "locale",
                 "type": "'ru' | 'uz'"
               }
-            ],
-            "name": "StartBodySchema"
+            ]
           }
         },
         "access": {
@@ -18132,6 +18830,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "AnswerBodySchema",
             "fields": [
               {
                 "name": "stepId",
@@ -18139,20 +18838,19 @@
               },
               {
                 "name": "patch",
-                "type": "record"
+                "type": "record<string, unknown>"
               }
-            ],
-            "name": "AnswerBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18232,6 +18930,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "AnswerBodySchema",
             "fields": [
               {
                 "name": "stepId",
@@ -18239,20 +18938,19 @@
               },
               {
                 "name": "patch",
-                "type": "record"
+                "type": "record<string, unknown>"
               }
-            ],
-            "name": "AnswerBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18322,13 +19020,13 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18394,13 +19092,13 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18466,6 +19164,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "EditStepBodySchema",
             "fields": [
               {
                 "name": "stepId",
@@ -18473,20 +19172,19 @@
               },
               {
                 "name": "patch",
-                "type": "record"
+                "type": "record<string, unknown>"
               }
-            ],
-            "name": "EditStepBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18552,6 +19250,7 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "EditStepBodySchema",
             "fields": [
               {
                 "name": "stepId",
@@ -18559,20 +19258,19 @@
               },
               {
                 "name": "patch",
-                "type": "record"
+                "type": "record<string, unknown>"
               }
-            ],
-            "name": "EditStepBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18638,13 +19336,13 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18710,13 +19408,13 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "SessionIdParamsSchema",
             "fields": [
               {
                 "name": "sessionId",
                 "type": "string"
               }
-            ],
-            "name": "SessionIdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18858,13 +19556,16 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -18934,14 +19635,21 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateBodySchema",
             "fields": [
               {
                 "name": "code",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "version",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "locale",
@@ -18949,7 +19657,10 @@
               },
               {
                 "name": "title",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "bodyMd",
@@ -18982,8 +19693,7 @@
                 "name": "effectiveAt",
                 "type": "string"
               }
-            ],
-            "name": "CreateBodySchema"
+            ]
           }
         },
         "access": {
@@ -19053,16 +19763,20 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "UpdateBodySchema",
             "fields": [
               {
                 "name": "title",
@@ -19104,8 +19818,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "UpdateBodySchema"
+            ]
           }
         },
         "access": {
@@ -19185,13 +19898,16 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -19251,13 +19967,23 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ReorderBodySchema",
             "fields": [
               {
                 "name": "items",
-                "type": "object[]"
+                "type": "object[]",
+                "fields": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "sortOrder",
+                    "type": "number"
+                  }
+                ]
               }
-            ],
-            "name": "ReorderBodySchema"
+            ]
           }
         },
         "access": {
@@ -19317,31 +20043,40 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "PresignPdfBodySchema",
             "fields": [
               {
                 "name": "fileName",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "sizeBytes",
                 "type": "number"
               }
-            ],
-            "name": "PresignPdfBodySchema"
+            ]
           }
         },
         "access": {
@@ -19413,23 +20148,29 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "ConfirmPdfBodySchema",
             "fields": [
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "ConfirmPdfBodySchema"
+            ]
           }
         },
         "access": {
@@ -19510,13 +20251,16 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -19640,13 +20384,32 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "AcceptBodySchema",
             "fields": [
               {
                 "name": "accepts",
-                "type": "object[]"
+                "type": "object[]",
+                "rules": [
+                  "minItems 1"
+                ],
+                "fields": [
+                  {
+                    "name": "code",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1"
+                    ]
+                  },
+                  {
+                    "name": "version",
+                    "type": "string",
+                    "rules": [
+                      "minLength 1"
+                    ]
+                  }
+                ]
               }
-            ],
-            "name": "AcceptBodySchema"
+            ]
           }
         },
         "access": {
@@ -19894,7 +20657,11 @@
             "fields": [
               {
                 "name": "ids",
-                "type": "string[]"
+                "type": "string[]",
+                "rules": [
+                  "minItems 1",
+                  "maxItems 100"
+                ]
               }
             ]
           }
@@ -20018,7 +20785,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -20090,7 +20857,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -20140,7 +20907,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -20220,13 +20987,16 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ClaimBodySchema",
             "fields": [
               {
                 "name": "vacancyId",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "ClaimBodySchema"
+            ]
           }
         },
         "access": {
@@ -20353,9 +21123,9 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PutProfileBodySchema",
             "fields": [],
-            "text": "t.Record(t.String(), t.Unknown())",
-            "name": "PutProfileBodySchema"
+            "type": "record<string, unknown>"
           }
         },
         "access": {
@@ -20408,9 +21178,9 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PutProfileBodySchema",
             "fields": [],
-            "text": "t.Record(t.String(), t.Unknown())",
-            "name": "PutProfileBodySchema"
+            "type": "record<string, unknown>"
           }
         },
         "access": {
@@ -20582,13 +21352,16 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           }
         },
         "access": {
@@ -20658,18 +21431,28 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateBodySchema",
             "fields": [
               {
                 "name": "code",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "labelRu",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "labelUz",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "sortOrder",
@@ -20681,8 +21464,7 @@
                 "type": "boolean",
                 "optional": true
               }
-            ],
-            "name": "CreateBodySchema"
+            ]
           }
         },
         "access": {
@@ -20752,16 +21534,20 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "IdParamsSchema",
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
-            ],
-            "name": "IdParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "UpdateBodySchema",
             "fields": [
               {
                 "name": "labelRu",
@@ -20783,8 +21569,7 @@
                 "type": "boolean",
                 "optional": true
               }
-            ],
-            "name": "UpdateBodySchema"
+            ]
           }
         },
         "access": {
@@ -20844,13 +21629,23 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ReorderBodySchema",
             "fields": [
               {
                 "name": "items",
-                "type": "object[]"
+                "type": "object[]",
+                "fields": [
+                  {
+                    "name": "id",
+                    "type": "string"
+                  },
+                  {
+                    "name": "sortOrder",
+                    "type": "number"
+                  }
+                ]
               }
-            ],
-            "name": "ReorderBodySchema"
+            ]
           }
         },
         "access": {
@@ -20955,6 +21750,7 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "listQuery",
             "fields": [
               {
                 "name": "afterId",
@@ -20971,8 +21767,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "listQuery"
+            ]
           }
         },
         "access": {
@@ -21030,7 +21825,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -21182,6 +21977,7 @@
         "input": {
           "query": {
             "kind": "typebox",
+            "name": "listQuery",
             "fields": [
               {
                 "name": "afterId",
@@ -21198,8 +21994,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "listQuery"
+            ]
           }
         },
         "access": {
@@ -21257,7 +22052,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -21420,6 +22215,7 @@
           },
           "query": {
             "kind": "typebox",
+            "name": "listQuery",
             "fields": [
               {
                 "name": "afterId",
@@ -21436,8 +22232,7 @@
                 "type": "string",
                 "optional": true
               }
-            ],
-            "name": "listQuery"
+            ]
           }
         },
         "access": {
@@ -21511,7 +22306,7 @@
           "body": {
             "kind": "typebox",
             "fields": [],
-            "text": "t.Unknown()"
+            "type": "unknown"
           }
         },
         "access": {
@@ -21591,23 +22386,27 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "KeyParams",
             "fields": [
               {
                 "name": "key",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 100"
+                ]
               }
-            ],
-            "name": "KeyParams"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "PutBody",
             "fields": [
               {
                 "name": "value",
                 "type": "unknown"
               }
-            ],
-            "name": "PutBody"
+            ]
           }
         },
         "access": {
@@ -21647,13 +22446,17 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "KeyParams",
             "fields": [
               {
                 "name": "key",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 100"
+                ]
               }
-            ],
-            "name": "KeyParams"
+            ]
           }
         },
         "access": {
@@ -21693,13 +22496,17 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "KeyParams",
             "fields": [
               {
                 "name": "key",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 100"
+                ]
               }
-            ],
-            "name": "KeyParams"
+            ]
           }
         },
         "access": {
@@ -21739,13 +22546,17 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "KeyParams",
             "fields": [
               {
                 "name": "key",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 100"
+                ]
               }
-            ],
-            "name": "KeyParams"
+            ]
           }
         },
         "access": {
@@ -21788,11 +22599,18 @@
             "fields": [
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
             ]
           }
@@ -21837,7 +22655,11 @@
             "fields": [
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 512"
+                ]
               },
               {
                 "name": "locale",
@@ -21908,7 +22730,11 @@
             "fields": [
               {
                 "name": "text",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 4000"
+                ]
               },
               {
                 "name": "locale",
@@ -21971,11 +22797,53 @@
             "fields": [
               {
                 "name": "instruction",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 1000"
+                ]
               },
               {
                 "name": "current",
-                "type": "object"
+                "type": "object",
+                "fields": [
+                  {
+                    "name": "level",
+                    "type": "'junior' | 'specialist' | 'manager' | null"
+                  },
+                  {
+                    "name": "title",
+                    "type": "string | null"
+                  },
+                  {
+                    "name": "duties",
+                    "type": "string | null"
+                  },
+                  {
+                    "name": "requirements",
+                    "type": "string | null"
+                  },
+                  {
+                    "name": "salaryMinTiyin",
+                    "type": "number | null"
+                  },
+                  {
+                    "name": "salaryMaxTiyin",
+                    "type": "number | null"
+                  },
+                  {
+                    "name": "schedule",
+                    "type": "string | null"
+                  },
+                  {
+                    "name": "location",
+                    "type": "string | null"
+                  },
+                  {
+                    "name": "workFormat",
+                    "type": "'office' | 'remote' | 'hybrid' | null"
+                  }
+                ]
               },
               {
                 "name": "locale",
@@ -22105,28 +22973,32 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "CreateReviewBodySchema",
             "fields": [
               {
                 "name": "rating",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1",
+                  "maximum 5"
+                ]
               },
               {
                 "name": "comment",
                 "type": "string | null",
                 "optional": true
               }
-            ],
-            "name": "CreateReviewBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
+            "name": "DealReviewParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "DealReviewParamsSchema"
+            ]
           }
         },
         "access": {
@@ -22511,16 +23383,17 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "ParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "ParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "BodySchema",
             "fields": [
               {
                 "name": "amountTiyin",
@@ -22530,15 +23403,20 @@
               {
                 "name": "externalRef",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 200"
+                ]
               },
               {
                 "name": "note",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
               }
-            ],
-            "name": "BodySchema"
+            ]
           }
         },
         "access": {
@@ -22641,28 +23519,35 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "RefundParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "RefundParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "RefundBodySchema",
             "fields": [
               {
                 "name": "reason",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
               },
               {
                 "name": "note",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 1000"
+                ]
               }
-            ],
-            "name": "RefundBodySchema"
+            ]
           }
         },
         "access": {
@@ -22704,19 +23589,28 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "ParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "ParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 1000 })) }))",
-            "name": "BodySchema"
+            "name": "BodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "note",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
+              }
+            ]
           }
         },
         "access": {
@@ -22821,6 +23715,7 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "TrancheParamsSchema",
             "fields": [
               {
                 "name": "dealId",
@@ -22830,14 +23725,35 @@
                 "name": "trancheNo",
                 "type": "string"
               }
-            ],
-            "name": "TrancheParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ externalRef: t.Optional(t.String({ maxLength: 200 })), note: t.Optional(t.String({ maxLength: 1000 })), force: t.Optional(t.Boolean()), }), )",
-            "name": "TrancheBodySchema"
+            "name": "TrancheBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "externalRef",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 200"
+                ]
+              },
+              {
+                "name": "note",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
+              },
+              {
+                "name": "force",
+                "type": "boolean",
+                "optional": true
+              }
+            ]
           }
         },
         "access": {
@@ -23443,7 +24359,10 @@
             "fields": [
               {
                 "name": "id",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               }
             ]
           }
@@ -23885,19 +24804,28 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "HireParamsSchema",
             "fields": [
               {
                 "name": "candidateId",
                 "type": "string"
               }
-            ],
-            "name": "HireParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional(t.Object({ note: t.Optional(t.String({ maxLength: 500 })) }))",
-            "name": "HireBodySchema"
+            "name": "HireBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "note",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 500"
+                ]
+              }
+            ]
           }
         },
         "access": {
@@ -23933,23 +24861,23 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "ConfirmReplacementParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "ConfirmReplacementParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "ConfirmReplacementBodySchema",
             "fields": [
               {
                 "name": "candidateId",
                 "type": "string"
               }
-            ],
-            "name": "ConfirmReplacementBodySchema"
+            ]
           }
         },
         "access": {
@@ -23988,19 +24916,33 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "ReportLeftParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "ReportLeftParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
-            "fields": [],
-            "text": "t.Optional( t.Object({ reason: t.Optional(t.String({ maxLength: 1000 })), leftAt: t.Optional(t.String()), }), )",
-            "name": "ReportLeftBodySchema"
+            "name": "ReportLeftBodySchema",
+            "optional": true,
+            "fields": [
+              {
+                "name": "reason",
+                "type": "string",
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
+              },
+              {
+                "name": "leftAt",
+                "type": "string",
+                "optional": true
+              }
+            ]
           }
         },
         "access": {
@@ -24100,19 +25042,20 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "PayParamsSchema",
             "fields": [
               {
                 "name": "vacancyId",
                 "type": "string"
               }
-            ],
-            "name": "PayParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "PayBodySchema",
+            "optional": true,
             "fields": [],
-            "text": "t.Optional(t.Unknown())",
-            "name": "PayBodySchema"
+            "type": "unknown"
           }
         },
         "access": {
@@ -24169,13 +25112,13 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "HandoffParamsSchema",
             "fields": [
               {
                 "name": "vacancyId",
                 "type": "string"
               }
-            ],
-            "name": "HandoffParamsSchema"
+            ]
           }
         },
         "access": {
@@ -24211,43 +25154,65 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ErrorReportBodySchema",
             "fields": [
               {
                 "name": "message",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 5000"
+                ]
               },
               {
                 "name": "stack",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 20_000"
+                ]
               },
               {
                 "name": "errorType",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 200"
+                ]
               },
               {
                 "name": "componentStack",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 10_000"
+                ]
               },
               {
                 "name": "appName",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 100"
+                ]
               },
               {
                 "name": "environment",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 50"
+                ]
               },
               {
                 "name": "pageUrl",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 2000"
+                ]
               }
-            ],
-            "name": "ErrorReportBodySchema"
+            ]
           }
         },
         "response": {
@@ -24287,21 +25252,32 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "PresignBodySchema",
             "fields": [
               {
                 "name": "fileName",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
-            ],
-            "name": "PresignBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -24372,26 +25348,40 @@
         "input": {
           "body": {
             "kind": "typebox",
+            "name": "ConfirmBodySchema",
             "fields": [
               {
                 "name": "objectKey",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "fileName",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
-            ],
-            "name": "ConfirmBodySchema"
+            ]
           },
           "params": {
             "kind": "typebox",
@@ -24644,24 +25634,32 @@
         "input": {
           "params": {
             "kind": "typebox",
+            "name": "SubmitReplacementParamsSchema",
             "fields": [
               {
                 "name": "dealId",
                 "type": "string"
               }
-            ],
-            "name": "SubmitReplacementParamsSchema"
+            ]
           },
           "body": {
             "kind": "typebox",
+            "name": "SubmitReplacementBodySchema",
             "fields": [
               {
                 "name": "fio",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 200"
+                ]
               },
               {
                 "name": "phone",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1"
+                ]
               },
               {
                 "name": "resumeUrl",
@@ -24671,10 +25669,12 @@
               {
                 "name": "comment",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 2000"
+                ]
               }
-            ],
-            "name": "SubmitReplacementBodySchema"
+            ]
           }
         },
         "access": {
@@ -24716,15 +25716,26 @@
             "fields": [
               {
                 "name": "fileName",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "contentType",
-                "type": "string"
+                "type": "string",
+                "rules": [
+                  "minLength 1",
+                  "maxLength 255"
+                ]
               },
               {
                 "name": "sizeBytes",
-                "type": "number"
+                "type": "number",
+                "rules": [
+                  "minimum 1"
+                ]
               }
             ]
           }
@@ -25118,7 +26129,10 @@
               {
                 "name": "note",
                 "type": "string",
-                "optional": true
+                "optional": true,
+                "rules": [
+                  "maxLength 1000"
+                ]
               }
             ]
           }

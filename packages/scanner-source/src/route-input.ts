@@ -358,7 +358,8 @@ function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback: Route
   const resolvedKind = ts.isIdentifier(expr) ? schemaKindOf(ctx, expr, fallback) : kind;
   const base = { kind: resolvedKind, ...(named === undefined ? {} : { name: named }), ...(t.optional ? { optional: true } : {}) };
   if (t.fields !== undefined) {
-    return { ...base, fields: t.fields };
+    // Объект без полей — «{}»: тело есть, данных в нём нет.
+    return t.fields.length > 0 ? { ...base, fields: t.fields } : { ...base, fields: [], type: '{}' };
   }
   const opaque = t.type === named || t.type === short(expr);
   return opaque ? { ...base, fields: [], text: short(expr) } : { ...base, fields: [], type: t.type };
