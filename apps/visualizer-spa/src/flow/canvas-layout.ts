@@ -9,6 +9,8 @@ import { SERVICE_NODE_SIZE } from './service-node-size';
 
 /** Группа нод сервисов бэкенда. */
 export const SERVICES_GROUP = 'services';
+/** Группа экранов без группы в карте. */
+export const OTHER_GROUP = 'other';
 /** Наибольшая ширина ряда группы в мировых координатах. */
 export const MAX_ROW_WIDTH = 4200;
 
@@ -57,10 +59,11 @@ export function layoutCanvas(
 ): { readonly boxes: LayoutBox[]; readonly packed: PackedLayout } {
   const boxes: LayoutBox[] = nodes.map((n) => {
     const s = canvasNodeSize(doc, n, sizing, true);
-    return { id: n.id, width: s.outerWidth, height: s.outerHeight, group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? 'other' };
+    return { id: n.id, width: s.outerWidth, height: s.outerHeight, group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? OTHER_GROUP };
   });
-  const groupTitles = new Map<string, string>([...(doc.groups ?? []).map((g): [string, string] => [g.id, g.title]), [SERVICES_GROUP, 'Сервисы бэкенда']]);
-  const groupOrder = [...[...(doc.groups ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((g) => g.id), SERVICES_GROUP];
+  const groupTitles = new Map<string, string>([[OTHER_GROUP, 'Экраны'], ...(doc.groups ?? []).map((g): [string, string] => [g.id, g.title]), [SERVICES_GROUP, 'Сервисы бэкенда']]);
+  // Экраны раньше сервисов: группы карты по order, затем экраны без группы, сервисы — последними.
+  const groupOrder = [...[...(doc.groups ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((g) => g.id), OTHER_GROUP, SERVICES_GROUP];
   const packed = packLayout(
     boxes,
     navEdges.flatMap((e) => (e.to === null ? [] : [{ from: e.from, to: e.to }])),

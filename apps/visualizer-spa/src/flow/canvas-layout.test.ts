@@ -47,6 +47,11 @@ describe('layoutCanvas без наложений', () => {
           const g = packed.groups.find((fr) => fr.id === boxes.find((b) => b.id === r.id)?.group);
           expect(g !== undefined && r.x >= g.x && r.y >= g.y && r.x + r.width <= g.x + g.width && r.y + r.height <= g.y + g.height).toBe(true);
         }
+        // Экраны раньше сервисов: стартовый вид открывает экраны.
+        const order = packed.groups.map((g) => g.id);
+        if (order.includes('services')) {
+          expect(order.at(-1)).toBe('services');
+        }
         // Невыбранная нода не больше своей коробки: выбор одной не наезжает на соседей.
         for (const n of filtered) {
           const s = canvasNodeSize(doc, n, sizing, false);
