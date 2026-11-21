@@ -1,5 +1,5 @@
 /**
- * Какой вид открыт: холст экранов, «API», «База данных» или «Документация»,
+ * Какой вид открыт: холст экранов, «API», «База данных», «Документация» или «Сравнение»,
  * и что выбрано в каждом виде. Фильтры вида «API» живут здесь, чтобы переход
  * к таблице и обратно их не сбрасывал.
  */
@@ -8,7 +8,7 @@ import type { ApiFilter } from '@live-app-map/graph';
 import type { DocsMode, NavState } from '../lib/nav-location';
 
 /** Вид приложения. */
-export type AppView = 'screens' | 'api' | 'database' | 'docs';
+export type AppView = 'screens' | 'api' | 'database' | 'docs' | 'compare';
 
 type ViewState = {
   readonly view: AppView;

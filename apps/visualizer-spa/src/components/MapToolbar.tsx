@@ -4,6 +4,7 @@
  */
 import {
   BookOpen,
+  GitCompare,
   Moon,
   Sun,
   Eraser,
@@ -24,6 +25,7 @@ import {
 } from '../lib/dogfood-api';
 import { SessionProfilesPanel } from './SessionProfilesPanel';
 import { useViewStore } from '../store/view-store';
+import { useMapSourceStore } from '../store/map-source-store';
 import { ensureDogfoodSessions as mintMissingDogfood } from '../lib/ensure-dogfood-sessions';
 import { importMapFile } from '../lib/import-map';
 import { loadMapPresetIntoStore } from '../lib/load-map-preset';
@@ -97,8 +99,10 @@ export function MapToolbar(props: MapToolbarProps) {
 
   const [sheet, setSheet] = useState<SheetId>(null);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
-  /** Выбранная карта в шапке (id каталога). */
-  const [activeMapId, setActiveMapId] = useState('');
+  /** Выбранная карта в шапке: id каталога, `__file__` для импортированного файла или пусто. */
+  const mapSource = useMapSourceStore((s) => s.source);
+  const setMapSource = useMapSourceStore((s) => s.setSource);
+  const activeMapId = mapSource === null ? '' : mapSource.kind === 'catalog' ? mapSource.id : '__file__';
   const [theme, setTheme] = useState<Theme>(currentTheme);
   const setPalette = useUiStore((s) => s.setPalette);
   // Тема меняется и клавишей T — кнопка следит за атрибутом корня.
@@ -115,9 +119,9 @@ export function MapToolbar(props: MapToolbarProps) {
     const mapParam = new URLSearchParams(window.location.search).get('map');
     const hit = mapParam === null ? undefined : catalog.find((c) => c.path === mapParam);
     if (hit !== undefined) {
-      setActiveMapId(hit.id);
+      setMapSource({ kind: 'catalog', id: hit.id, label: hit.label, path: hit.path });
     }
-  }, [catalog, activeMapId]);
+  }, [catalog, activeMapId, setMapSource]);
   const appView = useViewStore((s) => s.view);
   const setAppView = useViewStore((s) => s.setView);
   const hasDb = useAppStore((s) => (s.document?.code?.tables.length ?? 0) > 0);
@@ -179,7 +183,9 @@ export function MapToolbar(props: MapToolbarProps) {
       setToast(result.error);
       return;
     }
-    loadUnknownJson(result.json);
+    if (loadUnknownJson(result.json)) {
+      setMapSource({ kind: 'file', name: file.name });
+    }
     if (result.toast !== undefined) {
       setToast(result.toast);
     }
@@ -223,7 +229,7 @@ export function MapToolbar(props: MapToolbarProps) {
         setToast(res.error);
         return;
       }
-      setActiveMapId(preset.id);
+      setMapSource({ kind: 'catalog', id: preset.id, label: preset.label, path: preset.path });
       await ensureDogfoodSessions();
       const baseHint =
         preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
@@ -249,7 +255,7 @@ export function MapToolbar(props: MapToolbarProps) {
     }
     if (value === '__clear__') {
       clearMap();
-      setActiveMapId('');
+      setMapSource(null);
       setToast('Карта очищена');
       return;
     }
@@ -284,6 +290,11 @@ export function MapToolbar(props: MapToolbarProps) {
                 </option>
               );
             })}
+            {mapSource?.kind === 'file' ? (
+              <option value="__file__" disabled>
+                Файл: {mapSource.name}
+              </option>
+            ) : null}
             <option value="__open_file__">── Открыть JSON / .appmap ──</option>
             <option value="__clear__" disabled={!document}>
               ── Очистить карту ──
@@ -291,7 +302,7 @@ export function MapToolbar(props: MapToolbarProps) {
           </Select>
         </label>
 
-        {hasApi || hasDb || hasDocs ? (
+        {document ? (
           <div className="toolbar__group" role="group" aria-label="Вид">
             <Button type="button" size="sm" variant={appView === 'screens' ? 'primary' : 'outline'} aria-pressed={appView === 'screens'} onClick={() => setAppView('screens')} title="Экраны">
               <LayoutGrid size={16} strokeWidth={1.75} />
@@ -315,6 +326,10 @@ export function MapToolbar(props: MapToolbarProps) {
                 <span className="toolbar__label">Документация</span>
               </Button>
             ) : null}
+            <Button type="button" size="sm" variant={appView === 'compare' ? 'primary' : 'outline'} aria-pressed={appView === 'compare'} onClick={() => setAppView('compare')} data-testid="view-compare" title="Сравнение версий карты">
+              <GitCompare size={16} strokeWidth={1.75} />
+              <span className="toolbar__label">Сравнение</span>
+            </Button>
           </div>
         ) : null}
 
@@ -431,6 +446,7 @@ export function MapToolbar(props: MapToolbarProps) {
           disabled={!document}
           onClick={() => {
             clearMap();
+            setMapSource(null);
             setSheet(null);
             setToast('Карта очищена');
           }}
