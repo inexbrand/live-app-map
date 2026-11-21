@@ -5,7 +5,7 @@
     "name": "site",
     "platform": "web",
     "generator": "@live-app-map/scanner-next/0.1.0",
-    "generatedAt": "2026-11-21T16:08:34.368Z"
+    "generatedAt": "2026-11-21T17:07:10.329Z"
   },
   "pages": [
     {
@@ -768,6 +768,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/disputes",
         "serviceId": "service:@korbor/api"
       },
@@ -806,6 +814,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/disputes/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -839,6 +852,11 @@
           "auth": true,
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "disputes"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/disputes",
@@ -927,6 +945,16 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/disputes",
@@ -1052,6 +1080,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/bulk-take",
         "serviceId": "service:@korbor/api"
       },
@@ -1112,6 +1145,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "dispute"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/:id/take",
@@ -1200,6 +1238,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/:id/resolve",
         "serviceId": "service:@korbor/api"
       },
@@ -1258,6 +1301,14 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/activity",
         "serviceId": "service:@korbor/api"
       },
@@ -1292,6 +1343,15 @@
           "auth": true,
           "roles": [
             "admin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "accepted"
+          ],
+          "statuses": [
+            202
           ]
         },
         "id": "api:@korbor/api POST /api/v1/activity/batch",
@@ -1332,6 +1392,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/roles",
@@ -1426,6 +1491,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "repository.list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/admins",
         "serviceId": "service:@korbor/api"
       },
@@ -1476,6 +1546,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/admins/:id",
@@ -1561,6 +1636,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/admins",
@@ -1659,6 +1739,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/admins/:id",
@@ -1802,6 +1887,16 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/audit",
         "serviceId": "service:@korbor/api"
       },
@@ -1881,6 +1976,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "entry"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/audit/:id",
@@ -2027,6 +2127,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "values": [
+            "handleBulk()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/bulk-ban",
         "serviceId": "service:@korbor/api"
       },
@@ -2151,6 +2256,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "values": [
+            "handleBulk()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/bulk-unban",
         "serviceId": "service:@korbor/api"
       },
@@ -2242,6 +2352,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "user"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/ban",
         "serviceId": "service:@korbor/api"
       },
@@ -2313,6 +2428,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "user"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/unban",
         "serviceId": "service:@korbor/api"
       },
@@ -2359,6 +2479,12 @@
           ],
           "checks": [
             "assertAdminPermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/risk-events",
@@ -2515,6 +2641,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "analytics"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/analytics",
         "serviceId": "service:@korbor/api"
       },
@@ -2638,6 +2769,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "stats"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id/stats",
         "serviceId": "service:@korbor/api"
       },
@@ -2716,6 +2852,16 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/candidate-locks",
@@ -2826,6 +2972,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -2897,6 +3053,16 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "documents",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/knowledge",
         "serviceId": "service:@korbor/api"
       },
@@ -2950,6 +3116,12 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "document",
+            "chunks"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/knowledge/:documentId",
@@ -3063,6 +3235,13 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "ok",
+            "id",
+            "action"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/llm/knowledge/chunks",
         "serviceId": "service:@korbor/api"
       },
@@ -3086,6 +3265,14 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "documents",
+            "chunksUpserted",
+            "chunksSkippedAdmin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/llm/knowledge/seed",
@@ -3151,6 +3338,16 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "prompts",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/prompts",
         "serviceId": "service:@korbor/api"
       },
@@ -3195,6 +3392,20 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "category",
+            "version",
+            "description",
+            "instructions",
+            "userTemplate",
+            "temperature",
+            "maxTokens",
+            "enabled",
+            "source",
+            "updatedAt"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/prompts/:category",
@@ -3300,6 +3511,12 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "ok",
+            "category"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/llm/prompts/:category",
         "serviceId": "service:@korbor/api"
       },
@@ -3323,6 +3540,13 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "upserted",
+            "skippedAdmin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/llm/prompts/seed",
@@ -3401,6 +3625,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "listAdminLlmRuns()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/runs",
         "serviceId": "service:@korbor/api"
       },
@@ -3459,6 +3688,11 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/runs/:id",
@@ -3538,6 +3772,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/marketmaker/queue",
         "serviceId": "service:@korbor/api"
       },
@@ -3589,6 +3833,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/assign",
         "serviceId": "service:@korbor/api"
       },
@@ -3633,6 +3885,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/dismiss",
@@ -3746,6 +4006,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/bulk-assign",
         "serviceId": "service:@korbor/api"
       },
@@ -3852,6 +4117,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/bulk-dismiss",
         "serviceId": "service:@korbor/api"
       },
@@ -3937,6 +4207,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "applyVerification()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification",
@@ -4080,6 +4355,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification",
         "serviceId": "service:@korbor/api"
       },
@@ -4167,6 +4447,16 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters",
         "serviceId": "service:@korbor/api"
       },
@@ -4246,6 +4536,11 @@
           "auth": true,
           "checks": [
             "assertCan"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name",
@@ -4339,6 +4634,11 @@
             "assertCan"
           ]
         },
+        "response": {
+          "values": [
+            "registry.stats()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
         "serviceId": "service:@korbor/api"
       },
@@ -4397,6 +4697,11 @@
           "auth": true,
           "checks": [
             "assertCan"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name/:id",
@@ -4463,6 +4768,11 @@
             "assertCan"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/registry/:name/:id/actions/:action",
         "serviceId": "service:@korbor/api"
       },
@@ -4516,6 +4826,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "expiresInSec",
+            "objectKey",
+            "mediaRef"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/presign",
         "serviceId": "service:@korbor/api"
       },
@@ -4558,6 +4876,13 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "mediaRef",
+            "contentType",
+            "sizeBytes"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/confirm",
@@ -4750,6 +5075,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "overview"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/overview",
         "serviceId": "service:@korbor/api"
       },
@@ -4912,6 +5242,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/search",
         "serviceId": "service:@korbor/api"
       },
@@ -5060,6 +5395,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "entity"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/entity",
@@ -5222,6 +5562,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "entity"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/entity",
         "serviceId": "service:@korbor/api"
       },
@@ -5276,6 +5621,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/comments",
@@ -5347,6 +5697,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "comment"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/comments",
         "serviceId": "service:@korbor/api"
       },
@@ -5398,6 +5753,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/comments/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -5436,6 +5796,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/templates",
@@ -5501,6 +5866,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "template"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/templates",
@@ -5589,6 +5959,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "template"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -5638,6 +6013,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok"
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/templates/:id",
@@ -5690,6 +6070,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts",
         "serviceId": "service:@korbor/api"
       },
@@ -5739,6 +6124,12 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "broadcast",
+            "recipients"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id",
@@ -5818,6 +6209,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "broadcast"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts",
@@ -5931,6 +6327,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "broadcast"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/broadcasts/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6002,6 +6403,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/broadcasts/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6057,6 +6463,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "repository.previewAudience()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/audience/preview",
@@ -6175,6 +6586,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "broadcast",
+            "recipients"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/:id/send",
         "serviceId": "service:@korbor/api"
       },
@@ -6221,6 +6638,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "telegramId",
+            "locale",
+            "role"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/:id/test-send",
@@ -6318,6 +6743,17 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total",
+            "q",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/users",
         "serviceId": "service:@korbor/api"
       },
@@ -6367,6 +6803,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "user"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/users/:id",
@@ -6482,6 +6923,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "listMessages()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -6564,6 +7010,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "sendMessage()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -6614,6 +7065,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/documents",
@@ -6674,6 +7130,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "presignUpload()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -6722,6 +7183,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "signDownload()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/attachments/sign",
@@ -6825,6 +7291,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listMessages()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -6895,6 +7366,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "sendMessage()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -6931,6 +7407,11 @@
           ],
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/documents",
@@ -6979,6 +7460,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "presignUpload()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification/uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -7015,6 +7501,11 @@
           ],
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "signDownload()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/attachments/sign",
@@ -7107,6 +7598,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/applications",
         "serviceId": "service:@korbor/api"
       },
@@ -7168,6 +7664,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "getMyApplicationDetail()"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/applications/:id",
         "serviceId": "service:@korbor/api"
@@ -7273,6 +7774,11 @@
             "assertCanTakeVacancyLevel"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/vacancies/:vacancyId/applications",
         "serviceId": "service:@korbor/api"
       },
@@ -7313,6 +7819,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/withdraw",
         "serviceId": "service:@korbor/api"
       },
@@ -7352,6 +7866,11 @@
             "via": "issueSession"
           }
         ],
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/login",
         "serviceId": "service:@korbor/api"
       },
@@ -7447,6 +7966,12 @@
             "isSessionUsable"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/refresh",
         "serviceId": "service:@korbor/api"
       },
@@ -7486,6 +8011,11 @@
             "via": "AdminSessionRepository.revoke"
           }
         ],
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/logout",
         "serviceId": "service:@korbor/api"
       },
@@ -7532,6 +8062,12 @@
             "verifyAdminAccessToken"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/admin/me",
         "serviceId": "service:@korbor/api"
       },
@@ -7561,6 +8097,12 @@
             "via": "issueAppLoginChallenge"
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/telegram/start",
         "serviceId": "service:@korbor/api"
       },
@@ -7649,6 +8191,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/telegram/poll",
         "serviceId": "service:@korbor/api"
       },
@@ -7670,6 +8218,12 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/google/start",
         "serviceId": "service:@korbor/api"
       },
@@ -7689,6 +8243,11 @@
         },
         "doc": "Возврат из Google. Код здесь не меняется: без `code_verifier`, который\nесть только у приложения, он бесполезен. Просто отдаём его приложению\nпо схеме `korbor://`; `state` приложение сверяет само.",
         "dbCalls": [],
+        "response": {
+          "statuses": [
+            302
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/app/google/callback",
         "serviceId": "service:@korbor/api"
       },
@@ -7817,6 +8376,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/google/exchange",
         "serviceId": "service:@korbor/api"
       },
@@ -7893,6 +8457,12 @@
             "pending"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/app-login/bind",
         "serviceId": "service:@korbor/api"
       },
@@ -7935,6 +8505,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/app-login/decide",
         "serviceId": "service:@korbor/api"
@@ -8038,6 +8614,11 @@
             "hasEmployerCompany"
           ]
         },
+        "response": {
+          "values": [
+            "response"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/telegram/miniapp",
         "serviceId": "service:@korbor/api"
       },
@@ -8074,6 +8655,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/me/locale",
@@ -8142,6 +8729,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/phone/from-contact",
@@ -8255,6 +8848,12 @@
             "assertRefreshOutlivesAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/register/choose-role",
         "serviceId": "service:@korbor/api"
       },
@@ -8299,6 +8898,11 @@
           "checks": [
             "requireSession",
             "verifyAccessToken"
+          ]
+        },
+        "response": {
+          "statuses": [
+            204
           ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/logout",
@@ -8347,6 +8951,11 @@
             "verifyAccessToken"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/logout-all",
         "serviceId": "service:@korbor/api"
       },
@@ -8393,6 +9002,12 @@
             "verifyAccessToken"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/sessions",
         "serviceId": "service:@korbor/api"
       },
@@ -8412,6 +9027,12 @@
         },
         "doc": "Public: which browser login methods are configured on this deployment.\nClients disable Google / Telegram Widget instead of hitting 503.",
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/web/providers",
         "serviceId": "service:@korbor/api"
       },
@@ -8469,6 +9090,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/session",
@@ -8548,6 +9175,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/refresh",
         "serviceId": "service:@korbor/api"
       },
@@ -8577,6 +9210,11 @@
             }
           }
         ],
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/logout",
         "serviceId": "service:@korbor/api"
       },
@@ -8695,6 +9333,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/profile/switch",
         "serviceId": "service:@korbor/api"
       },
@@ -8809,6 +9452,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/register",
         "serviceId": "service:@korbor/api"
       },
@@ -8886,6 +9534,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/login",
         "serviceId": "service:@korbor/api"
       },
@@ -8936,6 +9589,12 @@
             "via": "issuePasswordResetChallenge"
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/password/forgot",
         "serviceId": "service:@korbor/api"
       },
@@ -9034,6 +9693,12 @@
             }
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/password/reset",
         "serviceId": "service:@korbor/api"
       },
@@ -9125,6 +9790,11 @@
             "verifyTelegramLoginWidgetPayload"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/telegram-login",
         "serviceId": "service:@korbor/api"
       },
@@ -9145,6 +9815,11 @@
         "dbCalls": [],
         "access": {
           "auth": true
+        },
+        "response": {
+          "statuses": [
+            302
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/google/start",
         "serviceId": "service:@korbor/api"
@@ -9274,6 +9949,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "statuses": [
+            302
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/web/google/callback",
         "serviceId": "service:@korbor/api"
       },
@@ -9314,6 +9994,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
         "serviceId": "service:@korbor/api"
@@ -9380,6 +10066,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/phone/status",
@@ -9490,6 +10182,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/email/verify",
         "serviceId": "service:@korbor/api"
       },
@@ -9578,6 +10276,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/email/resend",
         "serviceId": "service:@korbor/api"
       },
@@ -9617,6 +10321,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/calls",
@@ -9710,6 +10419,15 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "...summary",
+            "participants",
+            "events",
+            "transcript",
+            "assistantMessages"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/calls/:callId",
         "serviceId": "service:@korbor/api"
       },
@@ -9760,6 +10478,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "adminJoinCall()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/calls/:callId/join",
@@ -9826,6 +10549,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "startCall()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
@@ -9958,6 +10686,11 @@
             "canAccessCallNotes"
           ]
         },
+        "response": {
+          "values": [
+            "joinCall()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/join",
         "serviceId": "service:@korbor/api"
       },
@@ -10083,6 +10816,11 @@
             "candidate"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/livekit/webhook",
         "serviceId": "service:@korbor/api"
       },
@@ -10135,6 +10873,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "listCallTranscript()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
       },
@@ -10186,6 +10929,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "saveTranscriberFinal()"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
@@ -10259,6 +11007,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "transcribeCallAudio()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
       },
@@ -10314,6 +11067,11 @@
             "canAccessCallNotes"
           ]
         },
+        "response": {
+          "values": [
+            "readCallNote()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/notes",
         "serviceId": "service:@korbor/api"
       },
@@ -10367,6 +11125,11 @@
           "auth": true,
           "checks": [
             "canAccessCallNotes"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/calls/:callId/notes",
@@ -10432,6 +11195,11 @@
           "auth": true,
           "checks": [
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "listCallAssistant()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/assistant",
@@ -10507,6 +11275,11 @@
           "auth": true,
           "checks": [
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "listAssistantSegmentPage()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/assistant/segments",
@@ -10686,6 +11459,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/events",
         "serviceId": "service:@korbor/api"
       },
@@ -10748,6 +11526,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "endCall()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/end",
         "serviceId": "service:@korbor/api"
       },
@@ -10802,6 +11585,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "issueGuestLink()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/guest-link",
@@ -10870,6 +11658,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "inviteCallParty()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/invite",
         "serviceId": "service:@korbor/api"
       },
@@ -10924,6 +11717,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "inviteCallPartyAsViewer()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/invite-peer",
@@ -10990,6 +11788,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "acceptCallInvite()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/accept",
@@ -11077,6 +11880,11 @@
             "requireRecruiter"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/locks/:lockId/claims",
         "serviceId": "service:@korbor/api"
       },
@@ -11154,6 +11962,11 @@
           ],
           "checks": [
             "requireAdmin"
+          ]
+        },
+        "response": {
+          "values": [
+            "dto"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/anti-bypass-claims/:id/resolve",
@@ -11234,6 +12047,11 @@
             "assertOwnerOrAdmin"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
         "serviceId": "service:@korbor/api"
       },
@@ -11291,6 +12109,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "candidates"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -11342,6 +12165,11 @@
             "assertCanViewCandidate"
           ]
         },
+        "response": {
+          "values": [
+            "readCandidateDetail()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId",
         "serviceId": "service:@korbor/api"
       },
@@ -11391,6 +12219,11 @@
           ],
           "checks": [
             "assertCanViewCandidate"
+          ]
+        },
+        "response": {
+          "values": [
+            "readCandidateDetail()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId",
@@ -11458,6 +12291,11 @@
           "roles": [
             "admin",
             "employer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "candidates"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/candidates",
@@ -11589,6 +12427,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -11657,6 +12500,11 @@
             "assertOwnerOrAdmin"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
         "serviceId": "service:@korbor/api"
       },
@@ -11675,6 +12523,11 @@
           }
         },
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/vacancy-templates",
         "serviceId": "service:@korbor/api"
       },
@@ -11693,6 +12546,11 @@
           }
         },
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/price/categories",
         "serviceId": "service:@korbor/api"
       },
@@ -11716,6 +12574,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/feed-presets",
@@ -11743,6 +12606,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancy-templates",
         "serviceId": "service:@korbor/api"
       },
@@ -11766,6 +12634,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/price-categories",
@@ -11793,6 +12666,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/feed-presets/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -11818,6 +12696,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancy-templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -11841,6 +12724,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/price-categories/:id",
@@ -11879,6 +12767,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/feed-presets",
         "serviceId": "service:@korbor/api"
       },
@@ -11913,6 +12809,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/vacancy-templates",
@@ -11951,6 +12855,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/price-categories",
         "serviceId": "service:@korbor/api"
       },
@@ -11985,6 +12897,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/feed-presets/:id",
@@ -12023,6 +12940,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/vacancy-templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12057,6 +12979,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/price-categories/:id",
@@ -12095,6 +13022,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/feed-presets/order",
         "serviceId": "service:@korbor/api"
       },
@@ -12129,6 +13061,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/admin/vacancy-templates/order",
@@ -12167,6 +13104,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/price-categories/order",
         "serviceId": "service:@korbor/api"
       },
@@ -12186,6 +13128,11 @@
         },
         "doc": "Публичный список наборов фильтров ленты.",
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/feed-presets",
         "serviceId": "service:@korbor/api"
       },
@@ -12223,6 +13170,11 @@
           "checks": [
             "requirePermissionPlugin",
             "requireRecruiterUser"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/feed-presets/personal",
@@ -12281,6 +13233,14 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "fields": [
+            "preset"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/feed-presets/personal",
         "serviceId": "service:@korbor/api"
       },
@@ -12336,6 +13296,11 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "fields": [
+            "preset"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/recruiter/feed-presets/personal/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12386,6 +13351,11 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/recruiter/feed-presets/personal/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12423,6 +13393,11 @@
           "checks": [
             "requireEmployerUser",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancy-templates/personal",
@@ -12481,6 +13456,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "template"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-templates/personal",
         "serviceId": "service:@korbor/api"
       },
@@ -12529,6 +13512,11 @@
           "checks": [
             "requireEmployerUser",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "statuses": [
+            204
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/employer/vacancy-templates/personal/:id",
@@ -12611,6 +13599,16 @@
             "requireAdminChatView",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/chat/threads",
@@ -12755,6 +13753,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "nextCursor"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/chat/threads/:threadId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -12823,6 +13827,13 @@
           "checks": [
             "assertCanAccessCandidateChat",
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
@@ -12895,6 +13906,13 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/chat-uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -12956,6 +13974,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
         "serviceId": "service:@korbor/api"
       },
@@ -13015,6 +14039,12 @@
           "checks": [
             "assertCanAccessCandidateChat",
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/attachments/sign",
@@ -13115,6 +14145,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "support"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/chat/threads",
         "serviceId": "service:@korbor/api"
       },
@@ -13213,6 +14249,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "support"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/chat/threads",
         "serviceId": "service:@korbor/api"
       },
@@ -13301,6 +14343,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "thread"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/chat/threads/:candidateId",
         "serviceId": "service:@korbor/api"
       },
@@ -13387,6 +14434,11 @@
           ],
           "checks": [
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "thread"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/chat/threads/:candidateId",
@@ -13481,6 +14533,14 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "report"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/chat-reports",
         "serviceId": "service:@korbor/api"
       },
@@ -13573,6 +14633,14 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "report"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
         "serviceId": "service:@korbor/api"
       },
@@ -13633,6 +14701,11 @@
           "checks": [
             "requireAdminChatView",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/chat/reports",
@@ -13719,6 +14792,11 @@
           "checks": [
             "requireAdminSanction",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "report"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/chat/reports/:reportId/resolve",
@@ -13879,6 +14957,15 @@
           "checks": [
             "requireAdminSanction",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "sanction"
+          ],
+          "statuses": [
+            200,
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/chat/threads/:threadId/sanctions",
@@ -14063,6 +15150,11 @@
             "isChatSenderRole"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -14245,6 +15337,11 @@
             "isChatSenderRole"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -14375,6 +15472,11 @@
           ],
           "checks": [
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "values": [
+            "handleList()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
@@ -14509,6 +15611,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "values": [
+            "handleList()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -14641,6 +15748,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "values": [
+            "handleList()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -14660,6 +15772,11 @@
         },
         "doc": "BR-029-05: public, unauthenticated — whitelist only (029 §4 API sample).",
         "dbCalls": [],
+        "response": {
+          "values": [
+            "getPublicConfig()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/config/public",
         "serviceId": "service:@korbor/api"
       },
@@ -14740,6 +15857,16 @@
             "assertConfigPermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/config",
         "serviceId": "service:@korbor/api"
       },
@@ -14765,6 +15892,11 @@
           ],
           "checks": [
             "assertConfigPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "getConfigValue()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/config/:key",
@@ -14858,6 +15990,11 @@
             "assertConfigPermission"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/config/:key",
         "serviceId": "service:@korbor/api"
       },
@@ -14895,6 +16032,11 @@
             }
           }
         ],
+        "response": {
+          "fields": [
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/dev/dogfood/actors",
         "serviceId": "service:@korbor/api"
       },
@@ -14957,6 +16099,11 @@
             ]
           }
         },
+        "response": {
+          "fields": [
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/dev/dogfood/session",
         "serviceId": "service:@korbor/api"
       },
@@ -14993,6 +16140,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toCompanyDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/company",
@@ -15059,6 +16211,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "toCompanyDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/company",
         "serviceId": "service:@korbor/api"
       },
@@ -15122,6 +16279,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toCompanyDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/employer/company",
@@ -15221,6 +16383,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -15295,6 +16462,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "response"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies",
@@ -15416,6 +16588,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
         "serviceId": "service:@korbor/api"
       },
@@ -15453,6 +16630,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toTariffPreviewDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/tariff-preview",
@@ -15536,6 +16718,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "toTariffPreviewDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/bounty",
         "serviceId": "service:@korbor/api"
       },
@@ -15599,6 +16786,11 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/start",
         "serviceId": "service:@korbor/api"
@@ -15664,6 +16856,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/start",
         "serviceId": "service:@korbor/api"
       },
@@ -15706,6 +16903,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/internal/bot/intake/active",
         "serviceId": "service:@korbor/api"
       },
@@ -15747,6 +16952,14 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/intake/active",
         "serviceId": "service:@korbor/api"
@@ -15841,6 +17054,11 @@
           ],
           "checks": [
             "requireOwnedSession"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/answer",
@@ -15938,6 +17156,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/answer",
         "serviceId": "service:@korbor/api"
       },
@@ -16005,6 +17228,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/back",
         "serviceId": "service:@korbor/api"
       },
@@ -16070,6 +17298,11 @@
           "auth": true,
           "checks": [
             "requireOwnedSession"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/back",
@@ -16153,6 +17386,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/edit-step",
         "serviceId": "service:@korbor/api"
       },
@@ -16234,6 +17472,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/edit-step",
         "serviceId": "service:@korbor/api"
       },
@@ -16298,6 +17541,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/abandon",
         "serviceId": "service:@korbor/api"
       },
@@ -16361,6 +17612,14 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/abandon",
         "serviceId": "service:@korbor/api"
@@ -16453,6 +17712,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listLegalDocuments()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/legal/documents",
         "serviceId": "service:@korbor/api"
       },
@@ -16502,6 +17766,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "getLegalDocument()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/legal/documents/:id",
@@ -16616,6 +17885,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "created"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents",
@@ -16735,6 +18009,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/legal/documents/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -16816,6 +18095,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "published"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/publish",
         "serviceId": "service:@korbor/api"
       },
@@ -16875,6 +18159,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/admin/legal/documents/order",
@@ -16954,6 +18243,13 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/pdf/presign-upload",
@@ -17038,6 +18334,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/pdf/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -17119,6 +18420,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/legal/documents/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -17148,6 +18454,11 @@
             "via": "LegalRepository.findCurrentDocumentsByAudience"
           }
         ],
+        "response": {
+          "fields": [
+            "documents"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/legal/current",
         "serviceId": "service:@korbor/api"
       },
@@ -17232,6 +18543,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/legal/accept",
         "serviceId": "service:@korbor/api"
       },
@@ -17277,6 +18593,17 @@
             "admin"
           ]
         },
+        "response": {
+          "fields": [
+            "pdn",
+            "offer",
+            "documents",
+            "needsReconsent"
+          ],
+          "values": [
+            "getConsentStatus()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/legal/status",
         "serviceId": "service:@korbor/api"
       },
@@ -17309,6 +18636,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "body"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/me",
         "serviceId": "service:@korbor/api"
@@ -17372,6 +18704,12 @@
             "requireUserId"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "nextCursor"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/me/notifications",
         "serviceId": "service:@korbor/api"
       },
@@ -17405,6 +18743,11 @@
           "auth": true,
           "checks": [
             "requireUserId"
+          ]
+        },
+        "response": {
+          "values": [
+            "buildBadge()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/me/notifications/badge",
@@ -17453,6 +18796,11 @@
             "requireUserId"
           ]
         },
+        "response": {
+          "fields": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/me/notifications/read",
         "serviceId": "service:@korbor/api"
       },
@@ -17486,6 +18834,11 @@
           "auth": true,
           "checks": [
             "requireUserId"
+          ]
+        },
+        "response": {
+          "fields": [
+            "updated"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/me/notifications/read-all",
@@ -17590,6 +18943,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "quotePrice()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/price/quote",
         "serviceId": "service:@korbor/api"
       },
@@ -17630,6 +18988,14 @@
           "auth": true,
           "checks": [
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "token"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/me/push-tokens",
@@ -17674,6 +19040,11 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/me/push-tokens",
         "serviceId": "service:@korbor/api"
       },
@@ -17712,6 +19083,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/marketmaker/queue",
@@ -17755,6 +19131,14 @@
             "requireRecruiter"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/marketmaker/claim",
         "serviceId": "service:@korbor/api"
       },
@@ -17787,6 +19171,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -17807,6 +19196,11 @@
         "dbCalls": [],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "months"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/profile/rating-history",
         "serviceId": "service:@korbor/api"
@@ -17858,6 +19252,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -17908,6 +19307,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -17949,6 +19353,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "verificationLevel",
+            "verificationRequestedAt"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification-request",
         "serviceId": "service:@korbor/api"
@@ -18026,6 +19436,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listAdminSpecializations()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/specializations",
         "serviceId": "service:@korbor/api"
       },
@@ -18075,6 +19490,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "getAdminSpecialization()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/specializations/:id",
@@ -18164,6 +19584,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "created"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/specializations",
@@ -18263,6 +19688,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/specializations/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -18324,6 +19754,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/specializations/order",
         "serviceId": "service:@korbor/api"
       },
@@ -18354,6 +19789,11 @@
             "via": "listActiveSpecializations"
           }
         ],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/specializations",
         "serviceId": "service:@korbor/api"
       },
@@ -18433,6 +19873,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -18486,6 +19931,14 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -18522,6 +19975,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "fields": [
+            "marked"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/support/read",
         "serviceId": "service:@korbor/api"
       },
@@ -18556,6 +20014,11 @@
           "checks": [
             "requirePermissionPlugin",
             "requireSurfaceRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "marked"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/support/read",
@@ -18637,6 +20100,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -18688,6 +20156,14 @@
           "checks": [
             "requirePermissionPlugin",
             "requireSurfaceRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/support/messages",
@@ -18767,6 +20243,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/support/threads",
@@ -18864,6 +20345,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/support/threads/:userId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -18933,6 +20419,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/support/threads/:userId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -18960,6 +20454,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "groups"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/system-settings",
@@ -19013,6 +20512,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/system-settings/:key",
         "serviceId": "service:@korbor/api"
       },
@@ -19052,6 +20556,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/admin/system-settings/:key",
@@ -19095,6 +20604,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/system-settings/:key/regenerate",
         "serviceId": "service:@korbor/api"
       },
@@ -19134,6 +20648,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/system-settings/:key/audit",
@@ -19178,6 +20697,13 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-assistant/voice-uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -19219,6 +20745,13 @@
           "checks": [
             "assertVoiceKeyBelongsToUser",
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "text",
+            "detectedLanguage",
+            "durationSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-assistant/transcribe",
@@ -19493,6 +21026,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/deals/:dealId/reviews",
         "serviceId": "service:@korbor/api"
       },
@@ -19529,6 +21067,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "reviews"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/deals/:dealId/reviews",
         "serviceId": "service:@korbor/api"
       },
@@ -19563,6 +21106,11 @@
           "checks": [
             "canAdminViewHiddenUserReviews",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "reviews"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/users/:userId/reviews",
@@ -19626,6 +21174,12 @@
             "requireAdminRatingRecalc",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "userId",
+            "rating"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/rating-recalc",
@@ -19759,6 +21313,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "cached",
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/metrics",
         "serviceId": "service:@korbor/api"
       },
@@ -19884,6 +21444,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund/tranche2/mark-done",
         "serviceId": "service:@korbor/api"
       },
@@ -20003,6 +21568,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund-tranche2",
         "serviceId": "service:@korbor/api"
       },
@@ -20049,6 +21619,14 @@
             "requireDisputePermission",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/replacement/open",
@@ -20165,6 +21743,11 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/tranches/:trancheNo/mark-paid",
         "serviceId": "service:@korbor/api"
       },
@@ -20214,6 +21797,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/deals/export.csv",
@@ -20324,6 +21912,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/deals",
         "serviceId": "service:@korbor/api"
       },
@@ -20397,6 +21995,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/deals/:dealId",
         "serviceId": "service:@korbor/api"
       },
@@ -20446,6 +22049,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/ledger/export.csv",
@@ -20561,6 +22169,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/ledger",
         "serviceId": "service:@korbor/api"
       },
@@ -20611,6 +22229,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/ledger/:id",
@@ -20671,6 +22294,11 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/payout-requests",
         "serviceId": "service:@korbor/api"
       },
@@ -20723,6 +22351,14 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "id",
+            "status",
+            "acknowledgedAt",
+            "acknowledgedByUserId"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/payout-requests/:id/acknowledge",
         "serviceId": "service:@korbor/api"
       },
@@ -20773,6 +22409,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies/export.csv",
@@ -20883,6 +22524,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies",
         "serviceId": "service:@korbor/api"
       },
@@ -20922,6 +22573,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies/:id",
@@ -21032,6 +22688,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/vacancies/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -21136,6 +22797,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
         "serviceId": "service:@korbor/api"
       },
@@ -21183,6 +22849,14 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/deals/:dealId/confirm-replacement",
         "serviceId": "service:@korbor/api"
       },
@@ -21224,6 +22898,14 @@
           "auth": true,
           "roles": [
             "employer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/deals/:dealId/report-left",
@@ -21330,6 +23012,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/pay",
         "serviceId": "service:@korbor/api"
       },
@@ -21386,6 +23073,11 @@
           "auth": true,
           "roles": [
             "employer"
+          ]
+        },
+        "response": {
+          "values": [
+            "buildPaymentHandoffView()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/payment-handoff",
@@ -21448,6 +23140,11 @@
             ],
             "name": "ErrorReportBodySchema"
           }
+        },
+        "response": {
+          "fields": [
+            "ok"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/error-reports",
         "serviceId": "service:@korbor/api"
@@ -21514,6 +23211,13 @@
           ],
           "checks": [
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/resume/presign-upload",
@@ -21599,6 +23303,12 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "fields": [
+            "objectKey",
+            "uploadedAt"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/resume/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -21659,6 +23369,12 @@
           "checks": [
             "assertCanViewCandidate",
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/resume-url",
@@ -21723,6 +23439,12 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/resume-url",
         "serviceId": "service:@korbor/api"
       },
@@ -21783,6 +23505,12 @@
           "checks": [
             "assertCanViewCandidate",
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/candidates/:candidateId/resume-url",
@@ -21846,6 +23574,14 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/deals/:dealId/replacement-candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -21886,6 +23622,13 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/uploads/resume",
         "serviceId": "service:@korbor/api"
@@ -21983,6 +23726,11 @@
             "canRecruiterViewVacancyLevel"
           ]
         },
+        "response": {
+          "values": [
+            "buildPublicVacancyCard()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/vacancies/:vacancyId",
         "serviceId": "service:@korbor/api"
       },
@@ -22025,6 +23773,13 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "vacancyId",
+            "favorited",
+            "created"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
         "serviceId": "service:@korbor/api"
       },
@@ -22056,6 +23811,13 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "vacancyId",
+            "favorited",
+            "removed"
+          ]
         },
         "id": "api:@korbor/api DELETE /api/v1/recruiter/vacancies/:vacancyId/favorite",
         "serviceId": "service:@korbor/api"
@@ -22130,6 +23892,12 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "emptyResponse",
+            "response"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/vacancies",
         "serviceId": "service:@korbor/api"
       },
@@ -22178,6 +23946,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "dto"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/wallet",
@@ -22250,6 +24023,14 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "id",
+            "status",
+            "dueTiyin",
+            "createdAt"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests",
@@ -22332,6 +24113,15 @@
             "via": "withIdempotency"
           }
         ],
+        "response": {
+          "fields": [
+            "ok",
+            "test"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/webhooks/ipc",
         "serviceId": "service:@korbor/api"
       }
@@ -29273,6 +31063,19 @@
         "routeId": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/confirm"
       },
       {
+        "id": "call:apps/admin/src/pages/communications/broadcasts/ui/BroadcastTestUserPicker.tsx:116 GET /api/v1/admin/users",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/users",
+        "client": "wrapper",
+        "via": "api.get",
+        "location": {
+          "file": "apps/admin/src/pages/communications/broadcasts/ui/BroadcastTestUserPicker.tsx",
+          "line": 116
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/users"
+      },
+      {
         "id": "call:apps/admin/src/pages/communications/chats/model/chats-store.ts:135 GET /api/v1/admin/chat/threads",
         "serviceId": "service:@korbor/admin",
         "method": "GET",
@@ -30388,6 +32191,51 @@
           "line": 153
         },
         "routeId": "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+      },
+      {
+        "id": "call:apps/api/src/infra/llm/openrouter-call-assistant.ts:36 POST /chat/completions",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/chat/completions",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/infra/llm/openrouter-call-assistant.ts",
+          "line": 36
+        }
+      },
+      {
+        "id": "call:apps/api/src/infra/speech/whisper-http.ts:190 POST /v1/audio/transcriptions",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/v1/audio/transcriptions",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/infra/speech/whisper-http.ts",
+          "line": 190
+        }
+      },
+      {
+        "id": "call:apps/api/src/modules/calls/service.ts:834 POST /rooms/:id",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/rooms/:id",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/modules/calls/service.ts",
+          "line": 834
+        }
+      },
+      {
+        "id": "call:apps/call-transcriber/src/publish.ts:33 POST /api/v1/internal/calls/:callId/transcript",
+        "serviceId": "service:@korbor/call-transcriber",
+        "method": "POST",
+        "path": "/api/v1/internal/calls/:callId/transcript",
+        "client": "fetch",
+        "location": {
+          "file": "apps/call-transcriber/src/publish.ts",
+          "line": 33
+        },
+        "routeId": "api:@korbor/api POST /api/v1/internal/calls/:callId/transcript"
       },
       {
         "id": "call:apps/miniapp/src/app/WebDogfoodPicker.tsx:52 GET /api/v1/dev/dogfood/actors",
@@ -31691,6 +33539,19 @@
         "routeId": "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests"
       },
       {
+        "id": "call:apps/mobile/src/entities/account/ui/logout-all.tsx:27 POST /api/v1/auth/web/logout",
+        "serviceId": "service:@korbor/mobile",
+        "method": "POST",
+        "path": "/api/v1/auth/web/logout",
+        "client": "wrapper",
+        "via": "client.request",
+        "location": {
+          "file": "apps/mobile/src/entities/account/ui/logout-all.tsx",
+          "line": 27
+        },
+        "routeId": "api:@korbor/api POST /api/v1/auth/web/logout"
+      },
+      {
         "id": "call:apps/mobile/src/entities/chat/model/use-attachment-upload.ts:58 POST /api/v1/:surface/candidates/:candidateId/chat-uploads",
         "serviceId": "service:@korbor/mobile",
         "method": "POST",
@@ -32242,6 +34103,41 @@
         "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
       },
       {
+        "id": "call:scripts/dev-seed-mobile.ts:348 POST /api/v1/webhooks/ipc",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/webhooks/ipc",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-seed-mobile.ts",
+          "line": 348
+        },
+        "routeId": "api:@korbor/api POST /api/v1/webhooks/ipc"
+      },
+      {
+        "id": "call:scripts/dev-seed-mobile.ts:459 GET /health",
+        "serviceId": "service:korbor-platform",
+        "method": "GET",
+        "path": "/health",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-seed-mobile.ts",
+          "line": 459
+        }
+      },
+      {
+        "id": "call:scripts/dev-sim-pay.ts:117 POST /api/v1/webhooks/ipc",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/webhooks/ipc",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-sim-pay.ts",
+          "line": 117
+        },
+        "routeId": "api:@korbor/api POST /api/v1/webhooks/ipc"
+      },
+      {
         "id": "call:scripts/diag-initdata-auth.ts:74 POST /api/v1/auth/telegram/miniapp",
         "serviceId": "service:korbor-platform",
         "method": "POST",
@@ -32277,6 +34173,18 @@
         "location": {
           "file": "scripts/diag-initdata-auth.ts",
           "line": 76
+        },
+        "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
+      },
+      {
+        "id": "call:scripts/load-test/actors.ts:44 POST /api/v1/auth/telegram/miniapp",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/auth/telegram/miniapp",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/load-test/actors.ts",
+          "line": 44
         },
         "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
       },

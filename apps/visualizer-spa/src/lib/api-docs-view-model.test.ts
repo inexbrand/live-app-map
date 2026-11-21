@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildCodeIndex, type CodeIndex } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
-import { apiViewState, routeCard, schemaInline } from './api-view-model';
+import { apiViewState, routeCard, routeOneLine, schemaInline } from './api-view-model';
 import {
   docsSections,
   epochDateLabel,
@@ -38,6 +38,26 @@ beforeAll(() => {
 });
 
 describe('вид «API» на korbor', () => {
+  test('карточка: описание из кода и экраны админки; у роута без экранов — причина', () => {
+    const vac = index.code.routes.find((r) => r.method === 'GET' && r.path === '/api/v1/admin/vacancies');
+    const card = vac === undefined ? null : routeCard(index, vac.id);
+    expect(card?.auto.summary).toStartWith('Чтение «vacancies»');
+    expect(card?.callers.length).toBeGreaterThan(0);
+    expect(card?.gap).toBeUndefined();
+    const lonely = index.code.routes.find((r) => (index.callersByRoute.get(r.id)?.length ?? 0) === 0);
+    const gapCard = lonely === undefined ? null : routeCard(index, lonely.id);
+    expect(['unreached', 'other-client', 'no-caller']).toContain(gapCard?.gap?.kind ?? '');
+  });
+
+  test('строка списка: авторское описание, иначе из кода с пометкой auto', () => {
+    const documented = index.code.routes.find((r) => r.doc !== undefined);
+    const bare = index.code.routes.find((r) => r.doc === undefined && r.comments === undefined);
+    expect(documented === undefined ? undefined : routeOneLine(index, documented).auto).toBe(false);
+    const line = bare === undefined ? undefined : routeOneLine(index, bare);
+    expect(line?.auto).toBe(true);
+    expect(line?.text.length).toBeGreaterThan(0);
+  });
+
   test('дерево покрывает все роуты, разделы admin/employer/recruiter есть', () => {
     const s = apiViewState(index, {});
     expect(s.routes.length).toBe(korbor.code?.routes.length ?? -1);

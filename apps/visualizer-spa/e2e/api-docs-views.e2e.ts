@@ -74,14 +74,38 @@ test.describe('вид «API» на korbor', () => {
     expect(errors).toEqual([]);
   });
 
-  test('«без описания» оставляет только роуты без строки описания', async ({ page }) => {
+  test('«без описания» оставляет роуты без авторского описания, у каждого — описание из кода', async ({ page }) => {
     await openMap(page, 'korbor-all.liveappmap.json');
     await page.getByTestId('view-api').click();
     await page.getByTestId('api-undocumented').click();
     const rows = page.getByTestId('api-route-row');
     await expect.poll(async () => rows.count()).toBeGreaterThan(200);
-    await expect(page.locator('.api-row__doc')).toHaveCount(0);
+    await expect(page.locator('.api-row__doc:not(.api-row__doc--auto)')).toHaveCount(0);
+    await expect(page.locator('.api-row__doc--auto')).toHaveCount(await rows.count());
     await shot(page, 'api-korbor-undocumented.png');
+  });
+
+  test('карточка: описание из кода, экран админки; «без экранов» — с причиной', async ({ page }) => {
+    await openMap(page, 'korbor-all.liveappmap.json');
+    await page.getByTestId('view-api').click();
+    const rows = page.getByTestId('api-route-row');
+    await page.locator('#api-search').fill('/api/v1/admin/vacancies');
+    await page.getByTestId('api-method-GET').click();
+    await rows.filter({ hasText: /GET\s*\/api\/v1\/admin\/vacancies$/ }).first().click();
+    const card = page.getByTestId('api-route-card');
+    await expect(card.getByTestId('api-auto-doc')).toContainText('описание собрано из кода');
+    await expect(card.getByTestId('api-auto-doc')).toContainText('Чтение «vacancies»');
+    await expect(card.getByTestId('api-screen-link').first()).toBeVisible();
+    await shot(page, 'api-after-card.png');
+
+    await page.getByRole('button', { name: /^Сбросить/ }).click();
+    await page.getByTestId('api-no-screens').click();
+    const left = await rows.count();
+    expect(left).toBeGreaterThan(0);
+    expect(left).toBeLessThan(314);
+    await rows.first().click();
+    await expect(card.getByTestId('api-screen-gap')).toContainText('Экраны карты не вызывают');
+    await shot(page, 'api-after-no-screens.png');
   });
 });
 

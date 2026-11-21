@@ -319,6 +319,24 @@
   margin: 0;
   color: var(--muted-foreground);
 }
+.api-row__doc--auto {
+  font-style: italic;
+}
+.api-auto {
+  display: grid;
+  gap: 4px;
+  padding: 8px 12px;
+  border-left: 2px solid var(--border);
+}
+.api-auto__note {
+  margin: 0;
+  font-size: 12px;
+  line-height: 16px;
+  color: var(--muted-foreground);
+}
+.api-auto__summary {
+  margin: 0;
+}
 .api-card__section {
   display: grid;
   gap: 8px;

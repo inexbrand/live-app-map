@@ -19,8 +19,8 @@ const node = (id: string) => {
 };
 
 describe('списки API экрана из карты korbor', () => {
-  test('vacancies/[id] — списки вакансий рекрутера и клиента', () => {
-    expect(nodeSampleLists(doc, node('route:/vacancies/[id]'))).toEqual(['/api/v1/employer/vacancies', '/api/v1/recruiter/vacancies']);
+  test('vacancies/[id] — список вакансий рекрутера (экран рекрутера не ходит в кабинет клиента)', () => {
+    expect(nodeSampleLists(doc, node('route:/vacancies/[id]'))).toEqual(['/api/v1/recruiter/vacancies']);
   });
 
   test('applications/[id]/submit — список откликов рекрутера', () => {
@@ -87,6 +87,6 @@ describe('экраны без сопоставленных вызовов (ад�
   });
 
   test('вызовы экрана важнее общих роутов: мини-апп берёт свои списки', () => {
-    expect(nodeSampleLists(all, admin('miniapp:route:/vacancies/[id]'))).toEqual(['/api/v1/employer/vacancies', '/api/v1/recruiter/vacancies']);
+    expect(nodeSampleLists(all, admin('miniapp:route:/vacancies/[id]'))).toEqual(['/api/v1/recruiter/vacancies']);
   });
 });

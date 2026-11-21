@@ -5,7 +5,7 @@
     "name": "miniapp",
     "platform": "web",
     "generator": "@live-app-map/scanner-react-router/0.1.0",
-    "generatedAt": "2026-11-21T16:08:34.305Z"
+    "generatedAt": "2026-11-21T17:07:10.273Z"
   },
   "pages": [
     {
@@ -980,7 +980,7 @@
       "id": "api:route:/->service:@korbor/api",
       "from": "route:/",
       "to": "service:@korbor/api",
-      "label": "API: 17",
+      "label": "API: 18",
       "kind": "api",
       "metadata": {
         "routeIds": [
@@ -992,6 +992,7 @@
           "api:@korbor/api GET /api/v1/recruiter/specializations",
           "api:@korbor/api PATCH /api/v1/recruiter/profile",
           "api:@korbor/api POST /api/v1/auth/phone/from-contact",
+          "api:@korbor/api POST /api/v1/auth/profile/switch",
           "api:@korbor/api POST /api/v1/auth/register/choose-role",
           "api:@korbor/api POST /api/v1/auth/web/email/resend",
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
@@ -1005,10 +1006,25 @@
       }
     },
     {
+      "id": "api:route:/applications->service:@korbor/api",
+      "from": "route:/applications",
+      "to": "service:@korbor/api",
+      "label": "API: 4",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/recruiter/applications",
+          "api:@korbor/api GET /api/v1/recruiter/wallet",
+          "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/withdraw",
+          "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests"
+        ]
+      }
+    },
+    {
       "id": "api:route:/applications/[id]/submit->service:@korbor/api",
       "from": "route:/applications/[id]/submit",
       "to": "service:@korbor/api",
-      "label": "API: 6",
+      "label": "API: 8",
       "kind": "api",
       "metadata": {
         "routeIds": [
@@ -1016,7 +1032,9 @@
           "api:@korbor/api GET /api/v1/recruiter/vacancies/:vacancyId",
           "api:@korbor/api POST /api/v1/employer/company",
           "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/candidates",
+          "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/withdraw",
           "api:@korbor/api POST /api/v1/recruiter/uploads/resume",
+          "api:@korbor/api POST /api/v1/recruiter/vacancies/:vacancyId/applications",
           "api:@korbor/api PUT /api/v1/recruiter/vacancies/:vacancyId/favorite"
         ]
       }
@@ -1025,7 +1043,7 @@
       "id": "api:route:/call/[callId]->service:@korbor/api",
       "from": "route:/call/[callId]",
       "to": "service:@korbor/api",
-      "label": "API: 12",
+      "label": "API: 16",
       "kind": "api",
       "metadata": {
         "routeIds": [
@@ -1039,8 +1057,12 @@
           "api:@korbor/api POST /api/v1/auth/web/email/resend",
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
           "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
           "api:@korbor/api POST /api/v1/employer/company",
-          "api:@korbor/api POST /api/v1/me/notifications/read-all"
+          "api:@korbor/api POST /api/v1/me/notifications/read-all",
+          "api:@korbor/api POST /api/v1/recruiter/vacancies/:vacancyId/applications"
         ]
       }
     },
@@ -1048,13 +1070,16 @@
       "id": "api:route:/chat/[candidateId]->service:@korbor/api",
       "from": "route:/chat/[candidateId]",
       "to": "service:@korbor/api",
-      "label": "API: 13",
+      "label": "API: 26",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
           "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/resume-url",
           "api:@korbor/api GET /api/v1/employer/chat/threads",
+          "api:@korbor/api GET /api/v1/employer/support/messages",
           "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
@@ -1063,8 +1088,84 @@
           "api:@korbor/api POST /api/v1/auth/web/email/resend",
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
           "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
+          "api:@korbor/api POST /api/v1/calls/:callId/accept",
+          "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
           "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/employer/support/messages",
+          "api:@korbor/api POST /api/v1/employer/support/read",
           "api:@korbor/api POST /api/v1/me/notifications/read-all"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/chats->service:@korbor/api",
+      "from": "route:/chats",
+      "to": "service:@korbor/api",
+      "label": "API: 26",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/auth/web/phone/status",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/resume-url",
+          "api:@korbor/api GET /api/v1/employer/chat/threads",
+          "api:@korbor/api GET /api/v1/employer/support/messages",
+          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
+          "api:@korbor/api GET /api/v1/me/notifications",
+          "api:@korbor/api GET /api/v1/me/notifications/badge",
+          "api:@korbor/api POST /api/v1/auth/phone/from-contact",
+          "api:@korbor/api POST /api/v1/auth/register/choose-role",
+          "api:@korbor/api POST /api/v1/auth/web/email/resend",
+          "api:@korbor/api POST /api/v1/auth/web/email/verify",
+          "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
+          "api:@korbor/api POST /api/v1/calls/:callId/accept",
+          "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/employer/support/messages",
+          "api:@korbor/api POST /api/v1/employer/support/read",
+          "api:@korbor/api POST /api/v1/me/notifications/read-all"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/employer/create->service:@korbor/api",
+      "from": "route:/employer/create",
+      "to": "service:@korbor/api",
+      "label": "API: 18",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/employer/company",
+          "api:@korbor/api GET /api/v1/employer/intake/active",
+          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
+          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/tariff-preview",
+          "api:@korbor/api PATCH /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/employer/intake/:sessionId/abandon",
+          "api:@korbor/api POST /api/v1/employer/intake/:sessionId/answer",
+          "api:@korbor/api POST /api/v1/employer/intake/:sessionId/back",
+          "api:@korbor/api POST /api/v1/employer/intake/:sessionId/edit-step",
+          "api:@korbor/api POST /api/v1/employer/intake/start",
+          "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/bounty",
+          "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/confirm",
+          "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/pay",
+          "api:@korbor/api POST /api/v1/employer/vacancy-assistant/edit",
+          "api:@korbor/api POST /api/v1/employer/vacancy-assistant/fill",
+          "api:@korbor/api POST /api/v1/employer/vacancy-assistant/transcribe",
+          "api:@korbor/api POST /api/v1/employer/vacancy-assistant/voice-uploads"
         ]
       }
     },
@@ -1072,12 +1173,12 @@
       "id": "api:route:/employer/price->service:@korbor/api",
       "from": "route:/employer/price",
       "to": "service:@korbor/api",
-      "label": "API: 11",
+      "label": "API: 12",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
-          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
+          "api:@korbor/api GET /api/v1/employer/price/categories",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
           "api:@korbor/api POST /api/v1/auth/phone/from-contact",
@@ -1086,7 +1187,28 @@
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
           "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
           "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/employer/price/quote",
           "api:@korbor/api POST /api/v1/me/notifications/read-all"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/employer/vacancies->service:@korbor/api",
+      "from": "route:/employer/vacancies",
+      "to": "service:@korbor/api",
+      "label": "API: 9",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/employer/company",
+          "api:@korbor/api GET /api/v1/employer/vacancies",
+          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
+          "api:@korbor/api PATCH /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/disputes",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
+          "api:@korbor/api POST /api/v1/employer/company"
         ]
       }
     },
@@ -1094,7 +1216,7 @@
       "id": "api:route:/employer/vacancies/[id]->service:@korbor/api",
       "from": "route:/employer/vacancies/[id]",
       "to": "service:@korbor/api",
-      "label": "API: 14",
+      "label": "API: 15",
       "kind": "api",
       "metadata": {
         "routeIds": [
@@ -1109,9 +1231,59 @@
           "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
           "api:@korbor/api POST /api/v1/disputes",
           "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
           "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
           "api:@korbor/api POST /api/v1/employer/company",
           "api:@korbor/api POST /api/v1/me/notifications/read-all"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/feed->service:@korbor/api",
+      "from": "route:/feed",
+      "to": "service:@korbor/api",
+      "label": "API: 4",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/recruiter/feed-presets",
+          "api:@korbor/api GET /api/v1/recruiter/vacancies",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api PUT /api/v1/recruiter/vacancies/:vacancyId/favorite"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/home->service:@korbor/api",
+      "from": "route:/home",
+      "to": "service:@korbor/api",
+      "label": "API: 23",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/auth/web/phone/status",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api GET /api/v1/employer/chat/threads",
+          "api:@korbor/api GET /api/v1/me/notifications",
+          "api:@korbor/api GET /api/v1/me/notifications/badge",
+          "api:@korbor/api GET /api/v1/recruiter/applications",
+          "api:@korbor/api GET /api/v1/recruiter/candidates",
+          "api:@korbor/api GET /api/v1/recruiter/wallet",
+          "api:@korbor/api POST /api/v1/auth/phone/from-contact",
+          "api:@korbor/api POST /api/v1/auth/register/choose-role",
+          "api:@korbor/api POST /api/v1/auth/web/email/resend",
+          "api:@korbor/api POST /api/v1/auth/web/email/verify",
+          "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
+          "api:@korbor/api POST /api/v1/calls/:callId/accept",
+          "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/me/notifications/read-all",
+          "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/withdraw",
+          "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests"
         ]
       }
     },
@@ -1131,14 +1303,14 @@
       "id": "api:route:/marketmaker->service:@korbor/api",
       "from": "route:/marketmaker",
       "to": "service:@korbor/api",
-      "label": "API: 12",
+      "label": "API: 13",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
-          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
+          "api:@korbor/api GET /api/v1/recruiter/marketmaker/queue",
           "api:@korbor/api GET /api/v1/recruiter/profile",
           "api:@korbor/api POST /api/v1/auth/phone/from-contact",
           "api:@korbor/api POST /api/v1/auth/register/choose-role",
@@ -1146,7 +1318,8 @@
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
           "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
           "api:@korbor/api POST /api/v1/employer/company",
-          "api:@korbor/api POST /api/v1/me/notifications/read-all"
+          "api:@korbor/api POST /api/v1/me/notifications/read-all",
+          "api:@korbor/api POST /api/v1/recruiter/marketmaker/claim"
         ]
       }
     },
@@ -1159,7 +1332,6 @@
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
-          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
           "api:@korbor/api GET /api/v1/legal/current",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
@@ -1167,6 +1339,7 @@
           "api:@korbor/api GET /api/v1/recruiter/specializations",
           "api:@korbor/api PATCH /api/v1/recruiter/profile",
           "api:@korbor/api POST /api/v1/auth/phone/from-contact",
+          "api:@korbor/api POST /api/v1/auth/profile/switch",
           "api:@korbor/api POST /api/v1/auth/register/choose-role",
           "api:@korbor/api POST /api/v1/auth/web/email/resend",
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
@@ -1188,7 +1361,6 @@
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
-          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
           "api:@korbor/api GET /api/v1/legal/current",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
@@ -1196,6 +1368,7 @@
           "api:@korbor/api GET /api/v1/recruiter/specializations",
           "api:@korbor/api PATCH /api/v1/recruiter/profile",
           "api:@korbor/api POST /api/v1/auth/phone/from-contact",
+          "api:@korbor/api POST /api/v1/auth/profile/switch",
           "api:@korbor/api POST /api/v1/auth/register/choose-role",
           "api:@korbor/api POST /api/v1/auth/web/email/resend",
           "api:@korbor/api POST /api/v1/auth/web/email/verify",
@@ -1212,12 +1385,11 @@
       "id": "api:route:/vacancies/[id]->service:@korbor/api",
       "from": "route:/vacancies/[id]",
       "to": "service:@korbor/api",
-      "label": "API: 14",
+      "label": "API: 13",
       "kind": "api",
       "metadata": {
         "routeIds": [
           "api:@korbor/api GET /api/v1/auth/web/phone/status",
-          "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
           "api:@korbor/api GET /api/v1/me/notifications",
           "api:@korbor/api GET /api/v1/me/notifications/badge",
           "api:@korbor/api GET /api/v1/recruiter/vacancies/:vacancyId",
@@ -1230,6 +1402,58 @@
           "api:@korbor/api POST /api/v1/me/notifications/read-all",
           "api:@korbor/api POST /api/v1/recruiter/vacancies/:vacancyId/applications",
           "api:@korbor/api PUT /api/v1/recruiter/vacancies/:vacancyId/favorite"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/verification->service:@korbor/api",
+      "from": "route:/verification",
+      "to": "service:@korbor/api",
+      "label": "API: 27",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+          "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api GET /api/v1/employer/chat/threads",
+          "api:@korbor/api GET /api/v1/employer/company",
+          "api:@korbor/api GET /api/v1/employer/vacancies",
+          "api:@korbor/api GET /api/v1/legal/current",
+          "api:@korbor/api GET /api/v1/me/notification-preferences",
+          "api:@korbor/api GET /api/v1/recruiter/profile",
+          "api:@korbor/api GET /api/v1/recruiter/profile/rating-history",
+          "api:@korbor/api GET /api/v1/recruiter/specializations",
+          "api:@korbor/api GET /api/v1/recruiter/verification/attachments/sign",
+          "api:@korbor/api GET /api/v1/recruiter/verification/documents",
+          "api:@korbor/api GET /api/v1/recruiter/verification/messages",
+          "api:@korbor/api PATCH /api/v1/employer/company",
+          "api:@korbor/api PATCH /api/v1/recruiter/profile",
+          "api:@korbor/api POST /api/v1/auth/profile/switch",
+          "api:@korbor/api POST /api/v1/auth/web/logout",
+          "api:@korbor/api POST /api/v1/calls/:callId/accept",
+          "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+          "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/recruiter/verification-request",
+          "api:@korbor/api POST /api/v1/recruiter/verification/messages",
+          "api:@korbor/api POST /api/v1/recruiter/verification/uploads",
+          "api:@korbor/api PUT /api/v1/me/notification-preferences"
+        ]
+      }
+    },
+    {
+      "id": "api:route:/wallet->service:@korbor/api",
+      "from": "route:/wallet",
+      "to": "service:@korbor/api",
+      "label": "API: 3",
+      "kind": "api",
+      "metadata": {
+        "routeIds": [
+          "api:@korbor/api GET /api/v1/recruiter/wallet",
+          "api:@korbor/api POST /api/v1/employer/company",
+          "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests"
         ]
       }
     }
@@ -1445,6 +1669,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/disputes",
         "serviceId": "service:@korbor/api"
       },
@@ -1483,6 +1715,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/disputes/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -1516,6 +1753,11 @@
           "auth": true,
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "disputes"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/disputes",
@@ -1604,6 +1846,16 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/disputes",
@@ -1729,6 +1981,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/bulk-take",
         "serviceId": "service:@korbor/api"
       },
@@ -1789,6 +2046,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "dispute"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/:id/take",
@@ -1877,6 +2139,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "dispute"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/disputes/:id/resolve",
         "serviceId": "service:@korbor/api"
       },
@@ -1935,6 +2202,14 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/activity",
         "serviceId": "service:@korbor/api"
       },
@@ -1969,6 +2244,15 @@
           "auth": true,
           "roles": [
             "admin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "accepted"
+          ],
+          "statuses": [
+            202
           ]
         },
         "id": "api:@korbor/api POST /api/v1/activity/batch",
@@ -2009,6 +2293,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/roles",
@@ -2103,6 +2392,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "repository.list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/admins",
         "serviceId": "service:@korbor/api"
       },
@@ -2153,6 +2447,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/admins/:id",
@@ -2238,6 +2537,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/admins",
@@ -2336,6 +2640,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "admin"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/admins/:id",
@@ -2479,6 +2788,16 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/audit",
         "serviceId": "service:@korbor/api"
       },
@@ -2558,6 +2877,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "entry"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/audit/:id",
@@ -2704,6 +3028,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "values": [
+            "handleBulk()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/bulk-ban",
         "serviceId": "service:@korbor/api"
       },
@@ -2828,6 +3157,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "values": [
+            "handleBulk()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/bulk-unban",
         "serviceId": "service:@korbor/api"
       },
@@ -2919,6 +3253,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "user"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/ban",
         "serviceId": "service:@korbor/api"
       },
@@ -2990,6 +3329,11 @@
             "requireAdminAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "user"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/unban",
         "serviceId": "service:@korbor/api"
       },
@@ -3036,6 +3380,12 @@
           ],
           "checks": [
             "assertAdminPermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/risk-events",
@@ -3192,6 +3542,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "analytics"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/analytics",
         "serviceId": "service:@korbor/api"
       },
@@ -3315,6 +3670,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "stats"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id/stats",
         "serviceId": "service:@korbor/api"
       },
@@ -3393,6 +3753,16 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/candidate-locks",
@@ -3503,6 +3873,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -3574,6 +3954,16 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "documents",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/knowledge",
         "serviceId": "service:@korbor/api"
       },
@@ -3627,6 +4017,12 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "document",
+            "chunks"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/knowledge/:documentId",
@@ -3740,6 +4136,13 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "ok",
+            "id",
+            "action"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/llm/knowledge/chunks",
         "serviceId": "service:@korbor/api"
       },
@@ -3763,6 +4166,14 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "documents",
+            "chunksUpserted",
+            "chunksSkippedAdmin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/llm/knowledge/seed",
@@ -3828,6 +4239,16 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "prompts",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/prompts",
         "serviceId": "service:@korbor/api"
       },
@@ -3872,6 +4293,20 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "category",
+            "version",
+            "description",
+            "instructions",
+            "userTemplate",
+            "temperature",
+            "maxTokens",
+            "enabled",
+            "source",
+            "updatedAt"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/prompts/:category",
@@ -3977,6 +4412,12 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "fields": [
+            "ok",
+            "category"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/llm/prompts/:category",
         "serviceId": "service:@korbor/api"
       },
@@ -4000,6 +4441,13 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "upserted",
+            "skippedAdmin"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/llm/prompts/seed",
@@ -4078,6 +4526,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "listAdminLlmRuns()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/llm/runs",
         "serviceId": "service:@korbor/api"
       },
@@ -4136,6 +4589,11 @@
           "checks": [
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/llm/runs/:id",
@@ -4215,6 +4673,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/marketmaker/queue",
         "serviceId": "service:@korbor/api"
       },
@@ -4266,6 +4734,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/assign",
         "serviceId": "service:@korbor/api"
       },
@@ -4310,6 +4786,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/dismiss",
@@ -4423,6 +4907,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/bulk-assign",
         "serviceId": "service:@korbor/api"
       },
@@ -4529,6 +5018,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/marketmaker/bulk-dismiss",
         "serviceId": "service:@korbor/api"
       },
@@ -4614,6 +5108,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "applyVerification()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification",
@@ -4757,6 +5256,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "runBulkIdempotent()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/bulk-verification",
         "serviceId": "service:@korbor/api"
       },
@@ -4844,6 +5348,16 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters",
         "serviceId": "service:@korbor/api"
       },
@@ -4923,6 +5437,11 @@
           "auth": true,
           "checks": [
             "assertCan"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name",
@@ -5016,6 +5535,11 @@
             "assertCan"
           ]
         },
+        "response": {
+          "values": [
+            "registry.stats()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name/stats",
         "serviceId": "service:@korbor/api"
       },
@@ -5074,6 +5598,11 @@
           "auth": true,
           "checks": [
             "assertCan"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/registry/:name/:id",
@@ -5140,6 +5669,11 @@
             "assertCan"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/registry/:name/:id/actions/:action",
         "serviceId": "service:@korbor/api"
       },
@@ -5193,6 +5727,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "expiresInSec",
+            "objectKey",
+            "mediaRef"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/presign",
         "serviceId": "service:@korbor/api"
       },
@@ -5235,6 +5777,13 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "mediaRef",
+            "contentType",
+            "sizeBytes"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/confirm",
@@ -5427,6 +5976,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "overview"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/overview",
         "serviceId": "service:@korbor/api"
       },
@@ -5589,6 +6143,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/search",
         "serviceId": "service:@korbor/api"
       },
@@ -5737,6 +6296,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "entity"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/entity",
@@ -5899,6 +6463,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "entity"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/entity",
         "serviceId": "service:@korbor/api"
       },
@@ -5953,6 +6522,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/comments",
@@ -6024,6 +6598,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "comment"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/comments",
         "serviceId": "service:@korbor/api"
       },
@@ -6075,6 +6654,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/comments/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6113,6 +6697,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/templates",
@@ -6178,6 +6767,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "template"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/templates",
@@ -6266,6 +6860,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "template"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6315,6 +6914,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok"
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/templates/:id",
@@ -6367,6 +6971,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts",
         "serviceId": "service:@korbor/api"
       },
@@ -6416,6 +7025,12 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "broadcast",
+            "recipients"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/reports/broadcasts/:id",
@@ -6495,6 +7110,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "broadcast"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts",
@@ -6608,6 +7228,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "broadcast"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/reports/broadcasts/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6679,6 +7304,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/reports/broadcasts/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -6734,6 +7364,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "repository.previewAudience()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/audience/preview",
@@ -6852,6 +7487,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "broadcast",
+            "recipients"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/:id/send",
         "serviceId": "service:@korbor/api"
       },
@@ -6898,6 +7539,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok",
+            "telegramId",
+            "locale",
+            "role"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/reports/broadcasts/:id/test-send",
@@ -6995,6 +7644,17 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "page",
+            "pageSize",
+            "total",
+            "q",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/users",
         "serviceId": "service:@korbor/api"
       },
@@ -7044,6 +7704,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "user"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/users/:id",
@@ -7159,6 +7824,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "listMessages()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -7241,6 +7911,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "sendMessage()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -7291,6 +7966,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/documents",
@@ -7351,6 +8031,11 @@
             "requireVerifyPermission"
           ]
         },
+        "response": {
+          "values": [
+            "presignUpload()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/recruiters/:userId/verification/uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -7399,6 +8084,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireVerifyPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "signDownload()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/recruiters/:userId/verification/attachments/sign",
@@ -7502,6 +8192,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listMessages()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -7572,6 +8267,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "sendMessage()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -7608,6 +8308,11 @@
           ],
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/documents",
@@ -7656,6 +8361,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "presignUpload()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification/uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -7692,6 +8402,11 @@
           ],
           "checks": [
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "signDownload()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/verification/attachments/sign",
@@ -7784,6 +8499,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/applications",
         "serviceId": "service:@korbor/api"
       },
@@ -7845,6 +8565,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "getMyApplicationDetail()"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/applications/:id",
         "serviceId": "service:@korbor/api"
@@ -7950,6 +8675,11 @@
             "assertCanTakeVacancyLevel"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/vacancies/:vacancyId/applications",
         "serviceId": "service:@korbor/api"
       },
@@ -7990,6 +8720,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/withdraw",
         "serviceId": "service:@korbor/api"
       },
@@ -8029,6 +8767,11 @@
             "via": "issueSession"
           }
         ],
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/login",
         "serviceId": "service:@korbor/api"
       },
@@ -8124,6 +8867,12 @@
             "isSessionUsable"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/refresh",
         "serviceId": "service:@korbor/api"
       },
@@ -8163,6 +8912,11 @@
             "via": "AdminSessionRepository.revoke"
           }
         ],
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/admin/logout",
         "serviceId": "service:@korbor/api"
       },
@@ -8209,6 +8963,12 @@
             "verifyAdminAccessToken"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/admin/me",
         "serviceId": "service:@korbor/api"
       },
@@ -8238,6 +8998,12 @@
             "via": "issueAppLoginChallenge"
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/telegram/start",
         "serviceId": "service:@korbor/api"
       },
@@ -8326,6 +9092,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/telegram/poll",
         "serviceId": "service:@korbor/api"
       },
@@ -8347,6 +9119,12 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/google/start",
         "serviceId": "service:@korbor/api"
       },
@@ -8366,6 +9144,11 @@
         },
         "doc": "Возврат из Google. Код здесь не меняется: без `code_verifier`, который\nесть только у приложения, он бесполезен. Просто отдаём его приложению\nпо схеме `korbor://`; `state` приложение сверяет само.",
         "dbCalls": [],
+        "response": {
+          "statuses": [
+            302
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/app/google/callback",
         "serviceId": "service:@korbor/api"
       },
@@ -8494,6 +9277,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/app/google/exchange",
         "serviceId": "service:@korbor/api"
       },
@@ -8570,6 +9358,12 @@
             "pending"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/app-login/bind",
         "serviceId": "service:@korbor/api"
       },
@@ -8612,6 +9406,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/app-login/decide",
         "serviceId": "service:@korbor/api"
@@ -8715,6 +9515,11 @@
             "hasEmployerCompany"
           ]
         },
+        "response": {
+          "values": [
+            "response"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/telegram/miniapp",
         "serviceId": "service:@korbor/api"
       },
@@ -8751,6 +9556,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/me/locale",
@@ -8819,6 +9630,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/phone/from-contact",
@@ -8932,6 +9749,12 @@
             "assertRefreshOutlivesAccess"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/register/choose-role",
         "serviceId": "service:@korbor/api"
       },
@@ -8976,6 +9799,11 @@
           "checks": [
             "requireSession",
             "verifyAccessToken"
+          ]
+        },
+        "response": {
+          "statuses": [
+            204
           ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/logout",
@@ -9024,6 +9852,11 @@
             "verifyAccessToken"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/logout-all",
         "serviceId": "service:@korbor/api"
       },
@@ -9070,6 +9903,12 @@
             "verifyAccessToken"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/sessions",
         "serviceId": "service:@korbor/api"
       },
@@ -9089,6 +9928,12 @@
         },
         "doc": "Public: which browser login methods are configured on this deployment.\nClients disable Google / Telegram Widget instead of hitting 503.",
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/web/providers",
         "serviceId": "service:@korbor/api"
       },
@@ -9146,6 +9991,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/session",
@@ -9225,6 +10076,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/refresh",
         "serviceId": "service:@korbor/api"
       },
@@ -9254,6 +10111,11 @@
             }
           }
         ],
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/logout",
         "serviceId": "service:@korbor/api"
       },
@@ -9372,6 +10234,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/profile/switch",
         "serviceId": "service:@korbor/api"
       },
@@ -9486,6 +10353,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/register",
         "serviceId": "service:@korbor/api"
       },
@@ -9563,6 +10435,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/login",
         "serviceId": "service:@korbor/api"
       },
@@ -9613,6 +10490,12 @@
             "via": "issuePasswordResetChallenge"
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/password/forgot",
         "serviceId": "service:@korbor/api"
       },
@@ -9711,6 +10594,12 @@
             }
           }
         ],
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/password/reset",
         "serviceId": "service:@korbor/api"
       },
@@ -9802,6 +10691,11 @@
             "verifyTelegramLoginWidgetPayload"
           ]
         },
+        "response": {
+          "values": [
+            "issueSessionResponse()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/telegram-login",
         "serviceId": "service:@korbor/api"
       },
@@ -9822,6 +10716,11 @@
         "dbCalls": [],
         "access": {
           "auth": true
+        },
+        "response": {
+          "statuses": [
+            302
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/google/start",
         "serviceId": "service:@korbor/api"
@@ -9951,6 +10850,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "statuses": [
+            302
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/auth/web/google/callback",
         "serviceId": "service:@korbor/api"
       },
@@ -9991,6 +10895,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/auth/web/phone/challenge",
         "serviceId": "service:@korbor/api"
@@ -10057,6 +10967,12 @@
             "employer",
             "pending",
             "recruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "success",
+            "data"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/auth/web/phone/status",
@@ -10167,6 +11083,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/email/verify",
         "serviceId": "service:@korbor/api"
       },
@@ -10255,6 +11177,12 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "success",
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/auth/web/email/resend",
         "serviceId": "service:@korbor/api"
       },
@@ -10294,6 +11222,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/calls",
@@ -10387,6 +11320,15 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "...summary",
+            "participants",
+            "events",
+            "transcript",
+            "assistantMessages"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/calls/:callId",
         "serviceId": "service:@korbor/api"
       },
@@ -10437,6 +11379,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "adminJoinCall()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/calls/:callId/join",
@@ -10503,6 +11450,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "startCall()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/candidates/:candidateId/calls",
@@ -10635,6 +11587,11 @@
             "canAccessCallNotes"
           ]
         },
+        "response": {
+          "values": [
+            "joinCall()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/join",
         "serviceId": "service:@korbor/api"
       },
@@ -10760,6 +11717,11 @@
             "candidate"
           ]
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/livekit/webhook",
         "serviceId": "service:@korbor/api"
       },
@@ -10812,6 +11774,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "listCallTranscript()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
       },
@@ -10863,6 +11830,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "saveTranscriberFinal()"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
@@ -10936,6 +11908,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "transcribeCallAudio()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/transcript",
         "serviceId": "service:@korbor/api"
       },
@@ -10991,6 +11968,11 @@
             "canAccessCallNotes"
           ]
         },
+        "response": {
+          "values": [
+            "readCallNote()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/notes",
         "serviceId": "service:@korbor/api"
       },
@@ -11044,6 +12026,11 @@
           "auth": true,
           "checks": [
             "canAccessCallNotes"
+          ]
+        },
+        "response": {
+          "fields": [
+            "ok"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/calls/:callId/notes",
@@ -11109,6 +12096,11 @@
           "auth": true,
           "checks": [
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "listCallAssistant()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/assistant",
@@ -11184,6 +12176,11 @@
           "auth": true,
           "checks": [
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "listAssistantSegmentPage()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/calls/:callId/assistant/segments",
@@ -11363,6 +12360,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "ok"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/events",
         "serviceId": "service:@korbor/api"
       },
@@ -11425,6 +12427,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "endCall()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/end",
         "serviceId": "service:@korbor/api"
       },
@@ -11479,6 +12486,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "issueGuestLink()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/guest-link",
@@ -11547,6 +12559,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "inviteCallParty()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/invite",
         "serviceId": "service:@korbor/api"
       },
@@ -11601,6 +12618,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "inviteCallPartyAsViewer()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/invite-peer",
@@ -11667,6 +12689,11 @@
           "roles": [
             "employer",
             "recruiter"
+          ]
+        },
+        "response": {
+          "values": [
+            "acceptCallInvite()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/calls/:callId/accept",
@@ -11754,6 +12781,11 @@
             "requireRecruiter"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/locks/:lockId/claims",
         "serviceId": "service:@korbor/api"
       },
@@ -11831,6 +12863,11 @@
           ],
           "checks": [
             "requireAdmin"
+          ]
+        },
+        "response": {
+          "values": [
+            "dto"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/anti-bypass-claims/:id/resolve",
@@ -11911,6 +12948,11 @@
             "assertOwnerOrAdmin"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/interview",
         "serviceId": "service:@korbor/api"
       },
@@ -11968,6 +13010,11 @@
             "recruiter"
           ]
         },
+        "response": {
+          "fields": [
+            "candidates"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -12019,6 +13066,11 @@
             "assertCanViewCandidate"
           ]
         },
+        "response": {
+          "values": [
+            "readCandidateDetail()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId",
         "serviceId": "service:@korbor/api"
       },
@@ -12068,6 +13120,11 @@
           ],
           "checks": [
             "assertCanViewCandidate"
+          ]
+        },
+        "response": {
+          "values": [
+            "readCandidateDetail()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId",
@@ -12135,6 +13192,11 @@
           "roles": [
             "admin",
             "employer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "candidates"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/candidates",
@@ -12266,6 +13328,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/applications/:applicationId/candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -12334,6 +13401,11 @@
             "assertOwnerOrAdmin"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/reject",
         "serviceId": "service:@korbor/api"
       },
@@ -12352,6 +13424,11 @@
           }
         },
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/vacancy-templates",
         "serviceId": "service:@korbor/api"
       },
@@ -12370,6 +13447,11 @@
           }
         },
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/price/categories",
         "serviceId": "service:@korbor/api"
       },
@@ -12393,6 +13475,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/feed-presets",
@@ -12420,6 +13507,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancy-templates",
         "serviceId": "service:@korbor/api"
       },
@@ -12443,6 +13535,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/price-categories",
@@ -12470,6 +13567,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/feed-presets/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12495,6 +13597,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancy-templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12518,6 +13625,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/price-categories/:id",
@@ -12556,6 +13668,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/feed-presets",
         "serviceId": "service:@korbor/api"
       },
@@ -12590,6 +13710,14 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/vacancy-templates",
@@ -12628,6 +13756,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/price-categories",
         "serviceId": "service:@korbor/api"
       },
@@ -12662,6 +13798,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/feed-presets/:id",
@@ -12700,6 +13841,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/vacancy-templates/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -12734,6 +13880,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "options.toAdminDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/admin/price-categories/:id",
@@ -12772,6 +13923,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/feed-presets/order",
         "serviceId": "service:@korbor/api"
       },
@@ -12806,6 +13962,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/admin/vacancy-templates/order",
@@ -12844,6 +14005,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/price-categories/order",
         "serviceId": "service:@korbor/api"
       },
@@ -12863,6 +14029,11 @@
         },
         "doc": "Публичный список наборов фильтров ленты.",
         "dbCalls": [],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/feed-presets",
         "serviceId": "service:@korbor/api"
       },
@@ -12900,6 +14071,11 @@
           "checks": [
             "requirePermissionPlugin",
             "requireRecruiterUser"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/feed-presets/personal",
@@ -12958,6 +14134,14 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "fields": [
+            "preset"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/feed-presets/personal",
         "serviceId": "service:@korbor/api"
       },
@@ -13013,6 +14197,11 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "fields": [
+            "preset"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/recruiter/feed-presets/personal/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -13063,6 +14252,11 @@
             "requireRecruiterUser"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/recruiter/feed-presets/personal/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -13100,6 +14294,11 @@
           "checks": [
             "requireEmployerUser",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancy-templates/personal",
@@ -13158,6 +14357,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "template"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-templates/personal",
         "serviceId": "service:@korbor/api"
       },
@@ -13206,6 +14413,11 @@
           "checks": [
             "requireEmployerUser",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "statuses": [
+            204
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/employer/vacancy-templates/personal/:id",
@@ -13288,6 +14500,16 @@
             "requireAdminChatView",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/chat/threads",
@@ -13432,6 +14654,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "nextCursor"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/chat/threads/:threadId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -13500,6 +14728,13 @@
           "checks": [
             "assertCanAccessCandidateChat",
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-uploads",
@@ -13572,6 +14807,13 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/chat-uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -13633,6 +14875,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/attachments/sign",
         "serviceId": "service:@korbor/api"
       },
@@ -13692,6 +14940,12 @@
           "checks": [
             "assertCanAccessCandidateChat",
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/attachments/sign",
@@ -13792,6 +15046,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "support"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/chat/threads",
         "serviceId": "service:@korbor/api"
       },
@@ -13890,6 +15150,12 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "support"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/chat/threads",
         "serviceId": "service:@korbor/api"
       },
@@ -13978,6 +15244,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "thread"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/chat/threads/:candidateId",
         "serviceId": "service:@korbor/api"
       },
@@ -14064,6 +15335,11 @@
           ],
           "checks": [
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "thread"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/chat/threads/:candidateId",
@@ -14158,6 +15434,14 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "report"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/chat-reports",
         "serviceId": "service:@korbor/api"
       },
@@ -14250,6 +15534,14 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "fields": [
+            "report"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/chat-reports",
         "serviceId": "service:@korbor/api"
       },
@@ -14310,6 +15602,11 @@
           "checks": [
             "requireAdminChatView",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/chat/reports",
@@ -14396,6 +15693,11 @@
           "checks": [
             "requireAdminSanction",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "report"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/chat/reports/:reportId/resolve",
@@ -14556,6 +15858,15 @@
           "checks": [
             "requireAdminSanction",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "sanction"
+          ],
+          "statuses": [
+            200,
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/chat/threads/:threadId/sanctions",
@@ -14740,6 +16051,11 @@
             "isChatSenderRole"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -14922,6 +16238,11 @@
             "isChatSenderRole"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -15052,6 +16373,11 @@
           ],
           "checks": [
             "assertPrefixRole"
+          ]
+        },
+        "response": {
+          "values": [
+            "handleList()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/messages",
@@ -15186,6 +16512,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "values": [
+            "handleList()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -15318,6 +16649,11 @@
             "assertPrefixRole"
           ]
         },
+        "response": {
+          "values": [
+            "handleList()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/candidates/:candidateId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -15337,6 +16673,11 @@
         },
         "doc": "BR-029-05: public, unauthenticated — whitelist only (029 §4 API sample).",
         "dbCalls": [],
+        "response": {
+          "values": [
+            "getPublicConfig()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/config/public",
         "serviceId": "service:@korbor/api"
       },
@@ -15417,6 +16758,16 @@
             "assertConfigPermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/config",
         "serviceId": "service:@korbor/api"
       },
@@ -15442,6 +16793,11 @@
           ],
           "checks": [
             "assertConfigPermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "getConfigValue()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/config/:key",
@@ -15535,6 +16891,11 @@
             "assertConfigPermission"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/config/:key",
         "serviceId": "service:@korbor/api"
       },
@@ -15572,6 +16933,11 @@
             }
           }
         ],
+        "response": {
+          "fields": [
+            "data"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/dev/dogfood/actors",
         "serviceId": "service:@korbor/api"
       },
@@ -15634,6 +17000,11 @@
             ]
           }
         },
+        "response": {
+          "fields": [
+            "data"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/dev/dogfood/session",
         "serviceId": "service:@korbor/api"
       },
@@ -15670,6 +17041,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toCompanyDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/company",
@@ -15736,6 +17112,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "toCompanyDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/company",
         "serviceId": "service:@korbor/api"
       },
@@ -15799,6 +17180,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toCompanyDto()"
           ]
         },
         "id": "api:@korbor/api PATCH /api/v1/employer/company",
@@ -15898,6 +17284,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -15972,6 +17363,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "response"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies",
@@ -16093,6 +17489,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId",
         "serviceId": "service:@korbor/api"
       },
@@ -16130,6 +17531,11 @@
           ],
           "checks": [
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toTariffPreviewDto()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/tariff-preview",
@@ -16213,6 +17619,11 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "values": [
+            "toTariffPreviewDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/bounty",
         "serviceId": "service:@korbor/api"
       },
@@ -16276,6 +17687,11 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/start",
         "serviceId": "service:@korbor/api"
@@ -16341,6 +17757,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/start",
         "serviceId": "service:@korbor/api"
       },
@@ -16383,6 +17804,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/internal/bot/intake/active",
         "serviceId": "service:@korbor/api"
       },
@@ -16424,6 +17853,14 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/intake/active",
         "serviceId": "service:@korbor/api"
@@ -16518,6 +17955,11 @@
           ],
           "checks": [
             "requireOwnedSession"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/answer",
@@ -16615,6 +18057,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/answer",
         "serviceId": "service:@korbor/api"
       },
@@ -16682,6 +18129,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/back",
         "serviceId": "service:@korbor/api"
       },
@@ -16747,6 +18199,11 @@
           "auth": true,
           "checks": [
             "requireOwnedSession"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/back",
@@ -16830,6 +18287,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/edit-step",
         "serviceId": "service:@korbor/api"
       },
@@ -16911,6 +18373,11 @@
             "requireOwnedSession"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/edit-step",
         "serviceId": "service:@korbor/api"
       },
@@ -16975,6 +18442,14 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/internal/bot/intake/:sessionId/abandon",
         "serviceId": "service:@korbor/api"
       },
@@ -17038,6 +18513,14 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            404
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/intake/:sessionId/abandon",
         "serviceId": "service:@korbor/api"
@@ -17130,6 +18613,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listLegalDocuments()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/legal/documents",
         "serviceId": "service:@korbor/api"
       },
@@ -17179,6 +18667,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "getLegalDocument()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/legal/documents/:id",
@@ -17293,6 +18786,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "created"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents",
@@ -17412,6 +18910,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/legal/documents/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -17493,6 +18996,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "published"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/publish",
         "serviceId": "service:@korbor/api"
       },
@@ -17552,6 +19060,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "result"
           ]
         },
         "id": "api:@korbor/api PUT /api/v1/admin/legal/documents/order",
@@ -17631,6 +19144,13 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/pdf/presign-upload",
@@ -17715,6 +19235,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/legal/documents/:id/pdf/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -17796,6 +19321,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/admin/legal/documents/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -17825,6 +19355,11 @@
             "via": "LegalRepository.findCurrentDocumentsByAudience"
           }
         ],
+        "response": {
+          "fields": [
+            "documents"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/legal/current",
         "serviceId": "service:@korbor/api"
       },
@@ -17909,6 +19444,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/legal/accept",
         "serviceId": "service:@korbor/api"
       },
@@ -17954,6 +19494,17 @@
             "admin"
           ]
         },
+        "response": {
+          "fields": [
+            "pdn",
+            "offer",
+            "documents",
+            "needsReconsent"
+          ],
+          "values": [
+            "getConsentStatus()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/legal/status",
         "serviceId": "service:@korbor/api"
       },
@@ -17986,6 +19537,11 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "values": [
+            "body"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/me",
         "serviceId": "service:@korbor/api"
@@ -18049,6 +19605,12 @@
             "requireUserId"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "nextCursor"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/me/notifications",
         "serviceId": "service:@korbor/api"
       },
@@ -18082,6 +19644,11 @@
           "auth": true,
           "checks": [
             "requireUserId"
+          ]
+        },
+        "response": {
+          "values": [
+            "buildBadge()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/me/notifications/badge",
@@ -18130,6 +19697,11 @@
             "requireUserId"
           ]
         },
+        "response": {
+          "fields": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/me/notifications/read",
         "serviceId": "service:@korbor/api"
       },
@@ -18163,6 +19735,11 @@
           "auth": true,
           "checks": [
             "requireUserId"
+          ]
+        },
+        "response": {
+          "fields": [
+            "updated"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/me/notifications/read-all",
@@ -18267,6 +19844,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "quotePrice()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/price/quote",
         "serviceId": "service:@korbor/api"
       },
@@ -18307,6 +19889,14 @@
           "auth": true,
           "checks": [
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "token"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/me/push-tokens",
@@ -18351,6 +19941,11 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "statuses": [
+            204
+          ]
+        },
         "id": "api:@korbor/api DELETE /api/v1/me/push-tokens",
         "serviceId": "service:@korbor/api"
       },
@@ -18389,6 +19984,11 @@
             "requirePermission",
             "requirePermissionPlugin",
             "requireRecruiter"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/marketmaker/queue",
@@ -18432,6 +20032,14 @@
             "requireRecruiter"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/marketmaker/claim",
         "serviceId": "service:@korbor/api"
       },
@@ -18464,6 +20072,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -18484,6 +20097,11 @@
         "dbCalls": [],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "months"
+          ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/profile/rating-history",
         "serviceId": "service:@korbor/api"
@@ -18535,6 +20153,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -18585,6 +20208,11 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "toRecruiterProfileDto()"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/recruiter/profile",
         "serviceId": "service:@korbor/api"
       },
@@ -18626,6 +20254,12 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "verificationLevel",
+            "verificationRequestedAt"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/verification-request",
         "serviceId": "service:@korbor/api"
@@ -18703,6 +20337,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "listAdminSpecializations()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/specializations",
         "serviceId": "service:@korbor/api"
       },
@@ -18752,6 +20391,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "getAdminSpecialization()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/specializations/:id",
@@ -18841,6 +20485,11 @@
           "checks": [
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "created"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/specializations",
@@ -18940,6 +20589,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "updated"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/specializations/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -19001,6 +20655,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "result"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/specializations/order",
         "serviceId": "service:@korbor/api"
       },
@@ -19031,6 +20690,11 @@
             "via": "listActiveSpecializations"
           }
         ],
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/specializations",
         "serviceId": "service:@korbor/api"
       },
@@ -19110,6 +20774,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/employer/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -19163,6 +20832,14 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -19199,6 +20876,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "fields": [
+            "marked"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/support/read",
         "serviceId": "service:@korbor/api"
       },
@@ -19233,6 +20915,11 @@
           "checks": [
             "requirePermissionPlugin",
             "requireSurfaceRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "marked"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/support/read",
@@ -19314,6 +21001,11 @@
             "requireSurfaceRole"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/support/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -19365,6 +21057,14 @@
           "checks": [
             "requirePermissionPlugin",
             "requireSurfaceRole"
+          ]
+        },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/support/messages",
@@ -19444,6 +21144,11 @@
             "hasPermissionInSet",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/support/threads",
@@ -19541,6 +21246,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "list()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/support/threads/:userId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -19610,6 +21320,14 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "message"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/support/threads/:userId/messages",
         "serviceId": "service:@korbor/api"
       },
@@ -19637,6 +21355,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "groups"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/system-settings",
@@ -19690,6 +21413,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/admin/system-settings/:key",
         "serviceId": "service:@korbor/api"
       },
@@ -19729,6 +21457,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
           ]
         },
         "id": "api:@korbor/api DELETE /api/v1/admin/system-settings/:key",
@@ -19772,6 +21505,11 @@
             "hasPermissionInSet"
           ]
         },
+        "response": {
+          "values": [
+            "itemAfterWrite()"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/system-settings/:key/regenerate",
         "serviceId": "service:@korbor/api"
       },
@@ -19811,6 +21549,11 @@
             "assertConfigPermission",
             "hasPermission",
             "hasPermissionInSet"
+          ]
+        },
+        "response": {
+          "fields": [
+            "items"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/system-settings/:key/audit",
@@ -19855,6 +21598,13 @@
             "requireEmployer"
           ]
         },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-assistant/voice-uploads",
         "serviceId": "service:@korbor/api"
       },
@@ -19896,6 +21646,13 @@
           "checks": [
             "assertVoiceKeyBelongsToUser",
             "requireEmployer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "text",
+            "detectedLanguage",
+            "durationSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/vacancy-assistant/transcribe",
@@ -20170,6 +21927,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/deals/:dealId/reviews",
         "serviceId": "service:@korbor/api"
       },
@@ -20206,6 +21968,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "reviews"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/deals/:dealId/reviews",
         "serviceId": "service:@korbor/api"
       },
@@ -20240,6 +22007,11 @@
           "checks": [
             "canAdminViewHiddenUserReviews",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "reviews"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/users/:userId/reviews",
@@ -20303,6 +22075,12 @@
             "requireAdminRatingRecalc",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "fields": [
+            "userId",
+            "rating"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/users/:id/rating-recalc",
@@ -20436,6 +22214,12 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "cached",
+            "dto"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/metrics",
         "serviceId": "service:@korbor/api"
       },
@@ -20561,6 +22345,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund/tranche2/mark-done",
         "serviceId": "service:@korbor/api"
       },
@@ -20680,6 +22469,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/refund-tranche2",
         "serviceId": "service:@korbor/api"
       },
@@ -20726,6 +22520,14 @@
             "requireDisputePermission",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/replacement/open",
@@ -20842,6 +22644,11 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/deals/:dealId/tranches/:trancheNo/mark-paid",
         "serviceId": "service:@korbor/api"
       },
@@ -20891,6 +22698,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/deals/export.csv",
@@ -21001,6 +22813,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/deals",
         "serviceId": "service:@korbor/api"
       },
@@ -21074,6 +22896,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/deals/:dealId",
         "serviceId": "service:@korbor/api"
       },
@@ -21123,6 +22950,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/ledger/export.csv",
@@ -21238,6 +23070,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/ledger",
         "serviceId": "service:@korbor/api"
       },
@@ -21288,6 +23130,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/ledger/:id",
@@ -21348,6 +23195,11 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "items"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/payout-requests",
         "serviceId": "service:@korbor/api"
       },
@@ -21400,6 +23252,14 @@
             "requirePermission"
           ]
         },
+        "response": {
+          "fields": [
+            "id",
+            "status",
+            "acknowledgedAt",
+            "acknowledgedByUserId"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/admin/payout-requests/:id/acknowledge",
         "serviceId": "service:@korbor/api"
       },
@@ -21450,6 +23310,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "stream()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies/export.csv",
@@ -21560,6 +23425,16 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "fields": [
+            "items",
+            "total",
+            "page",
+            "pageSize",
+            "sortBy",
+            "sortDir"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies",
         "serviceId": "service:@korbor/api"
       },
@@ -21599,6 +23474,11 @@
             "requireAdminAccess",
             "requirePermission",
             "requirePermissionPlugin"
+          ]
+        },
+        "response": {
+          "values": [
+            "detail"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/vacancies/:id",
@@ -21709,6 +23589,11 @@
             "requirePermissionPlugin"
           ]
         },
+        "response": {
+          "values": [
+            "detail"
+          ]
+        },
         "id": "api:@korbor/api PATCH /api/v1/admin/vacancies/:id",
         "serviceId": "service:@korbor/api"
       },
@@ -21813,6 +23698,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/candidates/:candidateId/hire",
         "serviceId": "service:@korbor/api"
       },
@@ -21860,6 +23750,14 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/deals/:dealId/confirm-replacement",
         "serviceId": "service:@korbor/api"
       },
@@ -21901,6 +23799,14 @@
           "auth": true,
           "roles": [
             "employer"
+          ]
+        },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            200
           ]
         },
         "id": "api:@korbor/api POST /api/v1/employer/deals/:dealId/report-left",
@@ -22007,6 +23913,11 @@
             "employer"
           ]
         },
+        "response": {
+          "values": [
+            "responseBody"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/employer/vacancies/:vacancyId/pay",
         "serviceId": "service:@korbor/api"
       },
@@ -22063,6 +23974,11 @@
           "auth": true,
           "roles": [
             "employer"
+          ]
+        },
+        "response": {
+          "values": [
+            "buildPaymentHandoffView()"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/vacancies/:vacancyId/payment-handoff",
@@ -22125,6 +24041,11 @@
             ],
             "name": "ErrorReportBodySchema"
           }
+        },
+        "response": {
+          "fields": [
+            "ok"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/error-reports",
         "serviceId": "service:@korbor/api"
@@ -22191,6 +24112,13 @@
           ],
           "checks": [
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/resume/presign-upload",
@@ -22276,6 +24204,12 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "fields": [
+            "objectKey",
+            "uploadedAt"
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/candidates/:candidateId/resume/confirm",
         "serviceId": "service:@korbor/api"
       },
@@ -22336,6 +24270,12 @@
           "checks": [
             "assertCanViewCandidate",
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/employer/candidates/:candidateId/resume-url",
@@ -22400,6 +24340,12 @@
             "requireViewer"
           ]
         },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/candidates/:candidateId/resume-url",
         "serviceId": "service:@korbor/api"
       },
@@ -22460,6 +24406,12 @@
           "checks": [
             "assertCanViewCandidate",
             "requireViewer"
+          ]
+        },
+        "response": {
+          "fields": [
+            "downloadUrl",
+            "expiresInSec"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/admin/candidates/:candidateId/resume-url",
@@ -22523,6 +24475,14 @@
             "recruiter"
           ]
         },
+        "response": {
+          "values": [
+            "toDto()"
+          ],
+          "statuses": [
+            201
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/recruiter/deals/:dealId/replacement-candidates",
         "serviceId": "service:@korbor/api"
       },
@@ -22563,6 +24523,13 @@
         },
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "uploadUrl",
+            "objectKey",
+            "expiresInSec"
+          ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/uploads/resume",
         "serviceId": "service:@korbor/api"
@@ -22660,6 +24627,11 @@
             "canRecruiterViewVacancyLevel"
           ]
         },
+        "response": {
+          "values": [
+            "buildPublicVacancyCard()"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/vacancies/:vacancyId",
         "serviceId": "service:@korbor/api"
       },
@@ -22702,6 +24674,13 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "fields": [
+            "vacancyId",
+            "favorited",
+            "created"
+          ]
+        },
         "id": "api:@korbor/api PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
         "serviceId": "service:@korbor/api"
       },
@@ -22733,6 +24712,13 @@
         ],
         "access": {
           "auth": true
+        },
+        "response": {
+          "fields": [
+            "vacancyId",
+            "favorited",
+            "removed"
+          ]
         },
         "id": "api:@korbor/api DELETE /api/v1/recruiter/vacancies/:vacancyId/favorite",
         "serviceId": "service:@korbor/api"
@@ -22807,6 +24793,12 @@
         "access": {
           "auth": true
         },
+        "response": {
+          "values": [
+            "emptyResponse",
+            "response"
+          ]
+        },
         "id": "api:@korbor/api GET /api/v1/recruiter/vacancies",
         "serviceId": "service:@korbor/api"
       },
@@ -22855,6 +24847,11 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "values": [
+            "dto"
           ]
         },
         "id": "api:@korbor/api GET /api/v1/recruiter/wallet",
@@ -22927,6 +24924,14 @@
             "hasPermission",
             "hasPermissionInSet",
             "requirePermission"
+          ]
+        },
+        "response": {
+          "fields": [
+            "id",
+            "status",
+            "dueTiyin",
+            "createdAt"
           ]
         },
         "id": "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests",
@@ -23009,6 +25014,15 @@
             "via": "withIdempotency"
           }
         ],
+        "response": {
+          "fields": [
+            "ok",
+            "test"
+          ],
+          "statuses": [
+            200
+          ]
+        },
         "id": "api:@korbor/api POST /api/v1/webhooks/ipc",
         "serviceId": "service:@korbor/api"
       }
@@ -29950,6 +31964,19 @@
         "routeId": "api:@korbor/api POST /api/v1/admin/reports/broadcast-media/confirm"
       },
       {
+        "id": "call:apps/admin/src/pages/communications/broadcasts/ui/BroadcastTestUserPicker.tsx:116 GET /api/v1/admin/users",
+        "serviceId": "service:@korbor/admin",
+        "method": "GET",
+        "path": "/api/v1/admin/users",
+        "client": "wrapper",
+        "via": "api.get",
+        "location": {
+          "file": "apps/admin/src/pages/communications/broadcasts/ui/BroadcastTestUserPicker.tsx",
+          "line": 116
+        },
+        "routeId": "api:@korbor/api GET /api/v1/admin/users"
+      },
+      {
         "id": "call:apps/admin/src/pages/communications/chats/model/chats-store.ts:135 GET /api/v1/admin/chat/threads",
         "serviceId": "service:@korbor/admin",
         "method": "GET",
@@ -31065,6 +33092,51 @@
           "line": 153
         },
         "routeId": "api:@korbor/api GET /api/v1/admin/registry/:name/stats"
+      },
+      {
+        "id": "call:apps/api/src/infra/llm/openrouter-call-assistant.ts:36 POST /chat/completions",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/chat/completions",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/infra/llm/openrouter-call-assistant.ts",
+          "line": 36
+        }
+      },
+      {
+        "id": "call:apps/api/src/infra/speech/whisper-http.ts:190 POST /v1/audio/transcriptions",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/v1/audio/transcriptions",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/infra/speech/whisper-http.ts",
+          "line": 190
+        }
+      },
+      {
+        "id": "call:apps/api/src/modules/calls/service.ts:834 POST /rooms/:id",
+        "serviceId": "service:@korbor/api",
+        "method": "POST",
+        "path": "/rooms/:id",
+        "client": "fetch",
+        "location": {
+          "file": "apps/api/src/modules/calls/service.ts",
+          "line": 834
+        }
+      },
+      {
+        "id": "call:apps/call-transcriber/src/publish.ts:33 POST /api/v1/internal/calls/:callId/transcript",
+        "serviceId": "service:@korbor/call-transcriber",
+        "method": "POST",
+        "path": "/api/v1/internal/calls/:callId/transcript",
+        "client": "fetch",
+        "location": {
+          "file": "apps/call-transcriber/src/publish.ts",
+          "line": 33
+        },
+        "routeId": "api:@korbor/api POST /api/v1/internal/calls/:callId/transcript"
       },
       {
         "id": "call:apps/miniapp/src/app/WebDogfoodPicker.tsx:52 GET /api/v1/dev/dogfood/actors",
@@ -32368,6 +34440,19 @@
         "routeId": "api:@korbor/api POST /api/v1/recruiter/wallet/payout-requests"
       },
       {
+        "id": "call:apps/mobile/src/entities/account/ui/logout-all.tsx:27 POST /api/v1/auth/web/logout",
+        "serviceId": "service:@korbor/mobile",
+        "method": "POST",
+        "path": "/api/v1/auth/web/logout",
+        "client": "wrapper",
+        "via": "client.request",
+        "location": {
+          "file": "apps/mobile/src/entities/account/ui/logout-all.tsx",
+          "line": 27
+        },
+        "routeId": "api:@korbor/api POST /api/v1/auth/web/logout"
+      },
+      {
         "id": "call:apps/mobile/src/entities/chat/model/use-attachment-upload.ts:58 POST /api/v1/:surface/candidates/:candidateId/chat-uploads",
         "serviceId": "service:@korbor/mobile",
         "method": "POST",
@@ -32919,6 +35004,41 @@
         "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
       },
       {
+        "id": "call:scripts/dev-seed-mobile.ts:348 POST /api/v1/webhooks/ipc",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/webhooks/ipc",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-seed-mobile.ts",
+          "line": 348
+        },
+        "routeId": "api:@korbor/api POST /api/v1/webhooks/ipc"
+      },
+      {
+        "id": "call:scripts/dev-seed-mobile.ts:459 GET /health",
+        "serviceId": "service:korbor-platform",
+        "method": "GET",
+        "path": "/health",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-seed-mobile.ts",
+          "line": 459
+        }
+      },
+      {
+        "id": "call:scripts/dev-sim-pay.ts:117 POST /api/v1/webhooks/ipc",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/webhooks/ipc",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/dev-sim-pay.ts",
+          "line": 117
+        },
+        "routeId": "api:@korbor/api POST /api/v1/webhooks/ipc"
+      },
+      {
         "id": "call:scripts/diag-initdata-auth.ts:74 POST /api/v1/auth/telegram/miniapp",
         "serviceId": "service:korbor-platform",
         "method": "POST",
@@ -32954,6 +35074,18 @@
         "location": {
           "file": "scripts/diag-initdata-auth.ts",
           "line": 76
+        },
+        "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
+      },
+      {
+        "id": "call:scripts/load-test/actors.ts:44 POST /api/v1/auth/telegram/miniapp",
+        "serviceId": "service:korbor-platform",
+        "method": "POST",
+        "path": "/api/v1/auth/telegram/miniapp",
+        "client": "fetch",
+        "location": {
+          "file": "scripts/load-test/actors.ts",
+          "line": 44
         },
         "routeId": "api:@korbor/api POST /api/v1/auth/telegram/miniapp"
       },
@@ -33058,6 +35190,34 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
+            "via": "AppShellLayout"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:213 POST /api/v1/auth/profile/switch",
+            "via": "AppShellLayout"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
             "via": "AppShellLayout"
           },
@@ -33086,15 +35246,7 @@
             "via": "AppShellLayout"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "AppShellLayout"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/consent/api-client.ts:126 GET /api/v1/legal/current",
-            "via": "AppShellLayout"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
             "via": "AppShellLayout"
           },
           {
@@ -33114,22 +35266,6 @@
             "via": "AppShellLayout"
           },
           {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
-            "via": "AppShellLayout"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
-            "via": "AppShellLayout"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
-            "via": "AppShellLayout"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
-            "via": "AppShellLayout"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "AppShellLayout"
           },
@@ -33146,7 +35282,24 @@
       {
         "nodeId": "route:/applications",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:118 GET /api/v1/recruiter/applications",
+            "via": "ApplicationsScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:133 POST /api/v1/recruiter/applications/:applicationId/withdraw",
+            "via": "ApplicationsScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:99 GET /api/v1/recruiter/wallet",
+            "via": "ApplicationsScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:107 POST /api/v1/recruiter/wallet/payout-requests",
+            "via": "ApplicationsScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/applications/[id]/submit",
@@ -33154,18 +35307,6 @@
         "calls": [
           {
             "callId": "call:apps/miniapp/src/features/candidate-submit/api-client.ts:50 POST /api/v1/recruiter/applications/:applicationId/candidates",
-            "via": "CandidateSubmitScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:118 GET /api/v1/recruiter/applications",
-            "via": "CandidateSubmitScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/vacancy-card/api-client.ts:117 GET /api/v1/recruiter/vacancies/:vacancyId",
-            "via": "CandidateSubmitScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:70 GET /api/v1/recruiter/vacancies/:vacancyId",
             "via": "CandidateSubmitScreen"
           },
           {
@@ -33178,6 +35319,26 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/VacancyFavoriteToggle.tsx:49 PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
+            "via": "CandidateSubmitScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:118 GET /api/v1/recruiter/applications",
+            "via": "CandidateSubmitScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:133 POST /api/v1/recruiter/applications/:applicationId/withdraw",
+            "via": "CandidateSubmitScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:70 GET /api/v1/recruiter/vacancies/:vacancyId",
+            "via": "CandidateSubmitScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:78 POST /api/v1/recruiter/vacancies/:vacancyId/applications",
+            "via": "CandidateSubmitScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-card/api-client.ts:117 GET /api/v1/recruiter/vacancies/:vacancyId",
             "via": "CandidateSubmitScreen"
           }
         ]
@@ -33192,6 +35353,34 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:326 POST /api/v1/employer/candidates/:candidateId/interview",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:289 POST /api/v1/employer/candidates/:candidateId/hire",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:332 POST /api/v1/employer/candidates/:candidateId/reject",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:70 GET /api/v1/recruiter/vacancies/:vacancyId",
+            "via": "WebCallScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:78 POST /api/v1/recruiter/vacancies/:vacancyId/applications",
+            "via": "WebCallScreen"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
             "via": "WebCallScreen"
           },
@@ -33216,10 +35405,6 @@
             "via": "WebCallScreen"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "WebCallScreen"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "WebCallScreen"
           },
@@ -33232,15 +35417,7 @@
             "via": "WebCallScreen"
           },
           {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
-            "via": "WebCallScreen"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/vacancy-card/api-client.ts:117 GET /api/v1/recruiter/vacancies/:vacancyId",
-            "via": "WebCallScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/vacancy-detail-screen/api-client.ts:70 GET /api/v1/recruiter/vacancies/:vacancyId",
             "via": "WebCallScreen"
           }
         ]
@@ -33250,6 +35427,70 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:199 GET /api/v1/employer/chat/threads",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:203 GET /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:210 POST /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:217 POST /api/v1/employer/candidates/:candidateId/chat-reports",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:224 POST /api/v1/candidates/:candidateId/calls",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:231 POST /api/v1/calls/:callId/accept",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:239 POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:256 GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+            "via": "ChatScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:61 GET /api/v1/employer/support/messages",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:70 POST /api/v1/employer/support/messages",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:80 POST /api/v1/employer/support/read",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:326 POST /api/v1/employer/candidates/:candidateId/interview",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:289 POST /api/v1/employer/candidates/:candidateId/hire",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:332 POST /api/v1/employer/candidates/:candidateId/reject",
+            "via": "WebChatsWorkspace"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
             "via": "ChatScreen"
           },
@@ -33274,10 +35515,6 @@
             "via": "ChatScreen"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "ChatScreen"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "ChatScreen"
           },
@@ -33288,14 +35525,6 @@
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
             "via": "ChatScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
-            "via": "ChatScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:199 GET /api/v1/employer/chat/threads",
-            "via": "WebChatsWorkspace"
           },
           {
             "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:312 GET /api/v1/employer/candidates/:candidateId/resume-url",
@@ -33306,17 +35535,211 @@
       {
         "nodeId": "route:/chats",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:199 GET /api/v1/employer/chat/threads",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:203 GET /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:210 POST /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:217 POST /api/v1/employer/candidates/:candidateId/chat-reports",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:224 POST /api/v1/candidates/:candidateId/calls",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:231 POST /api/v1/calls/:callId/accept",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:239 POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:256 GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:61 GET /api/v1/employer/support/messages",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:70 POST /api/v1/employer/support/messages",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/support-api-client.ts:80 POST /api/v1/employer/support/read",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:326 POST /api/v1/employer/candidates/:candidateId/interview",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:289 POST /api/v1/employer/candidates/:candidateId/hire",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:332 POST /api/v1/employer/candidates/:candidateId/reject",
+            "via": "WebChatsWorkspace"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:227 POST /api/v1/auth/web/email/resend",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/api-client.ts:107 POST /api/v1/auth/phone/from-contact",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:196 POST /api/v1/auth/web/phone/challenge",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:203 GET /api/v1/auth/web/phone/status",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/api-client.ts:118 POST /api/v1/auth/register/choose-role",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:86 GET /api/v1/me/notifications",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
+            "via": "ChatsListScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:312 GET /api/v1/employer/candidates/:candidateId/resume-url",
+            "via": "WebChatsWorkspace"
+          }
+        ]
       },
       {
         "nodeId": "route:/employer/create",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:51 GET /api/v1/employer/company",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:109 POST /api/v1/employer/intake/start",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:121 GET /api/v1/employer/intake/active",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:134 POST /api/v1/employer/intake/:sessionId/answer",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:145 POST /api/v1/employer/intake/:sessionId/edit-step",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:156 POST /api/v1/employer/intake/:sessionId/back",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:167 POST /api/v1/employer/intake/:sessionId/abandon",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:179 GET /api/v1/employer/vacancies/:vacancyId/tariff-preview",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:189 POST /api/v1/employer/vacancies/:vacancyId/bounty",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:200 POST /api/v1/employer/vacancies/:vacancyId/confirm",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-create/api-client.ts:214 POST /api/v1/employer/vacancies/:vacancyId/pay",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:59 POST /api/v1/employer/company",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:70 PATCH /api/v1/employer/company",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-assistant/api-client.ts:80 POST /api/v1/employer/vacancy-assistant/voice-uploads",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-assistant/api-client.ts:98 POST /api/v1/employer/vacancy-assistant/transcribe",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-assistant/api-client.ts:105 POST /api/v1/employer/vacancy-assistant/fill",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-assistant/api-client.ts:109 POST /api/v1/employer/vacancy-assistant/edit",
+            "via": "EmployerCreateScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "EmployerCreateScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/employer/price",
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "WebPriceWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/price/api-client.ts:32 GET /api/v1/employer/price/categories",
+            "via": "WebPriceWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/price/api-client.ts:39 POST /api/v1/employer/price/quote",
+            "via": "WebPriceWizard"
+          },
           {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
             "via": "WebPriceWizard"
@@ -33339,10 +35762,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/auth/api-client.ts:118 POST /api/v1/auth/register/choose-role",
-            "via": "WebPriceWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
             "via": "WebPriceWizard"
           },
           {
@@ -33356,33 +35775,78 @@
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
             "via": "WebPriceWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
-            "via": "WebPriceWizard"
           }
         ]
       },
       {
         "nodeId": "route:/employer/vacancies",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:51 GET /api/v1/employer/company",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:264 GET /api/v1/employer/vacancies",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:59 POST /api/v1/employer/company",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:70 PATCH /api/v1/employer/company",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:326 POST /api/v1/employer/candidates/:candidateId/interview",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:289 POST /api/v1/employer/candidates/:candidateId/hire",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:332 POST /api/v1/employer/candidates/:candidateId/reject",
+            "via": "EmployerVacanciesScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:320 POST /api/v1/disputes",
+            "via": "EmployerVacanciesScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/employer/vacancies/[id]",
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
             "via": "EmployerVacancyDetailScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
+            "via": "WebEmployerVacancyPage"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:326 POST /api/v1/employer/candidates/:candidateId/interview",
+            "via": "WebEmployerVacancyPage"
           },
           {
             "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:289 POST /api/v1/employer/candidates/:candidateId/hire",
-            "via": "EmployerVacancyDetailScreen"
+            "via": "WebEmployerVacancyPage"
           },
           {
             "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:332 POST /api/v1/employer/candidates/:candidateId/reject",
-            "via": "EmployerVacancyDetailScreen"
+            "via": "WebEmployerVacancyPage"
           },
           {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
@@ -33406,10 +35870,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/auth/api-client.ts:118 POST /api/v1/auth/register/choose-role",
-            "via": "EmployerVacancyDetailScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
             "via": "EmployerVacancyDetailScreen"
           },
           {
@@ -33433,12 +35893,126 @@
       {
         "nodeId": "route:/feed",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/VacancyFavoriteToggle.tsx:49 PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
+            "via": "FeedScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "FeedScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/api-client.ts:55 GET /api/v1/recruiter/vacancies",
+            "via": "FeedScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/api-client.ts:43 GET /api/v1/recruiter/feed-presets",
+            "via": "FeedScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-feed/api-client.ts:139 GET /api/v1/recruiter/vacancies",
+            "via": "FeedScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/home",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:99 GET /api/v1/recruiter/wallet",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:107 POST /api/v1/recruiter/wallet/payout-requests",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/home/candidates-client.ts:31 GET /api/v1/recruiter/candidates",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:118 GET /api/v1/recruiter/applications",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/applications-board/api-client.ts:133 POST /api/v1/recruiter/applications/:applicationId/withdraw",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:199 GET /api/v1/employer/chat/threads",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:203 GET /api/v1/employer/candidates/:candidateId/messages",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:210 POST /api/v1/employer/candidates/:candidateId/messages",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:217 POST /api/v1/employer/candidates/:candidateId/chat-reports",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:224 POST /api/v1/candidates/:candidateId/calls",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:231 POST /api/v1/calls/:callId/accept",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:239 POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:256 GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:227 POST /api/v1/auth/web/email/resend",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/api-client.ts:107 POST /api/v1/auth/phone/from-contact",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:196 POST /api/v1/auth/web/phone/challenge",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:203 GET /api/v1/auth/web/phone/status",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/api-client.ts:118 POST /api/v1/auth/register/choose-role",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:86 GET /api/v1/me/notifications",
+            "via": "HomeScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
+            "via": "HomeScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/legal/[code]",
@@ -33455,6 +36029,18 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "MarketmakerQueueScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/marketmaker/api-client.ts:31 GET /api/v1/recruiter/marketmaker/queue",
+            "via": "MarketmakerQueueScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/marketmaker/api-client.ts:37 POST /api/v1/recruiter/marketmaker/claim",
+            "via": "MarketmakerQueueScreen"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:148 GET /api/v1/recruiter/profile",
             "via": "MarketmakerQueueScreen"
           },
@@ -33487,10 +36073,6 @@
             "via": "MarketmakerQueueScreen"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "MarketmakerQueueScreen"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "MarketmakerQueueScreen"
           },
@@ -33500,10 +36082,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
-            "via": "MarketmakerQueueScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
             "via": "MarketmakerQueueScreen"
           }
         ]
@@ -33513,6 +36091,34 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:213 POST /api/v1/auth/profile/switch",
+            "via": "RegisterWizard"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "RegisterWizard"
           },
@@ -33522,10 +36128,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
             "via": "RegisterWizard"
           },
           {
@@ -33557,15 +36159,7 @@
             "via": "RegisterWizard"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "RegisterWizard"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/consent/api-client.ts:126 GET /api/v1/legal/current",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
             "via": "RegisterWizard"
           },
           {
@@ -33582,22 +36176,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:98 GET /api/v1/recruiter/specializations",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
             "via": "RegisterWizard"
           }
         ]
@@ -33607,6 +36185,34 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
+            "via": "RegisterWizard"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:213 POST /api/v1/auth/profile/switch",
+            "via": "RegisterWizard"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "RegisterWizard"
           },
@@ -33616,10 +36222,6 @@
           },
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
             "via": "RegisterWizard"
           },
           {
@@ -33651,15 +36253,7 @@
             "via": "RegisterWizard"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "RegisterWizard"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/consent/api-client.ts:126 GET /api/v1/legal/current",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:152 POST /api/v1/legal/accept",
             "via": "RegisterWizard"
           },
           {
@@ -33677,22 +36271,6 @@
           {
             "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:98 GET /api/v1/recruiter/specializations",
             "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:161 PUT /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:63 PUT /api/v1/recruiter/profile",
-            "via": "RegisterWizard"
           }
         ]
       },
@@ -33701,7 +36279,11 @@
         "file": "apps/miniapp/src/app/routes-config.tsx",
         "calls": [
           {
-            "callId": "call:apps/miniapp/src/features/vacancy-card/api-client.ts:117 GET /api/v1/recruiter/vacancies/:vacancyId",
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "VacancyDetailScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/VacancyFavoriteToggle.tsx:49 PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
             "via": "VacancyDetailScreen"
           },
           {
@@ -33713,6 +36295,10 @@
             "via": "VacancyDetailScreen"
           },
           {
+            "callId": "call:apps/miniapp/src/features/vacancy-card/api-client.ts:117 GET /api/v1/recruiter/vacancies/:vacancyId",
+            "via": "VacancyDetailScreen"
+          },
+          {
             "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:217 POST /api/v1/auth/web/email/verify",
             "via": "VacancyDetailScreen"
           },
@@ -33737,10 +36323,6 @@
             "via": "VacancyDetailScreen"
           },
           {
-            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
-            "via": "VacancyDetailScreen"
-          },
-          {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:94 GET /api/v1/me/notifications/badge",
             "via": "VacancyDetailScreen"
           },
@@ -33751,26 +36333,160 @@
           {
             "callId": "call:apps/miniapp/src/features/notifications/api-client.ts:113 POST /api/v1/me/notifications/read-all",
             "via": "VacancyDetailScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:279 GET /api/v1/employer/vacancies/:vacancyId",
-            "via": "VacancyDetailScreen"
-          },
-          {
-            "callId": "call:apps/miniapp/src/features/vacancy-feed-screen/VacancyFavoriteToggle.tsx:49 PUT /api/v1/recruiter/vacancies/:vacancyId/favorite",
-            "via": "VacancyDetailScreen"
           }
         ]
       },
       {
         "nodeId": "route:/verification",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/notification-preferences-client.ts:25 GET /api/v1/me/notification-preferences",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/notification-preferences-client.ts:38 PUT /api/v1/me/notification-preferences",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/employer-cabinet/api-client.ts:264 GET /api/v1/employer/vacancies",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:148 GET /api/v1/recruiter/profile",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:55 GET /api/v1/recruiter/profile",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:214 GET /api/v1/recruiter/specializations",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:98 GET /api/v1/recruiter/specializations",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/rating-history-client.ts:22 GET /api/v1/recruiter/profile/rating-history",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/verification/verification-support-client.ts:126 GET /api/v1/recruiter/verification/messages",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/verification/verification-support-client.ts:133 GET /api/v1/recruiter/verification/documents",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/verification/verification-support-client.ts:138 POST /api/v1/recruiter/verification/messages",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/verification/verification-support-client.ts:151 POST /api/v1/recruiter/verification/uploads",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/verification/verification-support-client.ts:189 GET /api/v1/recruiter/verification/attachments/sign",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:213 POST /api/v1/auth/profile/switch",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:199 GET /api/v1/employer/chat/threads",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:203 GET /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:210 POST /api/v1/employer/candidates/:candidateId/messages",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:217 POST /api/v1/employer/candidates/:candidateId/chat-reports",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:224 POST /api/v1/candidates/:candidateId/calls",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:231 POST /api/v1/calls/:callId/accept",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:239 POST /api/v1/employer/candidates/:candidateId/chat-uploads",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/chat/api-client.ts:256 GET /api/v1/employer/candidates/:candidateId/attachments/sign",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:51 GET /api/v1/employer/company",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:59 POST /api/v1/employer/company",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile/company-api-client.ts:70 PATCH /api/v1/employer/company",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/consent/api-client.ts:126 GET /api/v1/legal/current",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/auth/web-api-client.ts:210 POST /api/v1/auth/web/logout",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:179 PATCH /api/v1/recruiter/profile",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:71 PATCH /api/v1/recruiter/profile",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/api-client.ts:197 POST /api/v1/recruiter/verification-request",
+            "via": "ProfileScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/profile-onboarding/shared-client-adapter.ts:86 POST /api/v1/recruiter/verification-request",
+            "via": "ProfileScreen"
+          }
+        ]
       },
       {
         "nodeId": "route:/wallet",
         "file": "apps/miniapp/src/app/routes-config.tsx",
-        "calls": []
+        "calls": [
+          {
+            "callId": "call:apps/miniapp/src/features/register-wizard/RegisterWizard.tsx:340 POST /api/v1/employer/company",
+            "via": "WalletScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:99 GET /api/v1/recruiter/wallet",
+            "via": "WalletScreen"
+          },
+          {
+            "callId": "call:apps/miniapp/src/features/wallet/api-client.ts:107 POST /api/v1/recruiter/wallet/payout-requests",
+            "via": "WalletScreen"
+          }
+        ]
       }
     ]
   },
