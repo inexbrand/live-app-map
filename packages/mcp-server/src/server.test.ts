@@ -125,3 +125,61 @@ describe('mcp stdio server', () => {
     expect(tables.tables.map((t) => t.name)).toContain('vacancy_favorites');
   });
 });
+
+describe('mcp: архитектура API и документация', () => {
+  const selfMap = path.resolve(import.meta.dir, '../../../maps/live-app-map.liveappmap.json');
+  const call = (id: number, name: string, args: Record<string, unknown>): unknown => ({
+    jsonrpc: '2.0',
+    id,
+    method: 'tools/call',
+    params: { name, arguments: args },
+  });
+
+  test('describe_api и get_route с входом и доступом на korbor', async () => {
+    const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-api-'));
+    const out = await rpc(
+      [
+        call(1, 'describe_api', { mapPath: allMap, service: '@korbor/api', method: 'GET' }),
+        call(2, 'get_route', { mapPath: allMap, route: 'GET /api/v1/admin/ledger' }),
+        call(3, 'describe_api', { mapPath: allMap, method: 'FETCH' }),
+      ],
+      lamDir,
+    );
+    const api = toolText(out[0]) as {
+      coverage: { routes: number; withAccess: number };
+      services: Array<{ service: string; sections: Array<{ prefix: string; modules: Array<{ routes: string[] }> }> }>;
+    };
+    expect(api.services.map((s) => s.service)).toEqual(['@korbor/api']);
+    const admin = api.services[0]?.sections.find((s) => s.prefix === '/api/v1/admin');
+    expect(admin?.modules.flatMap((m) => m.routes).every((r) => r.startsWith('GET /api/v1/admin/'))).toBe(true);
+    expect(api.coverage.withAccess).toBeGreaterThan(api.coverage.routes / 2);
+    const ledger = toolText(out[1]) as { input: { query: { fields: Array<{ name: string }> } }; access: { permissions: string[] } };
+    expect(ledger.input.query.fields.map((f) => f.name)).toContain('dealId');
+    expect(ledger.access.permissions).toContain('admin.ledger.read');
+    expect(out[2]).toMatchObject({ id: 3, result: { isError: true } });
+  });
+
+  test('list_epochs, get_epoch, search_docs по документации самого live-app-map', async () => {
+    const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-docs-'));
+    const out = await rpc(
+      [
+        call(1, 'list_epochs', { mapPath: selfMap }),
+        call(2, 'get_epoch', { mapPath: selfMap, epoch: 'live-korbor-e2e', file: '09-bugs.md' }),
+        call(3, 'search_docs', { mapPath: selfMap, query: 'шлюз', limit: 3 }),
+        call(4, 'get_epoch', { mapPath: selfMap, epoch: 'нет-такой' }),
+      ],
+      lamDir,
+    );
+    const list = toolText(out[0]) as { epochs: Array<{ id: string; date: string; readiness: string }> };
+    expect(list.epochs.map((e) => e.id)).toContain('live-korbor-e2e#20261121-175119');
+    const dates = list.epochs.map((e) => e.date);
+    expect(dates).toEqual([...dates].sort().reverse());
+    const epoch = toolText(out[1]) as { id: string; files: Array<{ path: string; text: string }> };
+    expect(epoch.id).toBe('live-korbor-e2e#20261121-175119');
+    expect(epoch.files.map((f) => f.path)).toEqual(['docs/epoch/live-korbor-e2e#20261121-175119/09-bugs.md']);
+    const hits = toolText(out[2]) as { hits: Array<{ path: string; line: number; snippet: string }> };
+    expect(hits.hits).toHaveLength(3);
+    expect(hits.hits.every((h) => h.snippet.toLowerCase().includes('шлюз') || h.path.includes('шлюз'))).toBe(true);
+    expect(out[3]).toMatchObject({ id: 4, result: { isError: true } });
+  });
+});
