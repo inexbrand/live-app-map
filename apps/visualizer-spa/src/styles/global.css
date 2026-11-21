@@ -1390,3 +1390,9 @@ kbd,
 .session-form { display: grid; gap: 8px; margin-top: 8px; }
 .session-form__error { color: #f08a8a; }
 .page-node__snapshot { position: absolute; top: 0; left: 0; display: block; max-width: none; pointer-events: none; user-select: none; }
+
+/* GPU: вьюпорт холста — отдельный композитный слой, пан/зум двигают его без перерисовки;
+   нода изолирует раскладку и отрисовку — изменения внутри не трогают соседей. */
+.react-flow__viewport { will-change: transform; }
+.react-flow__node { contain: layout style paint; }
+.react-flow__minimap { contain: strict; }
