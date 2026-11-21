@@ -2,6 +2,8 @@
  * Нормализация, индекс, adjacency, query, diff графа AppMap.
  */
 export * from './code-query';
+export * from './api-query';
+export * from './docs-query';
 import type {
   AppMapDocument,
   AppMapEdge,

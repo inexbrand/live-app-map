@@ -86,6 +86,8 @@
         "@live-app-map/schema": "workspace:*",
       },
       "devDependencies": {
+        "@live-app-map/scanner-docs": "workspace:*",
+        "@live-app-map/scanner-source": "workspace:*",
         "typescript": "^5.8.2",
       },
     },
