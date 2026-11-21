@@ -2,19 +2,13 @@
  * Разбор markdown-текста эпохи: заголовок, цель из 00-brief, статус из INDEX.md,
  * открытые пункты 09-bugs.
  */
+import { bugItems } from './bug-items';
 
 /** Предел длины строки пункта или цели. */
 const LINE_MAX = 240;
 
-/** Заголовок раздела «открытых» пунктов: Open, Открытые, Открыто, TODO. */
-const OPEN_HEADING = /^(open|открыт|todo|в работе)/i;
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
-const LIST_ITEM = /^(?:[-*+]|\d+[.)])\s+(.*)$/;
-const UNCHECKED = /^\[ \]\s*/;
-const CLOSED_MARK = /^(\[[xX]\]|\[закрыт[^\]]*\]|~~)/i;
-/** Пункт-заглушка: «(пусто)», «нет», «—». */
-const EMPTY_ITEM = /^\(?(пусто|нет|none|—|-)\)?\.?$/i;
 
 /**
  * Строки вне блоков кода ```.
@@ -60,34 +54,15 @@ export function firstHeading(text: string): string | undefined {
 }
 
 /**
- * Открытые пункты 09-bugs: неотмеченные чекбоксы `- [ ]` в любом месте и
- * пункты списка верхнего уровня в разделе «Open»/«Открытые» (кроме `[x]`,
- * `[закрыт]`, зачёркнутых и «(пусто)»).
+ * Открытые пункты 09-bugs одной строкой каждый (разбор — {@link bugItems}).
  *
  * @param text - текст 09-bugs
  * @returns пункты одной строкой
  */
 export function openBugItems(text: string): string[] {
-  const out: string[] = [];
-  let inOpen = false;
-  for (const raw of proseLines(text)) {
-    const heading = HEADING.exec(raw.trim());
-    if (heading?.[2] !== undefined) {
-      inOpen = OPEN_HEADING.test(heading[2].trim());
-      continue;
-    }
-    const topLevel = !/^\s{2,}/.test(raw);
-    const item = LIST_ITEM.exec(raw.trim())?.[1]?.trim();
-    if (item === undefined) {
-      continue;
-    }
-    if (UNCHECKED.test(item)) {
-      out.push(plain(item.replace(UNCHECKED, '')));
-    } else if (inOpen && topLevel && !CLOSED_MARK.test(item) && !EMPTY_ITEM.test(item)) {
-      out.push(plain(item));
-    }
-  }
-  return out.filter((s) => s !== '');
+  return bugItems(text)
+    .filter((b) => b.state === 'open')
+    .map((b) => b.text);
 }
 
 /**

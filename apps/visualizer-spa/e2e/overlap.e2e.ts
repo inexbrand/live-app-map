@@ -72,10 +72,16 @@ for (const [width, height] of [
     const toolbarHeight = await page.locator('.toolbar').evaluate((t) => t.getBoundingClientRect().height);
     expect(toolbarHeight).toBeLessThan(70);
 
+    // Панель экрана растёт, пока грузится содержимое: наложений нет в устоявшемся виде,
+    // а не в первый кадр после клика (иначе при нескольких воркерах тест плавает).
+    await expect
+      .poll(async () => {
+        const p = await probe(page, OVERLAYS);
+        return { overlaps: p.overlaps, covered: p.covered };
+      }, { timeout: 5_000 })
+      .toEqual({ overlaps: [], covered: [] });
     const p = await probe(page, OVERLAYS);
     expect(p.shown).toEqual(expect.arrayContaining(['.toolbar[0]', '.drawer[0]', '.diag-fab[0]', '.react-flow__minimap[0]']));
-    expect(p.overlaps).toEqual([]);
-    expect(p.covered).toEqual([]);
 
     // Шторка журнала — модальная: она сверху, подложка закрывает остальное.
     await page.locator('.diag-fab').click();

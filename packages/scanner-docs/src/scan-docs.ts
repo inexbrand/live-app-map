@@ -54,13 +54,13 @@ function epochDate(m: RegExpExecArray): string {
 }
 
 /**
- * Эпоха из папки.
+ * Эпоха из папки (после правки её файлов — заново, без скана всего проекта).
  *
  * @param root - корень проекта
  * @param dir - абсолютный путь папки эпохи
  * @returns эпоха
  */
-function readEpoch(root: string, dir: string): DocEpoch {
+export function readEpoch(root: string, dir: string): DocEpoch {
   const name = path.basename(dir);
   const m = EPOCH_NAME.exec(name);
   const all = listFiles(dir);

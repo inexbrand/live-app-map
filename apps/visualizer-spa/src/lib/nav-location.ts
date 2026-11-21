@@ -29,7 +29,7 @@ export const NAV_HOME: NavState = {
   docsMode: 'text',
 };
 
-const VIEWS: readonly AppView[] = ['screens', 'api', 'database', 'docs'];
+const VIEWS: readonly AppView[] = ['screens', 'api', 'database', 'docs', 'compare'];
 
 /** Ключи query, которыми владеет навигация. */
 const KEYS = ['view', 'route', 'table', 'doc', 'screen', 'docs'];

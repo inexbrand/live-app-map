@@ -5,6 +5,7 @@ export * from './code-query';
 export * from './api-query';
 export * from './route-auto-doc';
 export * from './docs-query';
+export * from './map-diff';
 import type {
   AppMapDocument,
   AppMapEdge,
@@ -127,88 +128,6 @@ export function searchNodes(
       (n.url?.toLowerCase().includes(q) ?? false)
     );
   });
-}
-
-export type AppMapDiff = {
-  readonly formatVersion: 1;
-  readonly leftRevision: string;
-  readonly rightRevision: string;
-  readonly nodes: {
-    readonly added: readonly string[];
-    readonly removed: readonly string[];
-    readonly changed: readonly { readonly id: string; readonly fields: readonly string[] }[];
-  };
-  readonly edges: {
-    readonly added: readonly string[];
-    readonly removed: readonly string[];
-  };
-};
-
-/**
- * Diff двух документов по id нод/рёбер.
- */
-export function diffDocuments(
-  left: AppMapDocument,
-  right: AppMapDocument,
-): AppMapDiff {
-  const leftNodes = new Map(left.nodes.map((n) => [n.id, n]));
-  const rightNodes = new Map(right.nodes.map((n) => [n.id, n]));
-  const leftEdges = new Set(left.edges.map((e) => e.id));
-  const rightEdges = new Set(right.edges.map((e) => e.id));
-
-  const added: string[] = [];
-  const removed: string[] = [];
-  const changed: { id: string; fields: string[] }[] = [];
-
-  for (const id of rightNodes.keys()) {
-    if (!leftNodes.has(id)) {
-      added.push(id);
-    }
-  }
-  for (const id of leftNodes.keys()) {
-    if (!rightNodes.has(id)) {
-      removed.push(id);
-    }
-  }
-  for (const [id, ln] of leftNodes) {
-    const rn = rightNodes.get(id);
-    if (!rn) {
-      continue;
-    }
-    const fields: string[] = [];
-    if (ln.pathPattern !== rn.pathPattern) {
-      fields.push('pathPattern');
-    }
-    if (ln.url !== rn.url) {
-      fields.push('url');
-    }
-    if (ln.title !== rn.title) {
-      fields.push('title');
-    }
-    if (ln.kind !== rn.kind) {
-      fields.push('kind');
-    }
-    if (fields.length > 0) {
-      changed.push({ id, fields });
-    }
-  }
-
-  changed.sort((a, b) => a.id.localeCompare(b.id));
-
-  return {
-    formatVersion: 1,
-    leftRevision: left.revision,
-    rightRevision: right.revision,
-    nodes: {
-      added: added.sort(),
-      removed: removed.sort(),
-      changed,
-    },
-    edges: {
-      added: [...rightEdges].filter((id) => !leftEdges.has(id)).sort(),
-      removed: [...leftEdges].filter((id) => !rightEdges.has(id)).sort(),
-    },
-  };
 }
 
 /**

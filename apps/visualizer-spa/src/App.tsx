@@ -13,6 +13,8 @@ import { AppMapCanvas } from './flow/AppMapCanvas';
 import { ApiView } from './components/ApiView';
 import { DatabaseView } from './components/DatabaseView';
 import { DocsView } from './components/DocsView';
+import { CompareView } from './components/CompareView';
+import { useMapSourceStore } from './store/map-source-store';
 import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { useRouteSamples } from './lib/use-route-samples';
@@ -35,6 +37,8 @@ import { Button } from './ui';
  */
 export function App() {
   const mapDocument = useAppStore((s) => s.document);
+  /** Номер загрузки карты: вид «Сравнение» начинается заново для новой карты. */
+  const loadSeq = useAppStore((s) => s.loadSeq);
   const toast = useAppStore((s) => s.toast);
   const setToast = useAppStore((s) => s.setToast);
   const lastLoadError = useAppStore((s) => s.lastLoadError);
@@ -104,6 +108,7 @@ export function App() {
           setToast(res.error);
           return;
         }
+        useMapSourceStore.getState().setSource({ kind: 'catalog', id: preset.id, label: preset.label, path: preset.path });
         await runDogfoodAfterMapLoad();
         const baseHint =
           preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
@@ -196,7 +201,9 @@ export function App() {
         setToast(result.error);
         return;
       }
-      loadUnknownJson(result.json);
+      if (loadUnknownJson(result.json)) {
+        useMapSourceStore.getState().setSource({ kind: 'file', name: file.name });
+      }
       if (result.toast !== undefined) {
         setToast(result.toast);
       }
@@ -315,7 +322,7 @@ export function App() {
                 </Button>
               </div>
             ) : null}
-            {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : <AppMapCanvas />}
+            {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : appView === 'compare' ? <CompareView key={loadSeq} /> : <AppMapCanvas />}
             <FeedbackPanel />
             <StateInjectPanel />
             <SnapshotOverlay />

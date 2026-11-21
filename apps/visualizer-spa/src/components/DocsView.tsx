@@ -20,6 +20,8 @@ import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Button, Chip, Input } from '../ui';
 import { DocMarkdown } from './Markdown';
+import { BugMarks } from './BugMarks';
+import { fetchLiveDocs } from '../lib/docs-live-client';
 import { DocGraphView } from './graph/DocGraphView';
 import { LocalGraph } from './graph/LocalGraph';
 
@@ -163,7 +165,7 @@ function Gallery(props: { readonly root: string; readonly images: readonly strin
 }
 
 /** Правая часть: шапка, вкладки файлов эпохи, документ, скриншоты. */
-function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; readonly onOpenDoc: (path: string) => void }) {
+function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; readonly onOpenDoc: (path: string) => void; readonly writable: true | string }) {
   const { docs, open } = props;
   const mapDocument = useAppStore((s) => s.document);
   const refs = useMemo(
@@ -212,6 +214,7 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
       )}
       <article className="docs-doc__body">
         {e === undefined ? null : <p className="docs-doc__file">{open.file.path.slice(e.dir.length + 1)}</p>}
+        {e !== undefined && open.file.path === `${e.dir}/09-bugs.md` ? <BugMarks key={e.id} docs={docs} epoch={e} file={open.file} writable={props.writable} /> : null}
         {open.file.text.trim() === '' ? <p className="docs-empty">Файл пуст — в нём ещё ничего не записано.</p> : md(open.file.text, open.file.path)}
         {e === undefined ? null : (
           <Gallery root={docs.root} images={galleryImages(e.images, open.file.path, open.file.text)} onOpen={setZoom} />
@@ -232,6 +235,37 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
   );
 }
 
+/**
+ * Документация с диска: при открытии вида раздел docs карты заменяется снятым сейчас
+ * (снимок в карте мог устареть). Нет каталога на этой машине — остаётся снимок.
+ *
+ * @param root - docs.root карты
+ * @returns true — документация с диска (можно отмечать пункты), иначе причина
+ */
+function useLiveDocs(root: string | undefined): true | string {
+  const setDocs = useAppStore((s) => s.setDocs);
+  const [live, setLive] = useState<true | string>('читаю документацию с диска…');
+  useEffect(() => {
+    if (root === undefined) {
+      return;
+    }
+    let cancelled = false;
+    void fetchLiveDocs(root).then((r) => {
+      if (cancelled) {
+        return;
+      }
+      if (r.ok) {
+        setDocs(r.value);
+      }
+      setLive(r.ok ? true : r.error);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [root, setDocs]);
+  return live;
+}
+
 /** Вид «Документация». */
 export function DocsView() {
   const docs = useAppStore((s) => s.document?.docs);
@@ -242,6 +276,7 @@ export function DocsView() {
   const [readiness, setReadiness] = useState<EpochReadiness | null>(null);
   const sections = useMemo(() => (docs === undefined ? null : docsSections(docs, query, readiness)), [docs, query, readiness]);
   const open = docs === undefined ? null : openDocOf(docs, docPath);
+  const live = useLiveDocs(docs?.root);
   useEffect(() => {
     document.querySelector('.docs-doc')?.scrollTo({ top: 0 });
   }, [open?.file.path]);
@@ -338,7 +373,7 @@ export function DocsView() {
           {docPath === null ? 'Выберите документ слева.' : `Документа «${docPath}» нет в карте: его удалили или карта снята раньше. Выберите документ слева.`}
         </p>
       ) : (
-        <DocPane docs={docs} open={open} onOpenDoc={openDoc} />
+        <DocPane docs={docs} open={open} onOpenDoc={openDoc} writable={live} />
       )}
     </div>
   );

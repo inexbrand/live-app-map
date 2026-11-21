@@ -3,8 +3,10 @@
  * App и MapToolbar только вызывают эти функции — без дублирования parse.
  */
 import {
+  liveAppMapToAppMap,
   parseAppMapDocument,
   parseLiveAppMapDocument,
+  type AppMapDocument,
 } from '@live-app-map/schema';
 
 /** Успешный импорт: готовый JSON для `loadUnknownJson`. */
@@ -44,6 +46,25 @@ export function importMapValue(raw: unknown): ImportMapResult {
     ok: false,
     error: `Не удалось разобрать JSON: ${detail}`,
   };
+}
+
+/**
+ * Документ карты из JSON любого из двух форматов (liveappmap переводится в enterprise),
+ * как его видит визуализатор после загрузки.
+ *
+ * @param raw - разобранный JSON
+ * @returns документ или текст ошибки
+ */
+export function documentFromJson(raw: unknown): { readonly ok: true; readonly document: AppMapDocument } | ImportMapFailure {
+  const asApp = parseAppMapDocument(raw);
+  if (asApp.ok) {
+    return { ok: true, document: asApp.document };
+  }
+  const asLive = parseLiveAppMapDocument(raw);
+  if (asLive.ok) {
+    return { ok: true, document: liveAppMapToAppMap(asLive.document) };
+  }
+  return { ok: false, error: `Не удалось разобрать JSON: ${asLive.errors[0]?.message ?? asApp.errors[0]?.message ?? 'неизвестная ошибка'}` };
 }
 
 /**

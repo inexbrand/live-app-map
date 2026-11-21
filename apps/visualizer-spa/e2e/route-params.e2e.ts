@@ -9,8 +9,13 @@ test('vacancies/:id — реальная вакансия вместо «Не н
   test.setTimeout(90_000);
   await page.setViewportSize({ width: 1600, height: 1000 });
   await page.goto('/?map=/maps/korbor-miniapp.liveappmap.json');
+  await expect(page.locator('.page-node__title').first()).toBeVisible({ timeout: 30_000 });
+  // Экран находится поиском, как пользователем: холст сам приводит к нему, от раскладки тест не зависит.
+  await page.keyboard.press('Control+k');
+  await page.getByTestId('palette-input').fill('vacancies / id');
+  await page.locator('[data-testid=palette-row][data-kind=screen]', { hasText: /^vacancies \/ id/ }).first().click();
   const node = page.locator('[data-lam-node="route:/vacancies/[id]"]');
-  await node.locator('.page-node__title').click();
+  await expect(node).toHaveClass(/page-node--selected/);
   const iframe = node.locator('iframe');
   await expect.poll(async () => (await iframe.getAttribute('src')) ?? '', { timeout: 30_000 }).toMatch(/#\/vacancies\/[0-9a-f-]{36}$/);
   const frame = await (await iframe.elementHandle())?.contentFrame();

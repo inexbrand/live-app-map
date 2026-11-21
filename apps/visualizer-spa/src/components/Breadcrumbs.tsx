@@ -14,6 +14,7 @@ const VIEW_LABELS: ReadonlyMap<AppView, string> = new Map([
   ['api', 'API'],
   ['database', 'База данных'],
   ['docs', 'Документация'],
+  ['compare', 'Сравнение'],
 ]);
 
 /** Крошка. */

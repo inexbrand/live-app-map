@@ -24,8 +24,8 @@ const HONO_TARGETS: ReadonlyMap<string, Part> = new Map<string, Part>([
   ['header', 'headers'],
 ]);
 const TEXT_MAX = 200;
-/** Глубина раскрытия вложенных схем по имени. */
-const MAX_DEPTH = 3;
+/** Глубина вложенности схем, до которой константы раскрываются (защита от циклов). */
+const MAX_DEPTH = 8;
 
 /** Тип TypeBox по имени конструктора. */
 const TYPEBOX_TYPES: ReadonlyMap<string, string> = new Map([
@@ -115,8 +115,194 @@ function constValues(ctx: SourceContext, expr: ts.Expression | undefined): strin
   return values.length > 0 && values.every((v) => v !== undefined) ? values.join(' | ') : `одно из ${id.text}`;
 }
 
-/** Тип поля и признак необязательности. */
-type FieldType = { readonly type: string; readonly optional: boolean };
+/** Тип выражения схемы: текст, необязательность, правила, вложенные поля. */
+type FieldType = {
+  readonly type: string;
+  readonly optional: boolean;
+  readonly rules?: readonly string[];
+  readonly fields?: readonly RouteSchemaField[];
+};
+
+/** Ключи опций TypeBox, которые показываются как правила. */
+const TYPEBOX_RULES = new Set([
+  'minLength',
+  'maxLength',
+  'minimum',
+  'maximum',
+  'exclusiveMinimum',
+  'exclusiveMaximum',
+  'minItems',
+  'maxItems',
+  'pattern',
+  'format',
+  'default',
+  'multipleOf',
+  'uniqueItems',
+]);
+
+/** Методы цепочки zod, которые меняют не правила, а необязательность или вид. */
+const ZOD_SHAPE_METHODS = new Set(['optional', 'nullish', 'nullable', 'partial', 'describe', 'openapi', 'strict', 'passthrough']);
+
+/** Значение опции строкой: литерал или текст выражения. */
+function optionValue(expr: ts.Expression): string {
+  const lit = literalText(expr);
+  return lit === undefined ? short(expr) : lit.replace(/^'(.*)'$/, '$1');
+}
+
+/** Правила из объекта опций TypeBox: `{ minLength: 1, format: 'uuid' }` → `minLength 1`, `format uuid`. */
+function typeboxRules(options: ts.Expression | undefined): string[] {
+  if (options === undefined || !ts.isObjectLiteralExpression(options)) {
+    return [];
+  }
+  return options.properties.flatMap((p) => {
+    const key = ts.isPropertyAssignment(p) ? p.name.getText() : '';
+    return ts.isPropertyAssignment(p) && TYPEBOX_RULES.has(key) ? [`${key} ${optionValue(p.initializer)}`] : [];
+  });
+}
+
+/** Правила из цепочки zod: `.min(1).max(9).email()` → `min 1`, `max 9`, `email`. */
+function zodRules(call: ts.CallExpression, methods: readonly string[]): string[] {
+  const out: string[] = [];
+  let cur: ts.Node = call.parent;
+  for (const m of methods) {
+    const owner = ts.isPropertyAccessExpression(cur) ? cur.parent : undefined;
+    const arg = owner !== undefined && ts.isCallExpression(owner) ? owner.arguments[0] : undefined;
+    if (!ZOD_SHAPE_METHODS.has(m)) {
+      out.push(arg === undefined ? m : `${m} ${optionValue(arg)}`);
+    }
+    cur = owner?.parent ?? cur;
+  }
+  return out;
+}
+
+/** Тип с правилами, если они есть. */
+function withRules(t: FieldType, rules: readonly string[]): FieldType {
+  return rules.length === 0 ? t : { ...t, rules: [...(t.rules ?? []), ...rules] };
+}
+
+/** Все поля необязательные (`t.Partial`, `.partial()`). */
+function allOptional(fields: readonly RouteSchemaField[] | undefined): RouteSchemaField[] | undefined {
+  return fields?.map((f) => ({ ...f, optional: true }));
+}
+
+/** Объектный тип с полями. */
+function objectType(fields: readonly RouteSchemaField[]): FieldType {
+  return { type: 'object', optional: false, fields };
+}
+
+/** Массив: тип элемента с `[]`, поля элемента-объекта переходят к массиву. */
+function arrayOf(item: FieldType): FieldType {
+  const type = item.type.includes(' | ') ? `(${item.type})[]` : `${item.type}[]`;
+  return { type, optional: false, ...(item.fields === undefined ? {} : { fields: item.fields }) };
+}
+
+/**
+ * Константа-схема по имени: `AudienceFilter` → её тип; объект подписывается именем константы.
+ *
+ * @param ctx - контекст
+ * @param expr - имя или `ns.Name`
+ * @param depth - глубина раскрытия
+ * @returns тип
+ */
+function namedType(ctx: SourceContext, expr: ts.Identifier | ts.PropertyAccessExpression, depth: number): FieldType {
+  const name = ts.isIdentifier(expr) ? expr.text : expr.name.text;
+  const id = ts.isIdentifier(expr) ? expr : expr.name;
+  const decl = depth < MAX_DEPTH ? resolvedSymbol(ctx.checker, id)?.valueDeclaration : undefined;
+  if (decl === undefined || !ts.isVariableDeclaration(decl) || decl.initializer === undefined) {
+    return { type: name, optional: false };
+  }
+  const resolved = fieldType(ctx, unwrap(decl.initializer), depth + 1);
+  return resolved.fields === undefined || resolved.type !== 'object' ? resolved : { ...resolved, type: name };
+}
+
+/** Поля, слитые из нескольких объектов: `t.Intersect([A, B])`, `t.Composite([A, B])`. */
+function mergedObjects(ctx: SourceContext, list: ts.Expression | undefined, depth: number): FieldType {
+  const parts = list !== undefined && ts.isArrayLiteralExpression(list) ? list.elements.map((e) => fieldType(ctx, e, depth + 1)) : [];
+  return objectType(parts.flatMap((p) => p.fields ?? []));
+}
+
+/**
+ * Тип конструктора TypeBox `t.*`.
+ *
+ * @param ctx - контекст
+ * @param ctor - вызов
+ * @param depth - глубина
+ * @returns тип
+ */
+function typeboxType(ctx: SourceContext, ctor: Ctor, depth: number): FieldType {
+  const args = ctor.call.arguments;
+  const inner = (e: ts.Expression | undefined): FieldType => (e === undefined ? { type: 'unknown', optional: false } : fieldType(ctx, e, depth + 1));
+  switch (ctor.name) {
+    case 'Optional':
+      return { ...inner(args[0]), optional: true };
+    case 'Nullable': {
+      const t = inner(args[0]);
+      return { ...t, type: `${t.type} | null` };
+    }
+    case 'Array':
+      return withRules(arrayOf(inner(args[0])), typeboxRules(args[1]));
+    case 'Literal':
+      return { type: literalText(args[0]) ?? 'literal', optional: false };
+    case 'Union':
+      return { type: unionText(ctx, args[0], depth), optional: false };
+    case 'Object':
+      return withRules(objectType(args[0] !== undefined && ts.isObjectLiteralExpression(args[0]) ? objectFields(ctx, args[0], depth + 1) : []), []);
+    case 'Partial': {
+      const t = inner(args[0]);
+      return { ...t, ...(t.fields === undefined ? {} : { fields: allOptional(t.fields) }) };
+    }
+    case 'Intersect':
+    case 'Composite':
+      return mergedObjects(ctx, args[0], depth);
+    case 'Record':
+      return { type: `record<${inner(args[0]).type}, ${inner(args[1]).type}>`, optional: false };
+    default:
+      return withRules({ type: TYPEBOX_TYPES.get(ctor.name) ?? ctor.name.toLowerCase(), optional: false }, typeboxRules(args[0]));
+  }
+}
+
+/** Союз: массив вариантов или константа-массив. */
+function unionText(ctx: SourceContext, e: ts.Expression | undefined, depth: number): string {
+  return e !== undefined && ts.isArrayLiteralExpression(e)
+    ? e.elements.map((x) => literalText(x) ?? fieldType(ctx, x, depth + 1).type).join(' | ')
+    : (constValues(ctx, e) ?? (e === undefined ? 'unknown' : fieldType(ctx, e, depth + 1).type));
+}
+
+/**
+ * Тип конструктора zod `z.*` с цепочкой методов.
+ *
+ * @param ctx - контекст
+ * @param ctor - базовый вызов
+ * @param methods - методы цепочки после него
+ * @param depth - глубина
+ * @returns тип
+ */
+function zodType(ctx: SourceContext, ctor: Ctor, methods: readonly string[], depth: number): FieldType {
+  const args = ctor.call.arguments;
+  const inner = (e: ts.Expression | undefined): FieldType => (e === undefined ? { type: 'unknown', optional: false } : fieldType(ctx, e, depth + 1));
+  const base = ((): FieldType => {
+    switch (ctor.name) {
+      case 'array':
+        return arrayOf(inner(args[0]));
+      case 'enum':
+      case 'union':
+        return { type: unionText(ctx, args[0], depth), optional: false };
+      case 'literal':
+        return { type: literalText(args[0]) ?? 'literal', optional: false };
+      case 'nativeEnum':
+        return inner(args[0]);
+      case 'object':
+        return objectType(args[0] !== undefined && ts.isObjectLiteralExpression(args[0]) ? objectFields(ctx, args[0], depth + 1) : []);
+      case 'record':
+        return { type: `record<string, ${inner(args[args.length - 1]).type}>`, optional: false };
+      default:
+        return { type: ctor.name, optional: false };
+    }
+  })();
+  const partial = methods.includes('partial') && base.fields !== undefined ? { fields: allOptional(base.fields) } : {};
+  const optional = methods.some((m) => m === 'optional' || m === 'nullish');
+  return withRules({ ...base, ...partial, optional }, zodRules(ctor.call, methods));
+}
 
 /**
  * Тип выражения схемы.
@@ -124,55 +310,17 @@ type FieldType = { readonly type: string; readonly optional: boolean };
  * @param ctx - контекст
  * @param expr - выражение поля
  * @param depth - глубина раскрытия
- * @returns тип и необязательность
+ * @returns тип, необязательность, правила, вложенные поля
  */
 function fieldType(ctx: SourceContext, expr: ts.Expression, depth: number): FieldType {
   if (ts.isIdentifier(expr) || ts.isPropertyAccessExpression(expr)) {
-    return { type: ts.isIdentifier(expr) ? expr.text : expr.name.text, optional: false };
+    return namedType(ctx, expr, depth);
   }
   const { ctor, methods } = baseCtor(expr);
   if (ctor === undefined) {
     return { type: short(expr), optional: false };
   }
-  const zodOptional = methods.some((m) => m === 'optional' || m === 'nullish');
-  const args = ctor.call.arguments;
-  const inner = (e: ts.Expression | undefined): string => (e === undefined ? 'unknown' : fieldType(ctx, e, depth + 1).type);
-  const union = (e: ts.Expression | undefined): string =>
-    e !== undefined && ts.isArrayLiteralExpression(e)
-      ? e.elements.map((x) => literalText(x) ?? inner(x)).join(' | ')
-      : (constValues(ctx, e) ?? inner(e));
-  if (ctor.ns === 't') {
-    switch (ctor.name) {
-      case 'Optional':
-        return { type: inner(args[0]), optional: true };
-      case 'Nullable':
-        return { type: `${inner(args[0])} | null`, optional: false };
-      case 'Array':
-        return { type: `${inner(args[0])}[]`, optional: false };
-      case 'Literal':
-        return { type: literalText(args[0]) ?? 'literal', optional: false };
-      case 'Union':
-        return { type: union(args[0]), optional: false };
-      default:
-        return { type: TYPEBOX_TYPES.get(ctor.name) ?? ctor.name.toLowerCase(), optional: false };
-    }
-  }
-  const zodType = (): string => {
-    switch (ctor.name) {
-      case 'array':
-        return `${inner(args[0])}[]`;
-      case 'enum':
-      case 'union':
-        return union(args[0]);
-      case 'literal':
-        return literalText(args[0]) ?? 'literal';
-      case 'nativeEnum':
-        return inner(args[0]);
-      default:
-        return ctor.name;
-    }
-  };
-  return { type: zodType(), optional: zodOptional };
+  return ctor.ns === 't' ? typeboxType(ctx, ctor, depth) : zodType(ctx, ctor, methods, depth);
 }
 
 /** Поля объектной схемы. */
@@ -182,7 +330,15 @@ function objectFields(ctx: SourceContext, obj: ts.ObjectLiteralExpression, depth
       return [];
     }
     const t = fieldType(ctx, p.initializer, depth);
-    return [{ name: p.name.getText().replace(/^['"]|['"]$/g, ''), type: t.type, ...(t.optional ? { optional: true } : {}) }];
+    return [
+      {
+        name: p.name.getText().replace(/^['"]|['"]$/g, ''),
+        type: t.type,
+        ...(t.optional ? { optional: true } : {}),
+        ...(t.rules === undefined || t.rules.length === 0 ? {} : { rules: t.rules }),
+        ...(t.fields === undefined || t.fields.length === 0 ? {} : { fields: t.fields }),
+      },
+    ];
   });
 }
 
@@ -192,24 +348,29 @@ function objectFields(ctx: SourceContext, obj: ts.ObjectLiteralExpression, depth
  * @param ctx - контекст
  * @param expr - выражение схемы
  * @param fallback - вид схемы, если по выражению не понять
- * @param depth - глубина раскрытия константы
- * @returns схема
+ * @returns схема: поля объекта или тип части; текст — только если не разобрано ничего
  */
-function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback: RouteSchemaKind, depth = 0): RouteInputSchema {
-  if (ts.isIdentifier(expr) && depth < MAX_DEPTH) {
-    const decl = resolvedSymbol(ctx.checker, expr)?.valueDeclaration;
-    if (decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined) {
-      return { ...describeSchema(ctx, decl.initializer, fallback, depth + 1), name: expr.text };
-    }
-    return { kind: fallback, name: expr.text, fields: [] };
-  }
+function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback: RouteSchemaKind): RouteInputSchema {
+  const named = ts.isIdentifier(expr) ? expr.text : undefined;
   const { ctor } = baseCtor(expr);
   const kind: RouteSchemaKind = ctor === undefined ? fallback : ctor.ns === 'z' ? 'zod' : 'typebox';
-  const arg = ctor?.call.arguments[0];
-  if (ctor !== undefined && (ctor.name === 'Object' || ctor.name === 'object') && arg !== undefined && ts.isObjectLiteralExpression(arg)) {
-    return { kind, fields: objectFields(ctx, arg, depth) };
+  const t = fieldType(ctx, expr, 0);
+  const resolvedKind = ts.isIdentifier(expr) ? schemaKindOf(ctx, expr, fallback) : kind;
+  const base = { kind: resolvedKind, ...(named === undefined ? {} : { name: named }), ...(t.optional ? { optional: true } : {}) };
+  if (t.fields !== undefined) {
+    // Объект без полей — «{}»: тело есть, данных в нём нет.
+    return t.fields.length > 0 ? { ...base, fields: t.fields } : { ...base, fields: [], type: '{}' };
   }
-  return { kind, fields: [], text: short(expr) };
+  const opaque = t.type === named || t.type === short(expr);
+  return opaque ? { ...base, fields: [], text: short(expr) } : { ...base, fields: [], type: t.type };
+}
+
+/** Вид схемы константы по её инициализатору. */
+function schemaKindOf(ctx: SourceContext, id: ts.Identifier, fallback: RouteSchemaKind): RouteSchemaKind {
+  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
+  const init = decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
+  const ctor = init === undefined ? undefined : baseCtor(init).ctor;
+  return ctor === undefined ? fallback : ctor.ns === 'z' ? 'zod' : 'typebox';
 }
 
 /** Схемы из объекта опций Elysia. */
