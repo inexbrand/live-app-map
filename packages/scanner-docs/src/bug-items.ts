@@ -201,6 +201,8 @@ export function setBugItemState(text: string, line: number, expected: string, ta
   }
   const end = blockEnd(lines, line);
   const block = lines.slice(line, end).map((l, i) => (i === 0 && target === 'open' ? unmark(l) : l));
-  const without = [...lines.slice(0, line), ...lines.slice(end)];
+  // Пустая строка до и после пункта — после переноса остаётся одна.
+  const gap = (lines[line - 1] ?? '').trim() === '' && (lines[end] ?? 'x').trim() === '' ? 1 : 0;
+  const without = [...lines.slice(0, line), ...lines.slice(end + gap)];
   return { ok: true, changed: true, text: insertIntoSection(without, target, block).join(eol) };
 }

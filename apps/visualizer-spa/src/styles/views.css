@@ -1339,3 +1339,17 @@
 .cmp-view__item--removed .cmp-view__mark { color: #9b1c1c; }
 .cmp-view__item--removed > span:not(.cmp-view__mark):not(.cmp-view__detail) { color: var(--muted-foreground); text-decoration: line-through; }
 .cmp-view__detail { color: var(--muted-foreground); font-size: 12px; line-height: 16px; }
+
+/* Пункты 09-bugs с отметкой «закрыт/открыт». */
+.docs-bugs { margin: 0 0 24px; padding: 16px; border: 1px solid var(--border); border-radius: 8px; display: grid; gap: 8px; }
+.docs-bugs h3 { margin: 0; font-size: 15px; line-height: 24px; font-weight: 600; }
+.docs-bugs__hint { margin: 0; color: var(--muted-foreground); font-size: 12px; line-height: 16px; word-break: break-all; }
+.docs-bugs__list { list-style: none; margin: 0; padding: 0; display: grid; gap: 8px; }
+.docs-bugs__item { display: grid; grid-template-columns: 96px 1fr auto; gap: 12px; align-items: baseline; font-size: 14px; line-height: 20px; }
+.docs-bugs__state { color: var(--muted-foreground); font-size: 12px; line-height: 16px; }
+.docs-bugs__item--open .docs-bugs__state { color: var(--foreground); font-weight: 600; }
+.docs-bugs__item--closed .docs-bugs__text { color: var(--muted-foreground); }
+.docs-bugs__confirm { grid-column: 1 / -1; padding: 12px; border-radius: 8px; background: var(--muted); display: grid; gap: 8px; }
+.docs-bugs__confirm p { margin: 0; font-size: 13px; line-height: 20px; }
+.docs-bugs__actions { display: flex; gap: 8px; }
+.docs-bugs__error { color: #9b1c1c; }

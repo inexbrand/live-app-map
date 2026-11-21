@@ -12,6 +12,7 @@ import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
 import { docsAssetMiddleware } from './src/lib/docs-asset-middleware';
 import { monorepoScanRecipes } from './src/lib/map-scan-recipes';
 import { mapVersionsMiddleware } from './src/lib/map-versions-middleware';
+import { docsWriteMiddleware } from './src/lib/docs-write-middleware';
 import { agentStateMiddleware } from './src/lib/agent-state-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
 import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
@@ -36,6 +37,7 @@ function errorReportsPlugin(): Plugin {
       server.middlewares.use(mcpAgentMiddleware);
       server.middlewares.use(docsAssetMiddleware);
       server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
+      server.middlewares.use(docsWriteMiddleware);
     },
     configurePreviewServer(server) {
       server.middlewares.use(errorReportsMiddleware);

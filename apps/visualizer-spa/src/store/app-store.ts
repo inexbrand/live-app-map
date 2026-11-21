@@ -29,6 +29,7 @@ import {
   type AppMapPageState,
   type DeviceViewport,
   type Diagnostic,
+  type DocsModel,
   type LiveAppMapDocument,
 } from '@live-app-map/schema';
 import { create } from 'zustand';
@@ -136,6 +137,8 @@ type AppStore = {
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
   /** Разбирает liveappmap / enterprise JSON; false — ошибка уже в lastLoadError */
   loadUnknownJson: (raw: unknown) => boolean;
+  /** Заменяет раздел docs открытой карты (документация с диска, отметка пункта 09-bugs). */
+  setDocs: (docs: DocsModel) => void;
   clearMap: () => void;
   clearLoadError: () => void;
   setMode: (mode: ViewMode) => void;
@@ -459,6 +462,13 @@ export const useAppStore = create<AppStore>((set, get) => ({
     });
     get().pushLog({ level: 'error', source: 'system', message });
     return false;
+  },
+
+  setDocs: (docs) => {
+    const doc = get().document;
+    if (doc !== null) {
+      set({ document: { ...doc, docs } });
+    }
   },
 
   clearMap: () => {
