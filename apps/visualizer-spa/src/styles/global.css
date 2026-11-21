@@ -1034,18 +1034,18 @@ code,
   background: #0c0c0c !important;
   border: 1px solid var(--border) !important;
   border-radius: var(--radius) !important;
-  width: 140px !important;
-  height: 100px !important;
+  /* Размер задаёт LamMiniMap (style): SVG и панель совпадают, рамка вьюпорта не обрезана. */
+  overflow: hidden;
 }
 
 .react-flow__minimap-mask {
   fill: rgba(255, 255, 255, 0.08) !important;
 }
 
-.react-flow__minimap-node {
-  fill: #a3a3a3 !important;
-  stroke: none !important;
-}
+/* Рамки групп — только контур: заливка закрывала экраны. */
+.react-flow__minimap-node.lam-mm-frame { fill: none; stroke: #404040; stroke-width: 8px; }
+.react-flow__minimap-node.lam-mm-page { fill: #d4d4d4; stroke: none; }
+.react-flow__minimap-node.lam-mm-service { fill: #737373; stroke: none; }
 
 .react-flow__controls {
   border: 1px solid var(--border) !important;

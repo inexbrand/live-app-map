@@ -5,7 +5,6 @@ import {
   Background,
   BackgroundVariant,
   Controls,
-  MiniMap,
   ReactFlow,
   type Edge,
   type Node,
@@ -18,6 +17,7 @@ import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
 import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
 import { RevealSelected } from './RevealSelected';
+import { LamMiniMap } from './LamMiniMap';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
@@ -226,7 +226,7 @@ export function AppMapCanvas() {
           size={1.25}
           color="#2a2a2a"
         />
-        <MiniMap pannable zoomable />
+        <LamMiniMap />
         <Controls />
       </ReactFlow>
     </div>
