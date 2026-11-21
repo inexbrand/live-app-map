@@ -32,6 +32,7 @@ import {
 import { runScan } from '../packages/cli/src/index';
 import type { AppMapDocument, AppMapNode, AppMapPageState, CodeModel } from '../packages/schema/src/types';
 import { attachKorborCode, type KorborSurfaceDoc } from './korbor-code';
+import { fetchCmsPages, withCmsPages } from './korbor-site-pages';
 
 /** Репозиторий Korbor: `KORBOR_DIR` или соседний каталог основного checkout (../korbor). */
 const KORBOR = path.resolve(process.env['KORBOR_DIR'] ?? path.join(import.meta.dir, '../../korbor'));
@@ -267,6 +268,12 @@ async function main(): Promise<void> {
     let doc = t.enrich(result.document);
     if (t.name === 'korbor-site') {
       doc = enrichSite(doc, t.baseUrl);
+      const cms = await fetchCmsPages(t.baseUrl);
+      if (cms === null) {
+        console.log(`[warning] CMS сайта не отвечает (${t.baseUrl}/api/pages): страницы CMS не добавлены — запустите site`);
+      } else {
+        doc = withCmsPages(doc, t.baseUrl, cms);
+      }
     }
     surfaceDocs.push({ id: t.name.replace('korbor-', ''), doc });
   }

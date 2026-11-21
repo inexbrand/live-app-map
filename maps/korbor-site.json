@@ -1,7 +1,7 @@
 {
   "formatVersion": 2,
   "kind": "live-app-map",
-  "generatedAt": "2026-11-21T13:10:52.959Z",
+  "generatedAt": "2026-11-21T13:14:48.125Z",
   "generator": {
     "name": "@live-app-map/scanner-next",
     "version": "0.1.0"
@@ -69,6 +69,132 @@
       "url": "http://localhost:16001/admin/collections",
       "groupIds": [
         "cms"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:docs",
+      "kind": "page",
+      "title": "Документы",
+      "pathPattern": "/docs",
+      "pathExample": "/docs",
+      "url": "http://localhost:16001/docs",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:contacts",
+      "kind": "page",
+      "title": "Контакты",
+      "pathPattern": "/contacts",
+      "pathExample": "/contacts",
+      "url": "http://localhost:16001/contacts",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:faq",
+      "kind": "page",
+      "title": "Вопросы и ответы",
+      "pathPattern": "/faq",
+      "pathExample": "/faq",
+      "url": "http://localhost:16001/faq",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:about",
+      "kind": "page",
+      "title": "О платформе",
+      "pathPattern": "/about",
+      "pathExample": "/about",
+      "url": "http://localhost:16001/about",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:guarantees",
+      "kind": "page",
+      "title": "Гарантии и споры",
+      "pathPattern": "/guarantees",
+      "pathExample": "/guarantees",
+      "url": "http://localhost:16001/guarantees",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:pricing",
+      "kind": "page",
+      "title": "Тарифы и выплаты",
+      "pathPattern": "/pricing",
+      "pathExample": "/pricing",
+      "url": "http://localhost:16001/pricing",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:how-it-works",
+      "kind": "page",
+      "title": "Как это работает",
+      "pathPattern": "/how-it-works",
+      "pathExample": "/how-it-works",
+      "url": "http://localhost:16001/how-it-works",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:recruiters",
+      "kind": "page",
+      "title": "Рекрутерам",
+      "pathPattern": "/recruiters",
+      "pathExample": "/recruiters",
+      "url": "http://localhost:16001/recruiters",
+      "groupIds": [
+        "marketing"
+      ],
+      "iframePolicy": {
+        "enabled": true
+      }
+    },
+    {
+      "id": "site-cms:employers",
+      "kind": "page",
+      "title": "Работодателям",
+      "pathPattern": "/employers",
+      "pathExample": "/employers",
+      "url": "http://localhost:16001/employers",
+      "groupIds": [
+        "marketing"
       ],
       "iframePolicy": {
         "enabled": true
@@ -475,6 +601,69 @@
       "kind": "wraps",
       "confidence": "high",
       "label": "wraps"
+    },
+    {
+      "id": "edge:site-home->site-cms:docs",
+      "from": "site-home",
+      "to": "site-cms:docs",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:contacts",
+      "from": "site-home",
+      "to": "site-cms:contacts",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:faq",
+      "from": "site-home",
+      "to": "site-cms:faq",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:about",
+      "from": "site-home",
+      "to": "site-cms:about",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:guarantees",
+      "from": "site-home",
+      "to": "site-cms:guarantees",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:pricing",
+      "from": "site-home",
+      "to": "site-cms:pricing",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:how-it-works",
+      "from": "site-home",
+      "to": "site-cms:how-it-works",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:recruiters",
+      "from": "site-home",
+      "to": "site-cms:recruiters",
+      "kind": "link",
+      "confidence": "medium"
+    },
+    {
+      "id": "edge:site-home->site-cms:employers",
+      "from": "site-home",
+      "to": "site-cms:employers",
+      "kind": "link",
+      "confidence": "medium"
     }
   ],
   "groups": [
