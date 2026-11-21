@@ -1354,3 +1354,28 @@ kbd,
 .mono {
   font-variant-numeric: tabular-nums;
 }
+
+/* Рамка группы нод: поверхность приложения или сервисы. */
+.group-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.015);
+  pointer-events: none;
+}
+.group-frame__title {
+  padding: 22px 40px 0;
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--foreground);
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.group-frame__count {
+  font-size: 28px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
