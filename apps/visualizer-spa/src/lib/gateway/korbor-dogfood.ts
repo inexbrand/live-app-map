@@ -95,8 +95,12 @@ export async function korborBearer(r: KorborRenewal, value: string): Promise<Bea
     body: JSON.stringify({ initData: value }),
     signal: AbortSignal.timeout(15_000),
   });
-  const body: unknown = await res.json().catch(() => null);
-  const data = typeof body === 'object' && body !== null && 'data' in body && typeof body.data === 'object' && body.data !== null ? body.data : null;
-  const token = data !== null && 'accessToken' in data && typeof data.accessToken === 'string' ? data.accessToken : '';
-  return res.ok && token !== '' ? { ok: true, token } : { ok: false, error: `вход мини-аппа не выдан (HTTP ${res.status})` };
+  const token = res.ok ? accessTokenOf(await res.json().catch(() => null)) : '';
+  return token !== '' ? { ok: true, token } : { ok: false, error: `вход мини-аппа не выдан (HTTP ${res.status})` };
+}
+
+/** data.accessToken ответа входа или ''. */
+function accessTokenOf(body: unknown): string {
+  const data = typeof body === 'object' && body !== null && 'data' in body ? body.data : null;
+  return typeof data === 'object' && data !== null && 'accessToken' in data && typeof data.accessToken === 'string' ? data.accessToken : '';
 }

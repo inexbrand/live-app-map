@@ -46,20 +46,23 @@ export function isListPath(path: string): boolean {
  * @param nodeId - экран
  */
 export function screenApiGets(doc: AppMapDocument, nodeId: string): string[] {
-  const out = new Set<string>();
-  for (const e of doc.edges) {
-    const ids = e.kind === 'api' && e.from === nodeId ? e.metadata?.['routeIds'] : undefined;
-    if (!Array.isArray(ids)) {
-      continue;
-    }
-    for (const id of ids) {
-      const m = typeof id === 'string' ? /\sGET\s(\/\S+)$/.exec(id) : null;
-      if (m?.[1] !== undefined) {
-        out.add(m[1]);
-      }
-    }
-  }
-  return [...out];
+  const ids = doc.edges.flatMap((e) => {
+    const v = e.kind === 'api' && e.from === nodeId ? e.metadata?.['routeIds'] : undefined;
+    return Array.isArray(v) ? v : [];
+  });
+  return [...new Set(ids.map(getPathOf).filter((p) => p !== null))];
+}
+
+/** Путь GET-роута из id `api:<сервис> GET /путь`; другой метод — null. */
+function getPathOf(routeId: unknown): string | null {
+  const m = typeof routeId === 'string' ? /\sGET\s(\/\S+)$/.exec(routeId) : null;
+  return m?.[1] ?? null;
+}
+
+/** Путь списка для роута: `…/vacancies/:id` → `…/vacancies`, список — как есть. */
+function listPathOf(apiPath: string): string {
+  const parts = apiPath.split('/');
+  return (parts[parts.length - 1] ?? '').startsWith(':') ? parts.slice(0, -1).join('/') : apiPath;
 }
 
 /**
@@ -80,17 +83,9 @@ export function paramSources(pathPattern: string, apiGets: readonly string[]): P
     if (param === null || prev === undefined || prev === '' || paramOf(prev) !== null) {
       return;
     }
-    const lists = new Set<string>();
-    for (const path of apiGets) {
-      const parts = path.split('/');
-      const last = parts[parts.length - 1] ?? '';
-      const list = last.startsWith(':') ? parts.slice(0, -1).join('/') : path;
-      if (list.endsWith(`/${prev}`) && isListPath(list)) {
-        lists.add(list);
-      }
-    }
-    if (lists.size > 0) {
-      out.push({ param, lists: [...lists].sort() });
+    const lists = [...new Set(apiGets.map(listPathOf))].filter((l) => l.endsWith(`/${prev}`) && isListPath(l));
+    if (lists.length > 0) {
+      out.push({ param, lists: lists.sort() });
     }
   });
   return out;
@@ -140,7 +135,17 @@ export function sampledPath(doc: AppMapDocument, node: AppMapNode, samples: Read
   if (samples === undefined || node.kind === 'service' || !pattern.includes('[')) {
     return null;
   }
-  const sources = nodeParamSources(doc, node);
+  const values = paramValues(nodeParamSources(doc, node), samples);
+  const segments = pattern.split('/').map((seg) => {
+    const p = paramOf(seg);
+    const v = p === null ? undefined : values.get(p);
+    return p === null ? seg : v === undefined ? null : encodeURIComponent(v);
+  });
+  return segments.every((s) => s !== null) ? segments.join('/') : null;
+}
+
+/** Параметр → первое непустое значение из его списков. */
+function paramValues(sources: readonly ParamSource[], samples: ReadonlyMap<string, string | null>): Map<string, string> {
   const values = new Map<string, string>();
   for (const s of sources) {
     const value = s.lists.map((l) => samples.get(l)).find((v) => typeof v === 'string' && v !== '');
@@ -148,11 +153,7 @@ export function sampledPath(doc: AppMapDocument, node: AppMapNode, samples: Read
       values.set(s.param, value);
     }
   }
-  const segments = pattern.split('/').map((seg) => {
-    const p = paramOf(seg);
-    return p === null ? seg : values.get(p) === undefined ? null : encodeURIComponent(values.get(p) ?? '');
-  });
-  return segments.every((s) => s !== null) ? segments.join('/') : null;
+  return values;
 }
 
 /**
@@ -162,32 +163,38 @@ export function sampledPath(doc: AppMapDocument, node: AppMapNode, samples: Read
  * @param body - JSON ответа
  */
 export function firstId(body: unknown): string | null {
-  const pick = (v: unknown): object | null => (typeof v === 'object' && v !== null && !Array.isArray(v) ? v : null);
-  const listOf = (v: unknown): unknown[] | null => {
-    if (Array.isArray(v)) {
-      return v;
-    }
-    const o = pick(v);
-    if (o === null) {
-      return null;
-    }
-    for (const key of ['items', 'data', 'results', 'rows']) {
-      const inner = Reflect.get(o, key);
-      const list = Array.isArray(inner) ? inner : key === 'data' ? listOf(inner) : null;
-      if (list !== null) {
-        return list;
-      }
-    }
-    return null;
-  };
   for (const item of listOf(body) ?? []) {
-    const o = pick(item);
-    const id = o === null ? undefined : Reflect.get(o, 'id');
-    if ((typeof id === 'string' && id !== '') || typeof id === 'number') {
-      return String(id);
+    const id = idOf(item);
+    if (id !== null) {
+      return id;
     }
   }
   return null;
+}
+
+/** Объект (не массив) или null. */
+function objectOf(v: unknown): object | null {
+  return typeof v === 'object' && v !== null && !Array.isArray(v) ? v : null;
+}
+
+/** Записи ответа списка: массив, items/results/rows или data (в т.ч. data.items). */
+function listOf(v: unknown): unknown[] | null {
+  if (Array.isArray(v)) {
+    return v;
+  }
+  const o = objectOf(v);
+  if (o === null) {
+    return null;
+  }
+  const found = ['items', 'results', 'rows'].map((k) => Reflect.get(o, k)).find((x) => Array.isArray(x));
+  return Array.isArray(found) ? found : listOf(Reflect.get(o, 'data'));
+}
+
+/** id записи строкой: непустая строка или число. */
+function idOf(item: unknown): string | null {
+  const o = objectOf(item);
+  const id = o === null ? undefined : Reflect.get(o, 'id');
+  return (typeof id === 'string' && id !== '') || typeof id === 'number' ? String(id) : null;
 }
 
 /**
