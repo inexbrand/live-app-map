@@ -20,6 +20,7 @@
     "@live-app-map/mcp-server": "workspace:*",
     "@live-app-map/schema": "workspace:*",
     "@xyflow/react": "^12.6.0",
+    "d3-force": "^3",
     "lucide-react": "^0.487.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
@@ -31,6 +32,7 @@
   "devDependencies": {
     "@live-app-map/cli": "workspace:*",
     "@playwright/test": "^1.51.0",
+    "@types/d3-force": "^3",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",

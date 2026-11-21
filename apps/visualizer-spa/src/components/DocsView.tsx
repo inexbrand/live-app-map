@@ -2,9 +2,9 @@
  * Вид «Документация»: эпохи задач (дата, цель, статус, готовность по 09-bugs),
  * заметки агентов и руководства; документ markdown со ссылками в карту и скриншотами эпохи.
  */
-import { useEffect, useMemo, useState } from 'react';
-import { X } from 'lucide-react';
-import { buildCodeIndex, buildDocRefIndex } from '@live-app-map/graph';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Check, Link2, X } from 'lucide-react';
+import { buildCodeIndex, buildDocRefIndex, type DocRefIndex } from '@live-app-map/graph';
 import type { DocEpoch, DocFile, DocsModel, EpochReadiness } from '@live-app-map/schema';
 import { docsAssetUrl } from '../lib/docs-asset-url';
 import {
@@ -20,6 +20,46 @@ import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Button, Chip, Input } from '../ui';
 import { DocMarkdown } from './Markdown';
+import { DocGraphView } from './graph/DocGraphView';
+import { LocalGraph } from './graph/LocalGraph';
+
+/** Переключатель «Текст / Граф» вида «Документация». Клавиша G. */
+function DocsModeSwitch() {
+  const mode = useViewStore((s) => s.docsMode);
+  const setMode = useViewStore((s) => s.setDocsMode);
+  return (
+    <div className="docs-mode" role="group" aria-label="Режим документации">
+      <button type="button" className={`docs-mode__btn${mode === 'text' ? ' docs-mode__btn--on' : ''}`} aria-pressed={mode === 'text'} onClick={() => setMode('text')}>
+        Текст
+      </button>
+      <button type="button" className={`docs-mode__btn${mode === 'graph' ? ' docs-mode__btn--on' : ''}`} aria-pressed={mode === 'graph'} onClick={() => setMode('graph')} data-testid="docs-mode-graph" title="Граф связей (G)">
+        Граф
+      </button>
+    </div>
+  );
+}
+
+/** Кнопка «Скопировать ссылку» на открытое место (адрес страницы хранит документ). */
+function CopyLink() {
+  const [done, setDone] = useState(false);
+  return (
+    <Button
+      type="button"
+      size="sm"
+      variant="ghost"
+      onClick={() => {
+        void navigator.clipboard?.writeText(window.location.href).then(() => {
+          setDone(true);
+          window.setTimeout(() => setDone(false), 1600);
+        });
+      }}
+      title="Ссылка на этот документ"
+    >
+      {done ? <Check size={16} /> : <Link2 size={16} />}
+      {done ? 'Скопировано' : 'Ссылка'}
+    </Button>
+  );
+}
 
 const READINESS: readonly { value: EpochReadiness | null; label: string }[] = [
   { value: null, label: 'Все' },
@@ -48,10 +88,7 @@ function EpochRow(props: { readonly epoch: DocEpoch; readonly active: boolean; r
           <span className="docs-row__meta">{epochDateLabel(e.date)}</span>
         </span>
         {e.summary === undefined ? null : <span className="docs-row__summary">{e.summary}</span>}
-        <span className={`docs-row__state${e.readiness === 'not-ready' ? ' docs-row__state--open' : ''}`}>
-          {readinessLabel(e)}
-          {e.declaredStatus === undefined ? '' : ` · ${e.declaredStatus.split(/[\s(]/)[0] ?? ''}`}
-        </span>
+        <span className={`docs-row__state${e.readiness === 'not-ready' ? ' docs-row__state--open' : ''}`}>{readinessLabel(e)}</span>
       </button>
     </li>
   );
@@ -70,13 +107,16 @@ function FileRow(props: { readonly file: DocFile; readonly active: boolean; read
 }
 
 /** Шапка эпохи: дата, статус, готовность, цель, открытые пункты. */
-function EpochHead(props: { readonly epoch: DocEpoch }) {
+function EpochHead(props: { readonly epoch: DocEpoch; readonly links: ReactNode; readonly renderBugs: (text: string) => ReactNode }) {
   const e = props.epoch;
   const [allBugs, setAllBugs] = useState(false);
   const bugs = allBugs ? e.openBugs : e.openBugs.slice(0, BUGS_SHOWN);
   return (
     <header className="docs-doc__head" data-testid="docs-epoch-head">
-      <h2>{e.slug}</h2>
+      <div className="docs-doc__title">
+        <h2>{e.slug}</h2>
+        {props.links}
+      </div>
       <p className="docs-doc__meta">
         {[epochDateLabel(e.date), e.declaredStatus === undefined ? '' : `статус: ${e.declaredStatus}`, readinessLabel(e)]
           .filter((s) => s !== '')
@@ -88,11 +128,7 @@ function EpochHead(props: { readonly epoch: DocEpoch }) {
           <h3>
             Открытые пункты <span className="docs-count">{e.openBugs.length}</span>
           </h3>
-          <ul>
-            {bugs.map((b) => (
-              <li key={b}>{b}</li>
-            ))}
-          </ul>
+          {props.renderBugs(bugs.map((b) => `- ${b}`).join('\n'))}
           {e.openBugs.length > BUGS_SHOWN && !allBugs ? (
             <Button type="button" size="sm" variant="ghost" onClick={() => setAllBugs(true)}>
               ещё {e.openBugs.length - BUGS_SHOWN}
@@ -140,15 +176,23 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
   );
   const [zoom, setZoom] = useState<string | null>(null);
   const e = open.epoch;
+  const md = (text: string, path: string): ReactNode => (
+    <DocMarkdown text={text} docPath={path} root={docs.root} refs={refs} knownDocs={knownDocs} onOpenDoc={props.onOpenDoc} />
+  );
   return (
     <main className="docs-doc" data-testid="docs-doc">
+      <div className="docs-doc__layout">
+      <div className="docs-doc__main">
       {e === undefined ? (
         <header className="docs-doc__head">
-          <h2>{open.file.title}</h2>
+          <div className="docs-doc__title">
+            <h2>{open.file.title}</h2>
+            <CopyLink />
+          </div>
           <p className="docs-doc__meta">{open.file.path}</p>
         </header>
       ) : (
-        <EpochHead key={e.id} epoch={e} />
+        <EpochHead key={e.id} epoch={e} links={<CopyLink />} renderBugs={(text) => md(text, `${e.dir}/09-bugs.md`)} />
       )}
       {e === undefined ? null : (
         <nav className="docs-tabs" aria-label="Файлы эпохи">
@@ -168,22 +212,14 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
       )}
       <article className="docs-doc__body">
         {e === undefined ? null : <p className="docs-doc__file">{open.file.path.slice(e.dir.length + 1)}</p>}
-        {open.file.text.trim() === '' ? (
-          <p className="docs-empty">Файл пуст.</p>
-        ) : (
-          <DocMarkdown
-            text={open.file.text}
-            docPath={open.file.path}
-            root={docs.root}
-            refs={refs}
-            knownDocs={knownDocs}
-            onOpenDoc={props.onOpenDoc}
-          />
-        )}
+        {open.file.text.trim() === '' ? <p className="docs-empty">Файл пуст — в нём ещё ничего не записано.</p> : md(open.file.text, open.file.path)}
         {e === undefined ? null : (
           <Gallery root={docs.root} images={galleryImages(e.images, open.file.path, open.file.text)} onOpen={setZoom} />
         )}
       </article>
+      </div>
+      <LocalGraph docPath={open.file.path} />
+      </div>
       {zoom === null ? null : (
         <div className="docs-zoom" role="dialog" aria-label={zoom} onClick={() => setZoom(null)}>
           <img src={docsAssetUrl(docs.root, zoom)} alt={zoom} />
@@ -201,6 +237,7 @@ export function DocsView() {
   const docs = useAppStore((s) => s.document?.docs);
   const docPath = useViewStore((s) => s.doc);
   const openDoc = useViewStore((s) => s.openDoc);
+  const docsMode = useViewStore((s) => s.docsMode);
   const [query, setQuery] = useState('');
   const [readiness, setReadiness] = useState<EpochReadiness | null>(null);
   const sections = useMemo(() => (docs === undefined ? null : docsSections(docs, query, readiness)), [docs, query, readiness]);
@@ -220,9 +257,17 @@ export function DocsView() {
     );
   }
   const notReady = docs.epochs.filter((e) => e.readiness === 'not-ready').length;
+  if (docsMode === 'graph') {
+    return (
+      <div className="docs-view docs-view--graph" data-testid="docs-view">
+        <DocGraphView switcher={<DocsModeSwitch />} />
+      </div>
+    );
+  }
   return (
     <div className="docs-view" data-testid="docs-view">
       <aside className="docs-list">
+        <DocsModeSwitch />
         <Input id="docs-search" aria-label="Поиск по документации" value={query} placeholder="Эпоха, заметка, слово из текста" onChange={(ev) => setQuery(ev.target.value)} />
         <div className="docs-list__filters" role="group" aria-label="Готовность эпох">
           {READINESS.map((r) => (
@@ -288,7 +333,13 @@ export function DocsView() {
           </section>
         )}
       </aside>
-      {open === null ? <p className="docs-empty docs-empty--pane">Выберите документ слева.</p> : <DocPane docs={docs} open={open} onOpenDoc={openDoc} />}
+      {open === null ? (
+        <p className="docs-empty docs-empty--pane" role="status">
+          {docPath === null ? 'Выберите документ слева.' : `Документа «${docPath}» нет в карте: его удалили или карта снята раньше. Выберите документ слева.`}
+        </p>
+      ) : (
+        <DocPane docs={docs} open={open} onOpenDoc={openDoc} />
+      )}
     </div>
   );
 }

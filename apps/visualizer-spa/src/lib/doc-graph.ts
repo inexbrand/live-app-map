@@ -51,6 +51,19 @@ export const NODE_KIND_LABELS: ReadonlyMap<GraphNodeKind, string> = new Map([
   ['file', 'Файлы кода'],
 ]);
 
+/** Тип узла в единственном числе — для карточки узла. */
+export const NODE_KIND_SINGULAR: ReadonlyMap<GraphNodeKind, string> = new Map([
+  ['epoch', 'Эпоха'],
+  ['epoch-file', 'Файл эпохи'],
+  ['note', 'Заметка'],
+  ['guide', 'Руководство'],
+  ['route', 'Роут'],
+  ['table', 'Таблица'],
+  ['screen', 'Экран'],
+  ['service', 'Сервис'],
+  ['file', 'Файл кода'],
+]);
+
 /** Путь к файлу кода в `коде`, который карта не знает: `apps/api/src/x.ts:12`. */
 const CODE_PATH = /^([\w@.-]+(?:\/[\w@.#[\]()-]+)+\.[a-z]{1,5})(?::\d+)?$/i;
 

@@ -760,3 +760,284 @@
     grid-template-columns: 240px minmax(0, 1fr) 360px;
   }
 }
+
+/* ---------- режим документации: текст / граф ---------- */
+.docs-mode {
+  display: inline-grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  gap: 4px;
+  padding: 4px;
+  border-radius: var(--radius);
+  background: var(--muted);
+}
+.docs-mode__btn {
+  height: 32px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  cursor: pointer;
+}
+.docs-mode__btn:hover {
+  color: var(--foreground);
+}
+.docs-mode__btn--on {
+  background: var(--background);
+  color: var(--foreground);
+  font-weight: 600;
+}
+
+/* ---------- документ + локальный граф ---------- */
+.docs-doc__layout {
+  display: grid;
+  grid-template-columns: minmax(0, 720px) 300px;
+  gap: 48px;
+  align-items: start;
+}
+.docs-doc__main {
+  min-width: 0;
+}
+.docs-doc__title {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+.docs-doc__title h2 {
+  flex: 1;
+  min-width: 0;
+}
+.docs-doc__bugs .md {
+  font-size: 14px;
+  line-height: 20px;
+}
+.docs-doc__bugs .md ul {
+  margin: 0;
+}
+.local-graph {
+  position: sticky;
+  top: 0;
+  display: grid;
+  gap: 12px;
+  max-height: calc(100vh - 120px);
+  overflow: auto;
+  padding-top: 4px;
+}
+.local-graph__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+.local-graph__head h3 {
+  margin: 0 !important;
+}
+.local-graph__depth {
+  display: flex;
+  gap: 4px;
+}
+.local-graph__full {
+  justify-self: start;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 12px;
+  line-height: 16px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.local-graph__full:hover {
+  color: var(--foreground);
+}
+.local-graph__list {
+  display: grid;
+  gap: 4px;
+}
+.local-graph__list h3 {
+  margin: 0 0 4px !important;
+}
+
+/* ---------- граф документации ---------- */
+.docs-view--graph {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+}
+.doc-graph {
+  display: grid;
+  grid-template-columns: 300px minmax(0, 1fr);
+  min-height: 0;
+  height: 100%;
+}
+.doc-graph--card {
+  grid-template-columns: 300px minmax(0, 1fr) 340px;
+}
+.doc-graph__side,
+.doc-graph__card {
+  overflow: auto;
+  padding: 24px 12px;
+  display: grid;
+  align-content: start;
+  gap: 12px;
+}
+.doc-graph__side {
+  border-right: 1px solid var(--border);
+}
+.doc-graph__card {
+  border-left: 1px solid var(--border);
+  padding: 24px 20px;
+}
+.doc-graph__card h2 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 28px;
+  font-weight: 600;
+  word-break: break-word;
+}
+.doc-graph__kind {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+.doc-graph__detail {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+  word-break: break-word;
+}
+.doc-graph__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.doc-graph__links {
+  display: grid;
+  gap: 16px;
+  margin-top: 12px;
+}
+.doc-graph__links h3 {
+  margin: 0 !important;
+}
+.doc-graph__group {
+  display: grid;
+  gap: 4px;
+}
+.doc-graph__group-title {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 20px;
+}
+.doc-graph__link,
+.doc-graph__kind-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 32px;
+  padding: 4px 8px;
+  border: 0;
+  border-radius: var(--radius);
+  background: none;
+  color: var(--foreground);
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.doc-graph__link span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.doc-graph__link:hover,
+.doc-graph__link--on,
+.doc-graph__kind-row:hover {
+  background: var(--muted);
+}
+.doc-graph__link:disabled {
+  cursor: default;
+  color: var(--muted-foreground);
+}
+.doc-graph__link:disabled:hover {
+  background: none;
+}
+.doc-graph__kind-row span:nth-child(2) {
+  flex: 1;
+}
+.doc-graph__kind-row--off {
+  color: var(--muted-foreground);
+}
+.doc-graph__kind-row--off .kind-mark {
+  opacity: 0.4;
+}
+.doc-graph__kinds {
+  display: grid;
+  gap: 0;
+}
+.doc-graph__reset {
+  margin-left: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--muted-foreground);
+  font: inherit;
+  font-size: 12px;
+  font-weight: 400;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+.doc-graph__stats {
+  margin: 0;
+  padding: 0 8px;
+  color: var(--muted-foreground);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+.doc-graph__stage {
+  position: relative;
+  min-width: 0;
+  min-height: 0;
+}
+.doc-graph__canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+  cursor: grab;
+  touch-action: none;
+}
+.doc-graph__canvas--compact {
+  height: 260px;
+  border-radius: var(--radius);
+  background: var(--card);
+  cursor: pointer;
+}
+.kind-mark {
+  flex: 0 0 auto;
+  color: var(--foreground);
+}
+
+@media (max-width: 1279px) {
+  .docs-doc__layout {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .local-graph {
+    position: static;
+    max-height: none;
+  }
+  .doc-graph--card {
+    grid-template-columns: 260px minmax(0, 1fr) 300px;
+  }
+}
