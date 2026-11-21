@@ -1,0 +1,460 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`каталог и вызов tools каталог tools/list не меняется (контракт для агентов) 1`] = `
+[
+  {
+    "description": "Список pages из liveappmap / enterprise JSON файла карты",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к .json карте",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "list_map_pages",
+  },
+  {
+    "description": "Детали page по id из карты",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к .json карте",
+          "type": "string",
+        },
+        "pageId": {
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+        "pageId",
+      ],
+      "type": "object",
+    },
+    "name": "get_page",
+  },
+  {
+    "description": "Сохранить feedback v1 (note + page) в .lam-feedback/ и вернуть пути артефактов",
+    "inputSchema": {
+      "properties": {
+        "feedback": {
+          "description": "live-app-map-feedback v1 object",
+          "type": "object",
+        },
+      },
+      "required": [
+        "feedback",
+      ],
+      "type": "object",
+    },
+    "name": "submit_feedback",
+  },
+  {
+    "description": "Список сохранённых feedback JSON в .lam-feedback/",
+    "inputSchema": {
+      "properties": {},
+      "type": "object",
+    },
+    "name": "list_feedback",
+  },
+  {
+    "description": "Что сейчас открыто в визуализаторе: карта, выбранный экран, live URL, роль",
+    "inputSchema": {
+      "properties": {},
+      "type": "object",
+    },
+    "name": "get_visualizer_state",
+  },
+  {
+    "description": "Попросить пользователя снять экран визуализатора; результат — get_snapshot",
+    "inputSchema": {
+      "properties": {
+        "note": {
+          "description": "Что нужно увидеть",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "request_snapshot",
+  },
+  {
+    "description": "Последний снимок экрана (путь к PNG) и статус просьбы",
+    "inputSchema": {
+      "properties": {
+        "requestId": {
+          "description": "id из request_snapshot",
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "get_snapshot",
+  },
+  {
+    "description": "Замечания пользователя к экранам и компонентам (визуализатор): текст, экран, компонент, файл:строка, статус. Исправив — add_change_note.",
+    "inputSchema": {
+      "properties": {
+        "author": {
+          "enum": [
+            "user",
+            "agent",
+          ],
+          "type": "string",
+        },
+        "mapName": {
+          "description": "имя карты",
+          "type": "string",
+        },
+        "pageId": {
+          "description": "id экрана",
+          "type": "string",
+        },
+        "query": {
+          "description": "подстрока текста, экрана или компонента",
+          "type": "string",
+        },
+        "status": {
+          "description": "open — ждут исправления",
+          "enum": [
+            "open",
+            "fixed",
+          ],
+          "type": "string",
+        },
+      },
+      "type": "object",
+    },
+    "name": "list_comments",
+  },
+  {
+    "description": "Ветка замечания целиком: привязка к элементу (селектор, путь DOM, рамка, компонент), события, путь к снимку PNG",
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "description": "id замечания",
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+      ],
+      "type": "object",
+    },
+    "name": "get_comment",
+  },
+  {
+    "description": "Ответ агента «что изменил»: текст, файлы, коммит. С commentId — в ветку замечания (resolve=true по умолчанию ставит «исправлено»); без commentId — новая заметка агента к экрану pageId (и элементу selector).",
+    "inputSchema": {
+      "properties": {
+        "commentId": {
+          "description": "id замечания, на которое отвечаем",
+          "type": "string",
+        },
+        "commit": {
+          "description": "хэш коммита",
+          "type": "string",
+        },
+        "files": {
+          "description": "изменённые файлы от корня репозитория",
+          "items": {
+            "type": "string",
+          },
+          "type": "array",
+        },
+        "mapName": {
+          "description": "карта для новой заметки",
+          "type": "string",
+        },
+        "pageId": {
+          "description": "экран для новой заметки (без commentId)",
+          "type": "string",
+        },
+        "pageTitle": {
+          "description": "название экрана для новой заметки",
+          "type": "string",
+        },
+        "resolve": {
+          "description": "поставить «исправлено» (по умолчанию true)",
+          "type": "boolean",
+        },
+        "selector": {
+          "description": "CSS-селектор элемента для новой заметки",
+          "type": "string",
+        },
+        "text": {
+          "description": "что изменено и почему",
+          "type": "string",
+        },
+      },
+      "required": [
+        "text",
+      ],
+      "type": "object",
+    },
+    "name": "add_change_note",
+  },
+  {
+    "description": "Пометить замечание исправленным (статус fixed)",
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "description": "id замечания",
+          "type": "string",
+        },
+        "note": {
+          "description": "пояснение",
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+      ],
+      "type": "object",
+    },
+    "name": "resolve_comment",
+  },
+  {
+    "description": "Снова открыть замечание (статус open)",
+    "inputSchema": {
+      "properties": {
+        "id": {
+          "description": "id замечания",
+          "type": "string",
+        },
+        "note": {
+          "description": "почему",
+          "type": "string",
+        },
+      },
+      "required": [
+        "id",
+      ],
+      "type": "object",
+    },
+    "name": "reopen_comment",
+  },
+  {
+    "description": "Сервисы проекта (пакеты монорепо) с числом HTTP-роутов, таблиц БД и символов",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "list_services",
+  },
+  {
+    "description": "HTTP-роуты: у какого сервиса какие роуты, кратко что делает каждый и какие таблицы читает/пишет. Фильтр по сервису и подстроке",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+        "query": {
+          "description": "Подстрока метода, пути или описания",
+          "type": "string",
+        },
+        "service": {
+          "description": "Имя сервиса (@korbor/api) или id",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "list_routes",
+  },
+  {
+    "description": "Роут целиком: авторское описание (комментарии) и описание, собранное из кода (вход, таблицы, доступ, ответ), где обработчик, какие таблицы читает и пишет (с признаком N+1), какие экраны его вызывают, а если ни один — почему",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+        "route": {
+          "description": "id роута или «GET /api/v1/…»",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+        "route",
+      ],
+      "type": "object",
+    },
+    "name": "get_route",
+  },
+  {
+    "description": "Архитектура API: сервисы → разделы (/api/v1/admin) → модули (/api/v1/admin/vacancies) с роутами; у роута — авторское описание и описание из кода; покрытие описаниями, проверкой входа, доступом и экранами (без экранов — по причинам). Фильтр по сервису, методу, таблице, «без описания» (авторского), «без экранов»",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+        "method": {
+          "description": "HTTP-метод: GET, POST …",
+          "type": "string",
+        },
+        "noScreens": {
+          "description": "Только роуты, которые не вызывает ни один экран, с причиной",
+          "type": "boolean",
+        },
+        "service": {
+          "description": "Имя сервиса (@korbor/api) или id",
+          "type": "string",
+        },
+        "table": {
+          "description": "Только роуты, которые читают или пишут таблицу",
+          "type": "string",
+        },
+        "undocumented": {
+          "description": "Только роуты без авторского описания",
+          "type": "boolean",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "describe_api",
+  },
+  {
+    "description": "Таблицы БД: имя в БД и в коде, сервис, число колонок, описание. Фильтр по подстроке",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+        "query": {
+          "description": "Подстрока имени или описания",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "list_tables",
+  },
+  {
+    "description": "Схема таблицы: колонки (тип, ключ, NOT NULL, default, enum), внешние ключи в обе стороны, роуты, которые её читают и пишут",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "type": "string",
+        },
+        "table": {
+          "description": "Имя таблицы в БД или в коде",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+        "table",
+      ],
+      "type": "object",
+    },
+    "name": "get_table",
+  },
+  {
+    "description": "Эпохи задач проекта (docs/epoch/<задача>#<дата>): дата, цель, статус из INDEX.md, готовность (ready — открытых пунктов в 09-bugs нет, not-ready — есть) и открытые пункты",
+    "inputSchema": {
+      "properties": {
+        "mapPath": {
+          "description": "Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json",
+          "type": "string",
+        },
+        "query": {
+          "description": "Подстрока имени, цели или открытого пункта",
+          "type": "string",
+        },
+        "readiness": {
+          "description": "Только эпохи с этой готовностью",
+          "enum": [
+            "ready",
+            "not-ready",
+            "no-bugs-file",
+          ],
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+      ],
+      "type": "object",
+    },
+    "name": "list_epochs",
+  },
+  {
+    "description": "Эпоха целиком: файлы 00-brief … 09-bugs, INDEX и прочие (markdown), картинки; или один файл эпохи",
+    "inputSchema": {
+      "properties": {
+        "epoch": {
+          "description": "Имя папки (slug#дата) или slug — тогда самая новая",
+          "type": "string",
+        },
+        "file": {
+          "description": "Имя файла эпохи, например 09-bugs.md; без него — все файлы",
+          "type": "string",
+        },
+        "mapPath": {
+          "description": "Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+        "epoch",
+      ],
+      "type": "object",
+    },
+    "name": "get_epoch",
+  },
+  {
+    "description": "Поиск подстроки по всей документации: эпохи, docs/agent-notes, CLAUDE.md/README, docs/*.md. Отдаёт файл, строку и текст строки",
+    "inputSchema": {
+      "properties": {
+        "limit": {
+          "description": "Предел попаданий, по умолчанию 50",
+          "type": "number",
+        },
+        "mapPath": {
+          "description": "Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json",
+          "type": "string",
+        },
+        "query": {
+          "description": "Подстрока без учёта регистра",
+          "type": "string",
+        },
+      },
+      "required": [
+        "mapPath",
+        "query",
+      ],
+      "type": "object",
+    },
+    "name": "search_docs",
+  },
+]
+`;

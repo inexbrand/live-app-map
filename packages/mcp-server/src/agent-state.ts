@@ -83,6 +83,15 @@ function agentDir(lamDir: string): string {
   return path.join(lamDir, 'agent');
 }
 
+/** Файлы канала: у каждого один писатель (см. шапку модуля). */
+const STATE_FILE = 'visualizer-state.json';
+const REQUEST_FILE = 'snapshot-request.json';
+const LATEST_FILE = 'snapshot-latest.json';
+
+function agentFile(lamDir: string, name: string): string {
+  return path.join(agentDir(lamDir), name);
+}
+
 /** Атомарная запись: tmp → rename (обрыв посередине не портит файл). */
 function writeJsonAtomic(file: string, value: unknown): void {
   mkdirSync(path.dirname(file), { recursive: true });
@@ -110,7 +119,7 @@ function readJson<T>(file: string, schema: z.ZodType<T>): T | null {
  * @param state - проверенное состояние
  */
 export function writeVisualizerState(lamDir: string, state: VisualizerState): void {
-  writeJsonAtomic(path.join(agentDir(lamDir), 'visualizer-state.json'), state);
+  writeJsonAtomic(agentFile(lamDir, STATE_FILE), state);
 }
 
 /**
@@ -119,10 +128,7 @@ export function writeVisualizerState(lamDir: string, state: VisualizerState): vo
  * @param lamDir - папка обмена
  */
 export function readVisualizerState(lamDir: string): VisualizerState | null {
-  return readJson(
-    path.join(agentDir(lamDir), 'visualizer-state.json'),
-    visualizerStateSchema,
-  );
+  return readJson(agentFile(lamDir, STATE_FILE), visualizerStateSchema);
 }
 
 /**
@@ -143,7 +149,7 @@ export function writeSnapshotRequest(
     note,
     requestedAt: now.toISOString(),
   };
-  writeJsonAtomic(path.join(agentDir(lamDir), 'snapshot-request.json'), request);
+  writeJsonAtomic(agentFile(lamDir, REQUEST_FILE), request);
   return request;
 }
 
@@ -153,10 +159,7 @@ export function writeSnapshotRequest(
  * @param lamDir - папка обмена
  */
 export function readLatestSnapshot(lamDir: string): SnapshotRecord | null {
-  return readJson(
-    path.join(agentDir(lamDir), 'snapshot-latest.json'),
-    snapshotRecordSchema,
-  );
+  return readJson(agentFile(lamDir, LATEST_FILE), snapshotRecordSchema);
 }
 
 /**
@@ -169,10 +172,7 @@ export function readPendingSnapshotRequest(
   lamDir: string,
   now: Date = new Date(),
 ): SnapshotRequest | null {
-  const request = readJson(
-    path.join(agentDir(lamDir), 'snapshot-request.json'),
-    snapshotRequestSchema,
-  );
+  const request = readJson(agentFile(lamDir, REQUEST_FILE), snapshotRequestSchema);
   if (request === null) {
     return null;
   }
@@ -217,6 +217,6 @@ export function saveSnapshot(
     capturedAt: now.toISOString(),
     bytes: png.length,
   };
-  writeJsonAtomic(path.join(agentDir(lamDir), 'snapshot-latest.json'), record);
+  writeJsonAtomic(agentFile(lamDir, LATEST_FILE), record);
   return record;
 }

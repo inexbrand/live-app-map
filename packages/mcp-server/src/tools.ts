@@ -8,39 +8,64 @@ import {
   readVisualizerState,
   writeSnapshotRequest,
 } from './agent-state';
-import { CODE_HANDLERS, CODE_TOOLS } from './code-tools';
-import { COMMENT_HANDLERS, COMMENT_TOOLS } from './comment-tools';
-import { DOCS_HANDLERS, DOCS_TOOLS } from './docs-tools';
+import { CODE_TOOLS } from './code-tools';
+import { COMMENT_TOOLS } from './comment-tools';
+import { DOCS_TOOLS } from './docs-tools';
 import { listFeedback, saveFeedback } from './feedback-store';
 import { loadMap } from './map-tools';
+import {
+  fail,
+  ok,
+  optionalStr,
+  rawStr,
+  stringProp,
+  toolCatalog,
+  type Tool,
+  type ToolArgs,
+  type ToolContext,
+  type ToolDef,
+  type ToolHandler,
+  type ToolResult,
+} from './tool-kit';
 
-/** Описание tool для tools/list. */
-export type ToolDef = {
-  readonly name: string;
-  readonly description: string;
-  readonly inputSchema: Readonly<Record<string, unknown>>;
-};
+export type { ToolContext, ToolDef, ToolResult } from './tool-kit';
 
-/** Результат tools/call. */
-export type ToolResult = {
-  readonly content: ReadonlyArray<{ readonly type: 'text'; readonly text: string }>;
-  readonly isError?: boolean;
-};
+const mapPathProp = stringProp('Путь к .json карте');
 
-/** Окружение tools. */
-export type ToolContext = {
-  /** Папка обмена (`resolveLamDir`). */
-  readonly lamDir: string;
-};
+function getPage(args: ToolArgs): ToolResult {
+  const pageId = rawStr(args, 'pageId');
+  const page = loadMap(rawStr(args, 'mapPath')).pages.find((p) => p.id === pageId);
+  return page === undefined ? fail(`page not found: ${pageId}`) : ok({ ok: true, page });
+}
 
-const mapPathProp = { type: 'string', description: 'Путь к .json карте' };
+function submitFeedback(args: ToolArgs, ctx: ToolContext): ToolResult {
+  const feedback = args['feedback'];
+  if (typeof feedback !== 'object' || feedback === null || Array.isArray(feedback)) {
+    return fail('feedback object required');
+  }
+  return ok({ ok: true, ...saveFeedback(ctx.lamDir, feedback) });
+}
 
-/** Каталог tools. */
-export const TOOLS: readonly ToolDef[] = [
+function getSnapshot(args: ToolArgs, ctx: ToolContext): ToolResult {
+  const requestId = rawStr(args, 'requestId');
+  const latest = readLatestSnapshot(ctx.lamDir);
+  const pending = readPendingSnapshotRequest(ctx.lamDir);
+  if (requestId !== '' && latest?.requestId !== requestId) {
+    return ok({ ok: true, status: 'pending', pendingRequest: pending, snapshot: null });
+  }
+  return ok({ ok: true, status: latest === null ? 'none' : 'ready', pendingRequest: pending, snapshot: latest });
+}
+
+/** Инструменты карты, feedback и визуализатора. */
+const MAP_TOOLS: readonly Tool[] = [
   {
     name: 'list_map_pages',
     description: 'Список pages из liveappmap / enterprise JSON файла карты',
     inputSchema: { type: 'object', required: ['mapPath'], properties: { mapPath: mapPathProp } },
+    handler: (args) => {
+      const map = loadMap(rawStr(args, 'mapPath'));
+      return ok({ ok: true, name: map.name, baseUrl: map.baseUrl, pages: map.pages });
+    },
   },
   {
     name: 'get_page',
@@ -50,6 +75,7 @@ export const TOOLS: readonly ToolDef[] = [
       required: ['mapPath', 'pageId'],
       properties: { mapPath: mapPathProp, pageId: { type: 'string' } },
     },
+    handler: getPage,
   },
   {
     name: 'submit_feedback',
@@ -59,17 +85,25 @@ export const TOOLS: readonly ToolDef[] = [
       required: ['feedback'],
       properties: { feedback: { type: 'object', description: 'live-app-map-feedback v1 object' } },
     },
+    handler: submitFeedback,
   },
   {
     name: 'list_feedback',
     description: 'Список сохранённых feedback JSON в .lam-feedback/',
     inputSchema: { type: 'object', properties: {} },
+    handler: (_args, ctx) => ok({ ok: true, files: listFeedback(ctx.lamDir) }),
   },
   {
     name: 'get_visualizer_state',
     description:
       'Что сейчас открыто в визуализаторе: карта, выбранный экран, live URL, роль',
     inputSchema: { type: 'object', properties: {} },
+    handler: (_args, ctx) => {
+      const state = readVisualizerState(ctx.lamDir);
+      return state === null
+        ? fail('визуализатор ещё не публиковал состояние: откройте http://localhost:4310 (bun run dev)')
+        : ok({ ok: true, state });
+    },
   },
   {
     name: 'request_snapshot',
@@ -77,7 +111,11 @@ export const TOOLS: readonly ToolDef[] = [
       'Попросить пользователя снять экран визуализатора; результат — get_snapshot',
     inputSchema: {
       type: 'object',
-      properties: { note: { type: 'string', description: 'Что нужно увидеть' } },
+      properties: { note: stringProp('Что нужно увидеть') },
+    },
+    handler: (args, ctx) => {
+      const request = writeSnapshotRequest(ctx.lamDir, optionalStr(args, 'note'));
+      return ok({ ok: true, request, hint: 'Пользователь выделит область в визуализаторе; затем get_snapshot' });
     },
   },
   {
@@ -85,77 +123,18 @@ export const TOOLS: readonly ToolDef[] = [
     description: 'Последний снимок экрана (путь к PNG) и статус просьбы',
     inputSchema: {
       type: 'object',
-      properties: { requestId: { type: 'string', description: 'id из request_snapshot' } },
+      properties: { requestId: stringProp('id из request_snapshot') },
     },
+    handler: getSnapshot,
   },
-  ...COMMENT_TOOLS,
-  ...CODE_TOOLS,
-  ...DOCS_TOOLS,
 ];
 
-function ok(value: unknown): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] };
-}
+const ALL_TOOLS: readonly Tool[] = [...MAP_TOOLS, ...COMMENT_TOOLS, ...CODE_TOOLS, ...DOCS_TOOLS];
 
-function fail(text: string): ToolResult {
-  return { isError: true, content: [{ type: 'text', text }] };
-}
+/** Каталог tools. */
+export const TOOLS: readonly ToolDef[] = toolCatalog(ALL_TOOLS);
 
-function stringArg(args: Readonly<Record<string, unknown>>, key: string): string {
-  const v = args[key];
-  return typeof v === 'string' ? v : '';
-}
-
-function getPage(args: Readonly<Record<string, unknown>>): ToolResult {
-  const pageId = stringArg(args, 'pageId');
-  const page = loadMap(stringArg(args, 'mapPath')).pages.find((p) => p.id === pageId);
-  return page === undefined ? fail(`page not found: ${pageId}`) : ok({ ok: true, page });
-}
-
-function submitFeedback(args: Readonly<Record<string, unknown>>, ctx: ToolContext): ToolResult {
-  const feedback = args['feedback'];
-  if (typeof feedback !== 'object' || feedback === null || Array.isArray(feedback)) {
-    return fail('feedback object required');
-  }
-  return ok({ ok: true, ...saveFeedback(ctx.lamDir, feedback) });
-}
-
-function getSnapshot(args: Readonly<Record<string, unknown>>, ctx: ToolContext): ToolResult {
-  const requestId = stringArg(args, 'requestId');
-  const latest = readLatestSnapshot(ctx.lamDir);
-  const pending = readPendingSnapshotRequest(ctx.lamDir);
-  if (requestId !== '' && latest?.requestId !== requestId) {
-    return ok({ ok: true, status: 'pending', pendingRequest: pending, snapshot: null });
-  }
-  return ok({ ok: true, status: latest === null ? 'none' : 'ready', pendingRequest: pending, snapshot: latest });
-}
-
-type Handler = (args: Readonly<Record<string, unknown>>, ctx: ToolContext) => ToolResult;
-
-const HANDLERS: ReadonlyMap<string, Handler> = new Map<string, Handler>([
-  ['list_map_pages', (args) => {
-    const map = loadMap(stringArg(args, 'mapPath'));
-    return ok({ ok: true, name: map.name, baseUrl: map.baseUrl, pages: map.pages });
-  }],
-  ['get_page', getPage],
-  ['submit_feedback', submitFeedback],
-  ['list_feedback', (_args, ctx) => ok({ ok: true, files: listFeedback(ctx.lamDir) })],
-  ['get_visualizer_state', (_args, ctx) => {
-    const state = readVisualizerState(ctx.lamDir);
-    return state === null
-      ? fail('визуализатор ещё не публиковал состояние: откройте http://localhost:4310 (bun run dev)')
-      : ok({ ok: true, state });
-  }],
-  ['request_snapshot', (args, ctx) => {
-    const note = stringArg(args, 'note').trim();
-    const request = writeSnapshotRequest(ctx.lamDir, note === '' ? null : note);
-    return ok({ ok: true, request, hint: 'Пользователь выделит область в визуализаторе; затем get_snapshot' });
-  }],
-  ['get_snapshot', getSnapshot],
-  ...COMMENT_HANDLERS,
-  ...CODE_HANDLERS,
-  ...DOCS_HANDLERS,
-]);
+const HANDLERS: ReadonlyMap<string, ToolHandler> = new Map(ALL_TOOLS.map((tool) => [tool.name, tool.handler]));
 
 /**
  * Выполняет tool; ошибки возвращаются как isError, не бросаются.
@@ -164,11 +143,7 @@ const HANDLERS: ReadonlyMap<string, Handler> = new Map<string, Handler>([
  * @param args - аргументы
  * @param ctx - окружение
  */
-export function callTool(
-  name: string,
-  args: Readonly<Record<string, unknown>>,
-  ctx: ToolContext,
-): ToolResult {
+export function callTool(name: string, args: ToolArgs, ctx: ToolContext): ToolResult {
   const handler = HANDLERS.get(name);
   if (handler === undefined) {
     return fail(`unknown tool: ${name}`);

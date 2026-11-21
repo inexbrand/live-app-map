@@ -5,22 +5,18 @@
 import { epochList, findEpoch, searchDocs } from '@live-app-map/graph';
 import type { DocEpoch, EpochReadiness } from '@live-app-map/schema';
 import { loadDocs } from './map-tools';
-import type { ToolDef, ToolResult } from './tools';
+import { fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
 
-/** Аргументы tool. */
-type Args = Readonly<Record<string, unknown>>;
-
-const mapPathProp = {
-  type: 'string',
-  description: 'Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json',
-};
+const mapPath = mapPathParam('Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json');
+const mapPathProp = mapPath.prop;
 
 const READINESS: readonly EpochReadiness[] = ['ready', 'not-ready', 'no-bugs-file'];
 
 /** Каталог tools документации. */
-export const DOCS_TOOLS: readonly ToolDef[] = [
+export const DOCS_TOOLS: readonly Tool[] = [
   {
     name: 'list_epochs',
+    handler: listEpochs,
     description:
       'Эпохи задач проекта (docs/epoch/<задача>#<дата>): дата, цель, статус из INDEX.md, готовность (ready — открытых пунктов в 09-bugs нет, not-ready — есть) и открытые пункты',
     inputSchema: {
@@ -35,6 +31,7 @@ export const DOCS_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'get_epoch',
+    handler: getEpoch,
     description: 'Эпоха целиком: файлы 00-brief … 09-bugs, INDEX и прочие (markdown), картинки; или один файл эпохи',
     inputSchema: {
       type: 'object',
@@ -48,6 +45,7 @@ export const DOCS_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'search_docs',
+    handler: searchDocsTool,
     description: 'Поиск подстроки по всей документации: эпохи, docs/agent-notes, CLAUDE.md/README, docs/*.md. Отдаёт файл, строку и текст строки',
     inputSchema: {
       type: 'object',
@@ -61,26 +59,9 @@ export const DOCS_TOOLS: readonly ToolDef[] = [
   },
 ];
 
-function ok(value: unknown): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] };
-}
-
-function fail(text: string): ToolResult {
-  return { isError: true, content: [{ type: 'text', text }] };
-}
-
-function str(args: Args, key: string): string {
-  const v = args[key];
-  return typeof v === 'string' ? v.trim() : '';
-}
-
 /** Карта из обязательного mapPath. */
 function docsOf(args: Args): ReturnType<typeof loadDocs> {
-  const mapPath = str(args, 'mapPath');
-  if (mapPath === '') {
-    throw new Error('mapPath обязателен: путь к карте с разделом docs, например maps/live-app-map.liveappmap.json');
-  }
-  return loadDocs(mapPath);
+  return loadDocs(mapPath.read(args));
 }
 
 /** Эпоха одной строкой для списка. */
@@ -110,10 +91,7 @@ function listEpochs(args: Args): ToolResult {
 
 function getEpoch(args: Args): ToolResult {
   const docs = docsOf(args);
-  const ref = str(args, 'epoch');
-  if (ref === '') {
-    return fail('epoch обязателен: имя папки эпохи (slug#дата) или slug');
-  }
+  const ref = requiredStr(args, 'epoch', 'имя папки эпохи (slug#дата) или slug');
   const e = findEpoch(docs, ref);
   if (e === undefined) {
     const near = docs.epochs.filter((x) => x.id.includes(ref.split('#')[0] ?? ref)).map((x) => x.id).slice(0, 10);
@@ -129,18 +107,8 @@ function getEpoch(args: Args): ToolResult {
 
 function searchDocsTool(args: Args): ToolResult {
   const docs = docsOf(args);
-  const query = str(args, 'query');
-  if (query === '') {
-    return fail('query обязателен: подстрока для поиска');
-  }
+  const query = requiredStr(args, 'query', 'подстрока для поиска');
   const limit = typeof args['limit'] === 'number' && args['limit'] > 0 ? args['limit'] : 50;
   const hits = searchDocs(docs, query, limit);
   return ok({ ok: true, total: hits.length, hits });
 }
-
-/** Обработчики tools документации. */
-export const DOCS_HANDLERS: ReadonlyMap<string, (args: Args) => ToolResult> = new Map([
-  ['list_epochs', listEpochs],
-  ['get_epoch', getEpoch],
-  ['search_docs', searchDocsTool],
-]);

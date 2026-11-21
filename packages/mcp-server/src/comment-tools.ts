@@ -14,35 +14,25 @@ import {
   type CommentFilter,
   type CommentThread,
 } from './comments-store';
-import type { ToolContext, ToolDef, ToolResult } from './tools';
-
-type Args = Readonly<Record<string, unknown>>;
-type Handler = (args: Args, ctx: ToolContext) => ToolResult;
-
-function ok(value: unknown): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] };
-}
-
-function fail(text: string): ToolResult {
-  return { isError: true, content: [{ type: 'text', text }] };
-}
-
-function str(args: Args, key: string): string {
-  const v = args[key];
-  return typeof v === 'string' ? v.trim() : '';
-}
-
-function strList(args: Args, key: string): string[] {
-  const v = args[key];
-  return Array.isArray(v) ? v.filter((x): x is string => typeof x === 'string' && x.trim() !== '') : [];
-}
-
-const str_ = (description: string) => ({ type: 'string', description });
+import {
+  fail,
+  ok,
+  optionalStr,
+  str,
+  stringProp as str_,
+  strList,
+  type Tool,
+  type ToolArgs as Args,
+  type ToolContext,
+  type ToolHandler as Handler,
+  type ToolResult,
+} from './tool-kit';
 
 /** Каталог tools замечаний. */
-export const COMMENT_TOOLS: readonly ToolDef[] = [
+export const COMMENT_TOOLS: readonly Tool[] = [
   {
     name: 'list_comments',
+    handler: listCommentsTool,
     description:
       'Замечания пользователя к экранам и компонентам (визуализатор): текст, экран, компонент, файл:строка, статус. Исправив — add_change_note.',
     inputSchema: {
@@ -58,11 +48,13 @@ export const COMMENT_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'get_comment',
+    handler: getCommentTool,
     description: 'Ветка замечания целиком: привязка к элементу (селектор, путь DOM, рамка, компонент), события, путь к снимку PNG',
     inputSchema: { type: 'object', required: ['id'], properties: { id: str_('id замечания') } },
   },
   {
     name: 'add_change_note',
+    handler: addChangeNote,
     description:
       'Ответ агента «что изменил»: текст, файлы, коммит. С commentId — в ветку замечания (resolve=true по умолчанию ставит «исправлено»); без commentId — новая заметка агента к экрану pageId (и элементу selector).',
     inputSchema: {
@@ -83,11 +75,13 @@ export const COMMENT_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'resolve_comment',
+    handler: setStatus('fixed'),
     description: 'Пометить замечание исправленным (статус fixed)',
     inputSchema: { type: 'object', required: ['id'], properties: { id: str_('id замечания'), note: str_('пояснение') } },
   },
   {
     name: 'reopen_comment',
+    handler: setStatus('open'),
     description: 'Снова открыть замечание (статус open)',
     inputSchema: { type: 'object', required: ['id'], properties: { id: str_('id замечания'), note: str_('почему') } },
   },
@@ -140,7 +134,7 @@ function addChangeNote(args: Args, ctx: ToolContext): ToolResult {
     return fail('text: напишите, что изменено');
   }
   const files = strList(args, 'files');
-  const commit = str(args, 'commit') === '' ? null : str(args, 'commit');
+  const commit = optionalStr(args, 'commit');
   const commentId = str(args, 'commentId');
   if (commentId !== '') {
     addCommentEvent(ctx.lamDir, commentId, { type: 'reply', author: 'agent', text, files, commit });
@@ -161,9 +155,9 @@ function addChangeNote(args: Args, ctx: ToolContext): ToolResult {
     text: `${text}${filesLine}${commit === null ? '' : `\nКоммит: ${commit}`}`,
     shotDataUrl: null,
     anchor: {
-      mapName: str(args, 'mapName') === '' ? null : str(args, 'mapName'),
+      mapName: optionalStr(args, 'mapName'),
       pageId,
-      pageTitle: str(args, 'pageTitle') === '' ? pageId : str(args, 'pageTitle'),
+      pageTitle: optionalStr(args, 'pageTitle') ?? pageId,
       pageUrl: null,
       role: null,
       element: selector === ''
@@ -180,26 +174,21 @@ function setStatus(status: 'open' | 'fixed'): Handler {
     if (id === '') {
       return fail('id: укажите замечание');
     }
-    const note = str(args, 'note') === '' ? null : str(args, 'note');
+    const note = optionalStr(args, 'note');
     return ok({ ok: true, comment: summary(addCommentEvent(ctx.lamDir, id, { type: 'status', author: 'agent', status, note })) });
   };
 }
 
-/** Обработчики tools замечаний. */
-export const COMMENT_HANDLERS: ReadonlyArray<readonly [string, Handler]> = [
-  ['list_comments', (args, ctx) => {
-    const filter = filterOf(args);
-    if (typeof filter === 'string') {
-      return fail(filter);
-    }
-    const threads = listComments(ctx.lamDir, filter);
-    return ok({ ok: true, count: threads.length, comments: threads.map(summary), hint: 'get_comment — привязка и снимок; исправив — add_change_note с commentId' });
-  }],
-  ['get_comment', (args, ctx) => {
-    const t = readComment(ctx.lamDir, str(args, 'id'));
-    return t === null ? fail(`замечание ${str(args, 'id')} не найдено`) : ok({ ok: true, comment: withShot(ctx, t) });
-  }],
-  ['add_change_note', addChangeNote],
-  ['resolve_comment', setStatus('fixed')],
-  ['reopen_comment', setStatus('open')],
-];
+function listCommentsTool(args: Args, ctx: ToolContext): ToolResult {
+  const filter = filterOf(args);
+  if (typeof filter === 'string') {
+    return fail(filter);
+  }
+  const threads = listComments(ctx.lamDir, filter);
+  return ok({ ok: true, count: threads.length, comments: threads.map(summary), hint: 'get_comment — привязка и снимок; исправив — add_change_note с commentId' });
+}
+
+function getCommentTool(args: Args, ctx: ToolContext): ToolResult {
+  const t = readComment(ctx.lamDir, str(args, 'id'));
+  return t === null ? fail(`замечание ${str(args, 'id')} не найдено`) : ok({ ok: true, comment: withShot(ctx, t) });
+}
