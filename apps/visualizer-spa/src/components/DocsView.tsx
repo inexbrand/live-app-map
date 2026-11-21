@@ -176,8 +176,8 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
   );
   const [zoom, setZoom] = useState<string | null>(null);
   const e = open.epoch;
-  const md = (text: string, path: string): ReactNode => (
-    <DocMarkdown text={text} docPath={path} root={docs.root} refs={refs} knownDocs={knownDocs} onOpenDoc={props.onOpenDoc} />
+  const md = (text: string, path: string, testId?: string): ReactNode => (
+    <DocMarkdown text={text} docPath={path} root={docs.root} refs={refs} knownDocs={knownDocs} onOpenDoc={props.onOpenDoc} testId={testId} />
   );
   return (
     <main className="docs-doc" data-testid="docs-doc">
@@ -192,7 +192,7 @@ function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDoc; read
           <p className="docs-doc__meta">{open.file.path}</p>
         </header>
       ) : (
-        <EpochHead key={e.id} epoch={e} links={<CopyLink />} renderBugs={(text) => md(text, `${e.dir}/09-bugs.md`)} />
+        <EpochHead key={e.id} epoch={e} links={<CopyLink />} renderBugs={(text) => md(text, `${e.dir}/09-bugs.md`, 'docs-open-bugs-md')} />
       )}
       {e === undefined ? null : (
         <nav className="docs-tabs" aria-label="Файлы эпохи">

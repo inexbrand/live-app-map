@@ -21,6 +21,8 @@ export type DocMarkdownProps = {
   /** Пути документов раздела docs — ссылки на них открываются внутри вида. */
   readonly knownDocs: ReadonlySet<string>;
   readonly onOpenDoc: (path: string) => void;
+  /** data-testid обёртки: у фрагментов (открытые пункты эпохи) — свой. */
+  readonly testId?: string;
 };
 
 /** Текст узла children, если это строка. */
@@ -41,7 +43,7 @@ export function DocMarkdown(props: DocMarkdownProps) {
   const nav = useMapNav();
   const { refs, docPath, root, knownDocs, onOpenDoc } = props;
   return (
-    <div className="md" data-testid="doc-markdown">
+    <div className="md" data-testid={props.testId ?? 'doc-markdown'}>
       <Markdown
         remarkPlugins={[remarkGfm]}
         components={{
