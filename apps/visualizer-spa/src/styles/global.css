@@ -1389,3 +1389,4 @@ kbd,
 .session-profiles__item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .session-form { display: grid; gap: 8px; margin-top: 8px; }
 .session-form__error { color: #f08a8a; }
+.page-node__snapshot { position: absolute; top: 0; left: 0; display: block; max-width: none; pointer-events: none; user-select: none; }

@@ -26,6 +26,7 @@ import {
 } from '../lib/viewport';
 import { Badge, Chip } from '../ui';
 import { NODE_IFRAME_ATTR } from '../lib/gateway/use-gateway-frames';
+import { snapshotSrc } from '../lib/gateway/snapshot-url';
 import { pageStatus } from '../lib/gateway/page-status';
 import { MAX_CONTENT_HEIGHT } from '../lib/viewport';
 import { useAppStore } from '../store/app-store';
@@ -168,7 +169,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
   // Порт и профили шлюза входят в адрес: подписка перестраивает его при входе.
-  useGatewayStore((s) => s.port);
+  const gatewayPort = useGatewayStore((s) => s.port);
   useGatewayStore((s) => s.profiles);
   const report = useGatewayStore((s) => s.reports.get(node.id));
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
@@ -176,6 +177,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [iframeError, setIframeError] = useState(false);
+  const [snapshotFailed, setSnapshotFailed] = useState(false);
   const isLive = inLive && mode === 'live';
   const isWarm = inWarm && mode === 'live';
   const isMounted = inMounted && mode === 'live';
@@ -267,6 +269,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
 
   // Keep-alive: mounted = live ∪ warm — не unmount, state SPA сохраняется
   const showIframe = isMounted && url && !iframeError;
+  // Снимок есть только у адресов шлюза: его снимает сервер под тем же профилем.
+  const snapshot =
+    !showIframe && mode === 'live' && url !== null && gatewayPort !== null && !snapshotFailed && url.includes(`.localhost:${gatewayPort}/`)
+      ? snapshotSrc(url, viewport.width, viewport.height)
+      : null;
   /** Warm вне live: держим DOM, visually «приглушён» если не в кадре */
   const iframeDimmed = isWarm && !isLive;
 
@@ -497,6 +504,24 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               }}
             />
           </div>
+        ) : snapshot !== null ? (
+          // Замороженная нода: снимок вместо живого iframe — память вкладки не растёт.
+          <img
+            data-lam-snapshot
+            className="page-node__snapshot"
+            src={snapshot}
+            alt={`Снимок: ${node.title}`}
+            loading="lazy"
+            decoding="async"
+            draggable={false}
+            onError={() => setSnapshotFailed(true)}
+            style={{
+              width: viewport.width,
+              height: viewport.height,
+              transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
+              transformOrigin: '0 0',
+            }}
+          />
         ) : (
           <div className="page-node__placeholder" role="status">
             {placeholder}

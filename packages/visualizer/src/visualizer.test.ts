@@ -33,7 +33,7 @@ function policyState(
 describe('@live-app-map/visualizer re-export surface', () => {
   test('DEFAULT_MAX_LIVE — числовой бюджет iframe (канон policy)', () => {
     expect(typeof DEFAULT_MAX_LIVE).toBe('number');
-    expect(DEFAULT_MAX_LIVE).toBe(8);
+    expect(DEFAULT_MAX_LIVE).toBe(6);
     expect(Number.isInteger(DEFAULT_MAX_LIVE)).toBe(true);
     expect(DEFAULT_MAX_LIVE).toBeGreaterThan(0);
   });

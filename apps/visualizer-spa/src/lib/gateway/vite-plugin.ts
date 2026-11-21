@@ -4,7 +4,11 @@
  */
 import type { Plugin } from 'vite';
 import { resolveLamDir } from '@live-app-map/mcp-server';
+import path from 'node:path';
+import { chromium } from '@playwright/test';
 import { startGateway } from './gateway-server';
+import { createSnapshotMiddleware } from './snapshot-middleware';
+import { SnapshotService } from './snapshot-service';
 import { createSessionsMiddleware } from './sessions-middleware';
 import { resolveSessionsDir, SessionStore } from './session-store';
 
@@ -38,7 +42,8 @@ export function lamGatewayPlugin(): Plugin {
     name: 'lam-gateway',
     configureServer(server) {
       previousGateway()?.stop(true);
-      const store = new SessionStore(resolveSessionsDir(resolveLamDir(process.cwd())));
+      const sessionsDir = resolveSessionsDir(resolveLamDir(process.cwd()));
+      const store = new SessionStore(sessionsDir);
       const wanted = Number(process.env['LAM_GATEWAY_PORT'] ?? DEFAULT_GATEWAY_PORT);
       let started: ReturnType<typeof startGateway> | undefined;
       for (let i = 0; i < PORT_TRIES && started === undefined; i++) {
@@ -55,9 +60,14 @@ export function lamGatewayPlugin(): Plugin {
       const gateway = started;
       Reflect.set(globalThis, GLOBAL_KEY, gateway);
       server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
-      server.middlewares.use(createSessionsMiddleware(store, gateway.port ?? wanted));
+      const port = gateway.port ?? wanted;
+      // Снимки рядом с профилями, тоже вне git: на них могут быть данные под входом.
+      const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: () => chromium.launch() });
+      server.middlewares.use(createSessionsMiddleware(store, port));
+      server.middlewares.use(createSnapshotMiddleware(snapshots, port));
       server.httpServer?.on('close', () => {
         void gateway.stop(true);
+        void snapshots.close();
       });
     },
   };

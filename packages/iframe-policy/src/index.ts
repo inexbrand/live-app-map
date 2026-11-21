@@ -152,14 +152,14 @@ export function liveDiff(
  * Бюджет live iframe (enterprise TDD §7): multi-iframe, не «все сразу».
  * 9999 в UI = opt-in unlimited.
  */
-export const DEFAULT_MAX_LIVE = 8;
+export const DEFAULT_MAX_LIVE = 6;
 /** Pin soft-cap; excess pins → deferred toast, live режет maxLive. */
 export const DEFAULT_MAX_PINNED = 6;
 /**
  * Keep-alive: iframe остаётся в DOM (state SPA не сбрасывается) после
  * выхода из live-бюджета. LRU, pin защищён.
  */
-export const DEFAULT_MAX_WARM = 8;
+export const DEFAULT_MAX_WARM = 2;
 
 export type WarmPoolInput = {
   /** Текущий live-набор после reconcile */
