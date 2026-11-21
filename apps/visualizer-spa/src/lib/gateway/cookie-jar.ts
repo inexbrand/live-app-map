@@ -60,11 +60,16 @@ export function parseSetCookie(header: string, now: number): StoredCookie | null
  */
 export function mergeSetCookies(jar: readonly StoredCookie[], setCookies: readonly string[], now: number): StoredCookie[] {
   const byKey = new Map(jar.map((c) => [`${c.name}|${c.path}`, c]));
-  for (const h of setCookies) {
-    const c = parseSetCookie(h, now);
-    if (c !== null) {
-      byKey.set(`${c.name}|${c.path}`, c);
+  const fresh = setCookies.flatMap((h) => parseSetCookie(h, now) ?? []);
+  // Сервер главнее: его кука вытесняет одноимённые с другим путём (например, вставленную вручную с Path=/).
+  const serverNames = new Set(fresh.map((c) => c.name));
+  for (const [key, c] of byKey) {
+    if (serverNames.has(c.name)) {
+      byKey.delete(key);
     }
+  }
+  for (const c of fresh) {
+    byKey.set(`${c.name}|${c.path}`, c);
   }
   return [...byKey.values()].filter((c) => c.expiresAt === undefined || c.expiresAt > now);
 }

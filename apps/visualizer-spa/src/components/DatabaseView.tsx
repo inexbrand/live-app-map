@@ -8,7 +8,7 @@ import type { DbColumn } from '@live-app-map/schema';
 import { dbIndexOf, tableRows, tableView, type RouteUse } from '../lib/db-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { Badge, Field, Input } from '../ui';
+import { Badge, Input } from '../ui';
 
 /** Признаки колонки одной строкой: PK, NOT NULL, UNIQUE, default, enum. */
 function columnFlags(c: DbColumn): string {
@@ -90,9 +90,10 @@ export function DatabaseView() {
   return (
     <div className="db-view" data-testid="database-view">
       <aside className="db-view__list">
-        <Field label={`Таблицы · ${rows.length}`} htmlFor="db-search">
-          <Input id="db-search" value={query} placeholder="Таблица, колонка, описание" onChange={(e) => setQuery(e.target.value)} />
-        </Field>
+        <h3 className="db-view__list-title">
+          Таблицы <span className="db-view__count">{rows.length}</span>
+        </h3>
+        <Input id="db-search" aria-label="Поиск таблиц" value={query} placeholder="Таблица, колонка, описание" onChange={(e) => setQuery(e.target.value)} />
         <ul>
           {rows.map((r) => (
             <li key={r.exportName}>

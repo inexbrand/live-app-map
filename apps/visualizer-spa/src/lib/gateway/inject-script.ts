@@ -45,6 +45,30 @@ export function isLamPageMessage(data: unknown): data is LamPageMessage {
   );
 }
 
+/** Состояние входа страницы: сколько 401/403 без последующего успеха. */
+export type AuthState = { readonly fails: number; readonly last?: string };
+
+/**
+ * Следующее состояние входа после ответа API. 401/403 — сбой; успешный
+ * JSON-ответ после сбоя — приложение восстановило вход само (обновило
+ * токен через refresh), сбои сбрасываются. Функция встраивается в скрипт
+ * страницы как текст — без замыканий и импортов.
+ *
+ * @param s - текущее состояние
+ * @param status - HTTP-статус
+ * @param path - путь запроса
+ * @param json - ответ в JSON
+ */
+export function nextAuthState(s: AuthState, status: number, path: string, json: boolean): AuthState {
+  if (status === 401 || status === 403) {
+    return { fails: s.fails + 1, last: `${status} ${path.slice(0, 120)}` };
+  }
+  if (s.fails > 0 && status >= 200 && status < 300 && json) {
+    return { fails: 0 };
+  }
+  return s;
+}
+
 /**
  * Текст скрипта.
  *
@@ -57,15 +81,15 @@ export function injectScript(storage: Readonly<Record<string, string>>, profile:
   const json = (v: unknown): string => JSON.stringify(v).replace(/<\//g, '<\\/');
   return `<script data-lam-gateway>(function(){
 var S=${json(storage)};try{for(var k in S){sessionStorage.setItem(k,S[k]);}}catch(e){}
-var P=${json(profile)},H=${hasSession ? 'true' : 'false'},fails=0,last;
+var P=${json(profile)},H=${hasSession ? 'true' : 'false'},A={fails:0},next=${nextAuthState.toString()};
 function contentH(){var d=document.documentElement,b=document.body,h=Math.max(d.offsetHeight,b?b.scrollHeight:0,b?b.offsetHeight:0),x=0,all=b?b.getElementsByTagName('*'):[];
 for(var i=0;i<all.length&&i<5000;i++){var e=all[i];if(e.scrollHeight>e.clientHeight+8&&e.clientHeight>0){var o=getComputedStyle(e).overflowY;if(o==='auto'||o==='scroll'){x=Math.max(x,e.scrollHeight-e.clientHeight);}}}return Math.ceil(h+x);}
-function post(){try{parent.postMessage({lam:'page',href:location.href,contentHeight:contentH(),viewportHeight:innerHeight,authFailures:fails,lastAuthFailure:last,profile:P,hasSession:H},'*');}catch(e){}}
+function post(){try{parent.postMessage({lam:'page',href:location.href,contentHeight:contentH(),viewportHeight:innerHeight,authFailures:A.fails,lastAuthFailure:A.last,profile:P,hasSession:H},'*');}catch(e){}}
 var t;function soon(){clearTimeout(t);t=setTimeout(post,120);}
-function note(s,u){if(s===401||s===403){fails++;last=s+' '+String(u).replace(location.origin,'').slice(0,120);soon();}}
-var f=window.fetch;if(f){window.fetch=function(i,o){return f.apply(this,arguments).then(function(r){note(r.status,r.url);return r;});};}
+function note(s,u,ct){var b=A;A=next(A,s,String(u).replace(location.origin,''),/json/i.test(ct||''));if(A!==b)soon();}
+var f=window.fetch;if(f){window.fetch=function(i,o){return f.apply(this,arguments).then(function(r){note(r.status,r.url,r.headers.get('content-type'));return r;});};}
 var X=XMLHttpRequest.prototype,op=X.open,sd=X.send;X.open=function(m,u){this.__lamU=u;return op.apply(this,arguments);};
-X.send=function(){var x=this;x.addEventListener('loadend',function(){note(x.status,x.__lamU);});return sd.apply(this,arguments);};
+X.send=function(){var x=this;x.addEventListener('loadend',function(){note(x.status,x.__lamU,x.getResponseHeader('content-type'));});return sd.apply(this,arguments);};
 var ps=history.pushState,rs=history.replaceState;history.pushState=function(){var r=ps.apply(this,arguments);soon();return r;};history.replaceState=function(){var r=rs.apply(this,arguments);soon();return r;};
 addEventListener('popstate',soon);addEventListener('hashchange',soon);addEventListener('load',post);addEventListener('message',function(e){if(e.data&&e.data.lam==='ping')post();});
 function watch(){if(!document.body){return setTimeout(watch,50);}try{new ResizeObserver(soon).observe(document.body);new MutationObserver(soon).observe(document.body,{childList:true,subtree:true});}catch(e){setInterval(post,1000);}post();}watch();

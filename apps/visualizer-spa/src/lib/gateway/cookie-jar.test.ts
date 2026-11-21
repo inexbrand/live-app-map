@@ -16,6 +16,12 @@ describe('cookie-jar', () => {
     expect(jar.map((c) => c.name)).toEqual(['sid']);
   });
 
+  test('кука сервера вытесняет одноимённую с другим путём (вставленную вручную)', () => {
+    const pasted = mergeSetCookies([], ['miniapp_access=stale; Path=/'], NOW);
+    const jar = mergeSetCookies(pasted, ['miniapp_access=fresh; Path=/api/v1; Max-Age=900'], NOW);
+    expect(jar.map((c) => [c.name, c.value, c.path])).toEqual([['miniapp_access', 'fresh', '/api/v1']]);
+  });
+
   test('Cookie: браузерные куки главнее, банка добавляет недостающие по пути, истёкшие не идут', () => {
     const jar = mergeSetCookies([], ['sid=jar; Path=/', 'api=1; Path=/api', 'old=1; Path=/; Expires=Thu, 01 Jan 2020 00:00:00 GMT'], NOW);
     expect(cookieHeaderFor('sid=browser', jar, '/api/v1/me', NOW)).toBe('sid=browser; api=1');
