@@ -9,7 +9,6 @@ import { parseGatewayHost } from './gateway-host';
 import { isValidSnapshotSize, type SnapshotService } from './snapshot-service';
 import { SNAPSHOT_PATH } from './snapshot-url';
 
-
 /**
  * Проверяет запрос снимка.
  *

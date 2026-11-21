@@ -5,7 +5,7 @@
  */
 
 /** Ключи sessionStorage, откуда приложения Korbor берут dev-вход. */
-export const KORBOR_DOGFOOD_STORAGE = { user: 'lam_init_data', admin: 'korbor.admin.accessToken' } as const;
+export const KORBOR_DOGFOOD_STORAGE: Readonly<Record<KorborRenewal['kind'], string>> = { user: 'lam_init_data', admin: 'korbor.admin.accessToken' };
 
 /** Как обновить вход профиля. */
 export type KorborRenewal = {

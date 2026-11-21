@@ -7,7 +7,7 @@
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { mergeSetCookies, type StoredCookie } from './cookie-jar';
-import { isDogfoodValueStale, KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal } from './korbor-dogfood';
+import { isDogfoodValueStale, KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal, type MintResult } from './korbor-dogfood';
 import { isValidProfileId } from './gateway-host';
 
 /** Переменная окружения с папкой профилей. */
@@ -188,7 +188,7 @@ export class SessionStore {
     if (!isDogfoodValueStale(renewal.kind, profile.storage[origin]?.[storageKey], Date.now())) {
       return null;
     }
-    const minted = await mintKorbor(renewal).catch((err: unknown) => ({ ok: false as const, error: err instanceof Error ? err.message : String(err) }));
+    const minted = await mintKorbor(renewal).catch((err: unknown): MintResult => ({ ok: false, error: err instanceof Error ? err.message : String(err) }));
     if (!minted.ok) {
       return minted.error;
     }

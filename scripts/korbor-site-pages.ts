@@ -2,7 +2,7 @@
  * Страницы сайта Korbor из живой CMS Payload: сайт — один catch-all Next
  * (`[[...slug]]`), поэтому экраны известны только из базы CMS.
  */
-import type { AppMapDocument, AppMapNode } from '../packages/schema/src/types';
+import type { AppMapDocument, AppMapEdge, AppMapNode } from '../packages/schema/src/types';
 
 /** Страница CMS из REST Payload. */
 type CmsPage = { readonly slug: string; readonly title: string };
@@ -63,6 +63,6 @@ export function withCmsPages(doc: AppMapDocument, baseUrl: string, pages: readon
   const home = doc.nodes.find((n) => n.pathPattern === '/');
   const edges = home === undefined
     ? []
-    : extra.map((n) => ({ id: `edge:${home.id}->${n.id}`, from: home.id, to: n.id, kind: 'link' as const, confidence: 'medium' as const }));
+    : extra.map((n): AppMapEdge => ({ id: `edge:${home.id}->${n.id}`, from: home.id, to: n.id, kind: 'link', confidence: 'medium' }));
   return { ...doc, nodes: [...doc.nodes, ...extra], edges: [...doc.edges, ...edges] };
 }

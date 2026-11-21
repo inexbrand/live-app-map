@@ -6,11 +6,11 @@ import { cellOf, parseGatewayHost, toGatewayUrl } from './gateway-host';
 
 describe('gateway-host', () => {
   test('адрес страницы через шлюз и обратно — тот же origin приложения', () => {
-    const cases = [
+    const cases: Array<[string, string, string, string]> = [
       ['https://vite.localhost:5175/feed?x=1#/a', 'recruiter', 'http://recruiter--s5175-vite.localhost:4320/feed?x=1#/a', 'https://vite.localhost:5175'],
       ['http://localhost:16002/deals', 'admin', 'http://admin--h16002.localhost:4320/deals', 'http://localhost:16002'],
       ['http://127.0.0.1:16000/health', 'anon', 'http://anon--h16000-ip.localhost:4320/health', 'http://127.0.0.1:16000'],
-    ] as const;
+    ];
     for (const [app, profile, gw, origin] of cases) {
       expect(toGatewayUrl(app, profile, 4320)).toBe(gw);
       const parsed = parseGatewayHost(new URL(gw).host);

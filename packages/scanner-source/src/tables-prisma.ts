@@ -169,7 +169,7 @@ export function parsePrismaSchema(text: string, file: string): FoundTable[] {
   const enums = new Map(
     blocks
       .filter((b) => b.kind === 'enum')
-      .map((b) => [b.name, b.lines.map((l) => l.text.split(/\s+/)[0] ?? '').filter((v) => /^\w+$/.test(v))] as const),
+      .map((b): [string, string[]] => [b.name, b.lines.map((l) => l.text.split(/\s+/)[0] ?? '').filter((v) => /^\w+$/.test(v))]),
   );
   return blocks.filter((b) => b.kind === 'model').map((b) => modelTable(b, models, enums));
 }
