@@ -42,10 +42,14 @@ export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes): De
       return;
     }
     const q = new URL(req.url ?? '/', 'http://localhost').searchParams;
-    const id = q.get('id') ?? '';
+    const id = q.get('id');
+    if (id === null || id === '') {
+      sendJson(res, 400, { ok: false, error: 'не задан id карты — например, korbor-all' });
+      return;
+    }
     const file = path.join(mapsDir, `${id}.liveappmap.json`);
     if (!MAP_ID.test(id) || !existsSync(file)) {
-      sendJson(res, 404, { ok: false, error: `карты ${id === '' ? '(id не задан)' : id} нет в каталоге` });
+      sendJson(res, 404, { ok: false, error: `карты ${id} нет в каталоге` });
       return;
     }
     if (p === MAP_SCAN_PATH) {

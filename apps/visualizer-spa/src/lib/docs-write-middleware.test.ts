@@ -27,6 +27,12 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
   fetch(`${server.url}/__lam_docs/bug`, { method: 'POST', headers: { 'content-type': 'application/json', ...headers }, body: JSON.stringify(body) });
 
 describe('docs-write middleware', () => {
+  test('живые docs без root — 400 с подсказкой', async () => {
+    const res = await fetch(`${server.url}/__lam_docs/live`);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain('root');
+  });
+
   test('закрыть пункт: файл на диске изменён, эпоха готова; повтор — без изменений', async () => {
     const res = await post({ root, path: BUGS, line: 4, text: 'Кнопка не нажимается', state: 'closed' });
     const body = (await res.json()) as { changed: boolean; epoch: { readiness: string; openBugs: string[] } };

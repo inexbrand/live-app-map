@@ -45,6 +45,12 @@ beforeAll(async () => {
 afterAll(() => server.close());
 
 describe('версии карты', () => {
+  test('без id — 400 с подсказкой, что вписать', async () => {
+    const res = await fetch(`${server.url}/__lam_maps/versions`);
+    expect(res.status).toBe(400);
+    expect(((await res.json()) as { error: string }).error).toContain('korbor-all');
+  });
+
   test('коммиты файла новые первыми, версия по хешу — содержимое того коммита', async () => {
     const body = (await (await fetch(`${server.url}/__lam_maps/versions?id=demo`)).json()) as {
       versions: { ref: string; subject: string }[];

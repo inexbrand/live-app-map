@@ -77,9 +77,13 @@ function applyBug(req: BugRequest): { status: number; body: unknown } {
 export const docsWriteMiddleware: DevMiddleware = (req, res, next) => {
   const p = requestPath(req);
   if (p === DOCS_LIVE_PATH) {
-    const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root') ?? '';
+    const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root');
+    if (root === null || root === '') {
+      sendJson(res, 400, { ok: false, error: 'не задан root — абсолютный путь к каталогу проекта' });
+      return;
+    }
     if (!existingRoot(root)) {
-      sendJson(res, 404, { ok: false, error: `каталога проекта нет на этой машине: ${root === '' ? '(root не задан)' : root}` });
+      sendJson(res, 404, { ok: false, error: `каталога проекта нет на этой машине: ${root}` });
       return;
     }
     sendJson(res, 200, { ok: true, docs: scanDocs(root) });
