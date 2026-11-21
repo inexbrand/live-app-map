@@ -28,8 +28,10 @@ beforeEach(async () => {
   upstream = createServer((req, res) => {
     hits++;
     if (req.url === `/${REPO}/resolve/main/onnx/encoder_model_quantized.onnx`) {
+      // Отдаёт в два куска с паузой: одновременные запросы перекрываются
       res.setHeader('content-length', String(WEIGHTS.length));
-      res.end(WEIGHTS);
+      res.write(WEIGHTS.subarray(0, 2048));
+      setTimeout(() => res.end(WEIGHTS.subarray(2048)), 60);
       return;
     }
     if (req.url === `/api/models/${REPO}/tree/main`) {
@@ -77,6 +79,13 @@ describe('models middleware', () => {
     const del = await fetch(`${server.url}/__lam_models/hf/${REPO}`, { method: 'DELETE' });
     expect(del.status).toBe(200);
     expect(existsSync(path.join(root, 'models', REPO))).toBe(false);
+  });
+
+  test('два одновременных запроса одного файла: оба получают его целиком', async () => {
+    const url = `${server.url}${fileUrl('onnx/encoder_model_quantized.onnx')}`;
+    const bodies = await Promise.all([fetch(url), fetch(url)].map(async (p) => Buffer.from(await (await p).arrayBuffer())));
+    expect(bodies.map((b) => b.equals(WEIGHTS))).toEqual([true, true]);
+    expect(existsSync(path.join(root, 'models', REPO, 'onnx', 'encoder_model_quantized.onnx'))).toBe(true);
   });
 
   test('чужая модель — 403, выход из папки — 400, нет файла у источника — 404', async () => {

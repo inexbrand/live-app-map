@@ -10,6 +10,10 @@
  * (сервер уже поднят вручную). Без сервера и без webServer — fail, не skip.
  */
 import { defineConfig, devices } from '@playwright/test';
+import { fileURLToPath } from 'node:url';
+
+/** Речь для voice.e2e: микрофон Chromium читает этот файл (macOS say, 16 кГц). */
+const VOICE_WAV = fileURLToPath(new URL('./e2e/fixtures/voice-ru.wav', import.meta.url));
 
 const PORT = 4310;
 const baseURL =
@@ -38,11 +42,29 @@ export default defineConfig({
   projects: [
     {
       name: 'chromium',
+      testIgnore: '**/voice.e2e.ts',
       use: {
         ...devices['Desktop Chrome'],
         // snapshot.e2e: диалог выбора вкладки getDisplayMedia принимается сам
         launchOptions: {
           args: ['--auto-accept-this-tab-capture', '--use-fake-ui-for-media-stream'],
+        },
+      },
+    },
+    {
+      name: 'voice',
+      testMatch: '**/voice.e2e.ts',
+      timeout: 360_000,
+      use: {
+        ...devices['Desktop Chrome'],
+        permissions: ['microphone'],
+        launchOptions: {
+          args: [
+            '--auto-accept-this-tab-capture',
+            '--use-fake-ui-for-media-stream',
+            '--use-fake-device-for-media-stream',
+            `--use-file-for-fake-audio-capture=${VOICE_WAV}`,
+          ],
         },
       },
     },

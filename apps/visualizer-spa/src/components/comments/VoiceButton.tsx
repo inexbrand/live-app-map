@@ -34,6 +34,8 @@ export function VoiceButton(props: { readonly capture: VoiceCapture }) {
         disabled={capture.finishing}
         onPointerDown={(e) => {
           e.preventDefault();
+          // Отпускание засчитывается кнопке, даже если строка черновика её сдвинула
+          e.currentTarget.setPointerCapture(e.pointerId);
           if (capture.recording && toggled.current) {
             toggled.current = false;
             capture.stop();

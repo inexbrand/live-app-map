@@ -74,21 +74,30 @@ export function useVoiceCapture(onFinal: (text: string) => void): VoiceCapture {
     if (rec.current !== null || starting.current) {
       return;
     }
-    const voice = useVoiceStore.getState();
-    if (voice.present !== true && voice.phase !== 'ready') {
-      voice.setDialog(true);
-      return;
-    }
-    if (!isVoiceModelLoaded() && voice.phase !== 'downloading') {
-      // Модель на диске/в кэше: грузим, пока человек говорит
-      void voice.load();
-    }
     setError(null);
     starting.current = true;
     stopWanted.current = false;
-    void startRecording()
+    void (async () => {
+      // Сразу после открытия страницы ещё неизвестно, лежит ли модель на диске
+      if (useVoiceStore.getState().present === null && useVoiceStore.getState().phase !== 'ready') {
+        await useVoiceStore.getState().inspect();
+      }
+      const voice = useVoiceStore.getState();
+      if (voice.present !== true && voice.phase !== 'ready') {
+        voice.setDialog(true);
+        return null;
+      }
+      if (!isVoiceModelLoaded() && voice.phase !== 'downloading') {
+        // Модель на диске или в кэше: грузим, пока человек говорит
+        void voice.load();
+      }
+      return startRecording();
+    })()
       .then((r) => {
         starting.current = false;
+        if (r === null) {
+          return; // модели нет: открыто окно скачивания
+        }
         rec.current = r;
         setRecording(true);
         if (stopWanted.current) {

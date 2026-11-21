@@ -9,6 +9,7 @@
  * - `DELETE hf/<repo>` — удалить модель с диска.
  * Звук сюда не приходит: распознавание идёт в браузере.
  */
+import { randomUUID } from 'node:crypto';
 import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync, renameSync, rmSync, statSync } from 'node:fs';
 import { createRequire } from 'node:module';
 import path from 'node:path';
@@ -90,7 +91,8 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
     return;
   }
   mkdirSync(path.dirname(target), { recursive: true });
-  const part = `${target}.${process.pid}.part`;
+  // Свой временный файл на запрос: одновременные загрузки одного файла не мешают друг другу
+  const part = `${target}.${process.pid}.${randomUUID()}.part`;
   const disk = createWriteStream(part);
   res.statusCode = 200;
   res.setHeader('content-type', contentType(file));
