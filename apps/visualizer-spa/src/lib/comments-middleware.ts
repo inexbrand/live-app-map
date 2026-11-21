@@ -18,6 +18,7 @@ import {
   resolveLamDir,
   type CommentFilter,
 } from '@live-app-map/mcp-server';
+import type { NewCommentEvent } from '@live-app-map/mcp-server/comments-schema';
 import { z } from 'zod';
 import { isLocalOrigin, parseJsonText, readBody, requestPath, sendJson, type DevMiddleware } from './dev-http';
 
@@ -87,9 +88,9 @@ async function handle(req: Req, res: Res, lamDir: string, url: URL): Promise<voi
   if (rest.length === 2 && tail === 'events' && req.method === 'POST') {
     const body = await readJson(req, res, eventBodySchema, 64 * 1024);
     if (body !== null) {
-      const event = body.type === 'reply'
-        ? { type: 'reply' as const, author: 'user' as const, text: body.text, files: [], commit: null }
-        : { type: 'status' as const, author: 'user' as const, status: body.status, note: body.note };
+      const event: NewCommentEvent = body.type === 'reply'
+        ? { type: 'reply', author: 'user', text: body.text, files: [], commit: null }
+        : { type: 'status', author: 'user', status: body.status, note: body.note };
       sendJson(res, 200, { ok: true, comment: addCommentEvent(lamDir, id, event) });
     }
     return;

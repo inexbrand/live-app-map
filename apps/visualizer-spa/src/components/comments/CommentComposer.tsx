@@ -144,7 +144,7 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
       {voice.recording || voice.finishing ? (
         <p className="comment-composer__draft" aria-live="polite" data-testid="voice-draft">
           <span className="voice-level" style={{ transform: `scale(${1 + voice.level})` }} aria-hidden={true} />
-          {voice.finishing ? 'Распознаю…' : voice.draft === '' ? 'Слушаю…' : voice.draft}
+          {voice.finishing ? 'Распознаю…' : voice.draft !== '' ? voice.draft : 'Слушаю…'}
         </p>
       ) : null}
       {voice.error !== null ? <p className="comment-composer__error" role="alert">{voice.error}</p> : null}
