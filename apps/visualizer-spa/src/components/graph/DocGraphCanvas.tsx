@@ -62,6 +62,16 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
   const linksRef = useRef<SimLink[]>([]);
   const positions = useRef(new Map<string, { x: number; y: number }>());
   const cam = useRef<Camera>({ x: 0, y: 0, k: 1 });
+  /** Узел, за которым камера следует, пока раскладка двигается; сдвиг или масштаб рукой отпускает его. */
+  const follow = useRef<string | null>(null);
+  /** Ставит узел в центр холста при текущем масштабе. */
+  const centerOn = (id: string): void => {
+    const n = nodesRef.current.find((x) => x.id === id);
+    if (n?.x !== undefined && n.y !== undefined) {
+      const k = cam.current.k;
+      cam.current = { k, x: size.current.w / 2 - n.x * k, y: size.current.h / 2 - n.y * k };
+    }
+  };
   const fitted = useRef(false);
   const hovered = useRef<string | null>(null);
   const size = useRef({ w: 0, h: 0 });
@@ -192,6 +202,8 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
       save();
       if (compact) {
         cam.current = fitCamera(nodes, size.current.w, size.current.h, 32);
+      } else if (follow.current !== null) {
+        centerOn(follow.current);
       }
       requestDraw.current();
     });
@@ -205,14 +217,12 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
     };
   }, [graph, compact, neighborsOf]);
 
-  // Выбор из списка: камера едет к узлу.
+  // Выбор: камера едет к узлу и держит его в центре, пока раскладка не успокоится.
   useEffect(() => {
-    if (selectedId !== null && !compact) {
-      const n = nodesRef.current.find((x) => x.id === selectedId);
-      if (n?.x !== undefined && n.y !== undefined) {
-        const k = Math.max(cam.current.k, 0.9);
-        cam.current = { k, x: size.current.w / 2 - n.x * k, y: size.current.h / 2 - n.y * k };
-      }
+    follow.current = compact ? null : selectedId;
+    if (follow.current !== null) {
+      cam.current = { ...cam.current, k: Math.max(cam.current.k, 0.9) };
+      centerOn(follow.current);
     }
     requestDraw.current();
   }, [selectedId, matches, compact]);
@@ -291,6 +301,7 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
           return;
         }
         if (d.mode === 'pan') {
+          follow.current = null;
           cam.current = { ...cam.current, x: cam.current.x + (p.x - d.x), y: cam.current.y + (p.y - d.y) };
           d.x = p.x;
           d.y = p.y;
@@ -338,6 +349,7 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
         const p = local(e);
         const c = cam.current;
         const k = Math.min(MAX_K, Math.max(MIN_K, c.k * Math.exp(-e.deltaY * 0.0015)));
+        follow.current = null;
         cam.current = { k, x: p.x - ((p.x - c.x) * k) / c.k, y: p.y - ((p.y - c.y) * k) / c.k };
         requestDraw.current();
       }}

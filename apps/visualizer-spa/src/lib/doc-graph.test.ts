@@ -133,3 +133,21 @@ describe('live-app-map', () => {
     expect(g.nodes.filter((n) => n.kind === 'file').length).toBeGreaterThan(5);
   });
 });
+
+describe('filterGraph: тип только показывает, связи держатся на документах', () => {
+  test('«только файлы кода» — файлы, на которые ссылаются документы, без самих документов', () => {
+    const g = collapseEpochs(full, new Set());
+    const files = filterGraph(g, { kinds: new Set(['file']) });
+    const allFiles = filterGraph(g, {}).nodes.filter((n) => n.kind === 'file').length;
+    expect(files.nodes.length).toBe(allFiles);
+    expect(files.nodes.length).toBeGreaterThan(0);
+    expect(files.nodes.every((n) => n.kind === 'file')).toBe(true);
+  });
+
+  test('«только роуты» при «не готово» — роуты незакрытых эпох, меньше всех роутов', () => {
+    const routes = filterGraph(full, { kinds: new Set(['route']) }).nodes.length;
+    const notReady = filterGraph(full, { kinds: new Set(['route']), readiness: 'not-ready' }).nodes;
+    expect(notReady.every((n) => n.kind === 'route')).toBe(true);
+    expect(notReady.length).toBeLessThan(routes);
+  });
+});

@@ -264,8 +264,10 @@ function isDocKind(k: GraphNodeKind): boolean {
 }
 
 /**
- * Фильтр по типу и готовности. Объекты карты остаются, только если на них ссылается
- * видимый документ; сервисы — если видим их роут или таблица.
+ * Фильтр по типу и готовности. Готовность выбирает документы-опоры; объект карты
+ * остаётся, если на него ссылается опора (даже когда сами документы скрыты типом —
+ * «только файлы кода» показывает файлы, упомянутые в документах). Сервисы — если
+ * видим их роут или таблица.
  *
  * @param g - граф
  * @param f - фильтр
@@ -274,21 +276,23 @@ function isDocKind(k: GraphNodeKind): boolean {
 export function filterGraph(g: DocGraph, f: GraphFilter): DocGraph {
   const kinds = f.kinds === undefined || f.kinds.size === 0 ? null : f.kinds;
   const readiness = f.readiness ?? null;
-  const docsVisible = new Set(
+  const anchors = new Set(
     g.nodes
-      .filter((n) => isDocKind(n.kind) && (kinds === null || kinds.has(n.kind)) && (readiness === null || n.kind === 'note' || n.kind === 'guide' || n.readiness === readiness))
+      .filter((n) => isDocKind(n.kind) && (readiness === null || n.kind === 'note' || n.kind === 'guide' || n.readiness === readiness))
       .map((n) => n.id),
   );
   const linked = new Set<string>();
   for (const e of g.edges) {
-    if (docsVisible.has(e.source)) {
+    if (anchors.has(e.source)) {
       linked.add(e.target);
     }
-    if (docsVisible.has(e.target)) {
+    if (anchors.has(e.target)) {
       linked.add(e.source);
     }
   }
-  const visible = new Set<string>(docsVisible);
+  const visible = new Set<string>(
+    g.nodes.filter((n) => anchors.has(n.id) && (kinds === null || kinds.has(n.kind))).map((n) => n.id),
+  );
   for (const n of g.nodes) {
     if (!isDocKind(n.kind) && n.kind !== 'service' && linked.has(n.id) && (kinds === null || kinds.has(n.kind))) {
       visible.add(n.id);
