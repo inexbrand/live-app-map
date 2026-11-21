@@ -270,10 +270,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   // Keep-alive: mounted = live ∪ warm — не unmount, state SPA сохраняется
   const showIframe = isMounted && url && !iframeError;
   // Снимок есть только у адресов шлюза: его снимает сервер под тем же профилем.
-  const snapshot =
-    !showIframe && mode === 'live' && url !== null && gatewayPort !== null && !snapshotFailed && url.includes(`.localhost:${gatewayPort}/`)
+  const gatewaySnapshot =
+    mode === 'live' && url !== null && gatewayPort !== null && !snapshotFailed && url.includes(`.localhost:${gatewayPort}/`)
       ? snapshotSrc(url, viewport.width, viewport.height)
       : null;
+  const snapshot = showIframe ? null : gatewaySnapshot;
   /** Warm вне live: держим DOM, visually «приглушён» если не в кадре */
   const iframeDimmed = isWarm && !isLive;
 
@@ -449,6 +450,20 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
               height: layout.contentHeight,
             }}
           >
+            {/* Под живым iframe — его снимок: во время зума iframe прячется (дорогой слой), виден снимок. */}
+            {gatewaySnapshot === null ? null : (
+              <img
+                className="page-node__snapshot page-node__snapshot--under"
+                src={gatewaySnapshot}
+                alt=""
+                aria-hidden={true}
+                loading="lazy"
+                decoding="async"
+                draggable={false}
+                onError={() => setSnapshotFailed(true)}
+                style={{ width: viewport.width, height: viewport.height, transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`, transformOrigin: '0 0' }}
+              />
+            )}
             <iframe
               ref={iframeRef}
               key={`${url}:${sandboxPreset}:${viewport.width}:${viewport.heightMode ?? 'auto'}`}

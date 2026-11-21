@@ -21,6 +21,8 @@ import { RevealSelected } from './RevealSelected';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
+/** Пауза после зума, после которой живые iframe возвращаются, мс. */
+const ZOOM_SETTLE_MS = 250;
 const nodeTypes = { page: PageNode, service: ServiceNode, groupFrame: GroupFrameNode };
 
 /** Стартовый масштаб: не мельче — иначе подписи нод не читаются. */
@@ -41,6 +43,8 @@ export function AppMapCanvas() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
   const contentHeights = useAppStore((s) => s.contentHeights);
   const hostRef = useRef<HTMLDivElement>(null);
+  const zoomAtStart = useRef(1);
+  const zoomIdle = useRef(0);
 
   const { nodes, edges, isSearchMiss, displayQuery, packed, boxes } = useMemo(() => {
     const empty: { packed: PackedLayout; boxes: LayoutBox[] } = { packed: { positions: new Map(), groups: [] }, boxes: [] };
@@ -186,6 +190,21 @@ export function AppMapCanvas() {
           const el = hostRef.current;
           const canvas = { width: el?.clientWidth ?? 1280, height: el?.clientHeight ?? 800 };
           void instance.setViewport(startViewport(packed, boxes, canvas, START_ZOOM));
+        }}
+        // Зум: живые iframe прячутся под свой снимок — пересборка их слоёв на каждом кадре стоила ~10 кадров/с.
+        onMoveStart={(_, vp) => {
+          zoomAtStart.current = vp.zoom;
+        }}
+        onMove={(_, vp) => {
+          if (vp.zoom !== zoomAtStart.current) {
+            window.clearTimeout(zoomIdle.current);
+            hostRef.current?.classList.add('flow-host--zooming');
+          }
+        }}
+        onMoveEnd={() => {
+          // Показ iframe дорогой: между шагами колеса не возвращаем, ждём паузу.
+          window.clearTimeout(zoomIdle.current);
+          zoomIdle.current = window.setTimeout(() => hostRef.current?.classList.remove('flow-host--zooming'), ZOOM_SETTLE_MS);
         }}
         onlyRenderVisibleElements
         minZoom={0.05}
