@@ -16,6 +16,9 @@ import {
   type ScanResult,
 } from '@live-app-map/scanner-core';
 import type { AppMapEdge, AppMapNode, Diagnostic } from '@live-app-map/schema';
+import { parseTanStackRoutes, tanstackToPattern } from './tanstack';
+
+export { linkTargets, parseTanStackRoutes, tanstackToPattern, type TanStackLink, type TanStackRoute } from './tanstack';
 
 export type ReactRouterScanOptions = ScanRequest & {
   /** Файлы-точки входа с route objects (относительно app root) */
@@ -130,6 +133,16 @@ export async function scanReactRouterApp(
   const exampleParams = request.exampleParams ?? {};
   const baseUrl = request.baseUrl ?? null;
   const diagnostics: Diagnostic[] = [];
+
+  const tanstack = scanTanStack(absRoot, exampleParams, baseUrl);
+  if (tanstack !== null) {
+    const t1 = Date.now();
+    return {
+      document: assembleDocument({ projectRoot: absRoot, projectName: path.basename(absRoot), framework: 'react-router', baseUrl, nodes: tanstack.nodes, edges: tanstack.edges, generatorName: '@live-app-map/scanner-react-router' }),
+      diagnostics: [...tanstack.diagnostics, diag('SCAN_OK', { message: `TanStack Router: ${tanstack.nodes.length} routes, ${tanstack.edges.length} edges` })],
+      timing: { discoverMs: t1 - t0, edgesMs: 0, totalMs: t1 - t0 },
+    };
+  }
 
   const entryFiles: string[] = [];
   for (const e of request.entries ?? DEFAULT_ENTRY_GLOBS) {
@@ -305,6 +318,60 @@ export async function scanReactRouterApp(
       totalMs: t1 - t0,
     },
   };
+}
+
+/**
+ * Приложение на TanStack Router: экраны и переходы. Нет маршрутов TanStack — null.
+ */
+function scanTanStack(
+  absRoot: string,
+  exampleParams: ExampleParamsConfig,
+  baseUrl: string | null,
+): { nodes: AppMapNode[]; edges: AppMapEdge[]; diagnostics: Diagnostic[] } | null {
+  const srcRoot = path.join(absRoot, 'src');
+  if (!existsSync(srcRoot)) {
+    return null;
+  }
+  const files = new Map<string, string>();
+  for (const f of walkFiles(srcRoot)) {
+    const rel = `src/${f.replace(/\\/g, '/')}`;
+    if (/\.(tsx?|jsx?)$/.test(rel) && !/\.(test|spec|perf-test)\./.test(rel)) {
+      files.set(rel, readFileSync(path.join(absRoot, rel), 'utf8'));
+    }
+  }
+  const { routes, links } = parseTanStackRoutes(files);
+  if (routes.length === 0) {
+    return null;
+  }
+  const diagnostics: Diagnostic[] = [];
+  const idOf = (fullPath: string) => `route:${tanstackToPattern(fullPath)}`;
+  const nodes: AppMapNode[] = routes.map((r) => {
+    const pattern = tanstackToPattern(r.fullPath);
+    const { path: pathExample, missing } = materializePath(pattern, mergeRrParams(exampleParams));
+    for (const p of missing) {
+      diagnostics.push(diag('MISSING_EXAMPLE_PARAM', { message: `Нет example для ${p} в ${pattern}`, path: pattern }));
+    }
+    const url = baseUrl === null ? undefined : URL.canParse(pathExample, baseUrl) ? new URL(pathExample, baseUrl).href : undefined;
+    return {
+      id: idOf(r.fullPath),
+      kind: 'page',
+      title: humanTitle(pattern),
+      pathPattern: pattern,
+      pathExample,
+      url,
+      source: { file: r.componentFile ?? r.file },
+      dynamicParams: extractDynamicParams(pattern),
+      iframePolicy: { enabled: true },
+      metadata: { router: 'tanstack-router', routeFile: r.file },
+    };
+  });
+  const edges: AppMapEdge[] = [...new Map(links.map((l) => {
+    const from = idOf(l.fromPath);
+    const to = idOf(l.toPath);
+    const edge: AppMapEdge = { id: `edge:${from}->${to}`, from, to, kind: l.kind, confidence: l.kind === 'redirect' ? 'high' : l.shared ? 'low' : 'medium', label: tanstackToPattern(l.toPath), source: { file: l.file, line: l.line, column: 1 } };
+    return [edge.id, edge];
+  })).values()];
+  return { nodes, edges, diagnostics };
 }
 
 function mergeRrParams(exampleParams: ExampleParamsConfig): ExampleParamsConfig {

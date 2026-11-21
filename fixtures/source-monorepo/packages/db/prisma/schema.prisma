@@ -3,12 +3,30 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+/// Статус заказа.
+enum OrderStatus {
+  NEW
+  PAID
+}
+
+/// Покупатель.
+model Customer {
+  id     String  @id @default(uuid())
+  /// Почта для чеков.
+  email  String  @unique
+  orders Order[]
+
+  @@map("customers")
+}
+
 /// Заказ покупателя.
 model Order {
-  id     Int     @id @default(autoincrement())
-  total  Int
-  note   String?
-  userId String  @map("user_id")
+  id       Int         @id @default(autoincrement())
+  total    Int
+  note     String?
+  status   OrderStatus @default(NEW)
+  userId   String      @map("user_id")
+  customer Customer    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("orders")
 }

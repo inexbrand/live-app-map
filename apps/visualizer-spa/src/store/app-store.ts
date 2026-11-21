@@ -42,6 +42,9 @@ import {
   clampViewport,
   viewportFromPresetId,
 } from '../lib/viewport';
+import { cellOf, toGatewayUrl } from '../lib/gateway/gateway-host';
+import { pickProfile } from '../lib/gateway/profile-pick';
+import { useGatewayStore } from './gateway-store';
 
 /** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
 export type IframeScale = 0.25 | 0.35 | 0.5 | 0.75 | 1;
@@ -803,6 +806,26 @@ export const useAppStore = create<AppStore>((set, get) => ({
           },
           hash: pageState?.inject?.hash,
         });
+
+    // Шлюз: сессия профиля вместо query-токенов и TLS-прокси.
+    const gateway = useGatewayStore.getState();
+    if (gateway.port !== null) {
+      const hashed = ensureMiniappHashRoute(withState);
+      let appOrigin = '';
+      try {
+        appOrigin = new URL(hashed).origin;
+      } catch {
+        return hashed;
+      }
+      const profile = pickProfile({
+        profiles: gateway.profiles,
+        appOrigin,
+        ...(stateName === undefined ? {} : { stateName }),
+        ...(node.states?.[0] === undefined ? {} : { defaultStateName: node.states[0].name }),
+        globalRole,
+      });
+      return toGatewayUrl(hashed, profile, gateway.port, cellOf(id)) ?? hashed;
+    }
 
     // Dogfood inject: miniapp initData + admin token (Korbor читает query)
     let url = applyDogfoodToUrl(withState, {

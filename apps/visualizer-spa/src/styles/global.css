@@ -1,7 +1,22 @@
 /**
- * Live App Map — monochrome design tokens (shadcn-like, Manrope).
+ * Live App Map — monochrome design tokens (shadcn-like, Medeo Sans).
  * Канон: нейтральная шкала, один акцент (foreground), без цветного chrome.
  */
+
+/* Шрифт один — Medeo Sans (правило владельца): кириллица и латиница отдельными файлами. */
+@font-face {
+  font-family: 'Medeo Sans';
+  src: url('/fonts/medeo-cyr.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+  unicode-range: U+0301, U+0400-045F, U+0490-0491, U+04B0-04B1, U+2116, U+20BD;
+}
+@font-face {
+  font-family: 'Medeo Sans';
+  src: url('/fonts/medeo-lat.woff2') format('woff2');
+  font-weight: 100 900;
+  font-display: swap;
+}
 
 :root {
   color-scheme: dark;
@@ -32,8 +47,9 @@
   --radius-sm: 0.375rem;
   --radius-lg: 0.75rem;
 
-  --font: 'Manrope', system-ui, -apple-system, sans-serif;
-  --mono: ui-monospace, 'Cascadia Code', 'SF Mono', Consolas, monospace;
+  --font: 'Medeo Sans', sans-serif;
+  /* Код — тем же Medeo с цифрами одной ширины: других гарнитур нет. */
+  --mono: 'Medeo Sans', sans-serif;
 
   --node-w: 320px;
   --node-h: 260px;
@@ -1330,3 +1346,88 @@ code,
   text-decoration: underline;
   cursor: pointer;
 }
+
+/* Код и числа: Medeo с цифрами одной ширины вместо моноширинной гарнитуры. */
+code,
+pre,
+kbd,
+.mono {
+  font-variant-numeric: tabular-nums;
+}
+
+/* Рамка группы нод: поверхность приложения или сервисы. */
+.group-frame {
+  width: 100%;
+  height: 100%;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.015);
+  pointer-events: none;
+}
+.group-frame__title {
+  padding: 22px 40px 0;
+  font-size: 44px;
+  font-weight: 600;
+  line-height: 1.1;
+  color: var(--foreground);
+  display: flex;
+  align-items: baseline;
+  gap: 16px;
+}
+.group-frame__count {
+  font-size: 28px;
+  color: var(--muted-foreground);
+  font-variant-numeric: tabular-nums;
+}
+
+/* Состояние живого экрана по отчёту шлюза */
+.ui-badge--alert { background: #fde8e8; color: #9b1c1c; border-color: #f5b5b5; }
+.ui-badge--warn { background: #fdf3dc; color: #7a4b00; border-color: #f1d58c; }
+.ui-badge--alert, .ui-badge--warn { text-transform: none; letter-spacing: 0; white-space: nowrap; flex: 0 0 auto; }
+.page-node__title { min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.session-profiles__list { list-style: none; margin: 8px 0; padding: 0; display: grid; gap: 8px; }
+.session-profiles__item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
+.session-form { display: grid; gap: 8px; margin-top: 8px; }
+.session-form__error { color: #f08a8a; }
+.page-node__snapshot { position: absolute; top: 0; left: 0; display: block; max-width: none; pointer-events: none; user-select: none; }
+
+/* GPU: вьюпорт холста — отдельный композитный слой, пан/зум двигают его без перерисовки;
+   нода изолирует раскладку и отрисовку — изменения внутри не трогают соседей. */
+.react-flow__viewport { will-change: transform; }
+.react-flow__node { contain: layout style paint; }
+.react-flow__minimap { contain: strict; }
+
+/* Вид «База данных» */
+.db-view { position: absolute; inset: 0; display: grid; grid-template-columns: 300px 1fr; background: var(--background); color: var(--foreground); z-index: 1; }
+.db-view--empty { display: flex; align-items: center; justify-content: center; }
+.db-view__list { border-right: 1px solid var(--border); padding: 72px 12px 12px; overflow: auto; }
+.db-view__list ul { list-style: none; margin: 8px 0 0; padding: 0; }
+.db-view__row { display: grid; width: 100%; text-align: left; gap: 2px; padding: 6px 8px; border-radius: 6px; background: none; border: 0; color: inherit; cursor: pointer; }
+.db-view__row:hover { background: var(--secondary); }
+.db-view__row--on { background: var(--secondary); outline: 1px solid var(--border); }
+.db-view__name { font-weight: 600; }
+.db-view__meta { font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.db-view__detail { overflow: auto; padding: 72px 24px 24px; }
+.db-view__head { display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.db-view__head h2 { margin: 0; font-size: 22px; }
+.db-view__doc { max-width: 760px; color: var(--muted-foreground); }
+.db-view__section { margin-top: 20px; }
+.db-view__section h3 { font-size: 15px; margin: 0 0 8px; }
+.db-view__count { color: var(--muted-foreground); font-weight: 400; font-variant-numeric: tabular-nums; }
+.db-view__columns { border-collapse: collapse; width: 100%; font-size: 13px; }
+.db-view__columns th, .db-view__columns td { text-align: left; padding: 5px 10px 5px 0; border-bottom: 1px solid var(--border); vertical-align: top; }
+.db-view__columns th { color: var(--muted-foreground); font-weight: 500; }
+.db-view__link { background: none; border: 0; padding: 0; color: inherit; text-decoration: underline; cursor: pointer; font: inherit; }
+.db-view__routes { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+.db-view__screens { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 4px; }
+/* Мини-карта левее кнопки журнала (.diag-fab: right 14 + 44 px) — не наезжают друг на друга. */
+.react-flow__panel.react-flow__minimap { margin-right: 70px; }
+/* Строка пути: значки состояния, путь (с многоточием), размер. */
+.page-node__path { display: flex; align-items: center; gap: 4px; }
+.page-node__path .ui-badge { flex: none; padding: 0 5px; font-size: 9px; line-height: 12px; }
+.page-node__path-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.page-node__size { flex: none; }
+/* Нода не прокручивается фокусом (clip, а не hidden); полоса размеров — одна строка с горизонтальной прокруткой, ровно в отведённую высоту. */
+.page-node { overflow: clip; }
+.page-node__viewport-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
+.page-node__vp-btn { flex: none; }

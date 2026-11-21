@@ -1,9 +1,15 @@
 /**
  * Чтение карты (liveappmap или enterprise JSON) для MCP-tools.
  */
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { parseAppMapDocument, parseLiveAppMapJson } from '@live-app-map/schema';
+import { buildCodeIndex, type CodeIndex } from '@live-app-map/graph';
+import {
+  liveAppMapToAppMap,
+  parseAppMapDocument,
+  parseLiveAppMapJson,
+  type AppMapDocument,
+} from '@live-app-map/schema';
 
 /** Экран карты в ответе tools. */
 export type MapPageSummary = {
@@ -61,4 +67,50 @@ export function loadMap(mapPath: string): LoadedMap {
     };
   }
   throw new Error(`не карта Live App Map: ${mapPath}`);
+}
+
+/**
+ * Читает карту как документ AppMap (liveappmap переводится в него).
+ *
+ * @param mapPath - путь к JSON (относительно cwd)
+ * @returns документ
+ * @throws Error если файл не читается или не является картой
+ */
+export function loadMapDocument(mapPath: string): AppMapDocument {
+  const text = readFileSync(path.resolve(mapPath), 'utf8');
+  const asApp = parseAppMapDocument(JSON.parse(text));
+  if (asApp.ok) {
+    return asApp.document;
+  }
+  const asLive = parseLiveAppMapJson(text);
+  if (asLive.ok) {
+    return liveAppMapToAppMap(asLive.document);
+  }
+  throw new Error(`не карта Live App Map: ${mapPath}`);
+}
+
+/** Индекс code последней прочитанной карты: путь + mtime → индекс. */
+const indexCache = new Map<string, { readonly mtimeMs: number; readonly index: CodeIndex }>();
+
+/**
+ * Индекс раздела code карты; перечитывает файл, только если он изменился.
+ *
+ * @param mapPath - путь к карте
+ * @returns индекс
+ * @throws Error если в карте нет раздела code
+ */
+export function loadCodeIndex(mapPath: string): CodeIndex {
+  const abs = path.resolve(mapPath);
+  const mtimeMs = statSync(abs).mtimeMs;
+  const cached = indexCache.get(abs);
+  if (cached !== undefined && cached.mtimeMs === mtimeMs) {
+    return cached.index;
+  }
+  const doc = loadMapDocument(abs);
+  if (doc.code === undefined) {
+    throw new Error(`в карте нет раздела code: ${mapPath}. Пересоберите её со сканом исходников (scan --code-dir <корень репо>)`);
+  }
+  const index = buildCodeIndex(doc);
+  indexCache.set(abs, { mtimeMs, index });
+  return index;
 }

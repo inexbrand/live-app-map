@@ -34,7 +34,10 @@ describe('loadMapPresetIntoStore', () => {
     const s = useAppStore.getState();
     expect(s.baseUrlOverride).toBe('http://localhost:16001');
     expect(s.mode).toBe('live');
-    expect(s.document?.nodes.filter((n) => n.kind === 'page').length).toBe(35);
+    const filePages = (JSON.parse(readFileSync(sitePath, 'utf8')) as { pages: Array<{ metadata?: { kind?: string } }> }).pages;
+    const screens = filePages.filter((p) => p.metadata?.kind === 'page').length;
+    expect(screens).toBeGreaterThan(0);
+    expect(s.document?.nodes.filter((n) => n.kind === 'page').length).toBe(screens);
   });
 
   test('HTTP 404 — ошибка, store не тронут', async () => {

@@ -13,6 +13,7 @@ import { agentStateMiddleware } from './src/lib/agent-state-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
 import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
 import { finalizeProxiedBody, sanitizeProxiedHeaders } from './src/lib/proxy-response';
+import { lamGatewayPlugin } from './src/lib/gateway/vite-plugin';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
@@ -281,6 +282,7 @@ export default defineConfig({
     mapsCatalogPlugin(),
     tlsCheckPlugin(),
     errorReportsPlugin(),
+    lamGatewayPlugin(),
   ],
   server: {
     port: 4310,

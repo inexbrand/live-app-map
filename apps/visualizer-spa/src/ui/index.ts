@@ -1,5 +1,5 @@
 /**
- * Публичный UI-kit visualizer (monochrome / Manrope / Lucide).
+ * Публичный UI-kit visualizer (monochrome / Medeo Sans / Lucide).
  */
 export { Badge, Chip } from './badge';
 export { Button, type ButtonProps, type ButtonSize, type ButtonVariant } from './button';

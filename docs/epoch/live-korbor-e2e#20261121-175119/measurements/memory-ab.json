@@ -1,0 +1,176 @@
+{
+  "when": "2026-11-21",
+  "how": "scratchpad mem.ts: Playwright chromium headless 1600×1000, korbor-all; GC через CDP HeapProfiler.collectGarbage перед замером; heapMb = Runtime.getHeapUsage вкладки (iframe в том же процессе), rssMb = сумма RSS дерева процессов браузера",
+  "A_old_live8_warm8_no_snapshots": [
+    [
+      {
+        "step": "старт korbor-all",
+        "rssMb": 407,
+        "heapMb": 155,
+        "procs": 4,
+        "iframes": 6,
+        "live": 6,
+        "nodes": 7,
+        "imgs": 0
+      },
+      {
+        "step": "отдалили (обзор)",
+        "rssMb": 462,
+        "heapMb": 180,
+        "procs": 4,
+        "iframes": 7,
+        "live": 7,
+        "nodes": 49,
+        "imgs": 0
+      },
+      {
+        "step": "панорама 10 шагов",
+        "rssMb": 468,
+        "heapMb": 180,
+        "procs": 4,
+        "iframes": 7,
+        "live": 7,
+        "nodes": 49,
+        "imgs": 0
+      },
+      {
+        "step": "после 4 переключений карт",
+        "rssMb": 429,
+        "heapMb": 153,
+        "procs": 4,
+        "iframes": 6,
+        "live": 6,
+        "nodes": 7,
+        "imgs": 0
+      }
+    ],
+    [
+      {
+        "step": "старт korbor-all",
+        "rssMb": 473,
+        "heapMb": 154,
+        "procs": 4,
+        "iframes": 6,
+        "live": 6,
+        "nodes": 7,
+        "imgs": 0
+      },
+      {
+        "step": "отдалили (обзор)",
+        "rssMb": 265,
+        "heapMb": 179,
+        "procs": 4,
+        "iframes": 7,
+        "live": 7,
+        "nodes": 49,
+        "imgs": 0
+      },
+      {
+        "step": "панорама 10 шагов",
+        "rssMb": 477,
+        "heapMb": 179,
+        "procs": 4,
+        "iframes": 7,
+        "live": 7,
+        "nodes": 49,
+        "imgs": 0
+      },
+      {
+        "step": "после 4 переключений карт",
+        "rssMb": 483,
+        "heapMb": 150,
+        "procs": 4,
+        "iframes": 6,
+        "live": 6,
+        "nodes": 7,
+        "imgs": 0
+      }
+    ]
+  ],
+  "B_new_live6_warm2_snapshots": [
+    [
+      {
+        "step": "старт korbor-all",
+        "rssMb": 401,
+        "heapMb": 134,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 7,
+        "imgs": 2
+      },
+      {
+        "step": "отдалили (обзор)",
+        "rssMb": 466,
+        "heapMb": 141,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 49,
+        "imgs": 44
+      },
+      {
+        "step": "панорама 10 шагов",
+        "rssMb": 462,
+        "heapMb": 141,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 49,
+        "imgs": 44
+      },
+      {
+        "step": "после 4 переключений карт",
+        "rssMb": 676,
+        "heapMb": 131,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 7,
+        "imgs": 2
+      }
+    ],
+    [
+      {
+        "step": "старт korbor-all",
+        "rssMb": 413,
+        "heapMb": 133,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 7,
+        "imgs": 2
+      },
+      {
+        "step": "отдалили (обзор)",
+        "rssMb": 409,
+        "heapMb": 139,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 49,
+        "imgs": 44
+      },
+      {
+        "step": "панорама 10 шагов",
+        "rssMb": 420,
+        "heapMb": 139,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 49,
+        "imgs": 44
+      },
+      {
+        "step": "после 4 переключений карт",
+        "rssMb": 301,
+        "heapMb": 131,
+        "procs": 4,
+        "iframes": 5,
+        "live": 5,
+        "nodes": 7,
+        "imgs": 2
+      }
+    ]
+  ]
+}

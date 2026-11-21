@@ -1,0 +1,420 @@
+{
+  "how": "scratchpad fps.ts (копия рядом): интервалы rAF во время панорамы (6 протяжек по 30 шагов) и зума колесом (12 щелчков); CDP Performance.getMetrics — LayoutCount, RecalcStyleCount, ScriptDuration. Машина под нагрузкой (мутационный прогон Tandir, load ~60) — разброс между прогонами большой.",
+  "headless_before_css": {
+    "pan_start": {
+      "fps": 60,
+      "layouts": 159,
+      "p95": 17.5
+    },
+    "zoom": {
+      "fps": 51,
+      "p95": 49.7,
+      "long": 3
+    },
+    "pan_overview": {
+      "fps": 59,
+      "layouts": 180,
+      "p95": 17.6
+    }
+  },
+  "headless_after_css": [
+    {
+      "label": "after-gpu",
+      "out": [
+        {
+          "name": "панорама при старте (6 iframe)",
+          "ms": 5664,
+          "frames": 307,
+          "fps": 54,
+          "p50": 16.7,
+          "p95": 17.7,
+          "long": 7,
+          "layouts": 165,
+          "styleRecalcs": 252,
+          "layoutMs": 40,
+          "scriptMs": 1151
+        },
+        {
+          "name": "зум колесом",
+          "ms": 1782,
+          "frames": 71,
+          "fps": 40,
+          "p50": 16.7,
+          "p95": 66.9,
+          "long": 6,
+          "layouts": 38,
+          "styleRecalcs": 49,
+          "layoutMs": 34,
+          "scriptMs": 481
+        },
+        {
+          "name": "панорама в обзоре (≈49 нод)",
+          "ms": 10148,
+          "frames": 459,
+          "fps": 45,
+          "p50": 16.7,
+          "p95": 50,
+          "long": 19,
+          "layouts": 180,
+          "styleRecalcs": 192,
+          "layoutMs": 21,
+          "scriptMs": 699
+        }
+      ]
+    },
+    {
+      "label": "after-gpu-2",
+      "out": [
+        {
+          "name": "панорама при старте (6 iframe)",
+          "ms": 4792,
+          "frames": 268,
+          "fps": 56,
+          "p50": 16.7,
+          "p95": 17.6,
+          "long": 5,
+          "layouts": 150,
+          "styleRecalcs": 225,
+          "layoutMs": 38,
+          "scriptMs": 833
+        },
+        {
+          "name": "зум колесом",
+          "ms": 1457,
+          "frames": 74,
+          "fps": 51,
+          "p50": 16.7,
+          "p95": 33.5,
+          "long": 2,
+          "layouts": 29,
+          "styleRecalcs": 17,
+          "layoutMs": 14,
+          "scriptMs": 260
+        },
+        {
+          "name": "панорама в обзоре (≈49 нод)",
+          "ms": 7199,
+          "frames": 408,
+          "fps": 57,
+          "p50": 16.7,
+          "p95": 17.6,
+          "long": 1,
+          "layouts": 180,
+          "styleRecalcs": 191,
+          "layoutMs": 16,
+          "scriptMs": 360
+        }
+      ]
+    }
+  ],
+  "headless_no_minimap": {
+    "label": "no-minimap",
+    "out": [
+      {
+        "name": "панорама при старте (6 iframe)",
+        "ms": 5528,
+        "frames": 309,
+        "fps": 56,
+        "p50": 16.7,
+        "p95": 17.6,
+        "long": 5,
+        "layouts": 66,
+        "styleRecalcs": 271,
+        "layoutMs": 32,
+        "scriptMs": 1096
+      },
+      {
+        "name": "зум колесом",
+        "ms": 1427,
+        "frames": 70,
+        "fps": 49,
+        "p50": 16.7,
+        "p95": 50,
+        "long": 3,
+        "layouts": 34,
+        "styleRecalcs": 41,
+        "layoutMs": 23,
+        "scriptMs": 347
+      },
+      {
+        "name": "панорама в обзоре (≈49 нод)",
+        "ms": 7328,
+        "frames": 421,
+        "fps": 57,
+        "p50": 16.7,
+        "p95": 17.7,
+        "long": 2,
+        "layouts": 0,
+        "styleRecalcs": 192,
+        "layoutMs": 0,
+        "scriptMs": 323
+      }
+    ]
+  },
+  "headless_no_background": {
+    "label": "no-bg",
+    "out": [
+      {
+        "name": "панорама при старте (6 iframe)",
+        "ms": 5229,
+        "frames": 288,
+        "fps": 55,
+        "p50": 16.7,
+        "p95": 17.7,
+        "long": 4,
+        "layouts": 166,
+        "styleRecalcs": 256,
+        "layoutMs": 38,
+        "scriptMs": 1068
+      },
+      {
+        "name": "зум колесом",
+        "ms": 1505,
+        "frames": 68,
+        "fps": 45,
+        "p50": 16.7,
+        "p95": 50,
+        "long": 3,
+        "layouts": 34,
+        "styleRecalcs": 39,
+        "layoutMs": 20,
+        "scriptMs": 312
+      },
+      {
+        "name": "панорама в обзоре (≈49 нод)",
+        "ms": 6653,
+        "frames": 390,
+        "fps": 59,
+        "p50": 16.7,
+        "p95": 17.5,
+        "long": 1,
+        "layouts": 180,
+        "styleRecalcs": 192,
+        "layoutMs": 15,
+        "scriptMs": 331
+      }
+    ]
+  },
+  "headed_gpu_first_runs_cold_snapshots": [
+    {
+      "label": "headed-gpu",
+      "out": [
+        {
+          "name": "панорама при старте (6 iframe)",
+          "ms": 5400,
+          "frames": 302,
+          "fps": 56,
+          "p50": 16.7,
+          "p95": 17.5,
+          "long": 2,
+          "layouts": 135,
+          "styleRecalcs": 162,
+          "layoutMs": 11,
+          "scriptMs": 424
+        },
+        {
+          "name": "зум колесом",
+          "ms": 4594,
+          "frames": 70,
+          "fps": 15,
+          "p50": 16.9,
+          "p95": 400,
+          "long": 14,
+          "layouts": 26,
+          "styleRecalcs": 15,
+          "layoutMs": 65,
+          "scriptMs": 629
+        },
+        {
+          "name": "панорама в обзоре (≈49 нод)",
+          "ms": 5806,
+          "frames": 332,
+          "fps": 57,
+          "p50": 16.7,
+          "p95": 17.5,
+          "long": 1,
+          "layouts": 180,
+          "styleRecalcs": 192,
+          "layoutMs": 11,
+          "scriptMs": 379
+        }
+      ]
+    },
+    {
+      "label": "headed-gpu-2",
+      "out": [
+        {
+          "name": "панорама при старте (6 iframe)",
+          "ms": 8131,
+          "frames": 473,
+          "fps": 58,
+          "p50": 16.7,
+          "p95": 17.6,
+          "long": 2,
+          "layouts": 153,
+          "styleRecalcs": 184,
+          "layoutMs": 25,
+          "scriptMs": 663
+        },
+        {
+          "name": "зум колесом",
+          "ms": 2342,
+          "frames": 62,
+          "fps": 26,
+          "p50": 16.7,
+          "p95": 133.3,
+          "long": 9,
+          "layouts": 30,
+          "styleRecalcs": 21,
+          "layoutMs": 23,
+          "scriptMs": 489
+        },
+        {
+          "name": "панорама в обзоре (≈49 нод)",
+          "ms": 7522,
+          "frames": 394,
+          "fps": 52,
+          "p50": 16.7,
+          "p95": 17.6,
+          "long": 2,
+          "layouts": 180,
+          "styleRecalcs": 192,
+          "layoutMs": 14,
+          "scriptMs": 504
+        }
+      ]
+    }
+  ],
+  "headed_gpu_no_will_change": {
+    "label": "headed-no-willchange",
+    "out": [
+      {
+        "name": "панорама при старте (6 iframe)",
+        "ms": 4595,
+        "frames": 276,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17.4,
+        "long": 0,
+        "layouts": 136,
+        "styleRecalcs": 161,
+        "layoutMs": 11,
+        "scriptMs": 434
+      },
+      {
+        "name": "зум колесом",
+        "ms": 1737,
+        "frames": 69,
+        "fps": 40,
+        "p50": 16.7,
+        "p95": 33.4,
+        "long": 3,
+        "layouts": 25,
+        "styleRecalcs": 16,
+        "layoutMs": 17,
+        "scriptMs": 337
+      },
+      {
+        "name": "панорама в обзоре (≈49 нод)",
+        "ms": 4977,
+        "frames": 300,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17.5,
+        "long": 0,
+        "layouts": 180,
+        "styleRecalcs": 192,
+        "layoutMs": 12,
+        "scriptMs": 436
+      }
+    ]
+  },
+  "headed_gpu_hidden_iframes": {
+    "label": "headed-hidden-iframes",
+    "out": [
+      {
+        "name": "панорама при старте (6 iframe)",
+        "ms": 5718,
+        "frames": 344,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17.6,
+        "long": 0,
+        "layouts": 135,
+        "styleRecalcs": 162,
+        "layoutMs": 14,
+        "scriptMs": 435
+      },
+      {
+        "name": "зум колесом",
+        "ms": 1684,
+        "frames": 72,
+        "fps": 43,
+        "p50": 16.7,
+        "p95": 51,
+        "long": 5,
+        "layouts": 27,
+        "styleRecalcs": 15,
+        "layoutMs": 20,
+        "scriptMs": 428
+      },
+      {
+        "name": "панорама в обзоре (≈49 нод)",
+        "ms": 5564,
+        "frames": 303,
+        "fps": 54,
+        "p50": 16.7,
+        "p95": 17.6,
+        "long": 2,
+        "layouts": 180,
+        "styleRecalcs": 191,
+        "layoutMs": 12,
+        "scriptMs": 497
+      }
+    ]
+  },
+  "headed_gpu_will_change": {
+    "label": "headed-willchange",
+    "out": [
+      {
+        "name": "панорама при старте (6 iframe)",
+        "ms": 4056,
+        "frames": 244,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17.1,
+        "long": 0,
+        "layouts": 138,
+        "styleRecalcs": 162,
+        "layoutMs": 10,
+        "scriptMs": 378
+      },
+      {
+        "name": "зум колесом",
+        "ms": 1411,
+        "frames": 66,
+        "fps": 47,
+        "p50": 16.7,
+        "p95": 50,
+        "long": 3,
+        "layouts": 26,
+        "styleRecalcs": 15,
+        "layoutMs": 15,
+        "scriptMs": 323
+      },
+      {
+        "name": "панорама в обзоре (≈49 нод)",
+        "ms": 3123,
+        "frames": 188,
+        "fps": 60,
+        "p50": 16.7,
+        "p95": 17,
+        "long": 0,
+        "layouts": 180,
+        "styleRecalcs": 191,
+        "layoutMs": 8,
+        "scriptMs": 256
+      }
+    ]
+  }
+}
