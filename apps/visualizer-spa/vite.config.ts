@@ -350,6 +350,8 @@ export default defineConfig({
     },
   },
   optimizeDeps: {
-    include: ['@xyflow/react', 'zustand', '@dagrejs/dagre'],
+    // transformers импортирует только воркер голоса: без include Vite находит его при первой
+    // записи голоса и перезагружает страницу посреди работы (и e2e)
+    include: ['@xyflow/react', 'zustand', '@dagrejs/dagre', '@huggingface/transformers'],
   },
 });
