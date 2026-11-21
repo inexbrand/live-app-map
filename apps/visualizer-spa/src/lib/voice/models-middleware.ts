@@ -15,7 +15,7 @@ import { createReadStream, createWriteStream, existsSync, mkdirSync, readdirSync
 import { createRequire } from 'node:module';
 import path from 'node:path';
 import { resolveLamDir } from '@live-app-map/mcp-server';
-import { isLocalOrigin, requestPath, sendJson, type DevMiddleware } from '../dev-http';
+import { localEndpointMiddleware, sendError, sendJson, underPath, type DevMiddleware } from '../dev-http';
 import { VOICE_MODELS } from './models';
 
 /** Корень эндпоинтов. */
@@ -143,7 +143,7 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
   });
   const up = await openSource(opts, repo, rev, file, ctrl.signal);
   if (!up.ok || up.body === null) {
-    sendJson(res, up.status === 404 ? 404 : 502, { ok: false, error: `модель: ${file} — HTTP ${up.status}` });
+    sendError(res, up.status === 404 ? 404 : 502, `модель: ${file} — HTTP ${up.status}`);
     return;
   }
   mkdirSync(path.dirname(target), { recursive: true });
@@ -229,7 +229,7 @@ async function upstreamSizes(opts: ModelsMiddlewareOptions, repo: string): Promi
 async function handleSize(opts: ModelsMiddlewareOptions, res: Res, url: URL): Promise<void> {
   const repo = url.searchParams.get('repo') ?? '';
   if (!opts.repos.includes(repo)) {
-    sendJson(res, 403, { ok: false, error: `модель не из списка: ${repo}` });
+    sendError(res, 403, `модель не из списка: ${repo}`);
     return;
   }
   const files = (url.searchParams.get('files') ?? '').split(',').filter((f) => f !== '');
@@ -239,7 +239,7 @@ async function handleSize(opts: ModelsMiddlewareOptions, res: Res, url: URL): Pr
   for (const f of files) {
     const local = path.join(opts.dir, repo, f);
     if (safeFile(f.split('/')) === null) {
-      sendJson(res, 400, { ok: false, error: `неверный файл: ${f}` });
+      sendError(res, 400, `неверный файл: ${f}`);
       return;
     }
     if (existsSync(local)) {
@@ -269,19 +269,19 @@ async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promis
   if (head === 'ort' && req.method === 'GET') {
     const name = rest.join('/');
     if (!/^ort-wasm[A-Za-z0-9._-]*\.(mjs|wasm)$/.test(name) || !existsSync(path.join(opts.ortDir, name))) {
-      sendJson(res, 404, { ok: false, error: `нет файла onnxruntime: ${name}` });
+      sendError(res, 404, `нет файла onnxruntime: ${name}`);
       return;
     }
     serveFile(res, path.join(opts.ortDir, name));
     return;
   }
   if (head !== 'hf') {
-    sendJson(res, 404, { ok: false, error: `нет такого пути: ${url.pathname}` });
+    sendError(res, 404, `нет такого пути: ${url.pathname}`);
     return;
   }
   const repo = rest.slice(0, 2).join('/');
   if (!opts.repos.includes(repo)) {
-    sendJson(res, 403, { ok: false, error: `модель не из списка: ${repo}` });
+    sendError(res, 403, `модель не из списка: ${repo}`);
     return;
   }
   if (req.method === 'DELETE' && rest.length === 2) {
@@ -292,7 +292,7 @@ async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promis
   const [, , resolve, rev = '', ...fileParts] = rest;
   const file = safeFile(fileParts);
   if (req.method !== 'GET' || resolve !== 'resolve' || !SAFE_PART.test(rev) || file === null) {
-    sendJson(res, 400, { ok: false, error: 'ожидается GET hf/<repo>/resolve/<rev>/<file>' });
+    sendError(res, 400, 'ожидается GET hf/<repo>/resolve/<rev>/<file>');
     return;
   }
   const target = path.join(opts.dir, repo, file);
@@ -309,22 +309,11 @@ async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promis
  * @param opts - папки, источник и список моделей
  */
 export function createModelsMiddleware(opts: ModelsMiddlewareOptions): DevMiddleware {
-  return (req, res, next) => {
-    const p = requestPath(req);
-    if (p !== MODELS_PATH && !p.startsWith(`${MODELS_PATH}/`)) {
-      next();
-      return;
-    }
-    if (!isLocalOrigin(req)) {
-      sendJson(res, 403, { ok: false, error: 'origin не локальный' });
-      return;
-    }
-    void handle(opts, req, res).catch((err: unknown) => {
-      if (!res.headersSent) {
-        sendJson(res, 502, { ok: false, error: err instanceof Error ? err.message : String(err) });
-      }
-    });
-  };
+  return localEndpointMiddleware({
+    matches: underPath(MODELS_PATH),
+    errorStatus: 502,
+    handle: (req, res) => handle(opts, req, res),
+  });
 }
 
 /** Переменная окружения: своя папка моделей. */

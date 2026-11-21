@@ -9,7 +9,7 @@
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
-import { isLocalOrigin, requestPath, sendJson, type DevMiddleware } from './dev-http';
+import { isLocalOrigin, requestPath, sendError, sendJson, type DevMiddleware } from './dev-http';
 import { freshScan, listMapVersions, readMapVersion, type ScanRecipes } from './map-versions';
 
 export const MAP_VERSIONS_PATH = '/__lam_maps/versions';
@@ -44,28 +44,28 @@ export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes): De
     const q = new URL(req.url ?? '/', 'http://localhost').searchParams;
     const id = q.get('id');
     if (id === null || id === '') {
-      sendJson(res, 400, { ok: false, error: 'не задан id карты — например, korbor-all' });
+      sendError(res, 400, 'не задан id карты — например, korbor-all');
       return;
     }
     const file = path.join(mapsDir, `${id}.liveappmap.json`);
     if (!MAP_ID.test(id) || !existsSync(file)) {
-      sendJson(res, 404, { ok: false, error: `карты ${id} нет в каталоге` });
+      sendError(res, 404, `карты ${id} нет в каталоге`);
       return;
     }
     if (p === MAP_SCAN_PATH) {
       if (req.method !== 'POST' || !isLocalOrigin(req)) {
-        sendJson(res, req.method !== 'POST' ? 405 : 403, { ok: false, error: 'скан — POST с локальной страницы' });
+        sendError(res, req.method !== 'POST' ? 405 : 403, 'скан — POST с локальной страницы');
         return;
       }
       const running = scans.get(id) ?? freshScan(id, recipes).finally(() => scans.delete(id));
       scans.set(id, running);
-      void running.then((r) => (r.ok ? sendMapText(res, r.stdout) : sendJson(res, 502, { ok: false, error: r.error })));
+      void running.then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 502, r.error)));
       return;
     }
     if (p === MAP_VERSIONS_PATH) {
       void listMapVersions(file).then((r) => sendJson(res, r.ok ? 200 : 502, r));
       return;
     }
-    void readMapVersion(file, q.get('ref') ?? '').then((r) => (r.ok ? sendMapText(res, r.stdout) : sendJson(res, 400, { ok: false, error: r.error })));
+    void readMapVersion(file, q.get('ref') ?? '').then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 400, r.error)));
   };
 }

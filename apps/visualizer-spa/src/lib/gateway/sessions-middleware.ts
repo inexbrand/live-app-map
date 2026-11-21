@@ -2,7 +2,7 @@
  * REST профилей сессий на dev-сервере визуализатора: `/__lam_sessions`.
  * Ответы не содержат значений кук и токенов — только имена.
  */
-import { isLocalOrigin, readBody, requestPath, sendJson, type DevMiddleware } from '../dev-http';
+import { errorMessage, isLocalOrigin, readBody, requestPath, sendError, sendJson, type DevMiddleware } from '../dev-http';
 import { parseSetCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
 import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type KorborRenewal } from './korbor-dogfood';
@@ -57,12 +57,12 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
     // Только сама страница визуализатора: страницы приложений в iframe шлюза тоже *.localhost.
     const origin = req.headers.origin;
     if (!isLocalOrigin(req) || (origin !== undefined && origin !== '' && origin !== `http://${req.headers.host ?? ''}`)) {
-      sendJson(res, 403, { ok: false, error: 'профили доступны только странице визуализатора' });
+      sendError(res, 403, 'профили доступны только странице визуализатора');
       return;
     }
     const rest = p.slice(SESSIONS_PATH.length).split('/').filter((s) => s !== '');
     void handle(req.method ?? 'GET', rest[0] ?? '', rest[1] ?? '').catch((err: unknown) => {
-      sendJson(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) });
+      sendError(res, 500, errorMessage(err));
     });
 
     async function handle(method: string, profileId: string, act: string): Promise<void> {
@@ -80,12 +80,12 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
       }
       const body = await readBody(req, MAX_BODY);
       if (!body.ok) {
-        sendJson(res, body.status, { ok: false, error: body.error });
+        sendError(res, body.status, body.error);
         return;
       }
       const o = asObject(body.text);
       if (o === null) {
-        sendJson(res, 400, { ok: false, error: 'тело — JSON-объект' });
+        sendError(res, 400, 'тело — JSON-объект');
         return;
       }
       const origin = originOf(o);
@@ -130,7 +130,7 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
         const renewal: KorborRenewal = { kind, actorId, apiBase };
         const minted = await mintKorbor(renewal);
         if (!minted.ok) {
-          sendJson(res, 502, { ok: false, error: minted.error });
+          sendError(res, 502, minted.error);
           return;
         }
         const saved = store.upsert({
@@ -144,7 +144,7 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
         sendJson(res, 200, { ok: true, actor: { label: minted.label, role: minted.role }, profile: summarize(saved) });
         return;
       }
-      sendJson(res, 405, { ok: false, error: `${method} ${p} не поддерживается` });
+      sendError(res, 405, `${method} ${p} не поддерживается`);
     }
 
     /** Первые id списков API под профилем: реальные параметры маршрутов экранов. */
@@ -152,17 +152,17 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
       const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
       const renewal = store.get(profileId)?.renewals?.[origin];
       if (renewal === undefined) {
-        sendJson(res, 404, { ok: false, error: `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»` });
+        sendError(res, 404, `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»`);
         return;
       }
       const stale = await store.ensureFresh(profileId, origin);
       if (stale !== null) {
-        sendJson(res, 502, { ok: false, error: stale });
+        sendError(res, 502, stale);
         return;
       }
       const bearer = await korborBearer(renewal, store.get(profileId)?.storage[origin]?.[KORBOR_DOGFOOD_STORAGE[renewal.kind]] ?? '');
       if (!bearer.ok) {
-        sendJson(res, 502, { ok: false, error: bearer.error });
+        sendError(res, 502, bearer.error);
         return;
       }
       sendJson(res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, bearer.token, lists) });

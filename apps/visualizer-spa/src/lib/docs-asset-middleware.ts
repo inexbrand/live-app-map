@@ -5,7 +5,7 @@
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { requestPath, sendJson, type DevMiddleware } from './dev-http';
+import { rejectMethod, requestPath, sendError, type DevMiddleware } from './dev-http';
 import { DOCS_ASSET_PATH } from './docs-asset-url';
 
 const TYPES: ReadonlyMap<string, string> = new Map([
@@ -41,14 +41,13 @@ export const docsAssetMiddleware: DevMiddleware = (req, res, next) => {
     return;
   }
   if (req.method !== 'GET' && req.method !== 'HEAD') {
-    res.setHeader('allow', 'GET, HEAD');
-    sendJson(res, 405, { ok: false, error: 'только GET' });
+    rejectMethod(res, 'GET, HEAD', 'только GET');
     return;
   }
   const params = new URL(req.url ?? '/', 'http://localhost').searchParams;
   const found = resolveAsset(params.get('root') ?? '', params.get('path') ?? '');
   if (!found.ok) {
-    sendJson(res, found.status, { ok: false, error: found.error });
+    sendError(res, found.status, found.error);
     return;
   }
   res.statusCode = 200;
