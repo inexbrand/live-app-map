@@ -5,7 +5,8 @@
  */
 import { scanSource } from '../packages/scanner-source/src/index';
 import { attachCode, screenEntries } from '../packages/cli/src/index';
-import type { AppMapDocument, CodeModel } from '../packages/schema/src/index';
+import { scanDocs } from '../packages/scanner-docs/src/index';
+import type { AppMapDocument, CodeModel, DocsModel } from '../packages/schema/src/index';
 
 /** Поверхность: id (приставка нод в общей карте) и её карта экранов. */
 export type KorborSurfaceDoc = {
@@ -15,9 +16,11 @@ export type KorborSurfaceDoc = {
 
 /** Результат: карты поверхностей с кодом и code для общей карты. */
 export type KorborCode = {
-  readonly docs: ReadonlyMap<string, AppMapDocument>;
+  readonly maps: ReadonlyMap<string, AppMapDocument>;
   /** code с экранами всех поверхностей; nodeId — `<поверхность>:<id ноды>`. */
   readonly allCode: CodeModel;
+  /** Документация репозитория (эпохи, заметки, руководства) — общая для всех карт. */
+  readonly docs: DocsModel;
 };
 
 /**
@@ -42,7 +45,9 @@ export function attachKorborCode(root: string, surfaces: readonly KorborSurfaceD
     (s) => s.doc !== undefined || s.comments !== undefined || screenFiles.has(s.location.file),
   );
   const code: CodeModel = { ...scan.code, symbols };
-  const docs = new Map<string, AppMapDocument>();
+  const projectDocs = scanDocs(root);
+  console.log(`docs: epochs=${projectDocs.epochs.length} notes=${projectDocs.notes.length} guides=${projectDocs.guides.length}`);
+  const maps = new Map<string, AppMapDocument>();
   for (const s of surfaces) {
     const prefix = `${s.id}:`;
     const own = screens
@@ -51,11 +56,11 @@ export function attachKorborCode(root: string, surfaces: readonly KorborSurfaceD
     // Карта поверхности несёт символы только своих экранов; полный набор — в общей карте.
     const files = new Set(own.map((sc) => sc.file));
     const ownSymbols = code.symbols.filter((x) => files.has(x.location.file));
-    docs.set(s.id, attachCode(s.doc, { ...code, symbols: ownSymbols, screens: own }));
+    maps.set(s.id, { ...attachCode(s.doc, { ...code, symbols: ownSymbols, screens: own }), docs: projectDocs });
   }
   const linked = screens.filter((s) => s.calls.length > 0).length;
   console.log(
     `code: symbols=${symbols.length}/${scan.code.symbols.length} routes=${scan.code.routes.length} tables=${scan.code.tables.length} apiCalls=${scan.code.apiCalls?.length ?? 0} screens=${screens.length} linked=${linked} (${Date.now() - t0} ms)`,
   );
-  return { docs, allCode: code };
+  return { maps, allCode: code, docs: projectDocs };
 }

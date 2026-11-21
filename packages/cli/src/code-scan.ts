@@ -1,8 +1,10 @@
 /**
  * Скан исходников для CLI: команда `code` и опция `scan --code-dir`.
  */
+import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { assembleDocument } from '@live-app-map/scanner-core';
+import { scanDocs } from '@live-app-map/scanner-docs';
 import { codeServiceNodes, scanSource, type ScreenEntry } from '@live-app-map/scanner-source';
 import { codeFileOfNode, screenOf } from '@live-app-map/schema';
 import type { AppMapDocument, AppMapEdge, CodeModel, Diagnostic } from '@live-app-map/schema';
@@ -23,7 +25,7 @@ export type CodeScanResult = {
 };
 
 /**
- * Добавляет к карте раздел code и ноды сервисов из каталога исходников.
+ * Добавляет к карте раздел code, ноды сервисов и раздел docs (документация того же каталога).
  *
  * @param doc - карта экранов
  * @param codeDir - каталог исходников (может отличаться от project.root)
@@ -35,7 +37,7 @@ export function withSourceCode(
 ): { document: AppMapDocument; diagnostics: readonly Diagnostic[] } {
   const root = path.resolve(codeDir);
   const scan = scanSource({ root, entries: screenEntries(doc, root) });
-  return { document: attachCode(doc, scan.code), diagnostics: scan.diagnostics };
+  return { document: { ...attachCode(doc, scan.code), docs: scanDocs(root) }, diagnostics: scan.diagnostics };
 }
 
 /**
@@ -132,6 +134,24 @@ export function apiEdges(code: CodeModel, screens: ReadonlyMap<string, string>):
 }
 
 /**
+ * Имя проекта: поле name корневого package.json, иначе имя каталога
+ * (каталог worktree часто назван не по проекту).
+ *
+ * @param root - каталог проекта
+ * @returns имя
+ */
+function projectNameOf(root: string): string {
+  const pkg = path.join(root, 'package.json');
+  if (existsSync(pkg)) {
+    const parsed: unknown = JSON.parse(readFileSync(pkg, 'utf8'));
+    if (typeof parsed === 'object' && parsed !== null && 'name' in parsed && typeof parsed.name === 'string' && parsed.name !== '') {
+      return parsed.name;
+    }
+  }
+  return path.basename(root);
+}
+
+/**
  * Карта только из исходников: ноды service + раздел code.
  *
  * @param opts - каталог, файл вывода, формат
@@ -143,13 +163,13 @@ export function runCodeScan(opts: CodeScanOptions): CodeScanResult {
   const scan = scanSource({ root });
   const base = assembleDocument({
     projectRoot: root,
-    projectName: path.basename(root),
+    projectName: projectNameOf(root),
     framework: 'unknown',
     nodes: codeServiceNodes(scan.code),
     edges: [],
     generatorName: '@live-app-map/scanner-source',
   });
-  const document: AppMapDocument = { ...base, code: scan.code };
+  const document: AppMapDocument = { ...base, code: scan.code, docs: scanDocs(root) };
   if (opts.out !== undefined) {
     writeMapFile(document, opts.out, opts.format);
   }

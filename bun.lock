@@ -49,6 +49,7 @@
         "@live-app-map/export-appmap": "workspace:*",
         "@live-app-map/graph": "workspace:*",
         "@live-app-map/scanner-core": "workspace:*",
+        "@live-app-map/scanner-docs": "workspace:*",
         "@live-app-map/scanner-next": "workspace:*",
         "@live-app-map/scanner-react-router": "workspace:*",
         "@live-app-map/scanner-source": "workspace:*",
