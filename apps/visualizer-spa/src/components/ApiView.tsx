@@ -4,10 +4,10 @@
  * авторское описание и собранное из кода, вход, доступ, таблицы, экраны (или почему
  * их нет), файл:строка. Переходы роут ↔ таблица ↔ экран.
  */
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import { KeyRound, Lock } from 'lucide-react';
 import { AUTO_DOC_NOTE, buildCodeIndex, type ApiFilter, type CodeIndex, type TableTouch } from '@live-app-map/graph';
-import type { ApiRoute, HttpMethod } from '@live-app-map/schema';
+import type { ApiRoute, HttpMethod, RouteSchemaField } from '@live-app-map/schema';
 import { apiViewState, routeCard, routeOneLine, type RouteCard } from '../lib/api-view-model';
 import { useMapNav } from '../lib/use-map-nav';
 import { useAppStore } from '../store/app-store';
@@ -118,22 +118,20 @@ function Card(props: { readonly card: RouteCard }) {
             <p className="api-schema__title">
               {i.label}
               {i.schema.name === undefined ? '' : ` · ${i.schema.name}`}
-              <span className="api-card__meta"> · {i.schema.kind === 'zod' ? 'zod' : 'Elysia t'}</span>
+              <span className="api-card__meta">
+                {' · '}
+                {i.schema.kind === 'zod' ? 'zod' : 'TypeBox'}
+                {i.schema.optional === true ? ' · необязательно' : ''}
+              </span>
             </p>
             {i.schema.fields.length === 0 ? (
-              <p className="api-schema__text">{i.schema.text ?? i.schema.name}</p>
+              <p className="api-schema__text" data-testid="api-input-type">
+                {i.schema.type ?? i.schema.text ?? i.schema.name}
+              </p>
             ) : (
               <table className="api-schema__fields">
                 <tbody>
-                  {i.schema.fields.map((f) => (
-                    <tr key={f.name}>
-                      <td>
-                        {f.name}
-                        {f.optional === true ? <span className="api-card__meta">?</span> : null}
-                      </td>
-                      <td>{f.type}</td>
-                    </tr>
-                  ))}
+                  <SchemaRows fields={i.schema.fields} depth={0} />
                 </tbody>
               </table>
             )}
@@ -202,6 +200,29 @@ function Card(props: { readonly card: RouteCard }) {
         </p>
       </section>
     </aside>
+  );
+}
+
+/** Строки полей схемы входа: вложенные объекты — с отступом под родителем. */
+function SchemaRows({ fields, depth }: { readonly fields: readonly RouteSchemaField[]; readonly depth: number }) {
+  return (
+    <>
+      {fields.map((f) => (
+        <Fragment key={f.name}>
+          <tr data-testid="api-input-field" data-depth={depth}>
+            <td style={{ paddingLeft: `${depth * 14}px` }}>
+              {f.name}
+              {f.optional === true ? <span className="api-card__meta" title="необязательное">?</span> : null}
+            </td>
+            <td>
+              {f.type}
+              {f.rules === undefined ? null : <span className="api-card__meta"> · {f.rules.join(', ')}</span>}
+            </td>
+          </tr>
+          {f.fields === undefined ? null : <SchemaRows fields={f.fields} depth={depth + 1} />}
+        </Fragment>
+      ))}
+    </>
   );
 }
 

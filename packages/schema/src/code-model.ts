@@ -84,9 +84,13 @@ export type DbCall = {
 /** Поле схемы входа роута. */
 export type RouteSchemaField = {
   readonly name: string;
-  /** Тип текстом: `string`, `number`, `string[]`, `'a' | 'b'`, `object`, имя схемы. */
+  /** Тип текстом: `string`, `number`, `string[]`, `'a' | 'b'`, `object`, `object[]`, имя схемы. */
   readonly type: string;
   readonly optional?: boolean;
+  /** Ограничения из опций и цепочки: `minLength 1`, `format uuid`, `int`. */
+  readonly rules?: readonly string[];
+  /** Поля вложенного объекта (или объекта — элемента массива). */
+  readonly fields?: readonly RouteSchemaField[];
 };
 
 /** Чем объявлена схема входа: Elysia `t.*` (TypeBox) или zod. */
@@ -99,8 +103,12 @@ export type RouteInputSchema = {
   readonly name?: string;
   /** Поля объекта; пусто — схема не объект или не разобрана (тогда есть text). */
   readonly fields: readonly RouteSchemaField[];
-  /** Текст схемы, если поля не разобраны (до 200 символов). */
+  /** Текст схемы, если ни поля, ни тип не разобраны (до 200 символов). */
   readonly text?: string;
+  /** Вся часть запроса необязательна: `t.Optional(t.Object(…))`. */
+  readonly optional?: boolean;
+  /** Тип части, если она не объект: `record<string, string>`, `unknown`, `string[]`. */
+  readonly type?: string;
 };
 
 /** Проверка входа роута: какие части запроса проверяются схемой. */

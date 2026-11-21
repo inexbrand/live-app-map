@@ -25,12 +25,35 @@ const dbCallSchema = z
   })
   .strict();
 
+/** Поле схемы входа; вложенные поля — той же формы. */
+export type RouteSchemaFieldShape = {
+  name: string;
+  type: string;
+  optional?: boolean;
+  rules?: string[];
+  fields?: RouteSchemaFieldShape[];
+};
+
+const routeSchemaFieldSchema: z.ZodType<RouteSchemaFieldShape> = z.lazy(() =>
+  z
+    .object({
+      name: z.string().min(1),
+      type: z.string(),
+      optional: z.boolean().optional(),
+      rules: z.array(z.string()).optional(),
+      fields: z.array(routeSchemaFieldSchema).optional(),
+    })
+    .strict(),
+);
+
 const routeInputSchemaSchema = z
   .object({
     kind: z.enum(['typebox', 'zod']),
     name: z.string().optional(),
-    fields: z.array(z.object({ name: z.string().min(1), type: z.string(), optional: z.boolean().optional() }).strict()),
+    fields: z.array(routeSchemaFieldSchema),
     text: z.string().optional(),
+    optional: z.boolean().optional(),
+    type: z.string().optional(),
   })
   .strict();
 
