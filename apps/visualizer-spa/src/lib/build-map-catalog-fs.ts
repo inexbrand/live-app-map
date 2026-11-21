@@ -3,7 +3,7 @@
  */
 import { existsSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { parseAppMapDocument, parseLiveAppMapJson } from '@live-app-map/schema';
+import { liveAppMapToAppMap, parseAppMapDocument, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
 import {
   MAP_CATALOG_VERSION,
   MAP_FILE_SUFFIX,
@@ -22,6 +22,11 @@ type SummaryResult =
   | { readonly ok: true; readonly summary: MapFileSummary }
   | { readonly ok: false; readonly reason: string };
 
+/** Экраны карты: сервисы и внешние ссылки экранами не считаются. */
+function screenCount(doc: AppMapDocument): number {
+  return doc.nodes.filter((n) => n.kind === 'page').length;
+}
+
 /**
  * Разбирает текст карты (viewer liveappmap или enterprise JSON).
  *
@@ -37,7 +42,7 @@ export function summarizeMapFile(fileName: string, text: string): SummaryResult 
         fileName,
         appName: live.document.app?.name ?? null,
         baseUrl: live.document.baseUrl ?? null,
-        pageCount: live.document.pages.length,
+        pageCount: screenCount(liveAppMapToAppMap(live.document)),
       },
     };
   }
@@ -55,7 +60,7 @@ export function summarizeMapFile(fileName: string, text: string): SummaryResult 
         fileName,
         appName: app.document.project.name ?? null,
         baseUrl: app.document.baseUrl,
-        pageCount: app.document.nodes.filter((n) => n.kind === 'page').length,
+        pageCount: screenCount(app.document),
       },
     };
   }
