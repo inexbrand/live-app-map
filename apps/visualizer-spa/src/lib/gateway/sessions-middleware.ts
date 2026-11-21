@@ -5,7 +5,8 @@
 import { isLocalOrigin, readBody, requestPath, sendJson, type DevMiddleware } from '../dev-http';
 import { parseSetCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
-import { KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal } from './korbor-dogfood';
+import { KORBOR_DOGFOOD_STORAGE, korborBearer, mintKorbor, type KorborRenewal } from './korbor-dogfood';
+import { fetchSampleIds } from './sample-ids';
 import { summarize, type SessionStore } from './session-store';
 
 /** Префикс маршрутов. */
@@ -91,6 +92,10 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
         sendJson(res, 400, { ok: false, error: 'origin обязателен: адрес приложения, например http://localhost:16002', field: 'origin' });
         return;
       }
+      if (method === 'POST' && act === 'sample-ids') {
+        await sampleIds(profileId, origin, o['lists']);
+        return;
+      }
       const label = str(o, 'label');
       if (label === '') {
         sendJson(res, 400, { ok: false, error: 'label обязателен: подпись профиля, например «Админ»', field: 'label' });
@@ -139,6 +144,27 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
         return;
       }
       sendJson(res, 405, { ok: false, error: `${method} ${p} не поддерживается` });
+    }
+
+    /** Первые id списков API под профилем: реальные параметры маршрутов экранов. */
+    async function sampleIds(profileId: string, origin: string, rawLists: unknown): Promise<void> {
+      const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
+      const renewal = store.get(profileId)?.renewals?.[origin];
+      if (renewal === undefined) {
+        sendJson(res, 404, { ok: false, error: `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»` });
+        return;
+      }
+      const stale = await store.ensureFresh(profileId, origin);
+      if (stale !== null) {
+        sendJson(res, 502, { ok: false, error: stale });
+        return;
+      }
+      const bearer = await korborBearer(renewal, store.get(profileId)?.storage[origin]?.[KORBOR_DOGFOOD_STORAGE[renewal.kind]] ?? '');
+      if (!bearer.ok) {
+        sendJson(res, 502, { ok: false, error: bearer.error });
+        return;
+      }
+      sendJson(res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, bearer.token, lists) });
     }
   };
 }

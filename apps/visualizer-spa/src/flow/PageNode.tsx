@@ -173,6 +173,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   // Порт и профили шлюза входят в адрес: подписка перестраивает его при входе.
   const gatewayPort = useGatewayStore((s) => s.port);
   useGatewayStore((s) => s.profiles);
+  useGatewayStore((s) => s.samples);
   const report = useGatewayStore((s) => s.reports.get(node.id));
   const url = useAppStore((s) => s.resolveLiveUrl(node.id));
 
