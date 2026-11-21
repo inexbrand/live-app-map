@@ -4,7 +4,7 @@
     "name": "live-app-map",
     "platform": "web",
     "generator": "@live-app-map/scanner-source/0.1.0",
-    "generatedAt": "2026-11-21T16:09:13.570Z"
+    "generatedAt": "2026-11-21T16:21:29.210Z"
   },
   "pages": [
     {
@@ -90,7 +90,7 @@
       "metadata": {
         "routes": 0,
         "tables": 0,
-        "symbols": 37,
+        "symbols": 40,
         "pathPattern": "packages/mcp-server",
         "kind": "service",
         "sourceFile": "packages/mcp-server"
@@ -255,7 +255,7 @@
       "metadata": {
         "routes": 0,
         "tables": 0,
-        "symbols": 334,
+        "symbols": 359,
         "pathPattern": "apps/visualizer-spa",
         "kind": "service",
         "sourceFile": "apps/visualizer-spa"
@@ -383,11 +383,23 @@
         "name": "App",
         "location": {
           "file": "apps/visualizer-spa/src/App.tsx",
-          "line": 29
+          "line": 31
         },
         "signature": "()",
         "doc": "Корневой shell.",
         "id": "symbol:apps/visualizer-spa/src/App.tsx#App",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "component",
+        "name": "ApiView",
+        "location": {
+          "file": "apps/visualizer-spa/src/components/ApiView.tsx",
+          "line": 197
+        },
+        "signature": "()",
+        "doc": "Вид «API».",
+        "id": "symbol:apps/visualizer-spa/src/components/ApiView.tsx#ApiView",
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
@@ -407,7 +419,7 @@
         "name": "DatabaseView",
         "location": {
           "file": "apps/visualizer-spa/src/components/DatabaseView.tsx",
-          "line": 72
+          "line": 75
         },
         "signature": "()",
         "doc": "Вид «База данных».",
@@ -424,6 +436,18 @@
         "signature": "()",
         "doc": "Плавающая кнопка логов + sheet.",
         "id": "symbol:apps/visualizer-spa/src/components/DiagnosticsDock.tsx#DiagnosticsDock",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "component",
+        "name": "DocsView",
+        "location": {
+          "file": "apps/visualizer-spa/src/components/DocsView.tsx",
+          "line": 200
+        },
+        "signature": "()",
+        "doc": "Вид «Документация».",
+        "id": "symbol:apps/visualizer-spa/src/components/DocsView.tsx#DocsView",
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
@@ -509,7 +533,7 @@
         "name": "MapToolbarProps",
         "location": {
           "file": "apps/visualizer-spa/src/components/MapToolbar.tsx",
-          "line": 34
+          "line": 36
         },
         "doc": "Props шапки: каталог из App (fetch /maps/index.json).",
         "id": "symbol:apps/visualizer-spa/src/components/MapToolbar.tsx#MapToolbarProps",
@@ -520,11 +544,34 @@
         "name": "MapToolbar",
         "location": {
           "file": "apps/visualizer-spa/src/components/MapToolbar.tsx",
-          "line": 44
+          "line": 46
         },
         "signature": "(props: MapToolbarProps)",
         "doc": "Главный chrome visualizer (минимализм + edge sheets).\n\n@param props - каталог карт и состояние загрузки",
         "id": "symbol:apps/visualizer-spa/src/components/MapToolbar.tsx#MapToolbar",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "type",
+        "name": "DocMarkdownProps",
+        "location": {
+          "file": "apps/visualizer-spa/src/components/Markdown.tsx",
+          "line": 14
+        },
+        "doc": "Свойства документа.",
+        "id": "symbol:apps/visualizer-spa/src/components/Markdown.tsx#DocMarkdownProps",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "component",
+        "name": "DocMarkdown",
+        "location": {
+          "file": "apps/visualizer-spa/src/components/Markdown.tsx",
+          "line": 40
+        },
+        "signature": "(props: DocMarkdownProps)",
+        "doc": "Документ markdown.",
+        "id": "symbol:apps/visualizer-spa/src/components/Markdown.tsx#DocMarkdown",
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
@@ -1353,6 +1400,87 @@
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
+        "kind": "type",
+        "name": "InputPart",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 20
+        },
+        "doc": "Часть входа с подписью.",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#InputPart",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "type",
+        "name": "RouteCard",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 27
+        },
+        "doc": "Карточка роута.",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#RouteCard",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "type",
+        "name": "ApiViewState",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 43
+        },
+        "doc": "Состояние вида.",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#ApiViewState",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "apiViewState",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 59
+        },
+        "signature": "(index: CodeIndex, filter: ApiFilter) => ApiViewState",
+        "doc": "Дерево и роуты под фильтр.\n\n@param index - индекс кода\n@param filter - фильтр\n@returns состояние вида",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#apiViewState",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "routeCard",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 78
+        },
+        "signature": "(index: CodeIndex, routeId: string) => RouteCard | null",
+        "doc": "Карточка роута.\n\n@param index - индекс кода\n@param routeId - id роута\n@returns карточка или null",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#routeCard",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "routeOneLine",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 93
+        },
+        "signature": "(r: ApiRoute) => string | undefined",
+        "doc": "Однострочное описание роута для списка.",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#routeOneLine",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "schemaInline",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/api-view-model.ts",
+          "line": 98
+        },
+        "signature": "(s: RouteInputSchema) => string",
+        "doc": "Схема одной строкой для подсказки: `{ title: string, salary?: number }`.",
+        "id": "symbol:apps/visualizer-spa/src/lib/api-view-model.ts#schemaInline",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
         "kind": "function",
         "name": "matchesCodeFilter",
         "location": {
@@ -1536,6 +1664,147 @@
         "signature": "(req: IncomingMessage) => boolean",
         "doc": "Запрос пришёл со страницы локального origin (или без Origin — curl, агент).\nЗащита от DNS rebinding: dev-сервер слушает все интерфейсы (`host: true`),\nа эндпоинты пишут файлы.\n\n@param req - запрос",
         "id": "symbol:apps/visualizer-spa/src/lib/dev-http.ts#isLocalOrigin",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "docsAssetMiddleware",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-asset-middleware.ts",
+          "line": 38
+        },
+        "signature": "(req, res, next)",
+        "doc": "Middleware картинок документации.",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-asset-middleware.ts#docsAssetMiddleware",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "variable",
+        "name": "DOCS_ASSET_PATH",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-asset-url.ts",
+          "line": 6
+        },
+        "doc": "Путь эндпоинта.",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-asset-url.ts#DOCS_ASSET_PATH",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "docsAssetUrl",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-asset-url.ts",
+          "line": 15
+        },
+        "signature": "(root: string, file: string) => string",
+        "doc": "URL картинки документации для `<img src>`.\n\n@param root - каталог проекта (docs.root карты)\n@param file - путь от корня\n@returns относительный URL эндпоинта",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-asset-url.ts#docsAssetUrl",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "epochFileLabel",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 30
+        },
+        "signature": "(epochDir: string, file: string) => string",
+        "doc": "Подпись файла эпохи: стандартные — словом («Бриф», «Баги»), прочие — путём в эпохе без .md.\n\n@param epochDir - каталог эпохи\n@param file - путь файла от корня\n@returns подпись",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#epochFileLabel",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "epochDateLabel",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 44
+        },
+        "signature": "(iso: string | undefined) => string",
+        "doc": "Дата эпохи: `21 ноя 2026, 20:56`.\n\n@param iso - `2026-11-21T20:56:36`\n@returns строка или пусто",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#epochDateLabel",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "readinessLabel",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 58
+        },
+        "signature": "(e: Pick<DocEpoch, 'readiness' | 'openBugs'>) => string",
+        "doc": "Готовность словами.\n\n@param e - эпоха\n@returns подпись",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#readinessLabel",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "type",
+        "name": "DocsSections",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 70
+        },
+        "doc": "Секции левой колонки.",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#DocsSections",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "docsSections",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 86
+        },
+        "signature": "(docs: DocsModel, query: string, readiness: EpochReadiness | null) => DocsSections",
+        "doc": "Левая колонка под запрос и готовность.\n\n@param docs - раздел docs\n@param query - строка поиска\n@param readiness - фильтр готовности эпох\n@returns секции",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#docsSections",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "type",
+        "name": "OpenDoc",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 98
+        },
+        "doc": "Документ и эпоха, к которой он относится.",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#OpenDoc",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "openDocOf",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 107
+        },
+        "signature": "(docs: DocsModel, docPath: string | null) => OpenDoc | null",
+        "doc": "Документ по пути; по пути каталога эпохи — её первый файл (бриф).\n\n@param docs - раздел docs\n@param docPath - путь файла или каталога эпохи\n@returns документ или null",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#openDocOf",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "galleryImages",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 134
+        },
+        "signature": "(images: readonly string[], docPath: string, text: string) => string[]",
+        "doc": "Картинки эпохи для галереи под документом: все, кроме вставленных в текст как `![](…)`.\n\n@param images - картинки эпохи (пути от корня)\n@param docPath - путь документа\n@param text - markdown документа\n@returns картинки галереи",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#galleryImages",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "resolveDocAsset",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/docs-view-model.ts",
+          "line": 151
+        },
+        "signature": "(docPath: string, src: string) => string | null",
+        "doc": "Путь картинки от корня по ссылке из markdown-документа.\n\n@param docPath - путь документа от корня\n@param src - src из markdown\n@returns путь от корня или null для внешних ссылок",
+        "id": "symbol:apps/visualizer-spa/src/lib/docs-view-model.ts#resolveDocAsset",
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
@@ -3359,6 +3628,30 @@
         "serviceId": "service:@live-app-map/visualizer-spa"
       },
       {
+        "kind": "function",
+        "name": "useMapNav",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/use-map-nav.ts",
+          "line": 11
+        },
+        "signature": "() => (target: DocTarget) => void",
+        "doc": "Функция перехода к цели.",
+        "id": "symbol:apps/visualizer-spa/src/lib/use-map-nav.ts#useMapNav",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
+        "kind": "function",
+        "name": "targetTitle",
+        "location": {
+          "file": "apps/visualizer-spa/src/lib/use-map-nav.ts",
+          "line": 38
+        },
+        "signature": "(target: DocTarget) => string",
+        "doc": "Подпись цели для подсказки.",
+        "id": "symbol:apps/visualizer-spa/src/lib/use-map-nav.ts#targetTitle",
+        "serviceId": "service:@live-app-map/visualizer-spa"
+      },
+      {
         "kind": "type",
         "name": "ViewportPresetId",
         "location": {
@@ -3929,7 +4222,7 @@
         "name": "AppView",
         "location": {
           "file": "apps/visualizer-spa/src/store/view-store.ts",
-          "line": 7
+          "line": 10
         },
         "doc": "Вид приложения.",
         "id": "symbol:apps/visualizer-spa/src/store/view-store.ts#AppView",
@@ -3940,7 +4233,7 @@
         "name": "useViewStore",
         "location": {
           "file": "apps/visualizer-spa/src/store/view-store.ts",
-          "line": 18
+          "line": 33
         },
         "doc": "Store вида.",
         "id": "symbol:apps/visualizer-spa/src/store/view-store.ts#useViewStore",
@@ -5452,7 +5745,7 @@
         "name": "CODE_TOOLS",
         "location": {
           "file": "packages/mcp-server/src/code-tools.ts",
-          "line": 28
+          "line": 32
         },
         "doc": "Каталог tools базы знаний.",
         "id": "symbol:packages/mcp-server/src/code-tools.ts#CODE_TOOLS",
@@ -5463,10 +5756,32 @@
         "name": "CODE_HANDLERS",
         "location": {
           "file": "packages/mcp-server/src/code-tools.ts",
-          "line": 220
+          "line": 282
         },
         "doc": "Обработчики tools базы знаний.",
         "id": "symbol:packages/mcp-server/src/code-tools.ts#CODE_HANDLERS",
+        "serviceId": "service:@live-app-map/mcp-server"
+      },
+      {
+        "kind": "variable",
+        "name": "DOCS_TOOLS",
+        "location": {
+          "file": "packages/mcp-server/src/docs-tools.ts",
+          "line": 21
+        },
+        "doc": "Каталог tools документации.",
+        "id": "symbol:packages/mcp-server/src/docs-tools.ts#DOCS_TOOLS",
+        "serviceId": "service:@live-app-map/mcp-server"
+      },
+      {
+        "kind": "variable",
+        "name": "DOCS_HANDLERS",
+        "location": {
+          "file": "packages/mcp-server/src/docs-tools.ts",
+          "line": 142
+        },
+        "doc": "Обработчики tools документации.",
+        "id": "symbol:packages/mcp-server/src/docs-tools.ts#DOCS_HANDLERS",
         "serviceId": "service:@live-app-map/mcp-server"
       },
       {
@@ -5543,7 +5858,7 @@
         "name": "MapPageSummary",
         "location": {
           "file": "packages/mcp-server/src/map-tools.ts",
-          "line": 15
+          "line": 16
         },
         "doc": "Экран карты в ответе tools.",
         "id": "symbol:packages/mcp-server/src/map-tools.ts#MapPageSummary",
@@ -5554,7 +5869,7 @@
         "name": "LoadedMap",
         "location": {
           "file": "packages/mcp-server/src/map-tools.ts",
-          "line": 24
+          "line": 25
         },
         "doc": "Карта, сведённая к списку экранов.",
         "id": "symbol:packages/mcp-server/src/map-tools.ts#LoadedMap",
@@ -5565,7 +5880,7 @@
         "name": "loadMap",
         "location": {
           "file": "packages/mcp-server/src/map-tools.ts",
-          "line": 37
+          "line": 38
         },
         "signature": "(mapPath: string) => LoadedMap",
         "doc": "Читает и разбирает файл карты.\n\n@param mapPath - путь к JSON (относительно cwd)\n@returns экраны карты\n@throws Error если файл не читается или не является картой",
@@ -5577,7 +5892,7 @@
         "name": "loadMapDocument",
         "location": {
           "file": "packages/mcp-server/src/map-tools.ts",
-          "line": 79
+          "line": 80
         },
         "signature": "(mapPath: string) => AppMapDocument",
         "doc": "Читает карту как документ AppMap (liveappmap переводится в него).\n\n@param mapPath - путь к JSON (относительно cwd)\n@returns документ\n@throws Error если файл не читается или не является картой",
@@ -5586,10 +5901,22 @@
       },
       {
         "kind": "function",
+        "name": "loadDocs",
+        "location": {
+          "file": "packages/mcp-server/src/map-tools.ts",
+          "line": 106
+        },
+        "signature": "(mapPath: string) => DocsModel",
+        "doc": "Раздел docs карты; перечитывает файл, только если он изменился.\n\n@param mapPath - путь к карте\n@returns раздел docs\n@throws Error если в карте нет раздела docs",
+        "id": "symbol:packages/mcp-server/src/map-tools.ts#loadDocs",
+        "serviceId": "service:@live-app-map/mcp-server"
+      },
+      {
+        "kind": "function",
         "name": "loadCodeIndex",
         "location": {
           "file": "packages/mcp-server/src/map-tools.ts",
-          "line": 102
+          "line": 128
         },
         "signature": "(mapPath: string) => CodeIndex",
         "doc": "Индекс раздела code карты; перечитывает файл, только если он изменился.\n\n@param mapPath - путь к карте\n@returns индекс\n@throws Error если в карте нет раздела code",
@@ -5659,7 +5986,7 @@
         "name": "ToolDef",
         "location": {
           "file": "packages/mcp-server/src/tools.ts",
-          "line": 16
+          "line": 17
         },
         "doc": "Описание tool для tools/list.",
         "id": "symbol:packages/mcp-server/src/tools.ts#ToolDef",
@@ -5670,7 +5997,7 @@
         "name": "ToolResult",
         "location": {
           "file": "packages/mcp-server/src/tools.ts",
-          "line": 23
+          "line": 24
         },
         "doc": "Результат tools/call.",
         "id": "symbol:packages/mcp-server/src/tools.ts#ToolResult",
@@ -5681,7 +6008,7 @@
         "name": "ToolContext",
         "location": {
           "file": "packages/mcp-server/src/tools.ts",
-          "line": 29
+          "line": 30
         },
         "doc": "Окружение tools.",
         "id": "symbol:packages/mcp-server/src/tools.ts#ToolContext",
@@ -5692,7 +6019,7 @@
         "name": "TOOLS",
         "location": {
           "file": "packages/mcp-server/src/tools.ts",
-          "line": 37
+          "line": 38
         },
         "doc": "Каталог tools.",
         "id": "symbol:packages/mcp-server/src/tools.ts#TOOLS",
@@ -5703,7 +6030,7 @@
         "name": "callTool",
         "location": {
           "file": "packages/mcp-server/src/tools.ts",
-          "line": 161
+          "line": 164
         },
         "signature": "(name: string, args: Readonly<Record<string, unknown>>, ctx: ToolContext) => ToolResult",
         "doc": "Выполняет tool; ошибки возвращаются как isError, не бросаются.\n\n@param name - имя tool\n@param args - аргументы\n@param ctx - окружение",
@@ -8193,14 +8520,14 @@
     "tables": [],
     "apiCalls": [
       {
-        "id": "call:apps/visualizer-spa/src/components/MapToolbar.tsx:570 GET /__lam_tls_check",
+        "id": "call:apps/visualizer-spa/src/components/MapToolbar.tsx:588 GET /__lam_tls_check",
         "serviceId": "service:@live-app-map/visualizer-spa",
         "method": "GET",
         "path": "/__lam_tls_check",
         "client": "fetch",
         "location": {
           "file": "apps/visualizer-spa/src/components/MapToolbar.tsx",
-          "line": 570
+          "line": 588
         }
       },
       {
@@ -8236,14 +8563,14 @@
         "date": "2026-11-21T20:56:36",
         "dir": "docs/epoch/api-docs-views#20261121-205636",
         "summary": "Владелец: «архитектура API и вся документация не работают — сделай, чтобы работало и красиво показывалось, и обязательно показывать docs/epoch». Нужны два новых вида визуализатора — «API» и «Документация» — и MCP-инструменты к ним.",
-        "declaredStatus": "research",
+        "declaredStatus": "done",
         "readiness": "ready",
         "openBugs": [],
         "files": [
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/00-brief.md",
             "title": "Brief",
-            "text": "# Brief\n\n## Цель\n\nВладелец: «архитектура API и вся документация не работают — сделай, чтобы работало и красиво\nпоказывалось, и обязательно показывать docs/epoch». Нужны два новых вида визуализатора —\n«API» и «Документация» — и MCP-инструменты к ним.\n\n## Готово когда\n\n- [ ] Вид «API» рядом с «Экраны» и «База данных»: сервисы → группы роутов по префиксам; у роута\n      метод, путь, описание из комментариев, проверка входа (body/query/params из Elysia `t.`/zod),\n      роли и доступ, таблицы чтения/записи, экраны-вызывающие, файл:строка.\n- [ ] Поиск и фильтры: метод, сервис, таблица, «без описания». Переходы роут ↔ таблица ↔ экран.\n- [ ] Вид «Документация»: эпохи `docs/epoch/<задача>#<дата>/` с датой и статусом (открытые пункты\n      09-bugs — «не готово»), файлы 00…09 и INDEX, `docs/agent-notes`, CLAUDE.md/README; markdown\n      с нормальной вёрсткой, скриншоты из `screens/`, ссылки из текста на роуты/таблицы/экраны карты.\n- [ ] Источник — сканер: новый раздел карты `docs` по `--code-dir`; работает на korbor, vpn-saas и live-app-map.\n- [ ] MCP: `list_epochs`, `get_epoch`, `search_docs`, `describe_api` (архитектура API).\n- [ ] Вид обсуждён с design-expert: Medeo, без надзаголовков капсом, без 01/02, без градиентных карточек,\n      отступы и радиусы из одного набора.\n- [ ] Доказательства: Playwright-скриншоты всех видов на korbor и на live-app-map; тесты сканера docs и видов.\n- [ ] Своя ветка, PR в master, не сливать.\n\n## Вне scope\n\n- Мини-карта, прокрутка экранов мини-аппа, vacancies/:id — область задачи 7 (другой агент).\n- Сопоставление экран → роут (66 из 77 экранов korbor без вызовов) — сканер экранов, отдельная задача.\n"
+            "text": "# Brief\n\n## Цель\n\nВладелец: «архитектура API и вся документация не работают — сделай, чтобы работало и красиво\nпоказывалось, и обязательно показывать docs/epoch». Нужны два новых вида визуализатора —\n«API» и «Документация» — и MCP-инструменты к ним.\n\n## Готово когда\n\n- [x] Вид «API» рядом с «Экраны» и «База данных»: сервисы → группы роутов по префиксам; у роута\n      метод, путь, описание из комментариев, проверка входа (body/query/params из Elysia `t.`/zod),\n      роли и доступ, таблицы чтения/записи, экраны-вызывающие, файл:строка.\n- [x] Поиск и фильтры: метод, сервис, таблица, «без описания». Переходы роут ↔ таблица ↔ экран.\n- [x] Вид «Документация»: эпохи `docs/epoch/<задача>#<дата>/` с датой и статусом (открытые пункты\n      09-bugs — «не готово»), файлы 00…09 и INDEX, `docs/agent-notes`, CLAUDE.md/README; markdown\n      с нормальной вёрсткой, скриншоты из `screens/`, ссылки из текста на роуты/таблицы/экраны карты.\n- [x] Источник — сканер: новый раздел карты `docs` по `--code-dir`; работает на korbor, vpn-saas и live-app-map.\n- [x] MCP: `list_epochs`, `get_epoch`, `search_docs`, `describe_api` (архитектура API).\n- [x] Вид обсуждён с design-expert: Medeo, без надзаголовков капсом, без 01/02, без градиентных карточек,\n      отступы и радиусы из одного набора.\n- [x] Доказательства: Playwright-скриншоты всех видов на korbor и на live-app-map; тесты сканера docs и видов.\n- [x] Своя ветка, PR в master, не сливать.\n\n## Вне scope\n\n- Мини-карта, прокрутка экранов мини-аппа, vacancies/:id — область задачи 7 (другой агент).\n- Сопоставление экран → роут (66 из 77 экранов korbor без вызовов) — сканер экранов, отдельная задача.\n"
           },
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/01-interrogation.md",
@@ -8273,31 +8600,41 @@
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/06-decisions.md",
             "title": "Решения",
-            "text": "# Решения\n\n## Принято\n\n| Решение | Почему | Альтернатива отвергнута |\n|---|---|---|\n\n"
+            "text": "# Решения\n\n## Принято\n\n| Решение | Почему | Альтернатива отвергнута |\n|---|---|---|\n| Текст документов хранится в карте (раздел `docs`, обрезка 200 000 символов на файл) | Карта самодостаточна: MCP и визуализатор читают одно и то же, работает без доступа к репо | Читать файлы с диска по запросу — MCP и статическая карта без исходников ломаются |\n| Картинки эпох — dev-эндпоинт `/__lam_docs/asset` (только картинки, только внутри `docs/` корня) | 15+ PNG на эпоху раздули бы карту на мегабайты | base64 в карте; копирование в public |\n| Готовность эпохи — по 09-bugs: неотмеченные `- [ ]` и пункты под «Open»; нет файла — отдельный статус | Правило docs-epoch: открытый пункт в 09-bugs — задача не готова | Доверять строке Status в INDEX — её часто не обновляют |\n| Группировка роутов — по пути после `/api` и `vN`: раздел (admin, recruiter) → модуль | У korbor все 314 роутов в одном сервисе, деление по сервису ничего не даёт | Группы по файлу — у Elysia-плагинов это внутреннее устройство, не API |\n| Доступ — эвристика по коду (сравнения role, права `a.b`, функции-проверки до глубины 1, хуки цепочки) | Схем авторизации нет в метаданных фреймворков; эвристика даёт 295 из 314 на korbor | Явная разметка в коде — korbor и vpn-saas её не используют |\n| Фильтры вида «API» в view-store, а не в состоянии компонента | Переход роут → таблица → роут сбрасывал фильтры (поймано e2e) | — |\n| Дизайн по совету design-expert: шкала 4/8/12/16/24/32, радиусы 6/8, без карточек-подложек, метод в слоте 56 px, GET серым, DELETE с обводкой; покрытие — список с полоской 2 px; вкладки эпохи словами без номеров | Требование брифа и антипаттерны владельца (без надзаголовков, 01/02, градиентных карточек) | Плитки метрик, точки-светофоры готовности |\n| Код и пути — Medeo (`--mono` уже Medeo), вкладки по-русски («Бриф», «Баги») | Правило владельца: только Medeo; интерфейс русский | Моноширинный шрифт для путей |\n"
           },
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/07-implementation-log.md",
             "title": "Что сделано",
-            "text": "# Что сделано\n\n## Изменения\n\n## Команды проверки\n\n## Не сделано\n\n(должно быть пусто или blocker с evidence)\n\n"
+            "text": "# Что сделано\n\n## Изменения\n\n- schema: `ApiRoute.input` (body/query/params/headers из Elysia `t.` и zod), `ApiRoute.access` (auth, roles, permissions, checks); новый раздел `docs` (DocsModel, DocEpoch с readiness и openBugs) в обоих форматах, конверт переносит его.\n- scanner-docs (новый пакет): `scanDocs(root)` — эпохи, заметки, руководства, картинки эпох.\n- scanner-source: `route-input.ts`, `route-access.ts`; на korbor вход у 187 из 314 роутов, доступ у 295.\n- graph: `api-query.ts` (группы, фильтры, покрытие), `docs-query.ts` (список эпох, поиск, индекс ссылок документ → роут/таблица/экран/файл).\n- cli: `code`/`scan --code-dir` кладут `docs`; карты korbor пересобраны с docs; карта live-app-map.\n- mcp-server: `list_epochs`, `get_epoch`, `search_docs`, `describe_api`; `get_route`/`list_routes` отдают вход и доступ.\n- visualizer-spa: виды «API» и «Документация», markdown (react-markdown + remark-gfm), dev-эндпоинт картинок, роуты в «Базе данных» кликабельны, кнопки видов в шапке.\n- README: виды и MCP-инструменты.\n\n## Журнал действий\n\n- Ресерч: что есть по API в визуализаторе (02-research) — роуты только в панели сервиса, docs нет вовсе.\n- TDD по пакетам: тест на фикстуре и живых репо → реализация → typecheck пакета.\n- design-expert: дал шкалу и раскладку (06-decisions) — вёрстка по ней.\n- Первый e2e упал: после перехода к таблице и назад фильтры «API» сбрасывались → вынес фильтры в view-store, добавил проверку в e2e.\n- Глазами по скриншотам: убрал лишний верхний отступ 72 px, длинный JSDoc в карточке свёрнут до первого абзаца, права — тегами вместо капс-бейджей.\n\n## Команды проверки\n\n- `bun test packages/schema` — 44 pass; `bun test packages/scanner-docs` — 6 pass (включая живые korbor, vpn-saas, live-app-map).\n- `bun test packages/scanner-source` — 36 pass; `bun test packages/graph/src/api-docs-query.test.ts` — 22 pass.\n- `bun test packages/cli/src/code-scan.test.ts` — 5 pass; `bun test packages/mcp-server` — 14 pass.\n- `bun test apps/visualizer-spa/src/lib/api-docs-view-model.test.ts` — 9 pass; `docs-asset-middleware.test.ts` — 2 pass.\n- `bun test scripts/verify-korbor-maps.test.ts` — 8 pass.\n- `bunx tsc --noEmit -p apps/visualizer-spa/tsconfig.json` — чисто.\n- `PLAYWRIGHT_BASE_URL=http://127.0.0.1:4312 PLAYWRIGHT_SKIP_WEBSERVER=1 LAM_SHOTS_DIR=<epoch>/screens bunx playwright test e2e/api-docs-views.e2e.ts` — 4 pass.\n\n## Не сделано\n\n(пусто)\n"
           },
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/08-verify-report.md",
             "title": "Проверка построчно",
-            "text": "# Проверка построчно\n\n## Чеклист brief\n\n## Тесты: реальные вызовы?\n\n## Баги\n\nСм. 09-bugs.md\n\n"
+            "text": "# Проверка построчно\n\n## Чеклист brief\n\n| Пункт | Доказательство |\n|---|---|\n| Вид «API»: группы, метод, путь, описание, вход, доступ, таблицы, экраны, файл:строка | screens/api-korbor-card.png, api-korbor-filter.png; e2e «дерево, фильтры, карточка…» |\n| Поиск и фильтры, переходы роут ↔ таблица ↔ экран | e2e: PATCH + vacancies → карточка → таблица vacancies → роут (фильтры сохранены) → экран на холсте; screens/db-korbor-routes-clickable.png |\n| «Без описания» | e2e: остаются только строки без описания (>200 из 314); screens/api-korbor-undocumented.png |\n| Вид «Документация»: эпохи, готовность, файлы, заметки, руководства, markdown, скриншоты, ссылки | e2e korbor: 26 эпох, «не готово» perf-load-test с открытыми пунктами, ссылка `POST /api/v1/auth/web/telegram-login` из текста открывает роут; screens/docs-korbor-not-ready.png |\n| Свои docs/epoch live-app-map | e2e: эпоха api-docs-views в списке, live-korbor-e2e — галерея 15 скриншотов грузится (naturalWidth > 0), полноэкранный просмотр; screens/docs-lam-epoch.png, docs-lam-zoom.png |\n| vpn-saas | Локальная карта (не в git): 286 роутов, 163 эпохи (29 «не готово»); screens/api-vpn-saas-admin.png, docs-vpn-saas-admin.png |\n| Сканер `docs` по `--code-dir` | scanner-docs тесты на живых korbor, vpn-saas, live-app-map; cli code-scan.test |\n| MCP | mcp-server server.test: list_epochs, get_epoch, search_docs, describe_api через stdio |\n| Дизайн | 06-decisions; Medeo, без надзаголовков, без 01/02, без градиентных карточек; радиусы 6/8 |\n| Экраны | screens/screens-korbor.png — холст не сломан |\n\n## Тесты: реальные вызовы?\n\nДа. Тесты сканера читают фикстуры и настоящие репо; тесты моделей вида читают настоящие карты\nkorbor-all и live-app-map; MCP — через stdio настоящего сервера; e2e — живой dev-сервер.\n\n## Баги\n\nСм. 09-bugs.md\n"
           },
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/09-bugs.md",
             "title": "Найденные баги",
-            "text": "# Найденные баги\n\n## Open\n\n## Closed\n\n"
+            "text": "# Найденные баги\n\n## Open\n\n## Closed\n\n- [x] Переход роут → таблица → роут сбрасывал фильтры вида «API» — фильтры перенесены в view-store, e2e проверяет.\n- [x] Шум в проверках доступа (hasPermission у 144 роутов из общих хелперов) — имена проверок только до глубины 1.\n- [x] node:fs попадал в браузерный бандл через docsAssetUrl — вынесен в docs-asset-url.ts.\n- [x] verify-korbor-maps падал на локальной generated-карте vpn-saas — такие файлы пропускаются.\n\n## Известные ограничения (не баги этой задачи)\n\n- Экраны вызывают 29 из 314 роутов korbor — сопоставление экран → роут вне scope (сканер экранов).\n- У vpn-saas есть метод `ALL` (Hono `app.all`) — показывается как есть.\n"
           },
           {
             "path": "docs/epoch/api-docs-views#20261121-205636/INDEX.md",
             "title": "Epoch index",
-            "text": "# Epoch index\n\n- Status: research\n- Repo: /Users/macbook/orca/workspaces/live-app-map/chinook\n- Created: 2026-11-21T20:56:36\n"
+            "text": "# Epoch index\n\n- Status: done\n- Repo: /Users/macbook/orca/workspaces/live-app-map/chinook\n- Created: 2026-11-21T20:56:36\n"
           }
         ],
         "images": [
-          "docs/epoch/api-docs-views#20261121-205636/screens/before-canvas.png"
+          "docs/epoch/api-docs-views#20261121-205636/screens/api-korbor-card.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/api-korbor-filter.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/api-korbor-undocumented.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/api-vpn-saas-admin.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/before-canvas.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/db-korbor-routes-clickable.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/docs-korbor-not-ready.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/docs-lam-epoch.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/docs-lam-zoom.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/docs-vpn-saas-admin.png",
+          "docs/epoch/api-docs-views#20261121-205636/screens/screens-korbor.png"
         ]
       },
       {
@@ -8603,7 +8940,7 @@
       {
         "path": "README.md",
         "title": "Live App Map",
-        "text": "# Live App Map\n\nProfessional developer tool: сканирует Next.js / React Router приложения, строит граф экранов и показывает **живые iframe** с бюджетом памяти (freeze/pin).\n\nКанон: [`docs/live-app-map-enterprise-tdd.md`](./docs/live-app-map-enterprise-tdd.md) · viewer seed: [`docs/live-app-map-design.md`](./docs/live-app-map-design.md).\n\n## Packages\n\n| Package | Role |\n|---------|------|\n| `@live-app-map/schema` | formatVersion 2 (читает 1), раздел `code`, Zod, liveappmap convert |\n| `@live-app-map/graph` | index, search, diff, URL + state inject |\n| `@live-app-map/diagnostics` | codes + formatters |\n| `@live-app-map/scanner-core` | walk, materialize params |\n| `@live-app-map/scanner-next` | App/Pages Router |\n| `@live-app-map/scanner-react-router` | React Router и TanStack Router: экраны и переходы |\n| `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, вызовы Drizzle/Prisma, таблицы, функции с JSDoc, вызовы API фронтенда и связь экран → роут |\n| `@live-app-map/iframe-policy` | pure reconcile budget |\n| `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |\n| `@live-app-map/plugin-api` | контракты плагинов + `applyPlugins` |\n| `@live-app-map/cli` | `scan` (+ `--code-dir`) / `code` / `diff` / `doctor` / `export` / `feedback` / `dev` |\n| `@live-app-map/mcp-server` | stdio MCP: map pages + feedback |\n| `@live-app-map/react` | embed + Devtools shell |\n| `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |\n| `@live-app-map/visualizer` | core utils (graph + iframe-policy re-export) |\n| `apps/visualizer-spa` | full UI on port **4310** (Medeo Sans monochrome UI kit + Lucide) |\n\n## Quick start\n\n```bash\nbun install\nbun run typecheck\nbun test\nbun run scan:korbor\nbun run dev          # visualizer :4310\n```\n\nОткройте http://localhost:4310 → пресеты **Korbor Miniapp / Admin / Site**.\n\n### UI kit (канон)\n\n- **Medeo Sans** + monochrome tokens (`--background` … `--border`)\n- **Lucide** icons only (no emoji)\n- Primitives: `apps/visualizer-spa/src/ui/*` — Button, Field/Input/Select/Textarea, Chip/Badge, Panel\n\n### Feedback → CLI / MCP\n\n1. Клик по экрану на карте  \n2. Слева **Замечание**: важность + текст + **Снимок** (выделите область мышью; снимается настоящая картинка вкладки вместе с iframe, браузер спросит доступ к вкладке; Alt+Shift+S — то же с клавиатуры)  \n3. **Копировать промпт** или **Скачать JSON** для CLI\n\n```bash\nbun run feedback -- --file ./lam-feedback-….json --print-prompt\n# пишет .lam-feedback/*.md + *.json\n\nbun run mcp\n# tools: list_map_pages, get_page, submit_feedback, list_feedback,\n#        get_visualizer_state, request_snapshot, get_snapshot\n```\n\nТе же tools отдаёт dev-сервер визуализатора по HTTP: `POST http://localhost:4310/mcp` (JSON-RPC 2.0).\nАгент видит, что открыто в визуализаторе (`get_visualizer_state`), и может попросить снимок\n(`request_snapshot`): в визуализаторе появится карточка «Агент просит снимок», пользователь\nвыделит область, `get_snapshot` вернёт путь к PNG. Обмен идёт через `.lam-feedback/` в корне\nмонорепо (или `$LAM_FEEDBACK_DIR`). Ошибки клиента визуализатора пишутся в\n`.lam-feedback/error-reports.jsonl`.\n\n### Korbor ports (dev.local.env)\n\n| Surface | URL |\n|---------|-----|\n| API | http://localhost:16000 |\n| Site | http://localhost:16001 |\n| Admin | http://localhost:16002 |\n| Miniapp | https://vite.localhost:5175 (Vite TLS host) |\n| Visualizer | http://localhost:4310 |\n\n### Живые экраны: шлюз и профили входа\n\nDev-сервер визуализатора поднимает шлюз на **:4320** (`LAM_GATEWAY_PORT`). Экран открывается\nкак `http://<профиль>--<цель>--<ячейка>.localhost:4320/…`: у каждой ноды свой origin, поэтому\niframe одного приложения не делят sessionStorage и не уводят друг друга на чужие экраны.\nШлюз подставляет куки профиля, кладёт значения sessionStorage до загрузки приложения, снимает\nX-Frame-Options/CSP и сообщает визуализатору высоту страницы и ответы API 401/403.\n\n- **Настройки → Профили входа**: вход один раз (dev-вход korbor или вставка кук / ключа\n  sessionStorage), роли recruiter / employer / admin. Профили лежат в `.lam-sessions/`\n  (права 600, в `.gitignore`); браузер видит только имена ключей, не значения.\n- Профиль экрана: роль стейта ноды → общая роль → первый профиль приложения → без входа.\n- Значки на ноде: **не авторизован** (API ответил 401/403, в подсказке — путь), **обрезано**\n  («Видно 844 из 5838 px»). Кнопка **целиком** в полосе размеров выбранной ноды растит ноду до\n  высоты страницы; повторное нажатие — окно прежней высоты с прокруткой внутри.\n- Токен админки korbor живёт ~15 минут — шлюз обновляет dev-вход сам.\n\n### Память\n\nЖивых iframe не больше 6 (+2 тёплых); остальные экраны — JPEG-снимки, которые делает\nheadless Chromium в dev-процессе (`.lam-snapshots/`, в `.gitignore`). На korbor-all куча вкладки\nв обзоре 180 → 140 МБ, утечки после переключений карт нет — замеры в\n`docs/epoch/live-korbor-e2e#20261121-175119/measurements/`.\n\n### Вид «База данных»\n\nКнопка в шапке (если в карте есть схема): таблицы с поиском, колонки (тип, PK, NOT NULL,\ndefault, enum, внешний ключ с переходом), кто ссылается, роуты чтения и записи и экраны,\nкоторые эти роуты вызывают (клик — экран на холсте).\n\n### MCP как база знаний\n\n`bun run mcp` и `POST /mcp` на dev-сервере, кроме страниц и замечаний, отдают код:\n`list_services`, `list_routes`, `get_route`, `list_tables`, `get_table` — роуты с\nкомментариями, таблицы с колонками и связями, экраны, вызывающие роут.\n\n### Сканер экранов\n\n`scanner-react-router` понимает React Router (литералы `path`) и **TanStack Router**:\n`createRoute({ getParentRoute, path, component })` с полным путём по цепочке родителей,\n`createFileRoute('/…')`, переходы `Link to` / `navigate({ to })` / `redirect({ to })` из\nфайла экрана и его локальных импортов (общие для многих экранов файлы — оболочка, меню —\nне считаются; переход через общий виджет помечен `confidence: low`).\n\n## CLI\n\n```bash\nbun run packages/cli/src/bin.ts scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/out.json\nbun run packages/cli/src/bin.ts doctor --dir ../korbor/apps/site\nbun run packages/cli/src/bin.ts diff maps/a.json maps/b.json\nbun run packages/cli/src/bin.ts feedback --file maps/sample-feedback.json --print-prompt\n```\n\n## Verify\n\nПолный список проверок monorepo (из корневого `package.json`):\n\n```bash\nbun install\nbun run typecheck\nbun test\nbun test packages\nbun test apps/visualizer-spa\nbun run test:unit\nbun run test:e2e\nbun run smoke\nbun run doctor -- --dir ../korbor/apps/site\nbun run build\nbun run scan:korbor\nbun run dev:visualizer\n```\n\n| Команда | Что проверяет |\n|---------|----------------|\n| `bun run typecheck` | `tsc --noEmit` во всех workspaces |\n| `bun test` / `bun run test:unit` | unit/integration: packages + visualizer-spa/src + scripts |\n| `bun run test:e2e` | Playwright e2e (`apps/visualizer-spa`) |\n| `bun run smoke` | runtime smoke (`scripts/runtime-smoke.ts`) |\n| `bun run doctor` | CLI doctor по каталогу приложения |\n| `bun run build` | build всех workspaces |\n| `bun run scan:korbor` | dogfood-скан Korbor → maps |\n| `bun run dev:visualizer` | dev SPA на порту **4310** |\n"
+        "text": "# Live App Map\n\nProfessional developer tool: сканирует Next.js / React Router приложения, строит граф экранов и показывает **живые iframe** с бюджетом памяти (freeze/pin).\n\nКанон: [`docs/live-app-map-enterprise-tdd.md`](./docs/live-app-map-enterprise-tdd.md) · viewer seed: [`docs/live-app-map-design.md`](./docs/live-app-map-design.md).\n\n## Packages\n\n| Package | Role |\n|---------|------|\n| `@live-app-map/schema` | formatVersion 2 (читает 1), раздел `code`, Zod, liveappmap convert |\n| `@live-app-map/graph` | index, search, diff, URL + state inject |\n| `@live-app-map/diagnostics` | codes + formatters |\n| `@live-app-map/scanner-core` | walk, materialize params |\n| `@live-app-map/scanner-next` | App/Pages Router |\n| `@live-app-map/scanner-react-router` | React Router и TanStack Router: экраны и переходы |\n| `@live-app-map/scanner-source` | исходники через TS compiler API: сервисы, роуты Elysia/Hono/Express с комментариями, схемой входа (Elysia `t.`, zod) и проверками доступа, вызовы Drizzle/Prisma, таблицы, функции с JSDoc, вызовы API фронтенда и связь экран → роут |\n| `@live-app-map/scanner-docs` | раздел карты `docs`: эпохи `docs/epoch/<задача>#<дата>/` (готовность по открытым пунктам 09-bugs), `docs/agent-notes`, CLAUDE.md/AGENTS.md/README, `docs/*.md` |\n| `@live-app-map/iframe-policy` | pure reconcile budget |\n| `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |\n| `@live-app-map/plugin-api` | контракты плагинов + `applyPlugins` |\n| `@live-app-map/cli` | `scan` (+ `--code-dir`) / `code` / `diff` / `doctor` / `export` / `feedback` / `dev` |\n| `@live-app-map/mcp-server` | stdio MCP: map pages + feedback |\n| `@live-app-map/react` | embed + Devtools shell |\n| `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |\n| `@live-app-map/visualizer` | core utils (graph + iframe-policy re-export) |\n| `apps/visualizer-spa` | full UI on port **4310** (Medeo Sans monochrome UI kit + Lucide) |\n\n## Quick start\n\n```bash\nbun install\nbun run typecheck\nbun test\nbun run scan:korbor\nbun run dev          # visualizer :4310\n```\n\nОткройте http://localhost:4310 → пресеты **Korbor Miniapp / Admin / Site**.\n\n### UI kit (канон)\n\n- **Medeo Sans** + monochrome tokens (`--background` … `--border`)\n- **Lucide** icons only (no emoji)\n- Primitives: `apps/visualizer-spa/src/ui/*` — Button, Field/Input/Select/Textarea, Chip/Badge, Panel\n\n### Feedback → CLI / MCP\n\n1. Клик по экрану на карте  \n2. Слева **Замечание**: важность + текст + **Снимок** (выделите область мышью; снимается настоящая картинка вкладки вместе с iframe, браузер спросит доступ к вкладке; Alt+Shift+S — то же с клавиатуры)  \n3. **Копировать промпт** или **Скачать JSON** для CLI\n\n```bash\nbun run feedback -- --file ./lam-feedback-….json --print-prompt\n# пишет .lam-feedback/*.md + *.json\n\nbun run mcp\n# tools: list_map_pages, get_page, submit_feedback, list_feedback,\n#        get_visualizer_state, request_snapshot, get_snapshot\n```\n\nТе же tools отдаёт dev-сервер визуализатора по HTTP: `POST http://localhost:4310/mcp` (JSON-RPC 2.0).\nАгент видит, что открыто в визуализаторе (`get_visualizer_state`), и может попросить снимок\n(`request_snapshot`): в визуализаторе появится карточка «Агент просит снимок», пользователь\nвыделит область, `get_snapshot` вернёт путь к PNG. Обмен идёт через `.lam-feedback/` в корне\nмонорепо (или `$LAM_FEEDBACK_DIR`). Ошибки клиента визуализатора пишутся в\n`.lam-feedback/error-reports.jsonl`.\n\n### Korbor ports (dev.local.env)\n\n| Surface | URL |\n|---------|-----|\n| API | http://localhost:16000 |\n| Site | http://localhost:16001 |\n| Admin | http://localhost:16002 |\n| Miniapp | https://vite.localhost:5175 (Vite TLS host) |\n| Visualizer | http://localhost:4310 |\n\n### Живые экраны: шлюз и профили входа\n\nDev-сервер визуализатора поднимает шлюз на **:4320** (`LAM_GATEWAY_PORT`). Экран открывается\nкак `http://<профиль>--<цель>--<ячейка>.localhost:4320/…`: у каждой ноды свой origin, поэтому\niframe одного приложения не делят sessionStorage и не уводят друг друга на чужие экраны.\nШлюз подставляет куки профиля, кладёт значения sessionStorage до загрузки приложения, снимает\nX-Frame-Options/CSP и сообщает визуализатору высоту страницы и ответы API 401/403.\n\n- **Настройки → Профили входа**: вход один раз (dev-вход korbor или вставка кук / ключа\n  sessionStorage), роли recruiter / employer / admin. Профили лежат в `.lam-sessions/`\n  (права 600, в `.gitignore`); браузер видит только имена ключей, не значения.\n- Профиль экрана: роль стейта ноды → общая роль → первый профиль приложения → без входа.\n- Значки на ноде: **не авторизован** (API ответил 401/403, в подсказке — путь), **обрезано**\n  («Видно 844 из 5838 px»). Кнопка **целиком** в полосе размеров выбранной ноды растит ноду до\n  высоты страницы; повторное нажатие — окно прежней высоты с прокруткой внутри.\n- Токен админки korbor живёт ~15 минут — шлюз обновляет dev-вход сам.\n\n### Память\n\nЖивых iframe не больше 6 (+2 тёплых); остальные экраны — JPEG-снимки, которые делает\nheadless Chromium в dev-процессе (`.lam-snapshots/`, в `.gitignore`). На korbor-all куча вкладки\nв обзоре 180 → 140 МБ, утечки после переключений карт нет — замеры в\n`docs/epoch/live-korbor-e2e#20261121-175119/measurements/`.\n\n### Вид «База данных»\n\nКнопка в шапке (если в карте есть схема): таблицы с поиском, колонки (тип, PK, NOT NULL,\ndefault, enum, внешний ключ с переходом), кто ссылается, роуты чтения и записи и экраны,\nкоторые эти роуты вызывают (клик — экран на холсте).\n\n### Вид «API»\n\nКнопка в шапке (если в карте есть роуты): дерево разделов и модулей по пути после `/api/vN`,\nпокрытие (описания, проверка входа, доступ, вызовы экранами — клик по «Описания» включает\nфильтр «без описания»), поиск и фильтры метод / сервис / таблица / без описания. Карточка роута:\nописание, схема входа по частям, роли, права и проверки доступа, таблицы чтения и записи\n(клик — «База данных»), экраны-вызывающие (клик — экран на холсте), обработчик файл:строка.\n\n### Вид «Документация»\n\nКнопка в шапке (если в карте есть `docs`, то есть скан с `--code-dir`): эпохи с датой, целью,\nстатусом из INDEX и готовностью по 09-bugs («не готово · N»), фильтр по готовности, поиск по\nтексту всех документов; заметки агентов и руководства. Документ — markdown (GFM): вкладки файлов\nэпохи словами, инлайн-код с роутом, таблицей или экраном карты — ссылка в карту, ссылки на другие\n.md — переход, скриншоты эпохи сеткой с просмотром во весь экран (картинки отдаёт dev-эндпоинт\n`/__lam_docs/asset`, только картинки внутри `docs/` корня).\n\n### MCP как база знаний\n\n`bun run mcp` и `POST /mcp` на dev-сервере, кроме страниц и замечаний, отдают код:\n`list_services`, `list_routes`, `get_route`, `list_tables`, `get_table` — роуты с\nкомментариями, входом и доступом, таблицы с колонками и связями, экраны, вызывающие роут;\n`describe_api` — архитектура API по сервисам и разделам с покрытием и фильтрами;\n`list_epochs`, `get_epoch` (с файлом), `search_docs` — документация проекта из раздела `docs`.\n\n### Сканер экранов\n\n`scanner-react-router` понимает React Router (литералы `path`) и **TanStack Router**:\n`createRoute({ getParentRoute, path, component })` с полным путём по цепочке родителей,\n`createFileRoute('/…')`, переходы `Link to` / `navigate({ to })` / `redirect({ to })` из\nфайла экрана и его локальных импортов (общие для многих экранов файлы — оболочка, меню —\nне считаются; переход через общий виджет помечен `confidence: low`).\n\n## CLI\n\n```bash\nbun run packages/cli/src/bin.ts scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/out.json\nbun run packages/cli/src/bin.ts doctor --dir ../korbor/apps/site\nbun run packages/cli/src/bin.ts diff maps/a.json maps/b.json\nbun run packages/cli/src/bin.ts feedback --file maps/sample-feedback.json --print-prompt\n```\n\n## Verify\n\nПолный список проверок monorepo (из корневого `package.json`):\n\n```bash\nbun install\nbun run typecheck\nbun test\nbun test packages\nbun test apps/visualizer-spa\nbun run test:unit\nbun run test:e2e\nbun run smoke\nbun run doctor -- --dir ../korbor/apps/site\nbun run build\nbun run scan:korbor\nbun run dev:visualizer\n```\n\n| Команда | Что проверяет |\n|---------|----------------|\n| `bun run typecheck` | `tsc --noEmit` во всех workspaces |\n| `bun test` / `bun run test:unit` | unit/integration: packages + visualizer-spa/src + scripts |\n| `bun run test:e2e` | Playwright e2e (`apps/visualizer-spa`) |\n| `bun run smoke` | runtime smoke (`scripts/runtime-smoke.ts`) |\n| `bun run doctor` | CLI doctor по каталогу приложения |\n| `bun run build` | build всех workspaces |\n| `bun run scan:korbor` | dogfood-скан Korbor → maps |\n| `bun run dev:visualizer` | dev SPA на порту **4310** |\n"
       },
       {
         "path": "docs/live-app-map-design.md",
