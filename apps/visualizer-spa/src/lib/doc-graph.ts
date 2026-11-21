@@ -214,7 +214,11 @@ export function buildDocGraph(doc: AppMapDocument, refs: DocRefIndex): DocGraph 
       b.edge(eid, id, 'contains');
     }
   }
-  for (const [kind, files] of [['note', docs.notes], ['guide', docs.guides]] as const) {
+  const sections: ReadonlyArray<readonly [GraphNodeKind, readonly DocFile[]]> = [
+    ['note', docs.notes],
+    ['guide', docs.guides],
+  ];
+  for (const [kind, files] of sections) {
     for (const f of files) {
       const id = `doc:${f.path}`;
       docIds.set(f.path, id);

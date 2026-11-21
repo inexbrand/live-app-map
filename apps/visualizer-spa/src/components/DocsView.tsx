@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Check, Link2, X } from 'lucide-react';
-import { buildCodeIndex, buildDocRefIndex, type DocRefIndex } from '@live-app-map/graph';
+import { buildCodeIndex, buildDocRefIndex } from '@live-app-map/graph';
 import type { DocEpoch, DocFile, DocsModel, EpochReadiness } from '@live-app-map/schema';
 import { docsAssetUrl } from '../lib/docs-asset-url';
 import {

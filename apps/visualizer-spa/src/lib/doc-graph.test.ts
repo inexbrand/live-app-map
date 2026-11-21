@@ -151,3 +151,15 @@ describe('filterGraph: тип только показывает, связи де
     expect(notReady.length).toBeLessThan(routes);
   });
 });
+
+describe('скорость на korbor-all', () => {
+  test('сборка, свёртка и фильтр графа — меньше 300 мс', () => {
+    const t0 = performance.now();
+    const g = graphOf(korbor);
+    const c = collapseEpochs(g, new Set());
+    filterGraph(c, { readiness: 'not-ready' });
+    const ms = performance.now() - t0;
+    expect(g.nodes.length).toBeGreaterThan(500);
+    expect(ms).toBeLessThan(300);
+  });
+});
