@@ -899,9 +899,33 @@ code,
   flex: 0 0 auto;
 }
 
+/* Действия ноды — поверх правого края шапки при наведении или выборе:
+   название получает всю ширину и не режется на «applicat…». */
+.page-node__header {
+  position: relative;
+  /* Высота как у ряда кнопок 40 px + поля: NODE_CHROME_H (viewport.ts) рассчитан на неё. */
+  min-height: 48px;
+}
 .page-node__actions {
+  position: absolute;
+  top: 4px;
+  right: 6px;
   display: flex;
   gap: 2px;
+  padding-left: 12px;
+  background: linear-gradient(to right, transparent, var(--card) 12px);
+  opacity: 0;
+  transition: opacity 120ms ease;
+}
+.page-node:hover .page-node__actions,
+.page-node--selected .page-node__actions,
+.page-node__actions:focus-within {
+  opacity: 1;
+}
+@media (prefers-reduced-motion: reduce) {
+  .page-node__actions {
+    transition: none;
+  }
 }
 
 .page-node__body {
