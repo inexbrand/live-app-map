@@ -38,12 +38,12 @@ import { fetchCmsPages, withCmsPages } from './korbor-site-pages';
 /** Репозиторий Korbor: `KORBOR_DIR` или соседний каталог основного checkout (../korbor). */
 const KORBOR = path.resolve(process.env['KORBOR_DIR'] ?? path.join(import.meta.dir, '../../korbor'));
 /** Канонический каталог артефактов scan (single-writer source of truth). */
-const OUT = path.resolve(import.meta.dir, '../maps');
+const OUT = path.resolve(process.env['LAM_MAPS_OUT'] ?? path.join(import.meta.dir, '../maps'));
 /**
  * Зеркало liveappmap для Vite static serve visualizer.
  * Содержимое только через copy из `OUT` — не независимый writer.
  */
-const PUBLIC_MAPS = path.resolve(import.meta.dir, '../apps/visualizer-spa/public/maps');
+const PUBLIC_MAPS = path.resolve(process.env['LAM_PUBLIC_MAPS_OUT'] ?? path.join(import.meta.dir, '../apps/visualizer-spa/public/maps'));
 
 const ROLE_STATES: AppMapPageState[] = [
   {

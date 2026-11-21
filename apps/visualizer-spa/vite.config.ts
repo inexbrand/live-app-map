@@ -10,6 +10,8 @@ import { defineConfig } from 'vite';
 import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
 import { docsAssetMiddleware } from './src/lib/docs-asset-middleware';
+import { monorepoScanRecipes } from './src/lib/map-scan-recipes';
+import { mapVersionsMiddleware } from './src/lib/map-versions-middleware';
 import { agentStateMiddleware } from './src/lib/agent-state-middleware';
 import { mcpAgentMiddleware } from './src/lib/mcp-middleware';
 import { httpsPathProxyMiddleware } from './src/lib/https-path-proxy';
@@ -18,6 +20,8 @@ import { lamGatewayPlugin } from './src/lib/gateway/vite-plugin';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
+/** Корень монорепо: scripts/ и packages/ для свежего скана карт. */
+const monorepoRoot = path.resolve(spaRoot, '../..');
 
 /**
  * POST /api/error-reports — client ErrorBoundary → SMTP (если env).
@@ -31,6 +35,7 @@ function errorReportsPlugin(): Plugin {
       server.middlewares.use(agentStateMiddleware);
       server.middlewares.use(mcpAgentMiddleware);
       server.middlewares.use(docsAssetMiddleware);
+      server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
     },
     configurePreviewServer(server) {
       server.middlewares.use(errorReportsMiddleware);
