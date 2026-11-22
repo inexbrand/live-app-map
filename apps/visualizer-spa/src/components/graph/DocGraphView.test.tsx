@@ -128,7 +128,7 @@ describe('граф документации', () => {
 
   test('эпоха: показать и свернуть файлы, раскрыть все', async () => {
     openMap('korbor-miniapp');
-    const { ui, container } = await view();
+    const { ui } = await view();
     const all = stats(ui);
     fireEvent.click(ui.getByTestId('graph-expand-all'));
     expect(stats(ui)).not.toBe(all);
