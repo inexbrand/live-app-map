@@ -6,16 +6,8 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildCodeIndex, buildDocRefIndex } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
-import {
-  buildDocGraph,
-  collapseEpochs,
-  docReferences,
-  filterGraph,
-  graphNeighbors,
-  localGraph,
-  searchGraph,
-  type DocGraph,
-} from './doc-graph';
+import { buildDocGraph, docReferences, type DocGraph } from './doc-graph';
+import { collapseEpochs, filterGraph, graphNeighbors, localGraph, searchGraph } from './doc-graph-query';
 
 const MAPS = path.resolve(import.meta.dir, '../../../../maps');
 

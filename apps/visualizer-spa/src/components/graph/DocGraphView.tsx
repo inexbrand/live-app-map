@@ -5,17 +5,8 @@
 import { useMemo, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, FileText, MapPin } from 'lucide-react';
 import type { EpochReadiness } from '@live-app-map/schema';
-import {
-  collapseEpochs,
-  filterGraph,
-  graphNeighbors,
-  NODE_KIND_LABELS,
-  NODE_KIND_SINGULAR,
-  searchGraph,
-  type DocGraph,
-  type GraphNode,
-  type GraphNodeKind,
-} from '../../lib/doc-graph';
+import { NODE_KIND_LABELS, NODE_KIND_SINGULAR, type DocGraph, type GraphNode, type GraphNodeKind } from '../../lib/doc-graph';
+import { collapseEpochs, filterGraph, graphNeighbors, searchGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { Button, Chip, Input } from '../../ui';
