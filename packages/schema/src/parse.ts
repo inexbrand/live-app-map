@@ -83,6 +83,28 @@ export function parseAppMapDocument(input: unknown): ParseResult<AppMapDocument>
   return { ok: true, document: doc, warnings };
 }
 
+/** Major-версия формата: 1.2 и «1.2.3» → 1; нечисловая — NaN (не больше 1). */
+function majorVersion(version: LiveAppMapDocument['version']): number {
+  return typeof version === 'number' ? Math.floor(version) : Number.parseInt(String(version).split('.')[0] ?? '0', 10);
+}
+
+/** Предупреждения страниц: повторы id и страницы без адреса. */
+function pageWarnings(doc: LiveAppMapDocument): Diagnostic[] {
+  const warnings: Diagnostic[] = [];
+  if (new Set(doc.pages.map((p) => p.id)).size !== doc.pages.length) {
+    warnings.push({ code: 'DUPLICATE_PAGE_ID', severity: 'warning', message: 'Обнаружены дубликаты page.id' });
+  }
+  for (const page of doc.pages.filter((p) => !p.url && !p.path)) {
+    warnings.push({
+      code: 'NO_URL',
+      severity: 'warning',
+      message: `Страница ${page.id} без url/path — iframe будет отключён`,
+      path: page.id,
+    });
+  }
+  return warnings;
+}
+
 /**
  * Валидирует viewer liveappmap JSON.
  */
@@ -96,12 +118,7 @@ export function parseLiveAppMapDocument(input: unknown): ParseResult<LiveAppMapD
     };
   }
   const doc = result.data as LiveAppMapDocument;
-  const warnings: Diagnostic[] = [];
-  const major =
-    typeof doc.version === 'number'
-      ? Math.floor(doc.version)
-      : Number.parseInt(String(doc.version).split('.')[0] ?? '0', 10);
-  if (major !== 1 && !Number.isNaN(major) && major > 1) {
+  if (majorVersion(doc.version) > 1) {
     return {
       ok: false,
       errors: [
@@ -111,28 +128,10 @@ export function parseLiveAppMapDocument(input: unknown): ParseResult<LiveAppMapD
           message: `Неподдерживаемая major-версия liveappmap: ${doc.version}`,
         },
       ],
-      warnings,
+      warnings: [],
     };
   }
-  const ids = new Set(doc.pages.map((p) => p.id));
-  if (ids.size !== doc.pages.length) {
-    warnings.push({
-      code: 'DUPLICATE_PAGE_ID',
-      severity: 'warning',
-      message: 'Обнаружены дубликаты page.id',
-    });
-  }
-  for (const page of doc.pages) {
-    if (!page.url && !page.path) {
-      warnings.push({
-        code: 'NO_URL',
-        severity: 'warning',
-        message: `Страница ${page.id} без url/path — iframe будет отключён`,
-        path: page.id,
-      });
-    }
-  }
-  return { ok: true, document: doc, warnings };
+  return { ok: true, document: doc, warnings: pageWarnings(doc) };
 }
 
 /**

@@ -37,13 +37,15 @@ export type AppMapZipParseResult =
  * @returns текст для errors[] / warnings[]
  */
 function errorDetail(err: unknown): string {
-  if (err instanceof Error && err.message.length > 0) {
+  const text = messageOf(err);
+  return text === '' ? 'unknown error' : text;
+}
+
+function messageOf(err: unknown): string {
+  if (err instanceof Error) {
     return err.message;
   }
-  if (typeof err === 'string' && err.length > 0) {
-    return err;
-  }
-  return 'unknown error';
+  return typeof err === 'string' ? err : '';
 }
 
 /**
@@ -83,81 +85,83 @@ function parseAppMapZipManifest(value: unknown): AppMapZipManifest {
 export async function parseAppMapZip(
   data: ArrayBuffer | Uint8Array,
 ): Promise<AppMapZipParseResult> {
-  const warnings: string[] = [];
   let zip: JSZip;
   try {
     zip = await JSZip.loadAsync(data);
   } catch (err: unknown) {
-    return {
-      ok: false,
-      errors: [`INVALID_ZIP: не удалось открыть архив (${errorDetail(err)})`],
-    };
+    return { ok: false, errors: [`INVALID_ZIP: не удалось открыть архив (${errorDetail(err)})`] };
   }
+  const map = await readMapJson(zip);
+  if (!map.ok) {
+    return map;
+  }
+  const { manifest, warnings } = await readManifest(zip);
+  const screens = await readScreens(zip);
+  const expo = parseExpoMapJson(map.json);
+  if (expo === null || expo.nodes === undefined) {
+    const direct = parseLiveAppMapDocument(map.json);
+    return direct.ok
+      ? { ok: true, document: direct.document, screens, warnings }
+      : { ok: false, errors: ['INVALID_MAP: map.json без nodes[] и не liveappmap'] };
+  }
+  return { ok: true, document: expoDocument(expo.nodes, expo.edges ?? [], manifest, screens), screens, warnings };
+}
 
+/** map.json архива: нет файла или не JSON — ошибка с кодом. */
+async function readMapJson(zip: JSZip): Promise<{ readonly ok: true; readonly json: unknown } | { readonly ok: false; readonly errors: string[] }> {
   const mapFile = zip.file('map.json');
   if (!mapFile) {
     return { ok: false, errors: ['MISSING_MAP_JSON'] };
   }
-  let mapJson: unknown;
   try {
-    mapJson = JSON.parse(await mapFile.async('string')) as unknown;
+    return { ok: true, json: JSON.parse(await mapFile.async('string')) };
   } catch (err: unknown) {
-    return {
-      ok: false,
-      errors: [`INVALID_JSON: map.json (${errorDetail(err)})`],
-    };
+    return { ok: false, errors: [`INVALID_JSON: map.json (${errorDetail(err)})`] };
   }
+}
 
-  let manifest: AppMapZipManifest = {};
+/** manifest.json необязателен: нет или нечитаем — предупреждение и пустой manifest. */
+async function readManifest(zip: JSZip): Promise<{ readonly manifest: AppMapZipManifest; readonly warnings: string[] }> {
   const manifestFile = zip.file('manifest.json');
-  if (manifestFile) {
-    try {
-      const rawManifest: unknown = JSON.parse(await manifestFile.async('string'));
-      manifest = parseAppMapZipManifest(rawManifest);
-    } catch (err: unknown) {
-      warnings.push(`MANIFEST_UNREADABLE: ${errorDetail(err)}`);
-    }
-  } else {
-    warnings.push('MANIFEST_MISSING: manifest.json отсутствует');
+  if (!manifestFile) {
+    return { manifest: {}, warnings: ['MANIFEST_MISSING: manifest.json отсутствует'] };
   }
+  try {
+    const rawManifest: unknown = JSON.parse(await manifestFile.async('string'));
+    return { manifest: parseAppMapZipManifest(rawManifest), warnings: [] };
+  } catch (err: unknown) {
+    return { manifest: {}, warnings: [`MANIFEST_UNREADABLE: ${errorDetail(err)}`] };
+  }
+}
 
+/** Снимки экранов из папки screens/ архива (путь внутри папки → байты). */
+async function readScreens(zip: JSZip): Promise<Map<string, Uint8Array>> {
   const screens = new Map<string, Uint8Array>();
-  const screenFolder = zip.folder('screens');
-  if (screenFolder) {
-    const tasks: Promise<void>[] = [];
-    screenFolder.forEach((relativePath, file) => {
-      if (file.dir) {
-        return;
-      }
-      tasks.push(
-        file.async('uint8array').then((buf) => {
-          screens.set(relativePath, buf);
-        }),
-      );
-    });
-    await Promise.all(tasks);
-  }
-
-  const expo = parseExpoMapJson(mapJson);
-  if (expo === null || expo.nodes === undefined) {
-    const direct = parseLiveAppMapDocument(mapJson);
-    if (direct.ok) {
-      return { ok: true, document: direct.document, screens, warnings };
-    }
-    return { ok: false, errors: ['INVALID_MAP: map.json без nodes[] и не liveappmap'] };
-  }
-
-  const pages = expo.nodes.map((n) => expoNodeToPage(n, screens));
-  const edges: LiveAppMapEdge[] = [];
-  const rawEdges = expo.edges ?? [];
-  rawEdges.forEach((edge, i) => {
-    const liveEdge = expoEdgeToLive(edge, i);
-    if (liveEdge !== null) {
-      edges.push(liveEdge);
+  const tasks: Promise<void>[] = [];
+  zip.folder('screens')?.forEach((relativePath, file) => {
+    if (!file.dir) {
+      tasks.push(file.async('uint8array').then((buf) => void screens.set(relativePath, buf)));
     }
   });
+  await Promise.all(tasks);
+  return screens;
+}
 
-  const document: LiveAppMapDocument = {
+type ExpoParsed = NonNullable<ReturnType<typeof parseExpoMapJson>>;
+
+/** Документ liveappmap из карты Expo: страницы, рёбра и сведения manifest. */
+function expoDocument(
+  nodes: NonNullable<ExpoParsed['nodes']>,
+  rawEdges: NonNullable<ExpoParsed['edges']>,
+  manifest: AppMapZipManifest,
+  screens: ReadonlyMap<string, Uint8Array>,
+): LiveAppMapDocument {
+  const pages = nodes.map((n) => expoNodeToPage(n, screens));
+  const edges: LiveAppMapEdge[] = rawEdges.flatMap((edge, i) => {
+    const liveEdge = expoEdgeToLive(edge, i);
+    return liveEdge === null ? [] : [liveEdge];
+  });
+  return {
     version: '1.0',
     app: {
       name: manifest.app?.name,
@@ -174,8 +178,6 @@ export async function parseAppMapZip(
       },
     },
   };
-
-  return { ok: true, document, screens, warnings };
 }
 
 /**

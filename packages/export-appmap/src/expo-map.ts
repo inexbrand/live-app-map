@@ -132,6 +132,15 @@ export function parseExpoMapJson(value: unknown): ExpoMapJson | null {
 }
 
 
+/** Снимок экрана: файл из архива screens/<slug>.png, иначе путь из capture, иначе null. */
+function screenshotOf(n: ExpoMapNode, slug: string, screens: ReadonlyMap<string, Uint8Array>): string | null {
+  if (screens.has(`${slug}.png`)) {
+    return `screens/${slug}.png`;
+  }
+  const shot = n.capture?.screenshot;
+  return shot !== undefined && shot.length > 0 ? shot : null;
+}
+
 /**
  * Expo-узел → LiveAppMapPage.
  * @param n — узел
@@ -143,12 +152,7 @@ export function expoNodeToPage(
 ): LiveAppMapPage {
   const id = n.id ?? n.slug ?? '';
   const slug = n.slug !== undefined ? n.slug : id;
-  let screenshot: string | null = null;
-  if (screens.has(`${slug}.png`)) {
-    screenshot = `screens/${slug}.png`;
-  } else if (n.capture?.screenshot !== undefined && n.capture.screenshot.length > 0) {
-    screenshot = n.capture.screenshot;
-  }
+  const screenshot = screenshotOf(n, slug, screens);
   return {
     id,
     title: n.title ?? n.id ?? slug,

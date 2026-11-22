@@ -304,15 +304,23 @@ function pageViewportToDevice(
   };
 }
 
+/** Шаблон пути страницы: path, иначе url без адреса приложения, иначе /id. */
+function pathPatternOf(p: LiveAppMapPage, baseUrl: string | undefined): string {
+  return p.path ?? (p.url && baseUrl ? stripBase(p.url, baseUrl) : p.url) ?? `/${p.id}`;
+}
+
+/** Исходник страницы из metadata.sourceFile. */
+function sourceOf(metadata: LiveAppMapPage['metadata']): { readonly file: string } | undefined {
+  const file = metadata?.['sourceFile'];
+  return typeof file === 'string' ? { file } : undefined;
+}
+
 function pageToNode(
   p: LiveAppMapPage,
   baseUrl: string | undefined,
   layout: LayoutHints | undefined,
 ): AppMapNode {
-  const pathPattern =
-    p.path ??
-    (p.url && baseUrl ? stripBase(p.url, baseUrl) : p.url) ??
-    `/${p.id}`;
+  const pathPattern = pathPatternOf(p, baseUrl);
   const enabled = !p.iframeDisabled;
   return {
     id: p.id,
@@ -322,7 +330,7 @@ function pageToNode(
     pathExample: p.path,
     url: p.url,
     groupIds: p.group ? [p.group] : undefined,
-    source: typeof p.metadata?.['sourceFile'] === 'string' ? { file: p.metadata['sourceFile'] } : undefined,
+    source: sourceOf(p.metadata),
     metadata: p.metadata,
     position: p.position,
     viewport: pageViewportToDevice(p.viewport, layout),
