@@ -86,10 +86,11 @@ describe('параметры запроса', () => {
   /** fetch, который запоминает init и отвечает пустым JSON. */
   function recorder(status = 200, body: unknown = {}): { readonly fetchFn: typeof fetch; readonly inits: RequestInit[] } {
     const inits: RequestInit[] = [];
-    const fetchFn: typeof fetch = async (_url, init) => {
+    const fn = async (_url: string | URL | Request, init?: RequestInit): Promise<Response> => {
       inits.push(init ?? {});
       return new Response(JSON.stringify(body), { status });
     };
+    const fetchFn: typeof fetch = Object.assign(fn, { preconnect: fetch.preconnect });
     return { fetchFn, inits };
   }
 
