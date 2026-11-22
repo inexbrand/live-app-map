@@ -26,14 +26,18 @@ function repeats(parent: ts.Node, child: ts.Node): boolean {
   if (ts.isForOfStatement(parent) || ts.isForInStatement(parent)) {
     return child === parent.statement;
   }
-  if (ts.isForStatement(parent) || ts.isWhileStatement(parent) || ts.isDoStatement(parent)) {
-    return child !== (ts.isForStatement(parent) ? parent.initializer : undefined);
+  if (ts.isForStatement(parent)) {
+    return child !== parent.initializer;
   }
+  return ts.isWhileStatement(parent) || ts.isDoStatement(parent) || isLoopCallback(parent, child);
+}
+
+/** Колбэк метода-цикла массива: `.map(x => …)`. */
+function isLoopCallback(parent: ts.Node, child: ts.Node): boolean {
   return (
     ts.isCallExpression(parent) &&
     ts.isPropertyAccessExpression(parent.expression) &&
     LOOP_METHODS.has(parent.expression.name.text) &&
-    child !== parent.expression &&
     (ts.isArrowFunction(child) || ts.isFunctionExpression(child))
   );
 }
@@ -121,23 +125,26 @@ function drizzleCall(
   if (method === 'from' && table !== undefined && isSelectChain(receiver)) {
     return { operation: 'select', table };
   }
+  return drizzleWrite(ctx, call, method, table) ?? drizzleQuery(method, receiver);
+}
+
+/** `db.insert(t)` / `update` / `delete`: таблица известна или получатель похож на клиент БД. */
+function drizzleWrite(ctx: SourceContext, call: ts.CallExpression, method: string, table: string | undefined): { operation: DbOperation; table: string } | undefined {
   const write = DRIZZLE_WRITE.get(method);
-  if (write !== undefined && table !== undefined && call.arguments.length === 1) {
-    const known = ctx.drizzleTables.has(table);
-    if (known || DB_RECEIVER.test(receiver.getText())) {
-      return { operation: write, table };
-    }
+  if (write === undefined || table === undefined || call.arguments.length !== 1 || !ts.isPropertyAccessExpression(call.expression)) {
+    return undefined;
   }
-  // db.query.<table>.findMany / findFirst
-  if (
+  return ctx.drizzleTables.has(table) || DB_RECEIVER.test(call.expression.expression.getText()) ? { operation: write, table } : undefined;
+}
+
+/** `db.query.<table>.findMany()` / `findFirst()`. */
+function drizzleQuery(method: string, receiver: ts.Expression): { operation: DbOperation; table: string } | undefined {
+  const isQuery =
     (method === 'findMany' || method === 'findFirst') &&
     ts.isPropertyAccessExpression(receiver) &&
     ts.isPropertyAccessExpression(receiver.expression) &&
-    receiver.expression.name.text === 'query'
-  ) {
-    return { operation: 'select', table: receiver.name.text };
-  }
-  return undefined;
+    receiver.expression.name.text === 'query';
+  return isQuery && ts.isPropertyAccessExpression(receiver) ? { operation: 'select', table: receiver.name.text } : undefined;
 }
 
 /**
@@ -184,29 +191,36 @@ export type Callee = { readonly name: string; readonly node: ts.Node };
  * @returns тела (пусто, если вызов ведёт вне проекта)
  */
 export function calledFunctions(ctx: SourceContext, call: ts.CallExpression): Callee[] {
-  const callee = ts.isPropertyAccessExpression(call.expression)
-    ? call.expression.name
-    : call.expression;
-  if (!ts.isIdentifier(callee)) {
+  const callee = ts.isPropertyAccessExpression(call.expression) ? call.expression.name : call.expression;
+  const decl = ts.isIdentifier(callee) ? projectDeclaration(ctx, callee) : undefined;
+  if (decl === undefined || !ts.isIdentifier(callee)) {
     return [];
   }
-  const sym = resolvedSymbol(ctx.checker, callee);
+  const body = functionBody(decl);
+  return body === undefined ? implementationBodies(ctx, decl, callee.text) : [{ name: callee.text, node: body }];
+}
+
+/** Объявление имени в проекте (не в библиотеках). */
+function projectDeclaration(ctx: SourceContext, id: ts.Identifier): ts.Declaration | undefined {
+  const sym = resolvedSymbol(ctx.checker, id);
   const decl = sym?.valueDeclaration ?? sym?.declarations?.[0];
-  if (decl === undefined || !isProjectNode(ctx, decl)) {
-    return [];
+  return decl !== undefined && isProjectNode(ctx, decl) ? decl : undefined;
+}
+
+/** Тело функции, метода или стрелки в константе. */
+function functionBody(decl: ts.Declaration): ts.Node | undefined {
+  if (ts.isFunctionDeclaration(decl) || ts.isMethodDeclaration(decl)) {
+    return decl.body;
   }
-  if ((ts.isFunctionDeclaration(decl) || ts.isMethodDeclaration(decl)) && decl.body !== undefined) {
-    return [{ name: callee.text, node: decl.body }];
-  }
-  if (ts.isVariableDeclaration(decl) && decl.initializer !== undefined) {
-    const init = decl.initializer;
-    if (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) {
-      return [{ name: callee.text, node: init.body }];
-    }
-  }
+  const init = ts.isVariableDeclaration(decl) ? decl.initializer : undefined;
+  return init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) ? init.body : undefined;
+}
+
+/** Тела реализаций метода интерфейса, которому принадлежит объявление. */
+function implementationBodies(ctx: SourceContext, decl: ts.Declaration, method: string): Callee[] {
   const iface = ownerInterface(decl);
-  const impls = iface === undefined ? undefined : ctx.implementations.get(iface)?.get(callee.text);
-  return (impls ?? []).map((node) => ({ name: `${iface}.${callee.text}`, node }));
+  const impls = iface === undefined ? undefined : ctx.implementations.get(iface)?.get(method);
+  return (impls ?? []).map((node) => ({ name: `${iface}.${method}`, node }));
 }
 
 /**
@@ -218,43 +232,75 @@ export function calledFunctions(ctx: SourceContext, call: ts.CallExpression): Ca
  * @returns вызовы БД без повторов
  */
 export function collectDbCalls(ctx: SourceContext, root: ts.Node): DbCall[] {
-  const out: DbCall[] = [];
-  const seen = new Set<string>();
-  // Тело, обойдённое вне цикла и в цикле, — разные случаи: в цикле это N+1.
-  const visited = { inLoop: new Set<ts.Node>(), once: new Set<ts.Node>([root]) };
+  const walker = new DbCallWalker(ctx, root);
+  walker.walk(root, undefined, 0, false);
+  return walker.out;
+}
 
-  const walk = (node: ts.Node, via: string | undefined, depth: number, inLoop: boolean): void => {
+/** Обход тела с заходом в функции проекта; вызовы БД без повторов. */
+class DbCallWalker {
+  readonly out: DbCall[] = [];
+  private readonly seen = new Set<string>();
+  /** Тело, обойдённое вне цикла и в цикле, — разные случаи: в цикле это N+1. */
+  private readonly visited: { readonly inLoop: Set<ts.Node>; readonly once: Set<ts.Node> };
+
+  constructor(
+    private readonly ctx: SourceContext,
+    root: ts.Node,
+  ) {
+    this.visited = { inLoop: new Set<ts.Node>(), once: new Set<ts.Node>([root]) };
+  }
+
+  walk(node: ts.Node, via: string | undefined, depth: number, inLoop: boolean): void {
     if (ts.isCallExpression(node)) {
-      const drizzle = drizzleCall(ctx, node);
-      const prisma = drizzle === undefined ? prismaCall(ctx, node) : undefined;
-      const found = drizzle ?? prisma;
-      if (found !== undefined) {
-        const call: DbCall = {
+      this.visitCall(node, via, depth, inLoop);
+    }
+    ts.forEachChild(node, (child) => this.walk(child, via, depth, inLoop || repeats(node, child)));
+  }
+
+  /** Вызов БД — записать; иначе зайти в вызываемые функции проекта (до MAX_DEPTH, каждое тело — раз). */
+  private visitCall(node: ts.CallExpression, via: string | undefined, depth: number, inLoop: boolean): void {
+    const call = this.dbCallOf(node, via, inLoop);
+    if (call !== undefined) {
+      this.record(call);
+    } else if (depth < MAX_DEPTH) {
+      this.enterCallees(node, via, depth, inLoop);
+    }
+  }
+
+  /** Обращение к БД в вызове (Drizzle, иначе Prisma). */
+  private dbCallOf(node: ts.CallExpression, via: string | undefined, inLoop: boolean): DbCall | undefined {
+    const drizzle = drizzleCall(this.ctx, node);
+    const found = drizzle ?? prismaCall(this.ctx, node);
+    return found === undefined
+      ? undefined
+      : {
           orm: drizzle === undefined ? 'prisma' : 'drizzle',
           operation: found.operation,
           table: found.table,
-          location: locationOf(ctx, node),
+          location: locationOf(this.ctx, node),
           ...(via === undefined ? {} : { via }),
           ...(inLoop ? { inLoop: true } : {}),
         };
-        const key = `${call.operation}|${call.table}|${call.via ?? ''}|${inLoop}|${call.location.file}:${call.location.line}`;
-        if (!seen.has(key)) {
-          seen.add(key);
-          out.push(call);
-        }
-      } else if (depth < MAX_DEPTH) {
-        const seenBodies = inLoop ? visited.inLoop : visited.once;
-        for (const fn of calledFunctions(ctx, node)) {
-          if (!seenBodies.has(fn.node)) {
-            seenBodies.add(fn.node);
-            walk(fn.node, via ?? fn.name, depth + 1, inLoop);
-          }
-        }
+  }
+
+  /** Заход в функции проекта, которые вызывает узел; каждое тело — раз (отдельно в цикле и вне). */
+  private enterCallees(node: ts.CallExpression, via: string | undefined, depth: number, inLoop: boolean): void {
+    const seenBodies = inLoop ? this.visited.inLoop : this.visited.once;
+    for (const fn of calledFunctions(this.ctx, node)) {
+      // Проверка на каждом шаге: тело могло быть обойдено внутри предыдущего.
+      if (!seenBodies.has(fn.node)) {
+        seenBodies.add(fn.node);
+        this.walk(fn.node, via ?? fn.name, depth + 1, inLoop);
       }
     }
-    ts.forEachChild(node, (child) => walk(child, via, depth, inLoop || repeats(node, child)));
-  };
+  }
 
-  walk(root, undefined, 0, false);
-  return out;
+  private record(call: DbCall): void {
+    const key = `${call.operation}|${call.table}|${call.via ?? ''}|${call.inLoop === true}|${call.location.file}:${call.location.line}`;
+    if (!this.seen.has(key)) {
+      this.seen.add(key);
+      this.out.push(call);
+    }
+  }
 }
