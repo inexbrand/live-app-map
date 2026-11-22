@@ -205,14 +205,18 @@ function namedClient(
   const value = first === undefined ? undefined : ev.evaluate(first, frame, origin);
   const prefixed = prefixedVerb(name);
   if (prefixed !== undefined) {
-    // `api.getUser(id)` — не путь; вызов, только если первый аргумент — путь.
-    return startsWithPath(value) ? { client: 'wrapper', method: prefixed, url: urlParts(value, origin, first) } : undefined;
+    return prefixedSink(prefixed, value, origin, first);
   }
   const verb = VERBS.get(name);
   if (value?.kind === 'obj') {
     return objectWrapperSink(value, verb, origin);
   }
   return { client: 'wrapper', method: verb ?? optionsMethod(ev, call.arguments[1], frame, origin), url: urlParts(value, origin, first) };
+}
+
+/** `api.getUser('/api/users/1')`: вызов, только если первый аргумент — путь (`api.getUser(id)` — не путь). */
+function prefixedSink(method: HttpMethod, value: Value | undefined, origin: ts.Node, first: ts.Expression | undefined): SinkHit | undefined {
+  return startsWithPath(value) ? { client: 'wrapper', method, url: urlParts(value, origin, first) } : undefined;
 }
 
 /** `api.send({ path | url, method })`. */
