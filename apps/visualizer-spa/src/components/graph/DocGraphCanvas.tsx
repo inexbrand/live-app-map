@@ -8,6 +8,7 @@ import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { NODE_KIND_LABELS, type DocGraph } from '../../lib/doc-graph';
 import { graphNeighbors } from '../../lib/doc-graph-query';
+import { centeredCamera, fitCamera, nodeAt, toSimNodes, toWorld, zoomAt, type Point } from './graph-camera';
 import { drawGraph, readPalette, type Camera, type SimLink, type SimNode } from './graph-draw';
 
 /** Свойства холста графа. */
@@ -24,36 +25,9 @@ export type DocGraphCanvasProps = {
   readonly ariaLabel: string;
 };
 
-const MIN_K = 0.15;
-const MAX_K = 3;
-
-/** Радиус узла по типу и числу связей. */
-function nodeRadius(kind: SimNode['kind'], degree: number): number {
-  const base = kind === 'epoch' ? 7 : kind === 'note' || kind === 'guide' ? 6 : kind === 'epoch-file' || kind === 'file' ? 3.5 : 4.5;
-  return base + Math.min(8, Math.sqrt(degree) * 1.2);
-}
-
 function prefersReducedMotion(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 }
-
-/** Камера, вписывающая узлы в рамку. */
-function fitCamera(nodes: readonly SimNode[], w: number, h: number, pad: number): Camera {
-  const xs = nodes.flatMap((n) => (n.x === undefined ? [] : [n.x]));
-  const ys = nodes.flatMap((n) => (n.y === undefined ? [] : [n.y]));
-  if (xs.length === 0) {
-    return { x: w / 2, y: h / 2, k: 1 };
-  }
-  const minX = Math.min(...xs);
-  const maxX = Math.max(...xs);
-  const minY = Math.min(...ys);
-  const maxY = Math.max(...ys);
-  const k = Math.min(MAX_K, Math.max(MIN_K, Math.min((w - pad * 2) / Math.max(1, maxX - minX), (h - pad * 2) / Math.max(1, maxY - minY))));
-  return { k, x: w / 2 - ((minX + maxX) / 2) * k, y: h / 2 - ((minY + maxY) / 2) * k };
-}
-
-/** Точка на холсте в css-пикселях. */
-type Point = { readonly x: number; readonly y: number };
 
 /** Жест мышью: сдвиг фона или перенос узла. */
 type Drag = { readonly mode: 'pan' | 'node'; readonly node: SimNode | null; x: number; y: number; moved: boolean };
@@ -103,11 +77,7 @@ function newCanvasState(props: DocGraphCanvasProps): CanvasState {
 
 /** Ставит узел в центр холста при текущем масштабе. */
 function centerOn(s: CanvasState, id: string): void {
-  const n = s.nodes.find((x) => x.id === id);
-  if (n?.x !== undefined && n.y !== undefined) {
-    const k = s.cam.k;
-    s.cam = { k, x: s.size.w / 2 - n.x * k, y: s.size.h / 2 - n.y * k };
-  }
+  s.cam = centeredCamera(s.nodes.find((x) => x.id === id), s.cam, s.size);
 }
 
 /** Соседи узла с кэшем на граф. */
@@ -148,25 +118,6 @@ function resizeCanvas(canvas: HTMLCanvasElement, s: CanvasState, compact: boolea
     s.fitted = rect.width > 0;
   }
   s.draw();
-}
-
-/** Число рёбер у каждого узла. */
-function nodeDegrees(graph: DocGraph): Map<string, number> {
-  const degree = new Map<string, number>();
-  for (const e of graph.edges) {
-    degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
-    degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
-  }
-  return degree;
-}
-
-/** Узлы симуляции; уже размещённые сохраняют позицию. */
-function toSimNodes(graph: DocGraph, prev: ReadonlyMap<string, { x: number; y: number }>): SimNode[] {
-  const degree = nodeDegrees(graph);
-  return graph.nodes.map((n) => {
-    const p = prev.get(n.id);
-    return { id: n.id, kind: n.kind, label: n.label, notReady: n.readiness === 'not-ready', r: nodeRadius(n.kind, degree.get(n.id) ?? 0), ...(p === undefined ? {} : { x: p.x, y: p.y }) };
-  });
 }
 
 /** Новый узел — рядом с уже размещённым соседом, чтобы раскрытие не взрывало раскладку; возвращает число размещённых раньше. */
@@ -254,22 +205,6 @@ function followSelection(s: CanvasState, selectedId: string | null, compact: boo
   s.draw();
 }
 
-/** Узел под точкой экрана. */
-function nodeAt(nodes: readonly SimNode[], c: Camera, p: Point): SimNode | null {
-  const wx = (p.x - c.x) / c.k;
-  const wy = (p.y - c.y) / c.k;
-  let best: SimNode | null = null;
-  let bestD = Infinity;
-  for (const n of nodes) {
-    const d = n.x === undefined || n.y === undefined ? Infinity : Math.hypot(n.x - wx, n.y - wy);
-    if (d < (n.r + 6) / Math.min(1, c.k) && d < bestD) {
-      best = n;
-      bestD = d;
-    }
-  }
-  return best;
-}
-
 /** Точка события относительно холста. */
 function localPoint(canvas: HTMLCanvasElement | null, e: { readonly clientX: number; readonly clientY: number }): Point {
   const rect = canvas?.getBoundingClientRect();
@@ -297,8 +232,9 @@ function dragTo(s: CanvasState, d: Drag, p: Point, compact: boolean): void {
     return;
   }
   if (d.node !== null && !compact) {
-    d.node.fx = (p.x - s.cam.x) / s.cam.k;
-    d.node.fy = (p.y - s.cam.y) / s.cam.k;
+    const w = toWorld(s.cam, p);
+    d.node.fx = w.x;
+    d.node.fy = w.y;
     s.sim?.alphaTarget(0.2).restart();
   }
 }
@@ -330,12 +266,6 @@ function pointerUp(s: CanvasState): void {
   if (!d.moved) {
     s.handlers.onSelect(d.node?.id ?? null);
   }
-}
-
-/** Масштаб колесом под курсором. */
-function zoomAt(c: Camera, p: Point, deltaY: number): Camera {
-  const k = Math.min(MAX_K, Math.max(MIN_K, c.k * Math.exp(-deltaY * 0.0015)));
-  return { k, x: p.x - ((p.x - c.x) * k) / c.k, y: p.y - ((p.y - c.y) * k) / c.k };
 }
 
 /** Подсказка над холстом: тип и описание наведённого узла. */
