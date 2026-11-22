@@ -53,6 +53,22 @@ export function dumpDom(name: string, el: Element): void {
   writeFileSync(join(dir, `${name.replace(/[^\w.-]+/g, '_')}.html`), el.outerHTML);
 }
 
+/**
+ * Окно файла не закрывается, а только останавливает свои таймеры: библиотеки, загруженные
+ * в первом DOM-файле прогона, держат его requestAnimationFrame (d3-timer у React Flow) —
+ * в закрытом окне кадры не приходят, и анимации холста в следующих файлах стоят.
+ */
+function keepWindowAlive(): void {
+  const api: unknown = Reflect.get(globalThis, 'happyDOM');
+  if (typeof api !== 'object' || api === null) {
+    return;
+  }
+  const abort: unknown = Reflect.get(api, 'abort');
+  if (typeof abort === 'function') {
+    Reflect.set(api, 'close', () => Reflect.apply(abort, api, []));
+  }
+}
+
 /** Включает DOM на время файла теста и чистит отрисованное после каждого теста. */
 export function useDom(): void {
   beforeAll(register);
@@ -66,6 +82,7 @@ export function useDom(): void {
     await new Promise((resolve) => setImmediate(resolve));
     await new Promise((resolve) => setTimeout(resolve, 20));
     if (GlobalRegistrator.isRegistered) {
+      keepWindowAlive();
       await GlobalRegistrator.unregister();
     }
   });

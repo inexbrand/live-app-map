@@ -24,6 +24,37 @@ function dockedPanels(): DockedPanel[] {
   return panels;
 }
 
+type Flow = ReturnType<typeof useReactFlow>;
+
+/** Размер ноды: измеренный, иначе заданный. */
+function sizeOf(node: { readonly measured?: { readonly width?: number; readonly height?: number }; readonly width?: number; readonly height?: number }): { readonly w: number; readonly h: number } {
+  return { w: node.measured?.width ?? node.width ?? 0, h: node.measured?.height ?? node.height ?? 0 };
+}
+
+/** Нода вне экрана (холст рисует только видимые): центр холста — на её координаты. */
+function centerOnNode(flow: Flow, id: string): void {
+  const node = flow.getNode(id);
+  if (node === undefined) {
+    return;
+  }
+  const { w, h } = sizeOf(node);
+  void flow.setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: flow.getViewport().zoom, duration: 300 });
+}
+
+/** Нода на экране: сдвиг холста из-под панелей, масштаб тот же. */
+function revealNode(flow: Flow, id: string): void {
+  const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(id)}"]`);
+  if (el === null) {
+    centerOnNode(flow, id);
+    return;
+  }
+  const { dx, dy } = revealShift(rectOf(el), dockedPanels(), GAP);
+  if (dx !== 0 || dy !== 0) {
+    const vp = flow.getViewport();
+    void flow.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }, { duration: 200 });
+  }
+}
+
 /** Сдвигает холст к выбранной ноде (компонент внутри ReactFlow). */
 export function RevealSelected() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
@@ -36,23 +67,7 @@ export function RevealSelected() {
     }
     // Два кадра: панели выбора и полоса размеров успевают смонтироваться.
     let raf = requestAnimationFrame(() => {
-      raf = requestAnimationFrame(() => {
-        const el = document.querySelector(`.react-flow__node[data-id="${CSS.escape(selectedPageId)}"]`);
-        if (el === null) {
-          const node = flow.getNode(selectedPageId);
-          if (node !== undefined) {
-            const w = node.measured?.width ?? node.width ?? 0;
-            const h = node.measured?.height ?? node.height ?? 0;
-            void flow.setCenter(node.position.x + w / 2, node.position.y + h / 2, { zoom: flow.getViewport().zoom, duration: 300 });
-          }
-          return;
-        }
-        const { dx, dy } = revealShift(rectOf(el), dockedPanels(), GAP);
-        if (dx !== 0 || dy !== 0) {
-          const vp = flow.getViewport();
-          void flow.setViewport({ x: vp.x + dx, y: vp.y + dy, zoom: vp.zoom }, { duration: 200 });
-        }
-      });
+      raf = requestAnimationFrame(() => revealNode(flow, selectedPageId));
     });
     return () => cancelAnimationFrame(raf);
   }, [selectedPageId, leftPanel, flow]);
