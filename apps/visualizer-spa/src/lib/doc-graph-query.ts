@@ -2,7 +2,7 @@
  * Запросы к графу документации: свёрнутые эпохи, фильтр, соседи, локальный граф, поиск.
  */
 import type { EpochReadiness } from '@live-app-map/schema';
-import { GraphBuilder, type DocGraph, type GraphNodeKind } from './doc-graph';
+import { GraphBuilder, type DocGraph, type GraphNode, type GraphNodeKind } from './doc-graph';
 
 /**
  * Свёртка: файлы нераскрытых эпох убираются, их ссылки переходят на эпоху.
@@ -51,12 +51,39 @@ function isDocKind(k: GraphNodeKind): boolean {
  */
 export function filterGraph(g: DocGraph, f: GraphFilter): DocGraph {
   const kinds = f.kinds === undefined || f.kinds.size === 0 ? null : f.kinds;
-  const readiness = f.readiness ?? null;
-  const anchors = new Set(
+  const allowed = (kind: GraphNodeKind): boolean => kinds === null || kinds.has(kind);
+  const anchors = anchorIds(g, f.readiness ?? null);
+  const linked = linkedIds(g, anchors);
+  const visible = new Set(g.nodes.filter((n) => (anchors.has(n.id) || isLinkedObject(n, linked)) && allowed(n.kind)).map((n) => n.id));
+  if (allowed('service')) {
+    addOwners(g, visible);
+  }
+  return {
+    nodes: g.nodes.filter((n) => visible.has(n.id)),
+    edges: g.edges.filter((e) => visible.has(e.source) && visible.has(e.target)),
+  };
+}
+
+/** Сервисы видимых узлов (ребро belongs) — тоже видимы. */
+function addOwners(g: DocGraph, visible: Set<string>): void {
+  for (const e of g.edges) {
+    if (e.kind === 'belongs' && visible.has(e.source)) {
+      visible.add(e.target);
+    }
+  }
+}
+
+/** Документы под фильтр готовности (заметки и руководства — всегда). */
+function anchorIds(g: DocGraph, readiness: GraphFilter['readiness'] | null): Set<string> {
+  return new Set(
     g.nodes
       .filter((n) => isDocKind(n.kind) && (readiness === null || n.kind === 'note' || n.kind === 'guide' || n.readiness === readiness))
       .map((n) => n.id),
   );
+}
+
+/** Узлы, связанные ребром с документом-якорем. */
+function linkedIds(g: DocGraph, anchors: ReadonlySet<string>): Set<string> {
   const linked = new Set<string>();
   for (const e of g.edges) {
     if (anchors.has(e.source)) {
@@ -66,23 +93,12 @@ export function filterGraph(g: DocGraph, f: GraphFilter): DocGraph {
       linked.add(e.source);
     }
   }
-  const visible = new Set<string>(
-    g.nodes.filter((n) => anchors.has(n.id) && (kinds === null || kinds.has(n.kind))).map((n) => n.id),
-  );
-  for (const n of g.nodes) {
-    if (!isDocKind(n.kind) && n.kind !== 'service' && linked.has(n.id) && (kinds === null || kinds.has(n.kind))) {
-      visible.add(n.id);
-    }
-  }
-  for (const e of g.edges) {
-    if (e.kind === 'belongs' && visible.has(e.source) && (kinds === null || kinds.has('service'))) {
-      visible.add(e.target);
-    }
-  }
-  return {
-    nodes: g.nodes.filter((n) => visible.has(n.id)),
-    edges: g.edges.filter((e) => visible.has(e.source) && visible.has(e.target)),
-  };
+  return linked;
+}
+
+/** Объект карты (не документ и не сервис), на который ссылается якорь. */
+function isLinkedObject(n: GraphNode, linked: ReadonlySet<string>): boolean {
+  return !isDocKind(n.kind) && n.kind !== 'service' && linked.has(n.id);
 }
 
 /**
@@ -112,28 +128,37 @@ export function graphNeighbors(g: DocGraph, id: string): Set<string> {
  * @param depth - глубина (1–3)
  * @returns подграф; центра нет в графе — пустой
  */
-export function localGraph(g: DocGraph, id: string, depth: number): DocGraph {
-  if (!g.nodes.some((n) => n.id === id)) {
-    return { nodes: [], edges: [] };
-  }
+/** Соседи каждого узла (рёбра без направления). */
+function adjacency(g: DocGraph): Map<string, string[]> {
   const adj = new Map<string, string[]>();
   for (const e of g.edges) {
     adj.set(e.source, [...(adj.get(e.source) ?? []), e.target]);
     adj.set(e.target, [...(adj.get(e.target) ?? []), e.source]);
   }
+  return adj;
+}
+
+/** Следующее кольцо обхода: ещё не виденные соседи (seen пополняется). */
+function nextRing(frontier: readonly string[], adj: ReadonlyMap<string, readonly string[]>, seen: Set<string>): string[] {
+  const next: string[] = [];
+  for (const y of frontier.flatMap((x) => adj.get(x) ?? [])) {
+    if (!seen.has(y)) {
+      seen.add(y);
+      next.push(y);
+    }
+  }
+  return next;
+}
+
+export function localGraph(g: DocGraph, id: string, depth: number): DocGraph {
+  if (!g.nodes.some((n) => n.id === id)) {
+    return { nodes: [], edges: [] };
+  }
+  const adj = adjacency(g);
   const seen = new Set([id]);
   let frontier = [id];
   for (let d = 0; d < depth; d++) {
-    const next: string[] = [];
-    for (const x of frontier) {
-      for (const y of adj.get(x) ?? []) {
-        if (!seen.has(y)) {
-          seen.add(y);
-          next.push(y);
-        }
-      }
-    }
-    frontier = next;
+    frontier = nextRing(frontier, adj, seen);
   }
   return { nodes: g.nodes.filter((n) => seen.has(n.id)), edges: g.edges.filter((e) => seen.has(e.source) && seen.has(e.target)) };
 }

@@ -141,26 +141,13 @@ export function resolveHeightMode(
   layout: LayoutHints | undefined,
   override?: DeviceViewport,
 ): ViewportHeightMode {
-  if (override?.heightMode === 'fixed' || override?.heightMode === 'auto') {
-    return override.heightMode;
-  }
-  if (
-    nodeViewport?.heightMode === 'fixed' ||
-    nodeViewport?.heightMode === 'auto'
-  ) {
-    return nodeViewport.heightMode;
-  }
-  const mapDevice = resolveLayoutDeviceViewport(layout);
-  if (mapDevice?.heightMode === 'fixed' || mapDevice?.heightMode === 'auto') {
-    return mapDevice.heightMode;
-  }
-  if (
-    layout?.defaultHeightMode === 'fixed' ||
-    layout?.defaultHeightMode === 'auto'
-  ) {
-    return layout.defaultHeightMode;
-  }
-  return 'fixed';
+  const sources = [override?.heightMode, nodeViewport?.heightMode, resolveLayoutDeviceViewport(layout)?.heightMode, layout?.defaultHeightMode];
+  return sources.find(isHeightMode) ?? 'fixed';
+}
+
+/** Режим высоты задан явно: fixed или auto. */
+function isHeightMode(v: unknown): v is ViewportHeightMode {
+  return v === 'fixed' || v === 'auto';
 }
 
 export type ResolveViewportArgs = {
@@ -181,56 +168,30 @@ export type ResolveViewportArgs = {
  */
 export function resolveNodeViewport(args: ResolveViewportArgs = {}): DeviceViewport {
   const mapDevice = resolveLayoutDeviceViewport(args.layout);
-  const heightMode = resolveHeightMode(
-    args.nodeViewport,
-    args.layout,
-    args.override,
-  );
-  const defaultW = resolveDefaultWidth(args.layout);
-  const defaultH = resolveDefaultHeight(args.layout);
+  const heightMode = resolveHeightMode(args.nodeViewport, args.layout, args.override);
+  const chain = [args.override, args.nodeViewport, mapDevice];
+  const width = firstOf(chain, 'width') ?? resolveDefaultWidth(args.layout);
+  const declared = firstOf(chain, 'height') ?? resolveDefaultHeight(args.layout);
+  // fixed: never use measuredHeight
+  const height = heightMode === 'auto' && isMeasured(args.measuredHeight) ? args.measuredHeight : declared;
+  const label = firstOf(chain, 'label') ?? String(Math.round(width));
+  return clampViewport({ width, height, label, heightMode });
+}
 
-  const width =
-    args.override?.width ??
-    args.nodeViewport?.width ??
-    mapDevice?.width ??
-    defaultW;
-
-  let height: number;
-  if (heightMode === 'auto') {
-    if (
-      typeof args.measuredHeight === 'number' &&
-      Number.isFinite(args.measuredHeight) &&
-      args.measuredHeight >= 120
-    ) {
-      height = args.measuredHeight;
-    } else {
-      height =
-        args.override?.height ??
-        args.nodeViewport?.height ??
-        mapDevice?.height ??
-        defaultH;
+/** Первое заданное значение поля по цепочке источников. */
+function firstOf<K extends 'width' | 'height' | 'label'>(chain: readonly (DeviceViewport | undefined)[], key: K): DeviceViewport[K] | undefined {
+  for (const v of chain) {
+    const x = v?.[key];
+    if (x !== undefined && x !== null) {
+      return x;
     }
-  } else {
-    // fixed: never use measuredHeight
-    height =
-      args.override?.height ??
-      args.nodeViewport?.height ??
-      mapDevice?.height ??
-      defaultH;
   }
+  return undefined;
+}
 
-  const label =
-    args.override?.label ??
-    args.nodeViewport?.label ??
-    mapDevice?.label ??
-    String(Math.round(width));
-
-  return clampViewport({
-    width,
-    height,
-    label,
-    heightMode,
-  });
+/** Измерение годится: конечное число не меньше 120 px. */
+function isMeasured(h: number | undefined): h is number {
+  return typeof h === 'number' && Number.isFinite(h) && h >= 120;
 }
 
 /**
