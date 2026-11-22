@@ -67,6 +67,38 @@ function first<T>(xs: readonly T[]): T {
   return x;
 }
 
+type Spot = { readonly x: number; readonly y: number };
+
+/** Центры узлов кадра, который не изменился за следующий кадр. */
+async function stableCircles(ctx: RecordingContext): Promise<Spot[]> {
+  let prev = JSON.stringify(circleCenters(ctx.log));
+  for (let i = 0; i < 50; i += 1) {
+    await frames();
+    const now = JSON.stringify(circleCenters(ctx.log));
+    if (now === prev) {
+      return circleCenters(ctx.log);
+    }
+    prev = now;
+  }
+  throw new Error('кадр холста не устоялся');
+}
+
+/** Точка холста 800×600 дальше всего от узлов — «фон». */
+function emptySpot(centers: readonly Spot[]): Spot {
+  let best: Spot = { x: 0, y: 0 };
+  let bestD = -1;
+  for (let x = 10; x < 800; x += 10) {
+    for (let y = 10; y < 600; y += 10) {
+      const d = Math.min(...centers.map((c) => Math.hypot(c.x - x, c.y - y)));
+      if (d > bestD) {
+        best = { x, y };
+        bestD = d;
+      }
+    }
+  }
+  return best;
+}
+
 describe('граф документации', () => {
   test('без документов — подсказка', async () => {
     const { container } = await view();
@@ -166,7 +198,8 @@ describe('холст графа', () => {
     openMap('korbor-miniapp');
     const { ui } = await view();
     const el = ui.getByTestId('doc-graph-canvas');
-    const p = first(circles(canvas.ctx));
+    // Узлы берём с кадра, который уже не меняется: под нагрузкой первый кадр бывает до подгонки камеры.
+    const p = first(await stableCircles(canvas.ctx));
     fireEvent.pointerMove(el, { clientX: p.x, clientY: p.y });
     await frames();
     fireEvent.pointerDown(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
@@ -175,11 +208,14 @@ describe('холст графа', () => {
     await waitFor(() => expect(ui.getByTestId('graph-node-card')).toBeTruthy());
     expect(el.getAttribute('data-selected')).not.toBe('');
     fireEvent.pointerLeave(el);
-    fireEvent.doubleClick(el, { clientX: p.x, clientY: p.y });
+    // Выбранный узел камера ставит в центр холста (800×600) — двойной клик там, где он теперь.
+    await frames();
+    fireEvent.doubleClick(el, { clientX: 400, clientY: 300 });
     expect(useViewStore.getState().doc).not.toBeNull();
-    fireEvent.pointerDown(el, { clientX: 2, clientY: 2, pointerId: 1 });
-    fireEvent.pointerUp(el, { clientX: 2, clientY: 2, pointerId: 1 });
-    fireEvent.doubleClick(el, { clientX: 2, clientY: 2 });
+    const bg = emptySpot(await stableCircles(canvas.ctx));
+    fireEvent.pointerDown(el, { clientX: bg.x, clientY: bg.y, pointerId: 1 });
+    fireEvent.pointerUp(el, { clientX: bg.x, clientY: bg.y, pointerId: 1 });
+    fireEvent.doubleClick(el, { clientX: bg.x, clientY: bg.y });
     expect(useDocGraphStore.getState().selected).toBeNull();
   });
 
