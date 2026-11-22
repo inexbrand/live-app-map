@@ -45,14 +45,34 @@ type VoiceState = {
   readonly remove: () => Promise<void>;
 };
 
+/** Поле сохранённых настроек, если оно из списка допустимых. */
+function knownField<T extends string>(raw: unknown, key: string, known: readonly { readonly id: T }[]): T | undefined {
+  const value: unknown = typeof raw === 'object' && raw !== null ? Reflect.get(raw, key) : undefined;
+  return known.find((x) => x.id === value)?.id;
+}
+
+/**
+ * Настройки голоса из localStorage: неизвестная модель или язык (или битый JSON) —
+ * модель base и русский.
+ *
+ * @param text - сохранённый JSON или null
+ */
+export function parseVoiceSettings(text: string | null): { model: VoiceModelId; language: VoiceLanguage } {
+  let raw: unknown = null;
+  try {
+    raw = JSON.parse(text ?? '{}');
+  } catch {
+    raw = null;
+  }
+  return { model: knownField(raw, 'model', VOICE_MODELS) ?? 'base', language: knownField(raw, 'language', VOICE_LANGUAGES) ?? 'ru' };
+}
+
 function readSettings(): { model: VoiceModelId; language: VoiceLanguage } {
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(SETTINGS_KEY) ?? '{}');
-    const model = typeof raw === 'object' && raw !== null && 'model' in raw ? VOICE_MODELS.find((m) => m.id === raw.model)?.id : undefined;
-    const language = typeof raw === 'object' && raw !== null && 'language' in raw ? VOICE_LANGUAGES.find((l) => l.id === raw.language)?.id : undefined;
-    return { model: model ?? 'base', language: language ?? 'ru' };
+    return parseVoiceSettings(localStorage.getItem(SETTINGS_KEY));
   } catch {
-    return { model: 'base', language: 'ru' };
+    // Хранилище недоступно (песочница браузера) — как без сохранённых настроек.
+    return parseVoiceSettings(null);
   }
 }
 
