@@ -3,6 +3,7 @@
  */
 import { getKorborApiBase } from '../../lib/dogfood-api';
 import { resolveViewportPresets } from '../../lib/viewport-presets';
+import { mapAdaptive } from './map-adaptive';
 import { useAppStore } from '../../store/app-store';
 import { Field, Input, Select } from '../../ui';
 import { EdgeSheet } from '../EdgeSheet';
@@ -41,9 +42,7 @@ function MapAdaptiveField() {
   const hasDocument = useAppStore((s) => s.document !== null);
   const layout = useAppStore((s) => s.document?.layout);
   const setPreset = useAppStore((s) => s.setMapViewportPreset);
-  const w = layout?.defaultDeviceViewport?.width ?? layout?.defaultWidth ?? 390;
-  const h = layout?.defaultDeviceViewport?.height ?? layout?.defaultHeight ?? 844;
-  const mode = layout?.defaultDeviceViewport?.heightMode ?? layout?.defaultHeightMode ?? 'fixed';
+  const { w, h, mode, presetId } = mapAdaptive(layout);
   const presets = resolveViewportPresets(layout);
   return (
     <Field
@@ -55,7 +54,7 @@ function MapAdaptiveField() {
         id="set-map-adaptive"
         data-testid="map-adaptive-select"
         disabled={!hasDocument}
-        value={presets.find((p) => p.width === w && p.height === h)?.id ?? 'w390'}
+        value={presetId}
         onChange={(e) => setPreset(e.target.value)}
       >
         {presets.map((p) => (

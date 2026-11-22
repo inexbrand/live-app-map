@@ -4,29 +4,10 @@
 import { anyBody, errorText, requestJson } from '../../lib/dev-api';
 import { useAppStore } from '../../store/app-store';
 import { Button } from '../../ui';
+import { tlsCheckMessage, tlsCheckOf } from './tls-check';
 
 /** Origin мини-приложения, если базовый URL не задан. */
 const DEFAULT_ORIGIN = 'https://vite.localhost:5175/';
-
-/** Ответ /__lam_tls_check. */
-type TlsCheck = { readonly ok?: boolean; readonly message?: string; readonly error?: string; readonly status?: number };
-
-function tlsCheckOf(body: unknown): TlsCheck {
-  if (typeof body !== 'object' || body === null) {
-    return {};
-  }
-  const field = (k: string): unknown => Object.entries(body).find(([key]) => key === k)?.[1];
-  const ok = field('ok');
-  const message = field('message');
-  const error = field('error');
-  const status = field('status');
-  return {
-    ...(typeof ok === 'boolean' ? { ok } : {}),
-    ...(typeof message === 'string' ? { message } : {}),
-    ...(typeof error === 'string' ? { error } : {}),
-    ...(typeof status === 'number' ? { status } : {}),
-  };
-}
 
 /** Proxy iframe: переключатель, проверка TLS и доверие сертификату. */
 export function TlsProxyBlock() {
@@ -44,7 +25,7 @@ export function TlsProxyBlock() {
       return;
     }
     const j = tlsCheckOf(anyBody(r));
-    const msg = j.ok ? `TLS OK · HTTP ${j.status ?? '—'} · ${j.message ?? ''}` : `TLS fail · ${j.error ?? 'unknown'}`;
+    const msg = tlsCheckMessage(j);
     setToast(msg);
     pushLog({ level: j.ok ? 'info' : 'warn', source: 'system', message: msg });
   };
