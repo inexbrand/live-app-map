@@ -7,7 +7,7 @@ import os from 'node:os';
 import path from 'node:path';
 import type { ApiRoute, CodeModel } from '@live-app-map/schema';
 import { scanSource } from '../index';
-import type { SourceScanResult } from '../scan-source';
+import type { ScreenEntry, SourceScanResult } from '../scan-source';
 
 const dirs: string[] = [];
 
@@ -46,6 +46,19 @@ export function writeProject(files: Record<string, string>): string {
  */
 export function scanProject(files: Record<string, string>): SourceScanResult {
   return scanSource({ root: writeProject(files) });
+}
+
+/**
+ * Вызовы API экранов строками «файл: путь [via …], …» в порядке экранов.
+ *
+ * @param files - файлы проекта (см. writeProject)
+ * @param entries - экраны (пути от корня репо)
+ * @returns строка на экран
+ */
+export function screenLines(files: Record<string, string>, entries: readonly ScreenEntry[]): string[] {
+  const code = scanSource({ root: writeProject(files), entries }).code;
+  const pathOf = new Map((code.apiCalls ?? []).map((c) => [c.id, c.path]));
+  return (code.screens ?? []).map((s) => `${s.file}: ${s.calls.map((c) => `${pathOf.get(c.callId) ?? c.callId}${c.via === undefined ? '' : ` via ${c.via}`}`).join(', ')}`);
 }
 
 /**
