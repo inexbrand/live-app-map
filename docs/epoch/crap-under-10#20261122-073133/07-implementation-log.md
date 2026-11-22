@@ -41,3 +41,8 @@
 - Зачем: в vite.config обход фрейма прокси (72), проверка TLS (16), каталог карт; в e2e probe 15, openMiniappAndSelectNode 13, componentPoint 12, readState 11, затем inside 20, startPick/mcpCall/openMap 12 — всё без покрытия.
 - Что: src/lib/tls-check-middleware.ts, maps-index-middleware.ts, frame-bypass.ts (+ surfaceProxy в vite.config); e2e/probes.ts — функции «в браузере» (самодостаточные, уходят в page.evaluate) и чистые расчёты; тесты src/lib/dev-proxy.test.ts (живой HTTP, EventEmitter-прокси) и src/test/e2e-probes.test.ts (happy-dom).
 - Проверка: живой vite — /maps/index.json 200, TLS-проверка, path-proxy сайта 200 с shim; Playwright chromium 33/33 (compare.e2e требует KORBOR_DIR у dev-сервера — без него «свежий скан» не стартует); crapper изменённых файлов — 0 функций ≥ 10.
+## Reassure: замеры ключевых экранов
+
+- Зачем: бриф требует perf-тесты Reassure для ключевых экранов.
+- Что: src/perf/screens.perf-test.tsx — вид «API» (314 роутов), «База данных» (74 таблицы), глобальный поиск; сценарий — ввод запроса userEvent, список сужается. src/perf/perf-test.ts — замер под bun (у bun нет expect.getState и global.gc). perf/bun-runner.mjs — TEST_RUNNER_PATH для CLI reassure, bun test --conditions=require (ESM-обёртка pretty-format под bun теряет plugins). Скрипты test:perf и test:perf:baseline, .reassure/ в .gitignore.
+- Проверка: test:perf:baseline и test:perf — сравнение без значимых изменений: API ~51 мс/6 рендеров, БД ~13 мс/5, поиск ~3 мс/11; лишних рендеров нет. Файлы *.perf-test.tsx не попадают в bun test по умолчанию.

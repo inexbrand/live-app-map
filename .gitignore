@@ -29,3 +29,5 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 .lam-snapshots
 .lam-models/
 *-probe.tmp.mjs
+# замеры Reassure (база и текущий прогон — локальные)
+.reassure/
