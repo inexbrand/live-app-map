@@ -26,13 +26,6 @@ function packageName(absRoot: string, dir: string): string {
   return dir === '' ? path.basename(absRoot) : dir;
 }
 
-/**
- * Строит индекс сервисов по списку файлов корня.
- *
- * @param absRoot - корень скана
- * @param relFiles - все файлы корня (POSIX, относительные)
- * @returns индекс
- */
 /** Каталоги с package.json (корень — '', есть всегда). */
 function serviceDirs(relFiles: readonly string[]): string[] {
   const dirs = relFiles
@@ -41,6 +34,13 @@ function serviceDirs(relFiles: readonly string[]): string[] {
   return dirs.includes('') ? dirs : [...dirs, ''];
 }
 
+/**
+ * Строит индекс сервисов по списку файлов корня.
+ *
+ * @param absRoot - корень скана
+ * @param relFiles - все файлы корня (POSIX, относительные)
+ * @returns индекс
+ */
 export function indexServices(absRoot: string, relFiles: readonly string[]): ServiceIndex {
   const services = new Map<string, CodeService>();
   for (const dir of serviceDirs(relFiles)) {
