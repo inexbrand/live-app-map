@@ -62,6 +62,22 @@ describe('createBearerCache — обмен initData на Bearer мини-апп�
     }
   });
 
+  test('korbor не ответил (сеть, таймаут) — отказ словами, не запоминается: следующий запрос входит', async () => {
+    const api = fakeKorbor(900);
+    const port = new URL(api.renewal.apiBase).port;
+    api.stop();
+    const bearer = createBearerCache();
+    const down = await bearer(api.renewal, 'auth_date=1&hash=a');
+    expect(down.ok).toBe(false);
+    expect(down.ok ? '' : down.error).toStartWith('вход мини-аппа не выдан: ');
+    const up = Bun.serve({ port: Number(port), fetch: () => Response.json({ data: { accessToken: jwt(Math.floor(Date.now() / 1000) + 900) } }) });
+    try {
+      expect((await bearer(api.renewal, 'auth_date=1&hash=a')).ok).toBe(true);
+    } finally {
+      up.stop(true);
+    }
+  });
+
   test('админке обмен не нужен: токен и есть Bearer', async () => {
     const bearer = createBearerCache();
     expect(await bearer({ kind: 'admin', actorId: 'a', apiBase: 'http://127.0.0.1:1' }, 'tok')).toEqual({ ok: true, token: 'tok' });
