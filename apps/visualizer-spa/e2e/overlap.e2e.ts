@@ -41,10 +41,10 @@ function probe(page: Page, selectors: readonly string[]): Promise<Probe> {
   }, selectors);
 }
 
-for (const [width, height] of [
-  [1600, 1000],
-  [1280, 800],
-  [1024, 700],
+for (const { width, height } of [
+  { width: 1600, height: 1000 },
+  { width: 1280, height: 800 },
+  { width: 1024, height: 700 },
 ]) {
   test(`нет наложений панелей ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });

@@ -4,6 +4,7 @@
  * клик центрирует холст в точке клика, перетаскивание и колесо пропорциональны.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { WIDE_VIEWPORT } from './helpers';
 
 type Rect = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
 
@@ -80,7 +81,7 @@ function inside(r: Rect, outer: Rect, slack = 1): boolean {
 }
 
 async function open(page: Page, map: string): Promise<MiniState> {
-  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.setViewportSize(WIDE_VIEWPORT);
   await page.goto(`/?map=/maps/${map}.liveappmap.json`);
   await expect(page.locator('.react-flow__minimap-node').first()).toBeAttached({ timeout: 30_000 });
   return readState(page);

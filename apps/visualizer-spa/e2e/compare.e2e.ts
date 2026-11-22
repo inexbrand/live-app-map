@@ -8,21 +8,13 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
+import { openMap, shot } from './helpers';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const SHOTS = process.env['LAM_SHOTS_DIR'];
-
-async function shot(page: Page, name: string): Promise<void> {
-  if (SHOTS !== undefined) {
-    await page.screenshot({ path: path.join(SHOTS, name) });
-  }
-}
-
 async function openCompare(page: Page): Promise<void> {
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto('/?map=/maps/korbor-all.liveappmap.json');
-  await expect(page.getByTestId('map-select')).toHaveValue('korbor-all', { timeout: 30_000 });
-  await page.keyboard.press('Escape');
+  await openMap(page, 'korbor-all.liveappmap.json', {
+    ready: (p) => expect(p.getByTestId('map-select')).toHaveValue('korbor-all', { timeout: 30_000 }),
+  });
   await page.getByTestId('view-compare').click();
   await expect(page.getByTestId('compare-view')).toBeVisible();
 }

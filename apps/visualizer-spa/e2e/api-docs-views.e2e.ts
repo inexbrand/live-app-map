@@ -4,28 +4,13 @@
  * ссылки из документа на роут, скриншоты эпохи через dev-эндпоинт.
  * Скриншоты пишутся в папку эпохи (LAM_SHOTS_DIR), если она задана.
  */
-import { expect, test, type Page } from '@playwright/test';
-import path from 'node:path';
+import { expect, test } from '@playwright/test';
+import { collectPageErrors, openMap, shot } from './helpers';
 
-const SHOTS = process.env['LAM_SHOTS_DIR'];
-
-async function shot(page: Page, name: string): Promise<void> {
-  if (SHOTS !== undefined) {
-    await page.screenshot({ path: path.join(SHOTS, name) });
-  }
-}
-
-async function openMap(page: Page, map: string): Promise<void> {
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto(`/?map=/maps/${map}`);
-  await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
-  await page.keyboard.press('Escape');
-}
 
 test.describe('вид «API» на korbor', () => {
   test('дерево, фильтры, карточка, переходы к таблице, обратно к роуту и к экрану', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
+    const errors = collectPageErrors(page);
     await openMap(page, 'korbor-all.liveappmap.json');
     await page.getByTestId('view-api').click();
     const rows = page.getByTestId('api-route-row');
