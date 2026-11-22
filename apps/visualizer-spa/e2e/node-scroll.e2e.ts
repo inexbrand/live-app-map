@@ -7,6 +7,7 @@
  * API :16000 и профиль recruiter в .lam-sessions.
  */
 import { expect, test, type Frame, type Locator, type Page } from '@playwright/test';
+import { scrollTopOf } from './probes';
 import { WIDE_VIEWPORT } from './helpers';
 
 const NODE = 'route:/feed';
@@ -19,7 +20,7 @@ function transform(page: Page): Promise<string> {
 async function liveFrame(node: Locator): Promise<Frame> {
   const iframe = node.locator('iframe');
   await expect(iframe).toBeAttached({ timeout: 30_000 });
-  const frame = await (await iframe.elementHandle())?.contentFrame();
+  const frame = await (await iframe.elementHandle()).contentFrame();
   if (!frame) {
     throw new Error('iframe без документа');
   }
@@ -28,7 +29,7 @@ async function liveFrame(node: Locator): Promise<Frame> {
 }
 
 function scrollTop(frame: Frame): Promise<number> {
-  return frame.evaluate((s) => document.querySelector(s)?.scrollTop ?? -1, SCROLLER);
+  return frame.evaluate(scrollTopOf, SCROLLER);
 }
 
 async function center(l: Locator): Promise<{ x: number; y: number }> {

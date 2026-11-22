@@ -5,8 +5,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { WIDE_VIEWPORT } from './helpers';
-
-type Rect = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+import { inside, matrixOf, minimapRaw, viewBoxOf, type Rect } from './probes';
 
 /** Снимок состояния мини-карты и холста в координатах экрана. */
 type MiniState = {
@@ -22,33 +21,18 @@ type MiniState = {
   readonly zoom: number;
 };
 
-function readState(page: Page): Promise<MiniState> {
-  return page.evaluate(() => {
-    const rect = (r: DOMRect) => ({ x: r.x, y: r.y, w: r.width, h: r.height });
-    const box = document.querySelector('.react-flow__minimap');
-    const svg = box?.querySelector('svg');
-    const flow = document.querySelector('.react-flow');
-    const vpEl = document.querySelector<HTMLElement>('.react-flow__viewport');
-    if (!box || !svg || !flow || !vpEl) {
-      throw new Error('нет мини-карты или холста');
-    }
-    const [vx, vy, vw, vh] = (svg.getAttribute('viewBox') ?? '').split(/\s+/).map(Number);
-    const m = new DOMMatrixReadOnly(getComputedStyle(vpEl).transform);
-    const nodes = [...svg.querySelectorAll('.react-flow__minimap-node')];
-    const fill = (n: Element) => getComputedStyle(n).fill;
-    return {
-      box: rect(box.getBoundingClientRect()),
-      svg: rect(svg.getBoundingClientRect()),
-      viewBox: { x: vx ?? 0, y: vy ?? 0, w: vw ?? 0, h: vh ?? 0 },
-      nodes: nodes.map((n) => rect(n.getBoundingClientRect())),
-      pageFills: nodes.filter((n) => !n.classList.contains('lam-minimap-frame')).map(fill),
-      frameFills: nodes.filter((n) => n.classList.contains('lam-minimap-frame')).map(fill),
-      flow: rect(flow.getBoundingClientRect()),
-      tx: m.e,
-      ty: m.f,
-      zoom: m.a,
-    };
-  });
+async function readState(page: Page): Promise<MiniState> {
+  const raw = await page.evaluate(minimapRaw);
+  return {
+    box: raw.box,
+    svg: raw.svg,
+    viewBox: viewBoxOf(raw.viewBox),
+    nodes: raw.nodes.map((n) => n.rect),
+    pageFills: raw.nodes.filter((n) => !n.frame).map((n) => n.fill),
+    frameFills: raw.nodes.filter((n) => n.frame).map((n) => n.fill),
+    flow: raw.flow,
+    ...matrixOf(raw.transform),
+  };
 }
 
 /** Масштаб и сдвиг SVG (preserveAspectRatio xMidYMid meet): экран → поток и обратно. */
@@ -74,10 +58,6 @@ function viewportFrame(s: MiniState): Rect {
 /** Точка потока в центре холста. */
 function canvasCenter(s: MiniState) {
   return { x: (s.flow.w / 2 - s.tx) / s.zoom, y: (s.flow.h / 2 - s.ty) / s.zoom };
-}
-
-function inside(r: Rect, outer: Rect, slack = 1): boolean {
-  return r.x >= outer.x - slack && r.y >= outer.y - slack && r.x + r.w <= outer.x + outer.w + slack && r.y + r.h <= outer.y + outer.h + slack;
 }
 
 async function open(page: Page, map: string): Promise<MiniState> {
