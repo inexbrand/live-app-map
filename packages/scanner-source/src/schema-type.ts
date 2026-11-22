@@ -115,20 +115,92 @@ function arrayOf(item: FieldType): FieldType {
  * @returns тип
  */
 function namedType(ctx: SourceContext, expr: ts.Identifier | ts.PropertyAccessExpression, depth: number): FieldType {
-  const name = ts.isIdentifier(expr) ? expr.text : expr.name.text;
   const id = ts.isIdentifier(expr) ? expr : expr.name;
-  const decl = depth < MAX_DEPTH ? resolvedSymbol(ctx.checker, id)?.valueDeclaration : undefined;
-  if (decl === undefined || !ts.isVariableDeclaration(decl) || decl.initializer === undefined) {
-    return { type: name, optional: false };
+  const init = depth < MAX_DEPTH ? schemaConst(ctx, id) : undefined;
+  if (init === undefined) {
+    return { type: id.text, optional: false };
   }
-  const resolved = fieldType(ctx, unwrap(decl.initializer), depth + 1);
+  const name = id.text;
+  const resolved = fieldType(ctx, init, depth + 1);
   return resolved.fields === undefined || resolved.type !== 'object' ? resolved : { ...resolved, type: name };
+}
+
+/** Инициализатор константы-схемы (без обёрток). */
+function schemaConst(ctx: SourceContext, id: ts.Node): ts.Expression | undefined {
+  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
+  return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
 }
 
 /** Поля, слитые из нескольких объектов: `t.Intersect([A, B])`, `t.Composite([A, B])`. */
 function mergedObjects(ctx: SourceContext, list: ts.Expression | undefined, depth: number): FieldType {
   const parts = list !== undefined && ts.isArrayLiteralExpression(list) ? list.elements.map((e) => fieldType(ctx, e, depth + 1)) : [];
   return objectType(parts.flatMap((p) => p.fields ?? []));
+}
+
+/** Аргументы конструктора и разбор вложенного выражения. */
+type CtorArgs = {
+  readonly ctx: SourceContext;
+  readonly args: ts.NodeArray<ts.Expression>;
+  readonly depth: number;
+  /** Тип вложенного выражения (нет выражения — unknown). */
+  readonly inner: (e: ts.Expression | undefined) => FieldType;
+};
+
+/** Поля объекта из первого аргумента-литерала. */
+function literalObject(a: CtorArgs): FieldType {
+  const first = a.args[0];
+  return objectType(first !== undefined && ts.isObjectLiteralExpression(first) ? objectFields(a.ctx, first, a.depth + 1) : []);
+}
+
+/** Литерал: `t.Literal('a')`, `z.literal('a')`. */
+function literalType(a: CtorArgs): FieldType {
+  return { type: literalText(a.args[0]) ?? 'literal', optional: false };
+}
+
+/** Союз: `t.Union([...])`, `z.enum([...])`. */
+function unionType(a: CtorArgs): FieldType {
+  return { type: unionText(a.ctx, a.args[0], a.depth), optional: false };
+}
+
+/** Конструкторы TypeBox, кроме простых типов (они — в TYPEBOX_TYPES). */
+const TYPEBOX_CTORS: ReadonlyMap<string, (a: CtorArgs) => FieldType> = new Map<string, (a: CtorArgs) => FieldType>([
+  ['Optional', (a) => ({ ...a.inner(a.args[0]), optional: true })],
+  ['Nullable', (a) => {
+    const t = a.inner(a.args[0]);
+    return { ...t, type: `${t.type} | null` };
+  }],
+  ['Array', (a) => withRules(arrayOf(a.inner(a.args[0])), typeboxRules(a.args[1]))],
+  ['Literal', literalType],
+  ['Union', unionType],
+  ['Object', literalObject],
+  ['Partial', (a) => {
+    const t = a.inner(a.args[0]);
+    return { ...t, ...(t.fields === undefined ? {} : { fields: allOptional(t.fields) }) };
+  }],
+  ['Intersect', (a) => mergedObjects(a.ctx, a.args[0], a.depth)],
+  ['Composite', (a) => mergedObjects(a.ctx, a.args[0], a.depth)],
+  ['Record', (a) => ({ type: `record<${a.inner(a.args[0]).type}, ${a.inner(a.args[1]).type}>`, optional: false })],
+]);
+
+/** Конструкторы zod, кроме простых (их тип — имя конструктора). */
+const ZOD_CTORS: ReadonlyMap<string, (a: CtorArgs) => FieldType> = new Map<string, (a: CtorArgs) => FieldType>([
+  ['array', (a) => arrayOf(a.inner(a.args[0]))],
+  ['enum', unionType],
+  ['union', unionType],
+  ['literal', literalType],
+  ['nativeEnum', (a) => a.inner(a.args[0])],
+  ['object', literalObject],
+  ['record', (a) => ({ type: `record<string, ${a.inner(a.args[a.args.length - 1]).type}>`, optional: false })],
+]);
+
+/** Аргументы вызова конструктора для таблиц. */
+function ctorArgs(ctx: SourceContext, ctor: Ctor, depth: number): CtorArgs {
+  return {
+    ctx,
+    args: ctor.call.arguments,
+    depth,
+    inner: (e) => (e === undefined ? { type: 'unknown', optional: false } : fieldType(ctx, e, depth + 1)),
+  };
 }
 
 /**
@@ -140,35 +212,11 @@ function mergedObjects(ctx: SourceContext, list: ts.Expression | undefined, dept
  * @returns тип
  */
 function typeboxType(ctx: SourceContext, ctor: Ctor, depth: number): FieldType {
-  const args = ctor.call.arguments;
-  const inner = (e: ts.Expression | undefined): FieldType => (e === undefined ? { type: 'unknown', optional: false } : fieldType(ctx, e, depth + 1));
-  switch (ctor.name) {
-    case 'Optional':
-      return { ...inner(args[0]), optional: true };
-    case 'Nullable': {
-      const t = inner(args[0]);
-      return { ...t, type: `${t.type} | null` };
-    }
-    case 'Array':
-      return withRules(arrayOf(inner(args[0])), typeboxRules(args[1]));
-    case 'Literal':
-      return { type: literalText(args[0]) ?? 'literal', optional: false };
-    case 'Union':
-      return { type: unionText(ctx, args[0], depth), optional: false };
-    case 'Object':
-      return withRules(objectType(args[0] !== undefined && ts.isObjectLiteralExpression(args[0]) ? objectFields(ctx, args[0], depth + 1) : []), []);
-    case 'Partial': {
-      const t = inner(args[0]);
-      return { ...t, ...(t.fields === undefined ? {} : { fields: allOptional(t.fields) }) };
-    }
-    case 'Intersect':
-    case 'Composite':
-      return mergedObjects(ctx, args[0], depth);
-    case 'Record':
-      return { type: `record<${inner(args[0]).type}, ${inner(args[1]).type}>`, optional: false };
-    default:
-      return withRules({ type: TYPEBOX_TYPES.get(ctor.name) ?? ctor.name.toLowerCase(), optional: false }, typeboxRules(args[0]));
+  const build = TYPEBOX_CTORS.get(ctor.name);
+  if (build !== undefined) {
+    return build(ctorArgs(ctx, ctor, depth));
   }
+  return withRules({ type: TYPEBOX_TYPES.get(ctor.name) ?? ctor.name.toLowerCase(), optional: false }, typeboxRules(ctor.call.arguments[0]));
 }
 
 /** Союз: массив вариантов или константа-массив. */
@@ -188,27 +236,8 @@ function unionText(ctx: SourceContext, e: ts.Expression | undefined, depth: numb
  * @returns тип
  */
 function zodType(ctx: SourceContext, ctor: Ctor, methods: readonly string[], depth: number): FieldType {
-  const args = ctor.call.arguments;
-  const inner = (e: ts.Expression | undefined): FieldType => (e === undefined ? { type: 'unknown', optional: false } : fieldType(ctx, e, depth + 1));
-  const base = ((): FieldType => {
-    switch (ctor.name) {
-      case 'array':
-        return arrayOf(inner(args[0]));
-      case 'enum':
-      case 'union':
-        return { type: unionText(ctx, args[0], depth), optional: false };
-      case 'literal':
-        return { type: literalText(args[0]) ?? 'literal', optional: false };
-      case 'nativeEnum':
-        return inner(args[0]);
-      case 'object':
-        return objectType(args[0] !== undefined && ts.isObjectLiteralExpression(args[0]) ? objectFields(ctx, args[0], depth + 1) : []);
-      case 'record':
-        return { type: `record<string, ${inner(args[args.length - 1]).type}>`, optional: false };
-      default:
-        return { type: ctor.name, optional: false };
-    }
-  })();
+  const build = ZOD_CTORS.get(ctor.name);
+  const base = build === undefined ? { type: ctor.name, optional: false } : build(ctorArgs(ctx, ctor, depth));
   const partial = methods.includes('partial') && base.fields !== undefined ? { fields: allOptional(base.fields) } : {};
   const optional = methods.some((m) => m === 'optional' || m === 'nullish');
   return withRules({ ...base, ...partial, optional }, zodRules(ctor.call, methods));
@@ -262,11 +291,9 @@ function objectFields(ctx: SourceContext, obj: ts.ObjectLiteralExpression, depth
  */
 export function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback: RouteSchemaKind): RouteInputSchema {
   const named = ts.isIdentifier(expr) ? expr.text : undefined;
-  const { ctor } = baseCtor(expr);
-  const kind: RouteSchemaKind = ctor === undefined ? fallback : ctor.ns === 'z' ? 'zod' : 'typebox';
   const t = fieldType(ctx, expr, 0);
-  const resolvedKind = ts.isIdentifier(expr) ? schemaKindOf(ctx, expr, fallback) : kind;
-  const base = { kind: resolvedKind, ...(named === undefined ? {} : { name: named }), ...(t.optional ? { optional: true } : {}) };
+  const kind = ts.isIdentifier(expr) ? schemaKindOf(ctx, expr, fallback) : kindOfExpr(expr, fallback);
+  const base = { kind, ...(named === undefined ? {} : { name: named }), ...(t.optional ? { optional: true } : {}) };
   if (t.fields !== undefined) {
     // Объект без полей — «{}»: тело есть, данных в нём нет.
     return t.fields.length > 0 ? { ...base, fields: t.fields } : { ...base, fields: [], type: '{}' };
@@ -277,8 +304,15 @@ export function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback
 
 /** Вид схемы константы по её инициализатору. */
 function schemaKindOf(ctx: SourceContext, id: ts.Identifier, fallback: RouteSchemaKind): RouteSchemaKind {
-  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
-  const init = decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
-  const ctor = init === undefined ? undefined : baseCtor(init).ctor;
-  return ctor === undefined ? fallback : ctor.ns === 'z' ? 'zod' : 'typebox';
+  const init = schemaConst(ctx, id);
+  return init === undefined ? fallback : kindOfExpr(init, fallback);
+}
+
+/** Вид схемы по базовому конструктору: `z.*` — zod, иначе typebox; не схема — fallback. */
+function kindOfExpr(expr: ts.Expression, fallback: RouteSchemaKind): RouteSchemaKind {
+  const { ctor } = baseCtor(expr);
+  if (ctor === undefined) {
+    return fallback;
+  }
+  return ctor.ns === 'z' ? 'zod' : 'typebox';
 }
