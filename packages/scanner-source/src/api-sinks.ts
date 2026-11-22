@@ -112,53 +112,74 @@ function chainUrl(v: Value & { readonly kind: 'client' }, origin: ts.Node): read
  * @returns клиент, метод и URL или undefined
  */
 export function sinkAt(ev: ValueEvaluator, call: ts.CallExpression, frame: Frame, origin: ts.Node): SinkHit | undefined {
+  const site: CallSite = { ev, call, frame, origin };
   const callee = call.expression;
-  const arg = (i: number): Value | undefined => {
-    const a = call.arguments[i];
-    return a === undefined ? undefined : ev.evaluate(a, frame, origin);
-  };
   if (ts.isPropertyAccessExpression(callee)) {
-    const name = callee.name.text;
-    if (!maySend(name)) {
-      return undefined;
-    }
-    const recv = ev.evaluate(callee.expression, frame, origin);
-    if (recv.kind === 'client' && recv.lib === 'eden' && VERBS.has(name)) {
-      return { client: 'eden', method: VERBS.get(name) ?? 'GET', url: chainUrl(recv, origin) };
-    }
-    if (recv.kind === 'client' && recv.lib === 'hono-rpc' && name.startsWith('$') && VERBS.has(name.slice(1))) {
-      return { client: 'hono-rpc', method: VERBS.get(name.slice(1)) ?? 'GET', url: chainUrl(recv, origin) };
-    }
-    if (name === 'fetch' && /^(window|globalThis|self)$/.test(callee.expression.getText())) {
-      const init = arg(1);
-      return { client: 'fetch', method: methodOf(prop(init, 'method'), 'GET'), url: urlParts(arg(0), origin, call.arguments[0]) };
-    }
-    const lib = libOf(recv);
-    if (lib !== undefined) {
-      const verb = VERBS.get(name);
-      if (verb !== undefined) {
-        return { client: lib.lib, method: verb, url: joined(lib.base, urlParts(arg(0), origin, call.arguments[0]), origin) };
-      }
-      if (name === 'request') {
-        const config = arg(0);
-        return { client: lib.lib, method: methodOf(prop(config, 'method'), 'GET'), url: joined(lib.base, urlParts(prop(config, 'url'), origin, undefined), origin) };
-      }
-    }
-    return namedClient(ev, call, callee, frame, origin);
+    return maySend(callee.name.text) ? memberSink(site, callee) : undefined;
   }
   const fn = ev.evaluate(callee, frame, origin);
   if (fn.kind === 'fetch' || injectedFetch(ev, callee, fn)) {
-    return { client: 'fetch', method: methodOf(prop(arg(1), 'method'), 'GET'), url: urlParts(arg(0), origin, call.arguments[0]) };
+    return fetchSink(site);
   }
   const lib = libOf(fn);
   if (lib === undefined) {
     return undefined;
   }
-  const first = arg(0);
+  const first = argAt(site, 0);
   if (first?.kind === 'obj') {
-    return { client: lib.lib, method: methodOf(prop(first, 'method'), 'GET'), url: joined(lib.base, urlParts(prop(first, 'url'), origin, undefined), origin) };
+    return configSink(site, lib, first);
   }
-  return { client: lib.lib, method: methodOf(prop(arg(1), 'method'), 'GET'), url: joined(lib.base, urlParts(first, origin, call.arguments[0]), origin) };
+  return { client: lib.lib, method: methodOf(prop(argAt(site, 1), 'method'), 'GET'), url: joined(lib.base, urlParts(first, origin, call.arguments[0]), origin) };
+}
+
+/** Вызов и окружение вычисления его аргументов. */
+type CallSite = { readonly ev: ValueEvaluator; readonly call: ts.CallExpression; readonly frame: Frame; readonly origin: ts.Node };
+
+/** Значение аргумента i или undefined. */
+function argAt(site: CallSite, i: number): Value | undefined {
+  const a = site.call.arguments[i];
+  return a === undefined ? undefined : site.ev.evaluate(a, site.frame, site.origin);
+}
+
+/** `fetch(url, { method })`. */
+function fetchSink(site: CallSite): SinkHit {
+  return { client: 'fetch', method: methodOf(prop(argAt(site, 1), 'method'), 'GET'), url: urlParts(argAt(site, 0), site.origin, site.call.arguments[0]) };
+}
+
+/** `axios({ method, url })`, `client.request({ method, url })`. */
+function configSink(site: CallSite, lib: NonNullable<ReturnType<typeof libOf>>, config: Value | undefined): SinkHit {
+  return { client: lib.lib, method: methodOf(prop(config, 'method'), 'GET'), url: joined(lib.base, urlParts(prop(config, 'url'), site.origin, undefined), site.origin) };
+}
+
+/** Метод цепочки Eden (`.get()`) или Hono RPC (`.$get()`). */
+function chainSink(recv: Value, name: string, origin: ts.Node): SinkHit | undefined {
+  if (recv.kind !== 'client') {
+    return undefined;
+  }
+  const verb = recv.lib === 'eden' ? VERBS.get(name) : recv.lib === 'hono-rpc' && name.startsWith('$') ? VERBS.get(name.slice(1)) : undefined;
+  return verb === undefined ? undefined : { client: recv.lib, method: verb, url: chainUrl(recv, origin) };
+}
+
+/** `x.name(...)`: цепочка клиента, window.fetch, метод axios/ky, иначе обёртка проекта. */
+function memberSink(site: CallSite, callee: ts.PropertyAccessExpression): SinkHit | undefined {
+  const name = callee.name.text;
+  const recv = site.ev.evaluate(callee.expression, site.frame, site.origin);
+  const chained = chainSink(recv, name, site.origin);
+  if (chained !== undefined) {
+    return chained;
+  }
+  if (name === 'fetch' && /^(window|globalThis|self)$/.test(callee.expression.getText())) {
+    return fetchSink(site);
+  }
+  const lib = libOf(recv);
+  const verb = VERBS.get(name);
+  if (lib !== undefined && verb !== undefined) {
+    return { client: lib.lib, method: verb, url: joined(lib.base, urlParts(argAt(site, 0), site.origin, site.call.arguments[0]), site.origin) };
+  }
+  if (lib !== undefined && name === 'request') {
+    return configSink(site, lib, argAt(site, 0));
+  }
+  return namedClient(site.ev, site.call, callee, site.frame, site.origin);
 }
 
 /**
@@ -189,10 +210,19 @@ function namedClient(
   }
   const verb = VERBS.get(name);
   if (value?.kind === 'obj') {
-    const url = prop(value, 'path') ?? prop(value, 'url');
-    return { client: 'wrapper', method: methodOf(prop(value, 'method'), verb ?? 'GET'), url: urlParts(url, origin, undefined) };
+    return objectWrapperSink(value, verb, origin);
   }
-  const second = call.arguments[1];
-  const options = verb === undefined && second !== undefined ? ev.evaluate(second, frame, origin) : undefined;
-  return { client: 'wrapper', method: verb ?? methodOf(prop(options, 'method'), 'GET'), url: urlParts(value, origin, first) };
+  return { client: 'wrapper', method: verb ?? optionsMethod(ev, call.arguments[1], frame, origin), url: urlParts(value, origin, first) };
+}
+
+/** `api.send({ path | url, method })`. */
+function objectWrapperSink(value: Value, verb: HttpMethod | undefined, origin: ts.Node): SinkHit {
+  const url = prop(value, 'path') ?? prop(value, 'url');
+  return { client: 'wrapper', method: methodOf(prop(value, 'method'), verb ?? 'GET'), url: urlParts(url, origin, undefined) };
+}
+
+/** Метод из второго аргумента-опций обёртки; нет — GET. */
+function optionsMethod(ev: ValueEvaluator, second: ts.Expression | undefined, frame: Frame, origin: ts.Node): HttpMethod {
+  const options = second === undefined ? undefined : ev.evaluate(second, frame, origin);
+  return methodOf(prop(options, 'method'), 'GET');
 }

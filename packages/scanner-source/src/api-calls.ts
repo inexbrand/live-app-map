@@ -29,6 +29,28 @@ function viaOf(callee: ts.Expression): string | undefined {
   return `${lastName(callee.expression.getText())}.${callee.name.text}`;
 }
 
+/** Обходит узлы по порядку (сначала узел, потом дети) и вызывает cb на каждом вызове. */
+function forEachCall(root: ts.Node, cb: (call: ts.CallExpression) => void): void {
+  const visit = (node: ts.Node): void => {
+    if (ts.isCallExpression(node)) {
+      cb(node);
+    }
+    ts.forEachChild(node, visit);
+  };
+  visit(root);
+}
+
+/** Есть ли вызов, для которого pred истинно (обход прекращается на первом). */
+function someCall(root: ts.Node, pred: (call: ts.CallExpression) => boolean): boolean {
+  const visit = (node: ts.Node): boolean => (ts.isCallExpression(node) && pred(node)) || ts.forEachChild(node, visit) === true;
+  return visit(root);
+}
+
+/** Путь задан здесь: литерал с '/' пришёл из аргументов этого вызова (id и прочее путь не задают). */
+function pathFromHere(hit: SinkHit, call: ts.CallExpression): boolean {
+  return hit.url.some((p) => p.origin === call && p.kind === 'lit' && p.text.includes('/'));
+}
+
 /**
  * Ищет вызовы API в файлах.
  */
@@ -46,13 +68,9 @@ export class ApiCallFinder {
    */
   collect(sf: ts.SourceFile): FoundApiCall[] {
     const out: FoundApiCall[] = [];
-    const visit = (node: ts.Node): void => {
-      if (ts.isCallExpression(node)) {
-        out.push(...this.callsAt(node));
-      }
-      ts.forEachChild(node, visit);
-    };
-    visit(sf);
+    forEachCall(sf, (node) => {
+      out.push(...this.callsAt(node));
+    });
     return out;
   }
 
@@ -60,26 +78,24 @@ export class ApiCallFinder {
   private callsAt(call: ts.CallExpression): FoundApiCall[] {
     const direct = sinkAt(this.ev, call, EMPTY_FRAME, call);
     if (direct !== undefined) {
-      const via = direct.client === 'wrapper' ? viaOf(call.expression) : undefined;
-      const found = this.found(call, direct, direct.client, via);
+      const found = this.found(call, direct, direct.client, direct.client === 'wrapper' ? viaOf(call.expression) : undefined);
       return found === undefined ? [] : [found];
     }
     const target = this.ev.functionsOf(call.expression);
     if (target === undefined || !target.fns.some((f) => this.reaches(f, 0))) {
       return [];
     }
+    return this.wrapperCalls(call, target.fns, target.name);
+  }
+
+  /** Вызовы через обёртки: тела функций с аргументами этого вызова; повтор метода и пути — один. */
+  private wrapperCalls(call: ts.CallExpression, fns: readonly FunctionNode[], via: string): FoundApiCall[] {
     const args = call.arguments.map((a) => this.ev.evaluate(a, EMPTY_FRAME, call));
     const out = new Map<string, FoundApiCall>();
-    for (const fn of target.fns) {
-      for (const hit of this.inlineHits(fn, this.ev.bind(fn, args), 1, new Set([fn]))) {
-        // Путь задан здесь, если литерал с '/' пришёл из аргументов этого вызова;
-        // id и прочие значения вызывающего путь не задают.
-        if (hit.url.some((p) => p.origin === call && p.kind === 'lit' && p.text.includes('/'))) {
-          const found = this.found(call, hit, 'wrapper', target.name);
-          if (found !== undefined) {
-            out.set(`${found.method} ${found.path}`, found);
-          }
-        }
+    for (const fn of fns) {
+      const hits = this.inlineHits(fn, this.ev.bind(fn, args), 1, new Set([fn])).filter((hit) => pathFromHere(hit, call));
+      for (const found of hits.flatMap((hit) => this.found(call, hit, 'wrapper', via) ?? [])) {
+        out.set(`${found.method} ${found.path}`, found);
       }
     }
     return [...out.values()];
@@ -96,28 +112,26 @@ export class ApiCallFinder {
   /** Вызовы клиентов в теле функции с подставленными аргументами, включая вложенные обёртки. */
   private inlineHits(fn: FunctionNode, frame: Frame, depth: number, stack: ReadonlySet<FunctionNode>): SinkHit[] {
     const out: SinkHit[] = [];
-    const visit = (node: ts.Node): void => {
-      if (ts.isCallExpression(node)) {
-        const hit = sinkAt(this.ev, node, frame, node);
-        if (hit !== undefined) {
-          out.push(hit);
-        } else if (depth < MAX_INLINE) {
-          const target = this.ev.functionsOf(node.expression);
-          const inner = target?.fns.filter((f) => !stack.has(f) && this.reaches(f, 0)) ?? [];
-          if (inner.length > 0) {
-            const args = node.arguments.map((a) => this.ev.evaluate(a, frame, node));
-            for (const f of inner) {
-              out.push(...this.inlineHits(f, this.ev.bind(f, args), depth + 1, new Set([...stack, f])));
-            }
-          }
-        }
-      }
-      ts.forEachChild(node, visit);
-    };
     if (fn.body !== undefined) {
-      visit(fn.body);
+      forEachCall(fn.body, (node) => {
+        out.push(...this.hitsAt(node, frame, depth, stack));
+      });
     }
     return out;
+  }
+
+  /** Вызов клиента в этом месте или вызовы во вложенной обёртке (до MAX_INLINE, без рекурсии). */
+  private hitsAt(node: ts.CallExpression, frame: Frame, depth: number, stack: ReadonlySet<FunctionNode>): SinkHit[] {
+    const hit = sinkAt(this.ev, node, frame, node);
+    if (hit !== undefined) {
+      return [hit];
+    }
+    const inner = depth < MAX_INLINE ? (this.ev.functionsOf(node.expression)?.fns.filter((f) => !stack.has(f) && this.reaches(f, 0)) ?? []) : [];
+    if (inner.length === 0) {
+      return [];
+    }
+    const args = node.arguments.map((a) => this.ev.evaluate(a, frame, node));
+    return inner.flatMap((f) => this.inlineHits(f, this.ev.bind(f, args), depth + 1, new Set([...stack, f])));
   }
 
   /** Функция (или вызываемые ею функции проекта) вызывает HTTP-клиент. */
@@ -127,28 +141,17 @@ export class ApiCallFinder {
       return known;
     }
     this.reach.set(fn, false);
-    let result = false;
-    const visit = (node: ts.Node): void => {
-      if (result) {
-        return;
-      }
-      if (ts.isCallExpression(node)) {
-        if (sinkAt(this.ev, node, EMPTY_FRAME, node) !== undefined) {
-          result = true;
-          return;
-        }
-        const target = depth < MAX_INLINE ? this.ev.functionsOf(node.expression) : undefined;
-        if (target?.fns.some((f) => f !== fn && this.reaches(f, depth + 1)) === true) {
-          result = true;
-          return;
-        }
-      }
-      ts.forEachChild(node, visit);
-    };
-    if (fn.body !== undefined) {
-      visit(fn.body);
-    }
+    const result = fn.body !== undefined && someCall(fn.body, (node) => this.callReaches(node, fn, depth));
     this.reach.set(fn, result);
     return result;
+  }
+
+  /** Вызов — клиент или функция проекта (не fn), которая доходит до клиента. */
+  private callReaches(node: ts.CallExpression, fn: FunctionNode, depth: number): boolean {
+    if (sinkAt(this.ev, node, EMPTY_FRAME, node) !== undefined) {
+      return true;
+    }
+    const target = depth < MAX_INLINE ? this.ev.functionsOf(node.expression) : undefined;
+    return target?.fns.some((f) => f !== fn && this.reaches(f, depth + 1)) === true;
   }
 }

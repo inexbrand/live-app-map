@@ -81,18 +81,22 @@ export function isKnown(v: Value): boolean {
   return v.kind !== 'none' && v.kind !== 'unknown';
 }
 
+/** Имя импорта: `{ a as b }` — a, `* as x` — *, `x` — default; не импорт — undefined. */
+function importedMember(decl: ts.Declaration): string | undefined {
+  if (ts.isImportSpecifier(decl)) {
+    return (decl.propertyName ?? decl.name).text;
+  }
+  if (ts.isNamespaceImport(decl)) {
+    return '*';
+  }
+  return ts.isImportClause(decl) ? 'default' : undefined;
+}
+
 /** Внешний модуль, из которого импортирован идентификатор. */
 export function importedFrom(checker: ts.TypeChecker, id: ts.Identifier): { module: string; member: string } | undefined {
   const decl = checker.getSymbolAtLocation(id)?.declarations?.[0];
-  if (decl === undefined) {
-    return undefined;
-  }
-  let member = 'default';
-  if (ts.isImportSpecifier(decl)) {
-    member = (decl.propertyName ?? decl.name).text;
-  } else if (ts.isNamespaceImport(decl)) {
-    member = '*';
-  } else if (!ts.isImportClause(decl)) {
+  const member = decl === undefined ? undefined : importedMember(decl);
+  if (decl === undefined || member === undefined) {
     return undefined;
   }
   let n: ts.Node = decl;
@@ -107,14 +111,13 @@ export function functionOfDeclaration(decl: ts.Node): FunctionNode | undefined {
   if ((ts.isFunctionDeclaration(decl) || ts.isMethodDeclaration(decl)) && decl.body !== undefined) {
     return decl;
   }
-  const init =
-    ts.isVariableDeclaration(decl) || ts.isPropertyAssignment(decl) || ts.isPropertyDeclaration(decl)
-      ? decl.initializer
-      : undefined;
-  if (init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))) {
-    return init;
-  }
-  return undefined;
+  const init = valueInitializer(decl);
+  return init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init)) ? init : undefined;
+}
+
+/** Инициализатор константы, свойства объекта или поля класса. */
+function valueInitializer(decl: ts.Node): ts.Expression | undefined {
+  return ts.isVariableDeclaration(decl) || ts.isPropertyAssignment(decl) || ts.isPropertyDeclaration(decl) ? decl.initializer : undefined;
 }
 
 /**
@@ -123,21 +126,31 @@ export function functionOfDeclaration(decl: ts.Node): FunctionNode | undefined {
  * @returns значение или undefined, если у значения нет свойств
  */
 export function memberOf(target: Value, key: string, origin: ts.Node): Value | undefined {
-  if (target.kind === 'obj') {
-    return target.props.get(key) ?? { kind: 'none' };
+  switch (target.kind) {
+    case 'obj':
+      return target.props.get(key) ?? { kind: 'none' };
+    case 'client':
+      return chainMember(target, key, origin);
+    case 'module':
+      return { kind: 'module', module: target.module, member: target.member === '*' || target.member === 'default' ? key : `${target.member}.${key}` };
+    case 'str':
+      return paramMember(target, key, origin);
+    default:
+      return undefined;
   }
-  if (target.kind === 'client' && (target.lib === 'eden' || target.lib === 'hono-rpc')) {
-    return key === 'index' ? target : { ...target, segs: [...target.segs, { kind: 'lit', text: key, origin }] };
+}
+
+/** Шаг цепочки Eden/Hono: `.index` — то же место, иначе новый сегмент; у axios/ky членов нет. */
+function chainMember(target: Value & { readonly kind: 'client' }, key: string, origin: ts.Node): Value | undefined {
+  if (target.lib !== 'eden' && target.lib !== 'hono-rpc') {
+    return undefined;
   }
-  if (target.kind === 'module') {
-    const member = target.member === '*' || target.member === 'default' ? key : `${target.member}.${key}`;
-    return { kind: 'module', module: target.module, member };
-  }
-  const only = target.kind === 'str' && target.parts.length === 1 ? target.parts[0] : undefined;
-  if (only?.kind === 'param') {
-    return { kind: 'str', parts: [{ kind: 'param', name: key, origin }] };
-  }
-  return undefined;
+  return key === 'index' ? target : { ...target, segs: [...target.segs, { kind: 'lit', text: key, origin }] };
+}
+
+/** Свойство параметра-строки: `options.url` → параметр url. */
+function paramMember(target: Value & { readonly kind: 'str' }, key: string, origin: ts.Node): Value | undefined {
+  return target.parts.length === 1 && target.parts[0]?.kind === 'param' ? { kind: 'str', parts: [{ kind: 'param', name: key, origin }] } : undefined;
 }
 
 /** Ключ доступа: `a.b` → b, `a['b']` → b. */
@@ -173,24 +186,17 @@ function baseOf(arg: Value | undefined, key: string, origin: ts.Node): readonly 
  * Клиент, созданный вызовом: `axios.create`, `ky.create/extend`, `treaty`, `edenTreaty`, `hc`.
  */
 export function createdClient(callee: Value, args: readonly Value[], origin: ts.Node): Value | undefined {
-  if (callee.kind === 'client' && (callee.lib === 'ky' || callee.lib === 'axios')) {
-    return undefined;
-  }
   if (callee.kind !== 'module') {
     return undefined;
   }
-  const { module, member } = callee;
-  if (module === 'axios' && member === 'create') {
-    return { kind: 'client', lib: 'axios', base: baseOf(args[0], 'baseURL', origin), segs: [] };
-  }
-  if (module === 'ky' && (member === 'create' || member === 'extend')) {
-    return { kind: 'client', lib: 'ky', base: baseOf(args[0], 'prefixUrl', origin), segs: [] };
-  }
-  if (module.startsWith('@elysiajs/eden') && (member === 'treaty' || member === 'edenTreaty')) {
-    return { kind: 'client', lib: 'eden', base: baseOf(args[0], 'base', origin), segs: [] };
-  }
-  if (module === 'hono/client' && member === 'hc') {
-    return { kind: 'client', lib: 'hono-rpc', base: baseOf(args[0], 'base', origin), segs: [] };
-  }
-  return undefined;
+  const factory = CLIENT_FACTORIES.find((f) => f.module(callee.module) && f.members.includes(callee.member));
+  return factory === undefined ? undefined : { kind: 'client', lib: factory.lib, base: baseOf(args[0], factory.baseKey, origin), segs: [] };
 }
+
+/** Фабрики клиентов: модуль, функции создания, ключ базы в первом аргументе. */
+const CLIENT_FACTORIES: readonly { readonly lib: ClientLib; readonly module: (m: string) => boolean; readonly members: readonly string[]; readonly baseKey: string }[] = [
+  { lib: 'axios', module: (m) => m === 'axios', members: ['create'], baseKey: 'baseURL' },
+  { lib: 'ky', module: (m) => m === 'ky', members: ['create', 'extend'], baseKey: 'prefixUrl' },
+  { lib: 'eden', module: (m) => m.startsWith('@elysiajs/eden'), members: ['treaty', 'edenTreaty'], baseKey: 'base' },
+  { lib: 'hono-rpc', module: (m) => m === 'hono/client', members: ['hc'], baseKey: 'base' },
+];
