@@ -11,6 +11,17 @@ export type SegmentKind =
   | { type: 'parallel'; name: string }
   | { type: 'intercept'; name: string; mode: string };
 
+/** Режимы перехвата: длинный (..)(..) — раньше (..). */
+const INTERCEPT_MODES = ['(.)', '(..)(..)', '(...)', '(..)'];
+
+/** Сегменты в скобках: открытие, закрытие, вид. */
+const WRAPPED: readonly [string, string, 'group' | 'optionalCatchAll' | 'catchAll' | 'dynamic'][] = [
+  ['(', ')', 'group'],
+  ['[[...', ']]', 'optionalCatchAll'],
+  ['[...', ']', 'catchAll'],
+  ['[', ']', 'dynamic'],
+];
+
 /**
  * Парсер имени сегмента App Router.
  */
@@ -18,33 +29,33 @@ export function parseSegment(folderName: string): SegmentKind {
   if (folderName.startsWith('@')) {
     return { type: 'parallel', name: folderName.slice(1) };
   }
-  const intercept = folderName.match(/^\(\.\.\.\)(.+)$|^\(\.\.\)\.\.(.+)$|^\(\.\.\)(.+)$|^\(\.\)(.+)$/);
-  if (folderName.startsWith('(.)')) {
-    return { type: 'intercept', name: folderName.slice(3), mode: '(.)' };
+  const mode = INTERCEPT_MODES.find((m) => folderName.startsWith(m));
+  if (mode !== undefined) {
+    return { type: 'intercept', name: folderName.slice(mode.length), mode };
   }
-  if (folderName.startsWith('(..)(..)')) {
-    return { type: 'intercept', name: folderName.slice(8), mode: '(..)(..)' };
+  const wrapped = WRAPPED.find(([open, close]) => folderName.startsWith(open) && folderName.endsWith(close));
+  if (wrapped === undefined) {
+    return { type: 'static', name: folderName };
   }
-  if (folderName.startsWith('(...)')) {
-    return { type: 'intercept', name: folderName.slice(5), mode: '(...)' };
+  const [open, close, type] = wrapped;
+  return { type, name: folderName.slice(open.length, -close.length) };
+}
+
+/** Часть пути сегмента; группы и слоты пути не меняют. */
+function pathPart(s: SegmentKind): string[] {
+  switch (s.type) {
+    case 'static':
+    case 'intercept':
+      return [s.name];
+    case 'dynamic':
+      return [`[${s.name}]`];
+    case 'catchAll':
+      return [`[...${s.name}]`];
+    case 'optionalCatchAll':
+      return [`[[...${s.name}]]`];
+    default:
+      return [];
   }
-  if (folderName.startsWith('(..)')) {
-    return { type: 'intercept', name: folderName.slice(4), mode: '(..)' };
-  }
-  if (folderName.startsWith('(') && folderName.endsWith(')')) {
-    return { type: 'group', name: folderName.slice(1, -1) };
-  }
-  if (folderName.startsWith('[[...') && folderName.endsWith(']]')) {
-    return { type: 'optionalCatchAll', name: folderName.slice(5, -2) };
-  }
-  if (folderName.startsWith('[...') && folderName.endsWith(']')) {
-    return { type: 'catchAll', name: folderName.slice(4, -1) };
-  }
-  if (folderName.startsWith('[') && folderName.endsWith(']')) {
-    return { type: 'dynamic', name: folderName.slice(1, -1) };
-  }
-  void intercept;
-  return { type: 'static', name: folderName };
 }
 
 /**
@@ -56,39 +67,14 @@ export function segmentsToPattern(segments: readonly SegmentKind[]): {
   parallelSlot: string | null;
   intercept: { type: string; targetPathPattern?: string } | null;
 } {
-  const parts: string[] = [];
-  const groups: string[] = [];
-  let parallelSlot: string | null = null;
-  let intercept: { type: string; targetPathPattern?: string } | null = null;
-
-  for (const s of segments) {
-    switch (s.type) {
-      case 'static':
-        parts.push(s.name);
-        break;
-      case 'dynamic':
-        parts.push(`[${s.name}]`);
-        break;
-      case 'catchAll':
-        parts.push(`[...${s.name}]`);
-        break;
-      case 'optionalCatchAll':
-        parts.push(`[[...${s.name}]]`);
-        break;
-      case 'group':
-        groups.push(s.name);
-        break;
-      case 'parallel':
-        parallelSlot = s.name;
-        break;
-      case 'intercept':
-        intercept = { type: s.mode };
-        parts.push(s.name);
-        break;
-      default:
-        break;
-    }
-  }
-  const pattern = parts.length === 0 ? '/' : `/${parts.join('/')}`;
-  return { pattern, groups, parallelSlot, intercept };
+  const parts = segments.flatMap(pathPart);
+  const groups = segments.flatMap((s) => (s.type === 'group' ? [s.name] : []));
+  const slot = segments.flatMap((s) => (s.type === 'parallel' ? [s.name] : [])).at(-1);
+  const mode = segments.flatMap((s) => (s.type === 'intercept' ? [s.mode] : [])).at(-1);
+  return {
+    pattern: parts.length === 0 ? '/' : `/${parts.join('/')}`,
+    groups,
+    parallelSlot: slot ?? null,
+    intercept: mode === undefined ? null : { type: mode },
+  };
 }
