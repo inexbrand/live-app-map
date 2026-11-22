@@ -87,31 +87,11 @@ function byLocation<T extends { readonly location: { readonly file: string; read
 export function scanSource(request: SourceScanRequest): SourceScanResult {
   const t0 = Date.now();
   const root = path.resolve(request.root);
-  const diagnostics: Diagnostic[] = [];
   const all = walkFiles(root, { exclude: [...DEFAULT_EXCLUDE, ...(request.exclude ?? [])] }).filter(
     (f) => !TEST_FILE.test(f),
   );
   const services = indexServices(root, all);
-  const maxFiles = request.maxFiles ?? DEFAULT_MAX_FILES;
-  const candidates = all.filter((f) => SOURCE_FILE.test(f) && !f.endsWith('.d.ts'));
-  if (candidates.length > maxFiles) {
-    diagnostics.push({
-      code: 'SOURCE_MAX_FILES',
-      severity: 'warning',
-      message: `Исходников ${candidates.length}, разобрано первые ${maxFiles}`,
-      file: root,
-      hint: 'Поднимите maxFiles или сузьте каталог / exclude',
-    });
-  }
-  const sourceFiles = candidates.slice(0, maxFiles);
-
-  const foundTables: { table: FoundTable; file: string }[] = [];
-  for (const f of all.filter((x) => x.endsWith('.prisma'))) {
-    for (const table of parsePrismaSchema(readFileSync(path.join(root, f), 'utf8'), f)) {
-      foundTables.push({ table, file: f });
-    }
-  }
-
+  const { sourceFiles, diagnostics } = limitedSources(root, all, request.maxFiles ?? DEFAULT_MAX_FILES);
   const program = createSourceProgram(sourceFiles.map((f) => path.join(root, f)));
   const projectFiles: ts.SourceFile[] = sourceFiles
     .map((f) => program.getSourceFile(path.join(root, f)))
@@ -123,47 +103,19 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
     prismaModels: new Map(),
     implementations: indexImplementations(projectFiles),
   };
-  for (const sf of projectFiles) {
-    if (mayDeclareDrizzleTables(sf.text)) {
-      for (const table of collectDrizzleTables(baseCtx, sf)) {
-        foundTables.push({ table, file: relPath(root, sf.fileName) });
-      }
-    }
-  }
-  const ctx: SourceContext = {
-    ...baseCtx,
-    drizzleTables: new Set(foundTables.filter((t) => t.table.orm === 'drizzle').map((t) => t.table.exportName)),
-    prismaModels: new Map(
-      foundTables.filter((t) => t.table.orm === 'prisma').map((t) => [t.table.exportName.toLowerCase(), t.table.exportName]),
-    ),
-  };
-
+  const foundTables = [...prismaTables(root, all), ...drizzleTables(baseCtx, projectFiles)];
+  const ctx = withTables(baseCtx, foundTables);
   const env = new EnvFiles();
   const ev = new ValueEvaluator(ctx, (sf, name) =>
     env.basePath(path.join(root, services.serviceOf(relPath(root, sf.fileName)).root), name),
   );
-  const routePaths = new RoutePaths(ev, projectFiles);
-  const symbolId = uniqueIds();
-  const routeId = uniqueIds();
+  const { symbols, routes } = symbolsAndRoutes(ctx, projectFiles, services, new RoutePaths(ev, projectFiles));
   const tableId = uniqueIds();
-  const symbols: CodeSymbol[] = [];
-  const routes: ApiRoute[] = [];
-  for (const sf of projectFiles) {
-    const rel = relPath(root, sf.fileName);
-    const service = services.serviceOf(rel);
-    for (const s of collectSymbols(ctx, sf)) {
-      symbols.push({ ...s, id: symbolId(`symbol:${rel}#${s.name}`), serviceId: service.id });
-    }
-    for (const r of collectRoutes(ctx, sf, routePaths)) {
-      routes.push({ ...r, id: routeId(`api:${service.name} ${r.method} ${r.path}`), serviceId: service.id });
-    }
-  }
   const tables: DbTable[] = foundTables.map(({ table, file }) => ({
     ...table,
     id: tableId(`table:${table.orm}:${table.exportName}`),
     serviceId: services.serviceOf(file).id,
   }));
-
   const sortedRoutes = routes.sort(byLocation);
   const api = collectApiCalls(ctx, ev, projectFiles, services, sortedRoutes);
   const usedServices = new Set(all.map((f) => services.serviceOf(f).id));
@@ -180,6 +132,76 @@ export function scanSource(request: SourceScanRequest): SourceScanResult {
     diagnostics,
     stats: { files: projectFiles.length, ms: Date.now() - t0 },
   };
+}
+
+/** Исходники .ts/.tsx (без .d.ts) не больше maxFiles; лишние — диагностика. */
+function limitedSources(root: string, all: readonly string[], maxFiles: number): { sourceFiles: string[]; diagnostics: Diagnostic[] } {
+  const candidates = all.filter((f) => SOURCE_FILE.test(f) && !f.endsWith('.d.ts'));
+  const diagnostics: Diagnostic[] =
+    candidates.length > maxFiles
+      ? [
+          {
+            code: 'SOURCE_MAX_FILES',
+            severity: 'warning',
+            message: `Исходников ${candidates.length}, разобрано первые ${maxFiles}`,
+            file: root,
+            hint: 'Поднимите maxFiles или сузьте каталог / exclude',
+          },
+        ]
+      : [];
+  return { sourceFiles: candidates.slice(0, maxFiles), diagnostics };
+}
+
+/** Таблица и файл, где она объявлена. */
+type TableInFile = { readonly table: FoundTable; readonly file: string };
+
+/** Модели всех schema.prisma. */
+function prismaTables(root: string, all: readonly string[]): TableInFile[] {
+  return all
+    .filter((x) => x.endsWith('.prisma'))
+    .flatMap((f) => parsePrismaSchema(readFileSync(path.join(root, f), 'utf8'), f).map((table) => ({ table, file: f })));
+}
+
+/** Таблицы Drizzle во всех исходниках. */
+function drizzleTables(ctx: SourceContext, files: readonly ts.SourceFile[]): TableInFile[] {
+  return files
+    .filter((sf) => mayDeclareDrizzleTables(sf.text))
+    .flatMap((sf) => collectDrizzleTables(ctx, sf).map((table) => ({ table, file: relPath(ctx.root, sf.fileName) })));
+}
+
+/** Контекст с известными таблицами Drizzle и моделями Prisma. */
+function withTables(ctx: SourceContext, found: readonly TableInFile[]): SourceContext {
+  return {
+    ...ctx,
+    drizzleTables: new Set(found.filter((t) => t.table.orm === 'drizzle').map((t) => t.table.exportName)),
+    prismaModels: new Map(
+      found.filter((t) => t.table.orm === 'prisma').map((t) => [t.table.exportName.toLowerCase(), t.table.exportName]),
+    ),
+  };
+}
+
+/** Символы и роуты всех файлов с уникальными id. */
+function symbolsAndRoutes(
+  ctx: SourceContext,
+  files: readonly ts.SourceFile[],
+  services: ServiceIndex,
+  routePaths: RoutePaths,
+): { symbols: CodeSymbol[]; routes: ApiRoute[] } {
+  const symbolId = uniqueIds();
+  const routeId = uniqueIds();
+  const symbols: CodeSymbol[] = [];
+  const routes: ApiRoute[] = [];
+  for (const sf of files) {
+    const rel = relPath(ctx.root, sf.fileName);
+    const service = services.serviceOf(rel);
+    for (const s of collectSymbols(ctx, sf)) {
+      symbols.push({ ...s, id: symbolId(`symbol:${rel}#${s.name}`), serviceId: service.id });
+    }
+    for (const r of collectRoutes(ctx, sf, routePaths)) {
+      routes.push({ ...r, id: routeId(`api:${service.name} ${r.method} ${r.path}`), serviceId: service.id });
+    }
+  }
+  return { symbols, routes };
 }
 
 /**
@@ -256,51 +278,98 @@ function screensOf(
   idsByNode: ReadonlyMap<ts.Node, readonly string[]>,
   services: ServiceIndex,
 ): ScreenApi[] {
-  const serviceOfAbs = (f: string): string => services.serviceOf(relPath(ctx.root, f)).id;
-  const sameService = (a: string, b: string): boolean => serviceOfAbs(a) === serviceOfAbs(b);
-  const byFile = new Map(files.map((sf) => [sf.fileName, sf]));
-  const perFile = countBy(entries, (e) => e.file);
-  // Свой файл экрана (один экран на файл) — в него обход других экранов не заходит.
-  const screenFiles = new Set(entries.filter((e) => perFile.get(e.file) === 1).map((e) => path.join(ctx.root, e.file)));
-  const sectionsByFile = new Map<string, Set<string>>();
-  for (const e of entries) {
-    const s = e.routePath === undefined ? undefined : routeSection(e.routePath);
-    if (s !== undefined) {
-      sectionsByFile.set(e.file, (sectionsByFile.get(e.file) ?? new Set()).add(s));
-    }
-  }
-  let dispatch: SectionDispatch | undefined;
-  const found: { entry: ScreenEntry; walk: ScreenWalk }[] = [];
-  for (const e of entries) {
-    const sf = byFile.get(path.join(ctx.root, e.file));
-    if (sf === undefined) {
-      continue;
-    }
-    let roots: ts.Node[] = e.routePath === undefined ? [sf] : rrScreenRoots(ctx, sf, e.routePath);
-    if (roots.length === 0 && e.routePath !== undefined) {
-      const section = routeSection(e.routePath);
-      if ((perFile.get(e.file) ?? 0) > 1 && section !== undefined) {
-        dispatch ??= new SectionDispatch(files);
-        roots = dispatch.roots(section, sectionsByFile.get(e.file) ?? new Set(), (f) => sameService(f, sf.fileName));
-      }
-      // Свой файл экрана или файл страницы на несколько маршрутов без диспетчера.
-      if (roots.length === 0) {
-        roots = [sf];
-      }
-    }
-    const routeSf = e.routeFile === undefined || e.routeFile === e.file ? undefined : byFile.get(path.join(ctx.root, e.routeFile));
-    if (routeSf !== undefined && e.routePath !== undefined) {
-      roots = [...roots, ...rrScreenRoots(ctx, routeSf, e.routePath)];
-    }
-    const skipFiles = new Set([...screenFiles].filter((f) => f !== sf.fileName));
-    found.push({ entry: e, walk: { roots, skipFiles, serviceId: serviceOfAbs(sf.fileName) } });
-  }
-  const calls = screensApiCalls(ctx, found.map((f) => f.walk), idsByNode, sameService);
+  const finder = new ScreenRoots(ctx, files, entries, services);
+  const found = entries.flatMap((entry) => {
+    const walk = finder.walkOf(entry);
+    return walk === undefined ? [] : [{ entry, walk }];
+  });
+  const calls = screensApiCalls(ctx, found.map((f) => f.walk), idsByNode, finder.sameService);
   return found.map(({ entry }, i) => ({
     ...(entry.nodeId === undefined ? {} : { nodeId: entry.nodeId }),
     file: entry.file,
     calls: calls[i] ?? [],
   }));
+}
+
+/** Разделы путей экранов каждого файла (для ветки switch общего конфига). */
+function sectionsByFile(entries: readonly ScreenEntry[]): Map<string, Set<string>> {
+  const out = new Map<string, Set<string>>();
+  for (const e of entries) {
+    const s = e.routePath === undefined ? undefined : routeSection(e.routePath);
+    if (s !== undefined) {
+      out.set(e.file, (out.get(e.file) ?? new Set()).add(s));
+    }
+  }
+  return out;
+}
+
+/** Откуда начинается обход каждого экрана. */
+class ScreenRoots {
+  private readonly byFile: ReadonlyMap<string, ts.SourceFile>;
+  private readonly perFile: ReadonlyMap<string, number>;
+  /** Свой файл экрана (один экран на файл) — в него обход других экранов не заходит. */
+  private readonly screenFiles: ReadonlySet<string>;
+  private readonly sections: ReadonlyMap<string, Set<string>>;
+  private dispatch: SectionDispatch | undefined;
+  /** Два абсолютных файла в одном сервисе. */
+  readonly sameService = (a: string, b: string): boolean => this.serviceOfAbs(a) === this.serviceOfAbs(b);
+
+  constructor(
+    private readonly ctx: SourceContext,
+    private readonly files: readonly ts.SourceFile[],
+    entries: readonly ScreenEntry[],
+    private readonly services: ServiceIndex,
+  ) {
+    this.byFile = new Map(files.map((sf) => [sf.fileName, sf]));
+    this.perFile = countBy(entries, (e) => e.file);
+    this.screenFiles = new Set(entries.filter((e) => this.perFile.get(e.file) === 1).map((e) => path.join(ctx.root, e.file)));
+    this.sections = sectionsByFile(entries);
+  }
+
+  /** Обход экрана; файла нет среди исходников — undefined. */
+  walkOf(e: ScreenEntry): ScreenWalk | undefined {
+    const sf = this.byFile.get(path.join(this.ctx.root, e.file));
+    if (sf === undefined) {
+      return undefined;
+    }
+    const roots = [...this.ownRoots(e, sf), ...this.routeFileRoots(e)];
+    const skipFiles = new Set([...this.screenFiles].filter((f) => f !== sf.fileName));
+    return { roots, skipFiles, serviceId: this.serviceOfAbs(sf.fileName) };
+  }
+
+  private serviceOfAbs(f: string): string {
+    return this.services.serviceOf(relPath(this.ctx.root, f)).id;
+  }
+
+  /** Файл (Next), объект роута RR, ветка switch общего конфига, иначе сам файл. */
+  private ownRoots(e: ScreenEntry, sf: ts.SourceFile): ts.Node[] {
+    if (e.routePath === undefined) {
+      return [sf];
+    }
+    const roots = rrScreenRoots(this.ctx, sf, e.routePath);
+    if (roots.length > 0) {
+      return roots;
+    }
+    const branch = this.sectionRoots(e, e.routePath, sf);
+    // Свой файл экрана или файл страницы на несколько маршрутов без диспетчера.
+    return branch.length === 0 ? [sf] : branch;
+  }
+
+  /** Ветка switch по разделу пути — когда в файле несколько экранов. */
+  private sectionRoots(e: ScreenEntry, routePath: string, sf: ts.SourceFile): ts.Node[] {
+    const section = routeSection(routePath);
+    if ((this.perFile.get(e.file) ?? 0) <= 1 || section === undefined) {
+      return [];
+    }
+    this.dispatch ??= new SectionDispatch(this.files);
+    return this.dispatch.roots(section, this.sections.get(e.file) ?? new Set(), (f) => this.sameService(f, sf.fileName));
+  }
+
+  /** `loader`/`beforeLoad` из объекта маршрута в отдельном файле конфига (TanStack). */
+  private routeFileRoots(e: ScreenEntry): ts.Node[] {
+    const routeSf = e.routeFile === undefined || e.routeFile === e.file ? undefined : this.byFile.get(path.join(this.ctx.root, e.routeFile));
+    return routeSf === undefined || e.routePath === undefined ? [] : rrScreenRoots(this.ctx, routeSf, e.routePath);
+  }
 }
 
 /**
