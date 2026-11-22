@@ -7,6 +7,8 @@ import type {
   SelectHTMLAttributes,
   TextareaHTMLAttributes,
 } from 'react';
+import { classed } from './classed';
+import { cx } from './class-names';
 
 export type FieldProps = {
   readonly label?: string;
@@ -23,7 +25,7 @@ export type FieldProps = {
 export function Field(props: FieldProps) {
   const { label, htmlFor, hint, inline = false, children, className } = props;
   return (
-    <div className={`ui-field${inline ? ' ui-field--inline' : ''}${className ? ` ${className}` : ''}`}>
+    <div className={cx('ui-field', inline && 'ui-field--inline', className)}>
       {label ? (
         <label className="ui-field__label" htmlFor={htmlFor}>
           {label}
@@ -40,31 +42,18 @@ export type InputProps = InputHTMLAttributes<HTMLInputElement>;
 /**
  * Текстовый input.
  */
-export function Input(props: InputProps) {
-  const { className, ...rest } = props;
-  return <input className={`ui-input${className ? ` ${className}` : ''}`} {...rest} />;
-}
+export const Input = classed('input', 'ui-input', 'Input');
 
 export type SelectProps = SelectHTMLAttributes<HTMLSelectElement>;
 
 /**
  * Select.
  */
-export function Select(props: SelectProps) {
-  const { className, children, ...rest } = props;
-  return (
-    <select className={`ui-select${className ? ` ${className}` : ''}`} {...rest}>
-      {children}
-    </select>
-  );
-}
+export const Select = classed('select', 'ui-select', 'Select');
 
 export type TextareaProps = TextareaHTMLAttributes<HTMLTextAreaElement>;
 
 /**
  * Textarea.
  */
-export function Textarea(props: TextareaProps) {
-  const { className, ...rest } = props;
-  return <textarea className={`ui-textarea${className ? ` ${className}` : ''}`} {...rest} />;
-}
+export const Textarea = classed('textarea', 'ui-textarea', 'Textarea');

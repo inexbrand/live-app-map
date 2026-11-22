@@ -2,6 +2,7 @@
  * Panel / card UI-kit.
  */
 import type { HTMLAttributes, ReactNode } from 'react';
+import { cx } from './class-names';
 
 export type PanelProps = HTMLAttributes<HTMLElement> & {
   readonly as?: 'div' | 'aside' | 'section';
@@ -14,7 +15,7 @@ export type PanelProps = HTMLAttributes<HTMLElement> & {
 export function Panel(props: PanelProps) {
   const { as: Tag = 'div', className, children, ...rest } = props;
   return (
-    <Tag className={`ui-panel${className ? ` ${className}` : ''}`} {...rest}>
+    <Tag className={cx('ui-panel', className)} {...rest}>
       {children}
     </Tag>
   );
@@ -48,7 +49,7 @@ export function PanelHeader(props: PanelHeaderProps) {
  */
 export function PanelBody(props: { readonly children?: ReactNode; readonly className?: string }) {
   return (
-    <div className={`ui-panel__body${props.className ? ` ${props.className}` : ''}`}>
+    <div className={cx('ui-panel__body', props.className)}>
       {props.children}
     </div>
   );

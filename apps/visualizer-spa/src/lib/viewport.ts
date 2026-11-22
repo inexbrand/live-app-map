@@ -167,30 +167,31 @@ export function resolveLayoutDeviceViewport(
  * Дефолтная ширина из layout или константа.
  */
 export function resolveDefaultWidth(layout: LayoutHints | undefined): number {
+  return layoutSize(layout, 'width', layout?.defaultWidth, { min: 200, max: 2560, fallback: DEFAULT_WIDTH });
+}
+
+/** Размер из layout: устройство по умолчанию, иначе явное число в пределах, иначе запасное. */
+function layoutSize(
+  layout: LayoutHints | undefined,
+  side: 'width' | 'height',
+  value: unknown,
+  limits: { readonly min: number; readonly max: number; readonly fallback: number },
+): number {
   const fromDevice = resolveLayoutDeviceViewport(layout);
   if (fromDevice !== undefined) {
-    return fromDevice.width;
+    return fromDevice[side];
   }
-  const w = layout?.defaultWidth;
-  if (typeof w === 'number' && Number.isFinite(w) && w >= 200) {
-    return Math.min(2560, Math.round(w));
+  if (typeof value === 'number' && Number.isFinite(value) && value >= limits.min) {
+    return Math.min(limits.max, Math.round(value));
   }
-  return DEFAULT_WIDTH;
+  return limits.fallback;
 }
 
 /**
  * Fallback высоты из layout.
  */
 export function resolveDefaultHeight(layout: LayoutHints | undefined): number {
-  const fromDevice = resolveLayoutDeviceViewport(layout);
-  if (fromDevice !== undefined) {
-    return fromDevice.height;
-  }
-  const h = layout?.defaultHeight;
-  if (typeof h === 'number' && Number.isFinite(h) && h >= 120) {
-    return Math.min(MAX_CONTENT_HEIGHT, Math.round(h));
-  }
-  return DEFAULT_HEIGHT_FALLBACK;
+  return layoutSize(layout, 'height', layout?.defaultHeight, { min: 120, max: MAX_CONTENT_HEIGHT, fallback: DEFAULT_HEIGHT_FALLBACK });
 }
 
 /**

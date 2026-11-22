@@ -113,26 +113,13 @@ export function segmentsToPattern(segments: readonly SegmentKind[]): {
   return { pattern, groups, parallelSlot, intercept };
 }
 
-function resolveAppDir(absRoot: string): { appDir: string; rel: string } | null {
-  const srcApp = path.join(absRoot, 'src', 'app');
-  const app = path.join(absRoot, 'app');
-  if (existsSync(srcApp)) {
-    return { appDir: srcApp, rel: 'src/app' };
-  }
-  if (existsSync(app)) {
-    return { appDir: app, rel: 'app' };
-  }
-  return null;
-}
-
-function resolvePagesDir(absRoot: string): { pagesDir: string; rel: string } | null {
-  const srcPages = path.join(absRoot, 'src', 'pages');
-  const pages = path.join(absRoot, 'pages');
-  if (existsSync(srcPages)) {
-    return { pagesDir: srcPages, rel: 'src/pages' };
-  }
-  if (existsSync(pages)) {
-    return { pagesDir: pages, rel: 'pages' };
+/** Каталог роутера: `src/<name>`, иначе `<name>` в корне приложения. */
+function resolveRouterDir(absRoot: string, name: 'app' | 'pages'): { dir: string; rel: string } | null {
+  for (const rel of [`src/${name}`, name]) {
+    const dir = path.join(absRoot, rel);
+    if (existsSync(dir)) {
+      return { dir, rel };
+    }
   }
   return null;
 }
@@ -146,12 +133,12 @@ function discoverAppRouter(
   const diagnostics: Diagnostic[] = [];
   const nodes: AppMapNode[] = [];
   const layouts: AppMapNode[] = [];
-  const found = resolveAppDir(absRoot);
+  const found = resolveRouterDir(absRoot, 'app');
   if (!found) {
     return { nodes, diagnostics, layouts };
   }
 
-  const files = walkFiles(found.appDir);
+  const files = walkFiles(found.dir);
   for (const rel of files) {
     const base = path.posix.basename(rel);
     const m = base.match(PAGE_RE);
@@ -260,11 +247,11 @@ function discoverPagesRouter(
 ): { nodes: AppMapNode[]; diagnostics: Diagnostic[] } {
   const diagnostics: Diagnostic[] = [];
   const nodes: AppMapNode[] = [];
-  const found = resolvePagesDir(absRoot);
+  const found = resolveRouterDir(absRoot, 'pages');
   if (!found) {
     return { nodes, diagnostics };
   }
-  const files = walkFiles(found.pagesDir);
+  const files = walkFiles(found.dir);
   for (const rel of files) {
     if (!/\.(js|jsx|ts|tsx)$/.test(rel)) {
       continue;

@@ -325,27 +325,24 @@ function withBaseUrl(
   return { document: { ...doc, baseUrl: trimmed, nodes }, error: null };
 }
 
-function clampMaxLive(n: number): number {
+/** Лимит iframe: не число — по умолчанию; 0 или 9999 и больше — без лимита (9999); иначе от min до потолка. */
+function clampIframeBudget(n: number, fallback: number, min: number): number {
   if (!Number.isFinite(n)) {
-    return DEFAULT_MAX_LIVE;
+    return fallback;
   }
-  // 0 / 9999 = unlimited
   const rounded = Math.round(n);
   if (rounded <= 0 || rounded >= 9999) {
     return 9999;
   }
-  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(1, rounded));
+  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(min, rounded));
+}
+
+function clampMaxLive(n: number): number {
+  return clampIframeBudget(n, DEFAULT_MAX_LIVE, 1);
 }
 
 function clampMaxWarm(n: number): number {
-  if (!Number.isFinite(n)) {
-    return DEFAULT_MAX_WARM;
-  }
-  const rounded = Math.round(n);
-  if (rounded <= 0 || rounded >= 9999) {
-    return 9999;
-  }
-  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(0, rounded));
+  return clampIframeBudget(n, DEFAULT_MAX_WARM, 0);
 }
 
 export const useAppStore = create<AppStore>((set, get) => ({

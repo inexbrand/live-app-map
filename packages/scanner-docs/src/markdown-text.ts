@@ -3,9 +3,8 @@
  * открытые пункты 09-bugs.
  */
 import { bugItems } from './bug-items';
+import { plain } from './plain-text';
 
-/** Предел длины строки пункта или цели. */
-const LINE_MAX = 240;
 
 
 const HEADING = /^(#{1,6})\s+(.*)$/;
@@ -31,11 +30,6 @@ function proseLines(text: string): string[] {
   return out;
 }
 
-/** Строка без markdown-выделения, обрезанная до предела. */
-function plain(s: string): string {
-  const t = s.replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
-  return t.length > LINE_MAX ? `${t.slice(0, LINE_MAX - 1)}…` : t;
-}
 
 /**
  * Заголовок документа: первый `# …`.

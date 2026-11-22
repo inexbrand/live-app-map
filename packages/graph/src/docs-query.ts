@@ -102,6 +102,28 @@ export type DocTarget =
   | { readonly kind: 'screen'; readonly nodeId: string }
   | { readonly kind: 'file'; readonly file: string; readonly line?: number };
 
+/** Обработчик на каждый вид цели. */
+export type DocTargetCases<R> = { readonly [K in DocTarget['kind']]: (t: Extract<DocTarget, { kind: K }>) => R };
+
+/**
+ * Разбор цели по виду: единственное место, где перечислены виды DocTarget.
+ *
+ * @param t - цель
+ * @param cases - обработчик на каждый вид
+ */
+export function matchDocTarget<R>(t: DocTarget, cases: DocTargetCases<R>): R {
+  switch (t.kind) {
+    case 'route':
+      return cases.route(t);
+    case 'table':
+      return cases.table(t);
+    case 'screen':
+      return cases.screen(t);
+    case 'file':
+      return cases.file(t);
+  }
+}
+
 /** Индекс для разбора ссылок из документов. */
 export type DocRefIndex = {
   readonly code?: CodeIndex;

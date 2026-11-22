@@ -2,6 +2,8 @@
  * Badge / Chip UI-kit.
  */
 import type { ButtonHTMLAttributes, HTMLAttributes, ReactNode } from 'react';
+import { classed } from './classed';
+import { cx } from './class-names';
 
 export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
   readonly children?: ReactNode;
@@ -10,14 +12,7 @@ export type BadgeProps = HTMLAttributes<HTMLSpanElement> & {
 /**
  * Статичный badge.
  */
-export function Badge(props: BadgeProps) {
-  const { className, children, ...rest } = props;
-  return (
-    <span className={`ui-badge${className ? ` ${className}` : ''}`} {...rest}>
-      {children}
-    </span>
-  );
-}
+export const Badge = classed('span', 'ui-badge', 'Badge');
 
 export type ChipProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   readonly active?: boolean;
@@ -31,7 +26,7 @@ export function Chip(props: ChipProps) {
   return (
     <button
       type={type}
-      className={`ui-chip${active ? ' ui-chip--active' : ''}${className ? ` ${className}` : ''}`}
+      className={cx('ui-chip', active && 'ui-chip--active', className)}
       {...rest}
     >
       {children}

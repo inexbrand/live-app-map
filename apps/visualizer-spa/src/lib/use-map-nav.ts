@@ -3,7 +3,7 @@
  * роут → вид «API», таблица → «База данных», экран → холст с выбранным экраном.
  */
 import { useCallback } from 'react';
-import type { DocTarget } from '@live-app-map/graph';
+import { matchDocTarget, type DocTarget } from '@live-app-map/graph';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 
@@ -14,36 +14,26 @@ export function useMapNav(): (target: DocTarget) => void {
   const setView = useViewStore((s) => s.setView);
   const selectPage = useAppStore((s) => s.selectPage);
   return useCallback(
-    (target: DocTarget) => {
-      switch (target.kind) {
-        case 'route':
-          openRoute(target.routeId);
-          return;
-        case 'table':
-          openTable(target.table);
-          return;
-        case 'screen':
+    (target: DocTarget) =>
+      matchDocTarget(target, {
+        route: (t) => openRoute(t.routeId),
+        table: (t) => openTable(t.table),
+        screen: (t) => {
           setView('screens');
-          selectPage(target.nodeId);
-          return;
-        case 'file':
-          return;
-      }
-    },
+          selectPage(t.nodeId);
+        },
+        file: () => undefined,
+      }),
     [openRoute, openTable, setView, selectPage],
   );
 }
 
 /** Подпись цели для подсказки. */
 export function targetTitle(target: DocTarget): string {
-  switch (target.kind) {
-    case 'route':
-      return 'Открыть роут в виде «API»';
-    case 'table':
-      return 'Открыть таблицу в «Базе данных»';
-    case 'screen':
-      return 'Показать экран на холсте';
-    case 'file':
-      return `${target.file}${target.line === undefined ? '' : `:${target.line}`}`;
-  }
+  return matchDocTarget(target, {
+    route: () => 'Открыть роут в виде «API»',
+    table: () => 'Открыть таблицу в «Базе данных»',
+    screen: () => 'Показать экран на холсте',
+    file: (f) => `${f.file}${f.line === undefined ? '' : `:${f.line}`}`,
+  });
 }

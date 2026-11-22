@@ -5,6 +5,7 @@
  * Express (`res.json(x)`, `res.status(404)`, `res.sendStatus(204)`).
  */
 import ts from 'typescript';
+import { calleeName } from './ts-call';
 import type { RouteResponse } from '@live-app-map/schema';
 
 /** Не больше полей и значений в описании. */
@@ -18,11 +19,6 @@ const STATUS_CALLS: ReadonlySet<string> = new Set(['status', 'error', 'sendStatu
 /** Собранное по обработчику. */
 type Acc = { readonly fields: Set<string>; readonly values: Set<string>; readonly statuses: Set<number> };
 
-/** Имя вызываемой функции: `f()` → f, `a.b()` → b. */
-function calleeName(call: ts.CallExpression): string | undefined {
-  const c = call.expression;
-  return ts.isIdentifier(c) ? c.text : ts.isPropertyAccessExpression(c) ? c.name.text : undefined;
-}
 
 /** Число из литерала. */
 function numberOf(e: ts.Expression | undefined): number | undefined {

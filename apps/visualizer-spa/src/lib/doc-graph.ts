@@ -4,7 +4,7 @@
  * рёбра — «эпоха содержит файл», «документ ссылается», «роут/таблица живёт в сервисе».
  * Чистые функции: построение, свёртка эпох, фильтры, соседи, локальный граф, поиск.
  */
-import { resolveDocRef, type DocRefIndex, type DocTarget } from '@live-app-map/graph';
+import { matchDocTarget, resolveDocRef, type DocRefIndex, type DocTarget } from '@live-app-map/graph';
 import type { AppMapDocument, DocFile, EpochReadiness } from '@live-app-map/schema';
 import { epochFileLabel, resolveDocAsset } from './docs-view-model';
 
@@ -77,16 +77,12 @@ export function docReferences(text: string): { readonly codes: readonly string[]
 
 /** Id узла по цели карты. */
 function targetId(t: DocTarget): string {
-  switch (t.kind) {
-    case 'route':
-      return `route:${t.routeId}`;
-    case 'table':
-      return `table:${t.table}`;
-    case 'screen':
-      return `screen:${t.nodeId}`;
-    case 'file':
-      return `file:${t.file}`;
-  }
+  return matchDocTarget(t, {
+    route: (r) => `route:${r.routeId}`,
+    table: (r) => `table:${r.table}`,
+    screen: (r) => `screen:${r.nodeId}`,
+    file: (r) => `file:${r.file}`,
+  });
 }
 
 function basename(p: string): string {
@@ -118,40 +114,47 @@ class GraphBuilder {
   }
 }
 
+/** Узел сервиса и связь «принадлежит» от объекта к нему. */
+function linkService(b: GraphBuilder, id: string, svc: { readonly id: string; readonly name: string; readonly root: string } | undefined): void {
+  if (svc !== undefined) {
+    b.node({ id: `service:${svc.id}`, kind: 'service', label: svc.name, detail: svc.root });
+    b.edge(id, `service:${svc.id}`, 'belongs');
+  }
+}
+
+type RouteTarget = Extract<DocTarget, { kind: 'route' }>;
+type TableTarget = Extract<DocTarget, { kind: 'table' }>;
+
+/** Сервис кода по id. */
+function serviceOf(doc: AppMapDocument, serviceId: string | undefined): { readonly id: string; readonly name: string; readonly root: string } | undefined {
+  return serviceId === undefined ? undefined : doc.code?.services.find((s) => s.id === serviceId);
+}
+
+function addRoute(b: GraphBuilder, doc: AppMapDocument, id: string, t: RouteTarget): void {
+  const r = doc.code?.routes.find((x) => x.id === t.routeId);
+  b.node({ id, kind: 'route', label: r === undefined ? t.routeId : `${r.method} ${r.path}`, detail: r?.location.file ?? '', target: t });
+  linkService(b, id, serviceOf(doc, r?.serviceId));
+}
+
+function addTable(b: GraphBuilder, doc: AppMapDocument, id: string, t: TableTarget): void {
+  const tb = doc.code?.tables.find((x) => x.exportName === t.table);
+  b.node({ id, kind: 'table', label: tb?.name ?? t.table, detail: tb?.location.file ?? '', target: t });
+  linkService(b, id, serviceOf(doc, tb?.serviceId));
+}
+
 /** Узел объекта карты по цели (роут, таблица, экран, файл) и его сервис. */
 function addTarget(b: GraphBuilder, doc: AppMapDocument, t: DocTarget): string {
   const id = targetId(t);
-  const code = doc.code;
-  switch (t.kind) {
-    case 'route': {
-      const r = code?.routes.find((x) => x.id === t.routeId);
-      b.node({ id, kind: 'route', label: r === undefined ? t.routeId : `${r.method} ${r.path}`, detail: r?.location.file ?? '', target: t });
-      const svc = r === undefined ? undefined : code?.services.find((s) => s.id === r.serviceId);
-      if (svc !== undefined) {
-        b.node({ id: `service:${svc.id}`, kind: 'service', label: svc.name, detail: svc.root });
-        b.edge(id, `service:${svc.id}`, 'belongs');
-      }
-      return id;
-    }
-    case 'table': {
-      const tb = code?.tables.find((x) => x.exportName === t.table);
-      b.node({ id, kind: 'table', label: tb?.name ?? t.table, detail: tb?.location.file ?? '', target: t });
-      const svc = tb === undefined ? undefined : code?.services.find((s) => s.id === tb.serviceId);
-      if (svc !== undefined) {
-        b.node({ id: `service:${svc.id}`, kind: 'service', label: svc.name, detail: svc.root });
-        b.edge(id, `service:${svc.id}`, 'belongs');
-      }
-      return id;
-    }
-    case 'screen': {
-      const n = doc.nodes.find((x) => x.id === t.nodeId);
-      b.node({ id, kind: 'screen', label: n?.title ?? t.nodeId, detail: n?.pathPattern ?? '', target: t });
-      return id;
-    }
-    case 'file':
-      b.node({ id, kind: 'file', label: basename(t.file), detail: t.file, target: { kind: 'file', file: t.file } });
-      return id;
-  }
+  matchDocTarget(t, {
+    route: (rt) => addRoute(b, doc, id, rt),
+    table: (tt) => addTable(b, doc, id, tt),
+    screen: (st) => {
+      const n = doc.nodes.find((x) => x.id === st.nodeId);
+      b.node({ id, kind: 'screen', label: n?.title ?? st.nodeId, detail: n?.pathPattern ?? '', target: st });
+    },
+    file: (ft) => b.node({ id, kind: 'file', label: basename(ft.file), detail: ft.file, target: { kind: 'file', file: ft.file } }),
+  });
+  return id;
 }
 
 /** Рёбра одного документа ко всему, на что он ссылается. */
