@@ -2,7 +2,7 @@
  * Профили входа шлюза как у пользователя: список, выход, форма dev-входа и вставки кук.
  * Шлюз — подмена fetch для /__lam_sessions (настоящий dev-сервер в unit не поднят).
  */
-import { useDom } from '../test/dom';
+import { useDom, type Ui } from '../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import type { ProfileSummary } from '../lib/gateway/session-store';
@@ -66,7 +66,7 @@ async function submitForm(button: HTMLElement): Promise<void> {
 }
 
 /** Заполнить поля формы по подписям (пусто — оставить пустым). */
-function fill(ui: ReturnType<typeof within>, values: Partial<Record<string, string>>): void {
+function fill(ui: Ui, values: Partial<Record<string, string>>): void {
   for (const [label, value] of Object.entries(values)) {
     fireEvent.change(ui.getByLabelText(label), { target: { value } });
   }

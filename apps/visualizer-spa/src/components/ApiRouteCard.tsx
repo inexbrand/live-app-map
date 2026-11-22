@@ -11,9 +11,15 @@ import { Button, Chip } from '../ui';
 
 /** Метод в слоте фиксированной ширины: читающие приглушены, меняющие — ярче. */
 export function Method(props: { readonly method: HttpMethod }) {
-  const m = props.method;
-  const kind = m === 'GET' || m === 'HEAD' || m === 'OPTIONS' ? 'read' : m === 'DELETE' ? 'delete' : 'write';
-  return <span className={`api-method api-method--${kind}`}>{m}</span>;
+  return <span className={`api-method api-method--${methodKind(props.method)}`}>{props.method}</span>;
+}
+
+/** Вид метода для цвета: читает, удаляет или меняет. */
+function methodKind(m: HttpMethod): 'read' | 'delete' | 'write' {
+  if (m === 'GET' || m === 'HEAD' || m === 'OPTIONS') {
+    return 'read';
+  }
+  return m === 'DELETE' ? 'delete' : 'write';
 }
 
 /** Признаки строки роута: проверка входа и доступ (пустой слот держит колонку). */
@@ -69,94 +75,184 @@ function Summary(props: { readonly text: string }) {
   );
 }
 
+type Route = RouteCard['route'];
+
+/** Шапка карточки: метод, путь, сервис, фреймворк, файл:строка. */
+function CardHead(props: { readonly card: RouteCard }) {
+  const { card } = props;
+  const r = card.route;
+  return (
+    <header className="api-card__head">
+      <h2>
+        <Method method={r.method} /> <span className="api-card__path">{r.path}</span>
+      </h2>
+      <p className="api-card__meta">
+        {card.service?.name ?? r.serviceId} · {r.framework}
+        <span className="api-card__file">
+          {r.location.file}:{r.location.line}
+        </span>
+      </p>
+    </header>
+  );
+}
+
+/** Описание из кода; строка «Ответ» отдельно. */
+function AutoDoc(props: { readonly auto: RouteCard['auto'] }) {
+  return (
+    <div className="api-auto" data-testid="api-auto-doc">
+      <p className="api-auto__note">{AUTO_DOC_NOTE}</p>
+      <p className="api-auto__summary">{props.auto.summary}</p>
+      {props.auto.lines
+        .filter((l) => l.label === 'Ответ')
+        .map((l) => (
+          <p key={l.label} className="api-card__text" data-testid="api-response">
+            Ответ: {l.text}
+          </p>
+        ))}
+    </div>
+  );
+}
+
+/** Часть входа: заголовок со схемой и поля (или тип одной строкой). */
+function InputPartView(props: { readonly input: RouteCard['inputs'][number] }) {
+  const i = props.input;
+  return (
+    <div className="api-schema" data-testid="api-input">
+      <p className="api-schema__title">
+        {i.label}
+        {i.schema.name === undefined ? '' : ` · ${i.schema.name}`}
+        <span className="api-card__meta">
+          {' · '}
+          {i.schema.kind === 'zod' ? 'zod' : 'TypeBox'}
+          {i.schema.optional === true ? ' · необязательно' : ''}
+        </span>
+      </p>
+      {i.schema.fields.length === 0 ? (
+        <p className="api-schema__text" data-testid="api-input-type">
+          {i.schema.type ?? i.schema.text ?? i.schema.name}
+        </p>
+      ) : (
+        <table className="api-schema__fields">
+          <tbody>
+            <SchemaRows fields={i.schema.fields} depth={0} />
+          </tbody>
+        </table>
+      )}
+    </div>
+  );
+}
+
+/** Раздел «Вход». */
+function InputSection(props: { readonly inputs: RouteCard['inputs'] }) {
+  return (
+    <section className="api-card__section">
+      <h3>Вход</h3>
+      {props.inputs.length === 0 ? <p className="api-card__empty">Схемы входа в коде не найдено.</p> : null}
+      {props.inputs.map((i) => (
+        <InputPartView key={i.part} input={i} />
+      ))}
+    </section>
+  );
+}
+
+/** Строка доступа с метками (роли, права); нет списка — ничего. */
+function TagRow(props: { readonly label: string; readonly tags: readonly string[] | undefined }) {
+  if (props.tags === undefined) {
+    return null;
+  }
+  return (
+    <div className="api-card__row">
+      <span className="api-card__label">{props.label}</span>
+      <span className="api-card__chips">
+        {props.tags.map((x) => (
+          <span key={x} className="api-tag">
+            {x}
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+/** Раздел «Доступ»: вход, роли, права, проверки. */
+function AccessSection(props: { readonly access: Route['access'] }) {
+  const a = props.access;
+  return (
+    <section className="api-card__section" data-testid="api-access">
+      <h3>Доступ</h3>
+      {a === undefined ? <p className="api-card__empty">Проверок доступа в коде не найдено — роут открыт.</p> : null}
+      {a?.auth === true ? <p className="api-card__line">Нужен вход</p> : null}
+      <TagRow label="Роли" tags={a?.roles} />
+      <TagRow label="Права" tags={a?.permissions} />
+      {a?.checks === undefined ? null : (
+        <div className="api-card__row">
+          <span className="api-card__label">Проверки</span>
+          <span className="api-card__text">{a.checks.join(', ')}</span>
+        </div>
+      )}
+    </section>
+  );
+}
+
+/** Почему экраны карты не вызывают роут. */
+function ScreenGapNote(props: { readonly gap: NonNullable<RouteCard['gap']> }) {
+  const { gap } = props;
+  return (
+    <div className="api-card__empty" data-testid="api-screen-gap">
+      <p className="api-card__line">Экраны карты не вызывают: {gap.text}.</p>
+      {gap.files.length === 0 ? null : <p className="api-card__meta">{gap.files.join(', ')}</p>}
+    </div>
+  );
+}
+
+/** Экран, который вызывает роут: кнопка перехода (без ноды на карте — неактивна). */
+function CallerChip(props: { readonly caller: RouteCard['callers'][number] }) {
+  const c = props.caller;
+  const nav = useMapNav();
+  const nodeId = c.nodeId;
+  return (
+    <Chip
+      disabled={nodeId === undefined}
+      title={c.via === undefined ? c.file : `${c.file} · через ${c.via}`}
+      onClick={() => (nodeId === undefined ? undefined : nav({ kind: 'screen', nodeId }))}
+      data-testid="api-screen-link"
+    >
+      {c.title}
+    </Chip>
+  );
+}
+
+/** Раздел «Экраны». */
+function ScreensSection(props: { readonly card: RouteCard }) {
+  const { card } = props;
+  return (
+    <section className="api-card__section">
+      <h3>Экраны</h3>
+      {card.gap === undefined ? null : <ScreenGapNote gap={card.gap} />}
+      <span className="api-card__chips">
+        {card.callers.map((c) => (
+          <CallerChip key={c.nodeId ?? c.file} caller={c} />
+        ))}
+      </span>
+    </section>
+  );
+}
+
 /** Карточка выбранного роута. */
 export function Card(props: { readonly card: RouteCard }) {
   const { card } = props;
   const r = card.route;
-  const nav = useMapNav();
-  const a = r.access;
   return (
     <aside className="api-card" data-testid="api-route-card">
-      <header className="api-card__head">
-        <h2>
-          <Method method={r.method} /> <span className="api-card__path">{r.path}</span>
-        </h2>
-        <p className="api-card__meta">
-          {card.service?.name ?? r.serviceId} · {r.framework}
-          <span className="api-card__file">
-            {r.location.file}:{r.location.line}
-          </span>
-        </p>
-      </header>
+      <CardHead card={card} />
       {card.summary === undefined ? (
         <p className="api-card__empty">Авторского описания нет — добавьте комментарий над обработчиком ({r.location.file}:{r.location.line}).</p>
       ) : (
         <Summary key={r.id} text={card.summary} />
       )}
-      <div className="api-auto" data-testid="api-auto-doc">
-        <p className="api-auto__note">{AUTO_DOC_NOTE}</p>
-        <p className="api-auto__summary">{card.auto.summary}</p>
-        {card.auto.lines
-          .filter((l) => l.label === 'Ответ')
-          .map((l) => (
-            <p key={l.label} className="api-card__text" data-testid="api-response">
-              Ответ: {l.text}
-            </p>
-          ))}
-      </div>
-
-      <section className="api-card__section">
-        <h3>Вход</h3>
-        {card.inputs.length === 0 ? <p className="api-card__empty">Схемы входа в коде не найдено.</p> : null}
-        {card.inputs.map((i) => (
-          <div key={i.part} className="api-schema" data-testid="api-input">
-            <p className="api-schema__title">
-              {i.label}
-              {i.schema.name === undefined ? '' : ` · ${i.schema.name}`}
-              <span className="api-card__meta">
-                {' · '}
-                {i.schema.kind === 'zod' ? 'zod' : 'TypeBox'}
-                {i.schema.optional === true ? ' · необязательно' : ''}
-              </span>
-            </p>
-            {i.schema.fields.length === 0 ? (
-              <p className="api-schema__text" data-testid="api-input-type">
-                {i.schema.type ?? i.schema.text ?? i.schema.name}
-              </p>
-            ) : (
-              <table className="api-schema__fields">
-                <tbody>
-                  <SchemaRows fields={i.schema.fields} depth={0} />
-                </tbody>
-              </table>
-            )}
-          </div>
-        ))}
-      </section>
-
-      <section className="api-card__section" data-testid="api-access">
-        <h3>Доступ</h3>
-        {a === undefined ? <p className="api-card__empty">Проверок доступа в коде не найдено — роут открыт.</p> : null}
-        {a?.auth === true ? <p className="api-card__line">Нужен вход</p> : null}
-        {a?.roles === undefined ? null : (
-          <div className="api-card__row">
-            <span className="api-card__label">Роли</span>
-            <span className="api-card__chips">{a.roles.map((x) => <span key={x} className="api-tag">{x}</span>)}</span>
-          </div>
-        )}
-        {a?.permissions === undefined ? null : (
-          <div className="api-card__row">
-            <span className="api-card__label">Права</span>
-            <span className="api-card__chips">{a.permissions.map((x) => <span key={x} className="api-tag">{x}</span>)}</span>
-          </div>
-        )}
-        {a?.checks === undefined ? null : (
-          <div className="api-card__row">
-            <span className="api-card__label">Проверки</span>
-            <span className="api-card__text">{a.checks.join(', ')}</span>
-          </div>
-        )}
-      </section>
+      <AutoDoc auto={card.auto} />
+      <InputSection inputs={card.inputs} />
+      <AccessSection access={r.access} />
 
       <section className="api-card__section">
         <h3>Таблицы</h3>
@@ -165,28 +261,7 @@ export function Card(props: { readonly card: RouteCard }) {
         <Tables title="Пишет" touches={card.writes} />
       </section>
 
-      <section className="api-card__section">
-        <h3>Экраны</h3>
-        {card.gap === undefined ? null : (
-          <div className="api-card__empty" data-testid="api-screen-gap">
-            <p className="api-card__line">Экраны карты не вызывают: {card.gap.text}.</p>
-            {card.gap.files.length === 0 ? null : <p className="api-card__meta">{card.gap.files.join(', ')}</p>}
-          </div>
-        )}
-        <span className="api-card__chips">
-          {card.callers.map((c) => (
-            <Chip
-              key={c.nodeId ?? c.file}
-              disabled={c.nodeId === undefined}
-              title={c.via === undefined ? c.file : `${c.file} · через ${c.via}`}
-              onClick={() => (c.nodeId === undefined ? undefined : nav({ kind: 'screen', nodeId: c.nodeId }))}
-              data-testid="api-screen-link"
-            >
-              {c.title}
-            </Chip>
-          ))}
-        </span>
-      </section>
+      <ScreensSection card={card} />
 
       <section className="api-card__section">
         <h3>Обработчик</h3>
