@@ -35,16 +35,14 @@ export type LamPageMessage = {
  * @param data - data из MessageEvent
  */
 export function isLamPageMessage(data: unknown): data is LamPageMessage {
-  return (
-    typeof data === 'object' &&
-    data !== null &&
-    'lam' in data &&
-    data.lam === 'page' &&
-    'contentHeight' in data &&
-    typeof data.contentHeight === 'number' &&
-    'viewportHeight' in data &&
-    typeof data.viewportHeight === 'number'
-  );
+  if (typeof data !== 'object' || data === null || !('lam' in data) || data.lam !== 'page') {
+    return false;
+  }
+  return isNumberField(data, 'contentHeight') && isNumberField(data, 'viewportHeight');
+}
+
+function isNumberField(o: object, key: string): boolean {
+  return typeof Reflect.get(o, key) === 'number';
 }
 
 /** Состояние входа страницы: сколько 401/403 без последующего успеха. */
@@ -94,17 +92,32 @@ export type LamWheelMessage = {
  * @returns true — что-то прокрутилось
  */
 export function wheelScroll(x: number, y: number, dx: number, dy: number): boolean {
-  const can = (d: number, pos: number, size: number, view: number, overflow: string): boolean =>
-    d !== 0 && (overflow === 'auto' || overflow === 'scroll') && (d > 0 ? pos + view < size - 1 : pos > 0);
   for (let el = document.elementFromPoint(x, y); el !== null; el = el.parentElement) {
-    const st = getComputedStyle(el);
-    const sx = can(dx, el.scrollLeft, el.scrollWidth, el.clientWidth, st.overflowX);
-    const sy = can(dy, el.scrollTop, el.scrollHeight, el.clientHeight, st.overflowY);
-    if (sx || sy) {
-      el.scrollBy(sx ? dx : 0, sy ? dy : 0);
+    if (scrollElement(el, dx, dy)) {
       return true;
     }
   }
+  return scrollRoot(dx, dy);
+}
+
+/** Можно ли сдвинуть по оси: есть сдвиг, overflow прокручивается, есть куда. */
+export function canScroll(d: number, pos: number, size: number, view: number, overflow: string): boolean {
+  return d !== 0 && (overflow === 'auto' || overflow === 'scroll') && (d > 0 ? pos + view < size - 1 : pos > 0);
+}
+
+/** Прокрутить сам элемент, если он прокручивается в нужную сторону. */
+export function scrollElement(el: Element, dx: number, dy: number): boolean {
+  const st = getComputedStyle(el);
+  const sx = canScroll(dx, el.scrollLeft, el.scrollWidth, el.clientWidth, st.overflowX);
+  const sy = canScroll(dy, el.scrollTop, el.scrollHeight, el.clientHeight, st.overflowY);
+  if (sx || sy) {
+    el.scrollBy(sx ? dx : 0, sy ? dy : 0);
+  }
+  return sx || sy;
+}
+
+/** Прокрутить документ; true — сдвинулся. */
+export function scrollRoot(dx: number, dy: number): boolean {
   const root = document.scrollingElement;
   if (root === null) {
     return false;
@@ -127,7 +140,7 @@ export function injectScript(storage: Readonly<Record<string, string>>, profile:
   const json = (v: unknown): string => JSON.stringify(v).replace(/<\//g, '<\\/');
   return `<script data-lam-gateway>(function(){
 var S=${json(storage)};try{for(var k in S){sessionStorage.setItem(k,S[k]);}}catch(e){}
-var P=${json(profile)},H=${hasSession ? 'true' : 'false'},A={fails:0},next=${nextAuthState.toString()},wheel=${wheelScroll.toString()};
+var P=${json(profile)},H=${hasSession ? 'true' : 'false'},A={fails:0},next=${nextAuthState.toString()},canScroll=${canScroll.toString()},scrollElement=${scrollElement.toString()},scrollRoot=${scrollRoot.toString()},wheel=${wheelScroll.toString()};
 function contentH(){var d=document.documentElement,b=document.body,h=Math.max(d.offsetHeight,b?b.scrollHeight:0,b?b.offsetHeight:0),x=0,all=b?b.getElementsByTagName('*'):[];
 for(var i=0;i<all.length&&i<5000;i++){var e=all[i];if(e.scrollHeight>e.clientHeight+8&&e.clientHeight>0){var o=getComputedStyle(e).overflowY;if(o==='auto'||o==='scroll'){x=Math.max(x,e.scrollHeight-e.clientHeight);}}}return Math.ceil(h+x);}
 function post(){try{var ch=contentH();if(ch===0)return;parent.postMessage({lam:'page',href:location.href,contentHeight:ch,viewportHeight:innerHeight,authFailures:A.fails,lastAuthFailure:A.last,profile:P,hasSession:H},'*');}catch(e){}}

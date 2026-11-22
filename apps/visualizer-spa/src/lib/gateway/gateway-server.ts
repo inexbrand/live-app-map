@@ -136,68 +136,74 @@ export function startGateway(opts: GatewayOptions): Server<WsData> {
     port: opts.port,
     hostname: '127.0.0.1',
     idleTimeout: 120,
-    async fetch(req, server) {
-      const target = parseGatewayHost(req.headers.get('host') ?? '');
-      if (target === null) {
-        return new Response('Это шлюз Live App Map: адрес вида http://<профиль>--<цель>.localhost:<порт>/', { status: 404 });
-      }
-      if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
-        const url = new URL(req.url);
-        const gatewayOrigin = `http://${req.headers.get('host') ?? url.host}`;
-        const protocols = (req.headers.get('sec-websocket-protocol') ?? '').split(',').map((s) => s.trim()).filter((s) => s !== '');
-        const headers = upstreamHeaders(req, target, opts.store, gatewayOrigin, url.pathname);
-        delete headers['sec-websocket-key'];
-        delete headers['sec-websocket-version'];
-        delete headers['sec-websocket-extensions'];
-        delete headers['sec-websocket-protocol'];
-        const wsUrl = `${target.protocol === 'https:' ? 'wss:' : 'ws:'}//${target.hostname}:${target.port}${url.pathname}${url.search}`;
-        const ok = server.upgrade(req, {
-          data: { url: wsUrl, headers, protocols, queue: [] },
-          ...(protocols[0] === undefined ? {} : { headers: { 'sec-websocket-protocol': protocols[0] } }),
-        });
-        return ok ? undefined : new Response('upgrade failed', { status: 400 });
-      }
-      try {
-        return await forward(req, target, opts.store);
-      } catch (err) {
-        const message = err instanceof Error ? err.message : String(err);
-        log(`[lam-gateway] ${target.origin}: ${message}`);
-        return new Response(`Приложение ${target.origin} не отвечает: ${message}`, { status: 502, headers: { 'content-type': 'text/plain; charset=utf-8' } });
-      }
-    },
-    websocket: {
-      open(ws: ServerWebSocket<WsData>) {
-        const { url, headers, protocols } = ws.data;
-        const upstream: WebSocket = Reflect.construct(WebSocket, [url, { headers, protocols, tls: { rejectUnauthorized: false } }]);
-        upstream.binaryType = 'arraybuffer';
-        upstream.addEventListener('open', () => {
-          for (const m of ws.data.queue) {
-            upstream.send(m);
-          }
-          ws.data.queue = [];
-        });
-        upstream.addEventListener('message', (e: MessageEvent) => {
-          const d: unknown = e.data;
-          if (typeof d === 'string' || d instanceof ArrayBuffer) {
-            ws.send(d);
-          }
-        });
-        upstream.addEventListener('close', () => ws.close());
-        upstream.addEventListener('error', () => ws.close());
-        ws.data.upstream = upstream;
-      },
-      message(ws: ServerWebSocket<WsData>, message: string | Buffer) {
-        const payload = typeof message === 'string' ? message : new Uint8Array(message);
-        const up = ws.data.upstream;
-        if (up !== undefined && up.readyState === WebSocket.OPEN) {
-          up.send(payload);
-        } else {
-          ws.data.queue.push(payload);
-        }
-      },
-      close(ws: ServerWebSocket<WsData>) {
-        ws.data.upstream?.close();
-      },
-    },
+    fetch: (req, server) => gatewayFetch(req, server, opts.store, log),
+    websocket: { open: wsOpen, message: wsMessage, close: (ws: ServerWebSocket<WsData>) => ws.data.upstream?.close() },
   });
+}
+
+/** Запрос к шлюзу: WebSocket — апгрейд, иначе — к приложению; нет ответа — 502. */
+async function gatewayFetch(req: Request, server: Server<WsData>, store: SessionStore, log: (line: string) => void): Promise<Response | undefined> {
+  const target = parseGatewayHost(req.headers.get('host') ?? '');
+  if (target === null) {
+    return new Response('Это шлюз Live App Map: адрес вида http://<профиль>--<цель>.localhost:<порт>/', { status: 404 });
+  }
+  if (req.headers.get('upgrade')?.toLowerCase() === 'websocket') {
+    return server.upgrade(req, wsUpgrade(req, target, store)) ? undefined : new Response('upgrade failed', { status: 400 });
+  }
+  try {
+    return await forward(req, target, store);
+  } catch (err) {
+    const message = err instanceof Error ? err.message : String(err);
+    log(`[lam-gateway] ${target.origin}: ${message}`);
+    return new Response(`Приложение ${target.origin} не отвечает: ${message}`, { status: 502, headers: { 'content-type': 'text/plain; charset=utf-8' } });
+  }
+}
+
+/** Данные соединения WebSocket: адрес приложения, заголовки профиля, подпротоколы. */
+function wsUpgrade(req: Request, target: GatewayTarget, store: SessionStore): { data: WsData; headers?: Record<string, string> } {
+  const url = new URL(req.url);
+  const gatewayOrigin = `http://${req.headers.get('host') ?? url.host}`;
+  const protocols = (req.headers.get('sec-websocket-protocol') ?? '').split(',').map((s) => s.trim()).filter((s) => s !== '');
+  const headers = upstreamHeaders(req, target, store, gatewayOrigin, url.pathname);
+  for (const h of ['sec-websocket-key', 'sec-websocket-version', 'sec-websocket-extensions', 'sec-websocket-protocol']) {
+    delete headers[h];
+  }
+  const wsUrl = `${target.protocol === 'https:' ? 'wss:' : 'ws:'}//${target.hostname}:${target.port}${url.pathname}${url.search}`;
+  return {
+    data: { url: wsUrl, headers, protocols, queue: [] },
+    ...(protocols[0] === undefined ? {} : { headers: { 'sec-websocket-protocol': protocols[0] } }),
+  };
+}
+
+/** Браузер подключился: открыть соединение с приложением и связать их. */
+function wsOpen(ws: ServerWebSocket<WsData>): void {
+  const { url, headers, protocols } = ws.data;
+  const upstream: WebSocket = Reflect.construct(WebSocket, [url, { headers, protocols, tls: { rejectUnauthorized: false } }]);
+  upstream.binaryType = 'arraybuffer';
+  upstream.addEventListener('open', () => {
+    for (const m of ws.data.queue) {
+      upstream.send(m);
+    }
+    ws.data.queue = [];
+  });
+  upstream.addEventListener('message', (e: MessageEvent) => {
+    const d: unknown = e.data;
+    if (typeof d === 'string' || d instanceof ArrayBuffer) {
+      ws.send(d);
+    }
+  });
+  upstream.addEventListener('close', () => ws.close());
+  upstream.addEventListener('error', () => ws.close());
+  ws.data.upstream = upstream;
+}
+
+/** Сообщение браузера — приложению; соединение ещё не открыто — в очередь. */
+function wsMessage(ws: ServerWebSocket<WsData>, message: string | Buffer): void {
+  const payload = typeof message === 'string' ? message : new Uint8Array(message);
+  const up = ws.data.upstream;
+  if (up !== undefined && up.readyState === WebSocket.OPEN) {
+    up.send(payload);
+  } else {
+    ws.data.queue.push(payload);
+  }
 }

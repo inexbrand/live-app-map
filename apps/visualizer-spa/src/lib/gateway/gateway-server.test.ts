@@ -105,3 +105,67 @@ describe('шлюз', () => {
     expect(res).toBe(404);
   });
 });
+
+describe('шлюз: WebSocket и отказы', () => {
+  test('WebSocket проксируется к приложению: сообщения туда и обратно, подпротокол', async () => {
+    const echo = Bun.serve<undefined>({
+      port: 0,
+      hostname: '127.0.0.1',
+      fetch(req, server) {
+        return server.upgrade(req, { headers: { 'sec-websocket-protocol': 'vite-hmr' } }) ? undefined : new Response('no', { status: 400 });
+      },
+      websocket: {
+        message(ws, m) {
+          ws.send(`эхо:${typeof m === 'string' ? m : new TextDecoder().decode(m)}`);
+        },
+      },
+    });
+    try {
+      const host = `recruiter--h${echo.port}.localhost:${gateway.port}`;
+      const ws: WebSocket = Reflect.construct(WebSocket, [`ws://127.0.0.1:${gateway.port}/hmr`, { headers: { host }, protocols: ['vite-hmr'] }]);
+      const got = await new Promise<string[]>((resolve, reject) => {
+        const out: string[] = [];
+        // Сообщения до открытия соединения с приложением ждут в очереди
+        ws.addEventListener('open', () => {
+          ws.send('раз');
+          ws.send(new TextEncoder().encode('два'));
+        });
+        ws.addEventListener('message', (e: MessageEvent) => {
+          out.push(String(e.data));
+          if (out.length === 2) {
+            resolve(out);
+          }
+        });
+        ws.addEventListener('error', () => reject(new Error('ws error')));
+        setTimeout(() => reject(new Error('нет ответа')), 3000);
+      });
+      expect(got).toEqual(['эхо:раз', 'эхо:два']);
+      expect(ws.protocol).toBe('vite-hmr');
+      ws.close();
+    } finally {
+      void echo.stop(true);
+    }
+  });
+
+  test('не адрес шлюза — 404 с подсказкой; приложение не отвечает — 502 и строка в журнал', async () => {
+    const lines: string[] = [];
+    const g = startGateway({ port: 0, store, log: (l) => lines.push(l) });
+    try {
+      const plain = await fetch(`http://127.0.0.1:${g.port}/`);
+      expect(plain.status).toBe(404);
+      expect(await plain.text()).toContain('<профиль>--<цель>');
+      const dead = await new Promise<number>((resolve, reject) => {
+        const r = request({ hostname: '127.0.0.1', port: g.port, path: '/', headers: { host: `recruiter--h1.localhost:${g.port}` } }, (res) => {
+          res.resume();
+          resolve(res.statusCode ?? 0);
+        });
+        r.on('error', reject);
+        r.end();
+      });
+      expect(dead).toBe(502);
+      expect(lines[0]).toContain('[lam-gateway] http://localhost:1');
+    } finally {
+      void g.stop(true);
+    }
+  });
+});
