@@ -27,13 +27,7 @@ export type DocMarkdownProps = {
 
 /** Текст узла children, если это строка. */
 function textOf(children: ReactNode): string | null {
-  if (typeof children === 'string') {
-    return children;
-  }
-  if (Array.isArray(children) && children.every((c) => typeof c === 'string')) {
-    return children.join('');
-  }
-  return null;
+  return typeof children === 'string' ? children : null;
 }
 
 /** Что нужно ссылкам документа: где он, что есть в разделе docs и в карте. */

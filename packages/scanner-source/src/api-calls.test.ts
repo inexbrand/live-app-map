@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import path from 'node:path';
 import type { ApiCall, CodeModel } from '@live-app-map/schema';
 import { scanSource } from './index';
+import { callLines, scan } from './test/scan-project';
 
 const FIXTURE = path.resolve(import.meta.dir, '../../../fixtures/source-monorepo');
 const USERS_SCREEN = 'apps/web/src/app/users/page.tsx';
@@ -207,5 +208,11 @@ describe('scanSource: экраны → вызовы', () => {
 
   test('без entries экранов нет', () => {
     expect(scanSource({ root: FIXTURE }).code.screens).toBeUndefined();
+  });
+});
+
+describe('глубина обёрток', () => {
+  test('цепочка из 4 обёрток доходит до fetch, из 5 — нет; объявление без тела и взаимная рекурсия — не обёртки', () => {
+    expect(callLines(scan({ 'src/w.ts': "function w3_1(p: string) { return w3_2(p); }\nfunction w3_2(p: string) { return w3_3(p); }\nfunction w3_3(p: string) { return fetch(p); }\nexport const go3 = () => w3_1('/api/chain3');\nfunction w4_1(p: string) { return w4_2(p); }\nfunction w4_2(p: string) { return w4_3(p); }\nfunction w4_3(p: string) { return w4_4(p); }\nfunction w4_4(p: string) { return fetch(p); }\nexport const go4 = () => w4_1('/api/chain4');\nfunction w5_1(p: string) { return w5_2(p); }\nfunction w5_2(p: string) { return w5_3(p); }\nfunction w5_3(p: string) { return w5_4(p); }\nfunction w5_4(p: string) { return w5_5(p); }\nfunction w5_5(p: string) { return fetch(p); }\nexport const go5 = () => w5_1('/api/chain5');\nfunction w6_1(p: string) { return w6_2(p); }\nfunction w6_2(p: string) { return w6_3(p); }\nfunction w6_3(p: string) { return w6_4(p); }\nfunction w6_4(p: string) { return w6_5(p); }\nfunction w6_5(p: string) { return w6_6(p); }\nfunction w6_6(p: string) { return fetch(p); }\nexport const go6 = () => w6_1('/api/chain6');\ndeclare function ext(p: string): void;\nexport const e = () => ext('/api/ext');\nfunction a(p: string): unknown { return b(p); }\nfunction b(p: string): unknown { return a(p); }\nexport const ab = () => a('/api/ab');\n" }))).toEqual(['GET /api/chain3 wrapper via w3_1', 'GET /api/chain4 wrapper via w4_1']);
   });
 });

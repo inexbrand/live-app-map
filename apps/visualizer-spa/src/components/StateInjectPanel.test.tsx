@@ -7,7 +7,7 @@ import { dumpDom, useDom } from '../test/dom';
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import type { AppMapDocument } from '@live-app-map/schema';
+import type { AppMapDocument, CodeSymbol } from '@live-app-map/schema';
 import { selectNodeCode } from '../lib/node-code';
 import { useAppStore } from '../store/app-store';
 import { openMap, resetStores } from '../test/fixtures';
@@ -207,5 +207,37 @@ describe('панель кода', () => {
       expect(ui.getAllByText('Роут не найден в исходниках').length).toBeGreaterThan(0);
       dumpDom('code-unmatched', container);
     }
+  });
+
+  test('панель кода экрана есть, если есть функции файла, вызовы с роутом или несопоставленные', () => {
+    const doc = openMap('korbor-miniapp');
+    const id = nodeWhere(doc, (nid) => {
+      const v = selectNodeCode(doc, nid);
+      return v !== null && v.kind === 'page' && v.api.length > 0;
+    });
+    const view = selectNodeCode(doc, id);
+    const code = doc.code;
+    if (view === null || view.kind !== 'page' || code === undefined) {
+      throw new Error('нет кода экрана');
+    }
+    const otherSymbols = code.symbols.filter((s) => s.location.file !== view.file);
+    const ownSymbol: CodeSymbol = { id: 'sym:own', kind: 'function', name: 'ownHelper', serviceId: 'x', location: { file: view.file, line: 1 } };
+    const variants: Array<[string, AppMapDocument]> = [
+      ['ничего', { ...doc, code: { ...code, symbols: otherSymbols, screens: [] } }],
+      ['только функции', { ...doc, code: { ...code, symbols: [...otherSymbols, ownSymbol], screens: [] } }],
+      ['только вызовы с роутом', { ...doc, code: { ...code, symbols: otherSymbols } }],
+      ['только несопоставленные', { ...doc, code: { ...code, symbols: otherSymbols, routes: [] } }],
+    ];
+    const shown = variants.map(([name, d]) => {
+      act(() => {
+        useAppStore.getState().loadDocument(d);
+        useAppStore.getState().selectPage(id);
+      });
+      const { container, unmount } = render(<StateInjectPanel />);
+      const has = container.querySelector('[data-testid="code-panel"]') !== null;
+      unmount();
+      return `${name}: ${has}`;
+    });
+    expect(shown).toEqual(['ничего: false', 'только функции: true', 'только вызовы с роутом: true', 'только несопоставленные: true']);
   });
 });

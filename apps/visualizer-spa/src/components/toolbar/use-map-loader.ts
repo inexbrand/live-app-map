@@ -104,9 +104,7 @@ async function mintMissingDogfood(dogfood: DogfoodActorsState): Promise<void> {
 async function loadCatalogMap(preset: MapCatalogEntry, dogfood: DogfoodActorsState, setSource: (s: MapSourceRef) => void): Promise<boolean> {
   const app = useAppStore.getState();
   // iframe dogfood: proxy всегда нужен (frame-bypass + TLS)
-  if (!app.useTlsProxy) {
-    app.setUseTlsProxy(true);
-  }
+  app.setUseTlsProxy(true);
   const res = await loadMapPresetIntoStore(preset, {
     setBaseUrlOverride: app.setBaseUrlOverride,
     loadUnknownJson: app.loadUnknownJson,

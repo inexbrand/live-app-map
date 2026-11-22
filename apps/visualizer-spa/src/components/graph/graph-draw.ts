@@ -4,6 +4,32 @@
  */
 import type { GraphNodeKind } from '../../lib/doc-graph';
 
+/** Часть контекста canvas, которой рисуется граф. */
+export type GraphCanvas = Pick<
+  CanvasRenderingContext2D,
+  | 'globalAlpha'
+  | 'strokeStyle'
+  | 'fillStyle'
+  | 'lineWidth'
+  | 'font'
+  | 'textAlign'
+  | 'textBaseline'
+  | 'lineJoin'
+  | 'clearRect'
+  | 'setLineDash'
+  | 'beginPath'
+  | 'closePath'
+  | 'moveTo'
+  | 'lineTo'
+  | 'rect'
+  | 'roundRect'
+  | 'arc'
+  | 'stroke'
+  | 'fill'
+  | 'strokeText'
+  | 'fillText'
+> & { measureText(text: string): { readonly width: number } };
+
 /** Узел симуляции. */
 export type SimNode = {
   readonly id: string;
@@ -75,7 +101,7 @@ function endId(e: SimNode | string): string {
 }
 
 /** Контур узла по типу: документы — круги, роуты — ромбы, таблицы и сервисы — квадраты, экраны — прямоугольники. */
-function shapePath(ctx: CanvasRenderingContext2D, n: SimNode, x: number, y: number, r: number): void {
+function shapePath(ctx: GraphCanvas, n: SimNode, x: number, y: number, r: number): void {
   ctx.beginPath();
   switch (n.kind) {
     case 'route':
@@ -148,7 +174,7 @@ function edgeLit(l: SimLink, focus: DrawFocus): boolean {
   return lit.size > 0 && lit.has(a) && lit.has(b) && [focus.selected, focus.hovered].some((id) => id === a || id === b);
 }
 
-function drawEdges(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], links: readonly SimLink[], t: ToScreen, focus: DrawFocus, pal: GraphPalette): void {
+function drawEdges(ctx: GraphCanvas, nodes: readonly SimNode[], links: readonly SimLink[], t: ToScreen, focus: DrawFocus, pal: GraphPalette): void {
   const dimming = focus.lit.size > 0;
   const byId = new Map(nodes.map((n) => [n.id, n]));
   ctx.lineWidth = 1;
@@ -171,7 +197,7 @@ function drawEdges(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], lin
 }
 
 /** Заливка или контур узла по типу. */
-function paintShape(ctx: CanvasRenderingContext2D, n: SimNode, pal: GraphPalette): void {
+function paintShape(ctx: GraphCanvas, n: SimNode, pal: GraphPalette): void {
   const color = isStrong(n.kind) ? pal.node : pal.nodeMuted;
   if (hollow(n.kind)) {
     ctx.fillStyle = pal.bg;
@@ -186,7 +212,7 @@ function paintShape(ctx: CanvasRenderingContext2D, n: SimNode, pal: GraphPalette
 }
 
 /** Кольца вокруг узла: эпоха не готова; узел выбран или найден. */
-function drawRings(ctx: CanvasRenderingContext2D, n: SimNode, x: number, y: number, r: number, focus: DrawFocus, pal: GraphPalette): void {
+function drawRings(ctx: GraphCanvas, n: SimNode, x: number, y: number, r: number, focus: DrawFocus, pal: GraphPalette): void {
   if (n.notReady && n.kind === 'epoch') {
     ctx.lineWidth = 2;
     ctx.strokeStyle = pal.attention;
@@ -201,7 +227,7 @@ function drawRings(ctx: CanvasRenderingContext2D, n: SimNode, x: number, y: numb
   }
 }
 
-function drawNodes(ctx: CanvasRenderingContext2D, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette): void {
+function drawNodes(ctx: GraphCanvas, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette): void {
   const t = toScreen(cam);
   const dimming = focus.lit.size > 0;
   for (const n of nodes.filter(isPlaced)) {
@@ -241,7 +267,7 @@ function labelColor(n: SimNode, focus: DrawFocus, pal: GraphPalette): string {
   return n.id === focus.selected || n.id === focus.hovered ? pal.labelStrong : pal.label;
 }
 
-function drawLabels(ctx: CanvasRenderingContext2D, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette, labelsAll: boolean): void {
+function drawLabels(ctx: GraphCanvas, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette, labelsAll: boolean): void {
   const t = toScreen(cam);
   const dimming = focus.lit.size > 0;
   ctx.font = '12px "Medeo Sans", sans-serif';
@@ -285,7 +311,7 @@ function drawLabels(ctx: CanvasRenderingContext2D, size: { readonly w: number; r
  * @param labelsAll - подписывать все узлы (локальный граф)
  */
 export function drawGraph(
-  ctx: CanvasRenderingContext2D,
+  ctx: GraphCanvas,
   size: { readonly w: number; readonly h: number },
   nodes: readonly SimNode[],
   links: readonly SimLink[],

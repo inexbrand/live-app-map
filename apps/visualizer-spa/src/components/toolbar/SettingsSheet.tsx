@@ -71,11 +71,10 @@ function MapAdaptiveField() {
 /** Сколько экранов живут, на паузе и закреплено. */
 function IframeBudgetLine() {
   const liveCount = useAppStore((s) => s.livePageIds.size);
-  const warmCount = useAppStore((s) => s.warmPageIds?.size ?? 0);
+  const warmCount = useAppStore((s) => s.warmPageIds.size);
   const pinCount = useAppStore((s) => s.pinnedPageIds.size);
   const maxLive = useAppStore((s) => s.maxLiveIframes);
-  // maxWarm / warmCount — keep-alive; запасное значение на случай частичного HMR store
-  const maxWarm = useAppStore((s) => (typeof s.maxWarmIframes === 'number' ? s.maxWarmIframes : 8));
+  const maxWarm = useAppStore((s) => s.maxWarmIframes);
   return (
     <p className="drawer__hint" data-testid="iframe-budget">
       Живых экранов {liveCount}
@@ -96,7 +95,7 @@ export function SettingsSheet(props: SettingsSheetProps) {
   const setIframeScale = useAppStore((s) => s.setIframeScale);
   const maxLive = useAppStore((s) => s.maxLiveIframes);
   const setMaxLive = useAppStore((s) => s.setMaxLiveIframes);
-  const maxWarm = useAppStore((s) => (typeof s.maxWarmIframes === 'number' ? s.maxWarmIframes : 8));
+  const maxWarm = useAppStore((s) => s.maxWarmIframes);
   const setMaxWarm = useAppStore((s) => s.setMaxWarmIframes);
   const globalRole = useAppStore((s) => s.globalRole);
   const setGlobalRole = useAppStore((s) => s.setGlobalRole);

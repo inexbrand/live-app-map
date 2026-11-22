@@ -3,44 +3,8 @@
  * слияние схем TypeBox, составные ключи Drizzle, обёртки клиента API с объектом опций
  * и деструктурированным параметром.
  */
-import { afterAll, describe, expect, test } from 'bun:test';
-import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
-import type { ApiRoute, CodeModel } from '@live-app-map/schema';
-import { scanSource } from './index';
-
-const dirs: string[] = [];
-
-afterAll(() => {
-  for (const d of dirs) {
-    rmSync(d, { recursive: true, force: true });
-  }
-});
-
-/** Сканирует проект-монорепо с одним сервисом apps/x из заданных файлов (пути от apps/x). */
-function scan(files: Record<string, string>): CodeModel {
-  const root = mkdtempSync(path.join(os.tmpdir(), 'lam-scan-'));
-  dirs.push(root);
-  const all: Record<string, string> = {
-    'package.json': JSON.stringify({ name: 'fx', private: true, workspaces: ['apps/*'] }),
-    'apps/x/package.json': JSON.stringify({ name: '@fx/x' }),
-    ...Object.fromEntries(Object.entries(files).map(([f, text]) => [`apps/x/${f}`, text])),
-  };
-  for (const [f, text] of Object.entries(all)) {
-    mkdirSync(path.dirname(path.join(root, f)), { recursive: true });
-    writeFileSync(path.join(root, f), text);
-  }
-  return scanSource({ root }).code;
-}
-
-function route(code: CodeModel, method: string, routePath: string): ApiRoute {
-  const found = code.routes.find((r) => r.method === method && r.path === routePath);
-  if (found === undefined) {
-    throw new Error(`нет роута ${method} ${routePath}; есть: ${code.routes.map((r) => `${r.method} ${r.path}`).join(', ')}`);
-  }
-  return found;
-}
+import { describe, expect, test } from 'bun:test';
+import { route, scan } from './test/scan-project';
 
 describe('обработчик роута по имени', () => {
   const code = scan({

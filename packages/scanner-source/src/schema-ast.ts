@@ -55,14 +55,6 @@ export function unwrap(expr: ts.Expression): ts.Expression {
   return ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr) || ts.isParenthesizedExpression(expr) ? unwrap(expr.expression) : expr;
 }
 
-/**
- * Значения из константы-массива: `t.Union(TYPES.map((v) => t.Literal(v)))`, `z.enum(TYPES)` →
- * `'a' | 'b'`; константа не массив литералов — «одно из TYPES».
- *
- * @param ctx - контекст
- * @param expr - `TYPES` или `TYPES.map(...)`
- * @returns тип строкой или undefined, если это не константа
- */
 /** `X.map(…)` → X; иначе само выражение. */
 function mappedSource(expr: ts.Expression): ts.Expression {
   return ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'map' ? expr.expression.expression : expr;
@@ -74,6 +66,14 @@ export function constInitOf(ctx: SourceContext, id: ts.Node): ts.Expression | un
   return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
 }
 
+/**
+ * Значения из константы-массива: `t.Union(TYPES.map((v) => t.Literal(v)))`, `z.enum(TYPES)` →
+ * `'a' | 'b'`; константа не массив литералов — «одно из TYPES».
+ *
+ * @param ctx - контекст
+ * @param expr - `TYPES` или `TYPES.map(...)`
+ * @returns тип строкой или undefined, если это не константа
+ */
 export function constValues(ctx: SourceContext, expr: ts.Expression | undefined): string | undefined {
   const id = expr === undefined ? undefined : mappedSource(expr);
   if (id === undefined || !ts.isIdentifier(id)) {

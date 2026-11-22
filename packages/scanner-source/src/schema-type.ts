@@ -91,8 +91,8 @@ function withRules(t: FieldType, rules: readonly string[]): FieldType {
 }
 
 /** Все поля необязательные (`t.Partial`, `.partial()`). */
-function allOptional(fields: readonly RouteSchemaField[] | undefined): RouteSchemaField[] | undefined {
-  return fields?.map((f) => ({ ...f, optional: true }));
+function allOptional(fields: readonly RouteSchemaField[]): RouteSchemaField[] {
+  return fields.map((f) => ({ ...f, optional: true }));
 }
 
 /** Объектный тип с полями. */
@@ -231,9 +231,9 @@ function unionText(ctx: SourceContext, e: ts.Expression | undefined, depth: numb
  */
 function zodType(ctx: SourceContext, ctor: Ctor, methods: readonly string[], depth: number): FieldType {
   const build = ZOD_CTORS.get(ctor.name);
-  const base = build === undefined ? { type: ctor.name, optional: false } : build(ctorArgs(ctx, ctor, depth));
-  const partial = methods.includes('partial') && base.fields !== undefined ? { fields: allOptional(base.fields) } : {};
   const optional = methods.some((m) => m === 'optional' || m === 'nullish');
+  const base = build === undefined ? { type: ctor.name, optional } : build(ctorArgs(ctx, ctor, depth));
+  const partial = methods.includes('partial') && base.fields !== undefined ? { fields: allOptional(base.fields) } : {};
   return withRules({ ...base, ...partial, optional }, zodRules(ctor.call, methods));
 }
 

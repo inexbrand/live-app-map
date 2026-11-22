@@ -31,3 +31,6 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 *-probe.tmp.mjs
 # замеры Reassure (база и текущий прогон — локальные)
 .reassure/
+
+target/
+.metrics/
