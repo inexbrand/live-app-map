@@ -41,6 +41,12 @@ const rawMap = JSON.parse(readFileSync(ALL, 'utf8')) as {
   code: { services: { id: string; name: string }[]; routes: { id: string; method: string; path: string; serviceId: string }[]; tables: { name: string }[] };
 };
 
+/** Значение фикстуры обязано быть — иначе тест бессмыслен. */
+function present<T>(value: T | undefined, what: string): T {
+  if (value === undefined) throw new Error(`в фикстуре нет: ${what}`);
+  return value;
+}
+
 describe('протокол', () => {
   test('ошибки разбора и запроса, уведомление без ответа, id не строка и не число — null', () => {
     const r = (line: string): RpcResponse | null => handleRpcText(line, ctx);
@@ -57,8 +63,8 @@ describe('протокол', () => {
 });
 
 describe('база знаний по коду', () => {
-  const route = rawMap.code.routes[0];
-  const service = rawMap.code.services.find((s) => s.id === route?.serviceId);
+  const route = present(rawMap.code.routes[0], 'роут в карте');
+  const service = present(rawMap.code.services.find((s) => s.id === route.serviceId), 'сервис роута');
 
   test('list_routes по сервису: только его роуты; неизвестный сервис — ошибка со списком', () => {
     const r = data('list_routes', { mapPath: ALL, service: service?.name });
@@ -99,7 +105,7 @@ describe('база знаний по коду', () => {
 
 describe('документация', () => {
   const docs = (JSON.parse(readFileSync(SELF, 'utf8')) as { docs: { epochs: { id: string; readiness: string; files: { path: string }[] }[] } }).docs;
-  const epoch = docs.epochs[0];
+  const epoch = present(docs.epochs[0], 'эпоха в карте');
 
   test('list_epochs: фильтр готовности, неизвестная — ошибка', () => {
     const ready = data('list_epochs', { mapPath: SELF, readiness: 'ready' })['epochs'] as { readiness: string }[];
