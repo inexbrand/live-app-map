@@ -17,52 +17,37 @@ export const DEFAULT_ENTRY_GLOBS = [
   'src/routes.ts',
 ];
 
+/** Не пустой и не «*». */
+function isConcrete(p: string | undefined): p is string {
+  return p !== undefined && p !== '' && p !== '*';
+}
+
+/** Литерал пути без подстановок шаблона. */
+function isLiteralPath(p: string | undefined): p is string {
+  return isConcrete(p) && !p.includes('${');
+}
+
+/** Источники путей по порядку: регулярка и пути из совпадения. */
+const PATH_SOURCES: readonly [RegExp, (m: RegExpMatchArray) => string[]][] = [
+  // path: "feed", path: "/vacancies", path: 'deals/:id'
+  [/\bpath\s*:\s*["'`]([^"'`]+)["'`]/g, (m) => (isLiteralPath(m[1]) ? [m[1]] : [])],
+  // tabRoute("id", "path") / similar helpers: second string literal
+  [/\b(?:tabRoute|route|childRoute)\(\s*["'`][^"'`]+["'`]\s*,\s*["'`]([^"'`]+)["'`]/g, (m) => (isLiteralPath(m[1]) ? [m[1]] : [])],
+  // Navigate to=
+  [/\bto=["'`]([^"'`]+)["'`]/g, (m) => (m[1]?.startsWith('/') ? [m[1]] : [])],
+  // Korbor admin: def("id", "/section", "relative/path", index)
+  [
+    /\bdef\(\s*["'`][^"'`]+["'`]\s*,\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/g,
+    (m) => [...(isConcrete(m[1]) ? [m[1]] : []), ...(isConcrete(m[2]) ? [m[2].startsWith('/') ? m[2] : `/${m[2]}`] : [])],
+  ],
+];
+
 /**
  * Извлекает path-литералы из исходника route-конфига.
  * Поддерживает: path: "feed", path: "/vacancies", path: 'deals/:id'
  */
 export function extractPathsFromSource(source: string): string[] {
-  const paths: string[] = [];
-  const re = /\bpath\s*:\s*["'`]([^"'`]+)["'`]/g;
-  let m: RegExpExecArray | null;
-  while ((m = re.exec(source)) !== null) {
-    const p = m[1];
-    if (!p || p === '*' || p.includes('${')) {
-      continue;
-    }
-    paths.push(p);
-  }
-  // tabRoute("id", "path") / similar helpers: second string literal
-  const tabRe =
-    /\b(?:tabRoute|route|childRoute)\(\s*["'`][^"'`]+["'`]\s*,\s*["'`]([^"'`]+)["'`]/g;
-  while ((m = tabRe.exec(source)) !== null) {
-    const p = m[1];
-    if (p && p !== '*' && !p.includes('${')) {
-      paths.push(p);
-    }
-  }
-  // index routes → treat parent later; also Navigate to=
-  const navRe = /\bto=["'`]([^"'`]+)["'`]/g;
-  while ((m = navRe.exec(source)) !== null) {
-    const p = m[1];
-    if (p && p.startsWith('/')) {
-      paths.push(p);
-    }
-  }
-  // Korbor admin: def("id", "/section", "relative/path", index)
-  const defRe =
-    /\bdef\(\s*["'`][^"'`]+["'`]\s*,\s*["'`]([^"'`]+)["'`]\s*,\s*["'`]([^"'`]+)["'`]/g;
-  while ((m = defRe.exec(source)) !== null) {
-    const section = m[1];
-    const relPath = m[2];
-    if (section && section !== '*') {
-      paths.push(section);
-    }
-    if (relPath && relPath !== '*') {
-      paths.push(relPath.startsWith('/') ? relPath : `/${relPath}`);
-    }
-  }
-  return [...new Set(paths)];
+  return [...new Set(PATH_SOURCES.flatMap(([re, pathsOf]) => [...source.matchAll(re)].flatMap(pathsOf)))];
 }
 
 /**
