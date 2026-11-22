@@ -103,12 +103,16 @@ export async function korborBearer(r: KorborRenewal, value: string): Promise<Bea
   if (r.kind === 'admin') {
     return { ok: true, token: value };
   }
+  // Сбой сети или таймаут — отказ, а не исключение: иначе кэш Bearer хранит отклонённый промис до перезапуска.
   const res = await fetch(`${r.apiBase.replace(/\/$/, '')}/api/v1/auth/telegram/miniapp`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify({ initData: value }),
     signal: AbortSignal.timeout(15_000),
-  });
+  }).catch((e: unknown) => (e instanceof Error ? e : new Error(String(e))));
+  if (res instanceof Error) {
+    return { ok: false, error: `вход мини-аппа не выдан: ${res.message}` };
+  }
   const token = res.ok ? accessTokenOf(await res.json().catch(() => null)) : '';
   return token !== '' ? { ok: true, token } : { ok: false, error: `вход мини-аппа не выдан (HTTP ${res.status})` };
 }
