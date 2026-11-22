@@ -1,7 +1,6 @@
 /**
  * Сегменты папок Next.js: [id], [...slug], [[...opt]], (group), @slot — в шаблон пути.
  */
-import path from 'node:path';
 
 export type SegmentKind =
   | { type: 'static'; name: string }

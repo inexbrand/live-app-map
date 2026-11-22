@@ -6,8 +6,8 @@ import path from 'node:path';
 import { diag } from '@live-app-map/diagnostics';
 import { assembleDocument, humanTitle, type ScanRequest, type ScanResult } from '@live-app-map/scanner-core';
 import type { AppMapEdge, AppMapNode, Diagnostic } from '@live-app-map/schema';
-import { discoverAppRouter, discoverPagesRouter, resolveRouterDir } from './discover';
-import { buildWrapsEdges, extractEdgesFromSource, matchRoute } from './edges';
+import { discoverAppRouter, discoverPagesRouter } from './discover';
+import { buildWrapsEdges, extractEdgesFromSource } from './edges';
 export { extractEdgesFromSource, matchRoute } from './edges';
 export { parseSegment, segmentsToPattern } from './segments';
 

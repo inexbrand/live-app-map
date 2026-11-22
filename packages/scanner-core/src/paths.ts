@@ -1,7 +1,6 @@
 /**
  * Шаблоны путей: подстановка примеров параметров, имена параметров, человекочитаемый заголовок.
  */
-import path from 'node:path';
 import { getExampleParam, type ExampleParamsConfig } from './example-params';
 
 /**

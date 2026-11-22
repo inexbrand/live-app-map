@@ -12,7 +12,7 @@ const PAGE_RE = /^(page|route|layout|loading|error|not-found|default|template)\.
 const PAGES_IGNORE = new Set(['_app', '_document', '_error', '_middleware']);
 
 /** Каталог роутера: `src/<name>`, иначе `<name>` в корне приложения. */
-export function resolveRouterDir(absRoot: string, name: 'app' | 'pages'): { dir: string; rel: string } | null {
+function resolveRouterDir(absRoot: string, name: 'app' | 'pages'): { dir: string; rel: string } | null {
   for (const rel of [`src/${name}`, name]) {
     const dir = path.join(absRoot, rel);
     if (existsSync(dir)) {
