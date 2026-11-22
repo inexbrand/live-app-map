@@ -45,7 +45,7 @@ export const SCHEMA_DIAGNOSTIC_CODES: readonly SchemaDiagnosticCode[] = [
   'DUPLICATE_PAGE_ID',
   'DANGLING_EDGE',
   'NO_URL',
-] as const;
+];
 
 /**
  * Канонический wire-тип diagnostic (schema + scanners + CLI + SPA).

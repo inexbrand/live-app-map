@@ -31,7 +31,7 @@ export const BUILTIN_VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   { id: 'w1024', label: '1024', width: 1024, height: 900, heightMode: 'fixed' },
   { id: 'w1280', label: '1280', width: 1280, height: 800, heightMode: 'fixed' },
   { id: 'w1920', label: '1920', width: 1920, height: 1080, heightMode: 'fixed' },
-] as const;
+];
 
 /** @deprecated alias — UI/тесты; то же что BUILTIN */
 export const VIEWPORT_PRESETS = BUILTIN_VIEWPORT_PRESETS;
