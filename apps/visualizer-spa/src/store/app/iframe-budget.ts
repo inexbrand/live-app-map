@@ -22,9 +22,9 @@ export function clampMaxLive(n: number): number {
   return clampIframeBudget(n, DEFAULT_MAX_LIVE);
 }
 
-/** Лимит warm iframe; 0 — без лимита. */
+/** Лимит warm iframe; 0 и меньше — ни одного (в настройках «0 — сразу unmount»). */
 export function clampMaxWarm(n: number): number {
-  return clampIframeBudget(n, DEFAULT_MAX_WARM);
+  return Number.isFinite(n) && Math.round(n) <= 0 ? 0 : clampIframeBudget(n, DEFAULT_MAX_WARM);
 }
 
 /** Раскладка iframe. */
