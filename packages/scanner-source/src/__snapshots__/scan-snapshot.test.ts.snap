@@ -1,0 +1,2580 @@
+// Bun Snapshot v1, https://bun.sh/docs/test/snapshots
+
+exports[`scanSource: снимок фикстур next-app-router-basic 1`] = `
+{
+  "code": {
+    "apiCalls": [],
+    "root": "<root>",
+    "routes": [],
+    "services": [],
+    "symbols": [
+      {
+        "id": "symbol:app/about/page.tsx#About",
+        "kind": "component",
+        "location": {
+          "file": "app/about/page.tsx",
+          "line": 3,
+        },
+        "name": "About",
+        "serviceId": "service:fixture-next-app-router-basic",
+        "signature": "()",
+      },
+      {
+        "doc": 
+"Fixture App Router route handler: GET /api/health.
+Нужен scanner-next unit-тестам includeRouteHandlers."
+,
+        "id": "symbol:app/api/health/route.ts#GET",
+        "kind": "function",
+        "location": {
+          "file": "app/api/health/route.ts",
+          "line": 5,
+        },
+        "name": "GET",
+        "serviceId": "service:fixture-next-app-router-basic",
+        "signature": "() => Response",
+      },
+      {
+        "id": "symbol:app/page.tsx#Home",
+        "kind": "component",
+        "location": {
+          "file": "app/page.tsx",
+          "line": 1,
+        },
+        "name": "Home",
+        "serviceId": "service:fixture-next-app-router-basic",
+        "signature": "()",
+      },
+      {
+        "id": "symbol:app/users/[id]/page.tsx#UserPage",
+        "kind": "component",
+        "location": {
+          "file": "app/users/[id]/page.tsx",
+          "line": 1,
+        },
+        "name": "UserPage",
+        "serviceId": "service:fixture-next-app-router-basic",
+        "signature": "()",
+      },
+    ],
+    "tables": [],
+  },
+  "diagnostics": [],
+  "files": 4,
+}
+`;
+
+exports[`scanSource: снимок фикстур react-router-basic 1`] = `
+{
+  "code": {
+    "apiCalls": [],
+    "root": "<root>",
+    "routes": [],
+    "services": [],
+    "symbols": [
+      {
+        "doc": 
+"Fixture: miniapp-like routes-config (tabRoute + path + Navigate).
+Не исполняется — только static source для scanner-react-router."
+,
+        "id": "symbol:src/app/routes-config.tsx#tabRoute",
+        "kind": "function",
+        "location": {
+          "file": "src/app/routes-config.tsx",
+          "line": 6,
+        },
+        "name": "tabRoute",
+        "serviceId": "service:react-router-basic-fixture",
+        "signature": "(id: string, path: string)",
+      },
+      {
+        "id": "symbol:src/app/routes-config.tsx#routes",
+        "kind": "variable",
+        "location": {
+          "file": "src/app/routes-config.tsx",
+          "line": 10,
+        },
+        "name": "routes",
+        "serviceId": "service:react-router-basic-fixture",
+      },
+      {
+        "id": "symbol:src/app/routes-config.tsx#ShellNav",
+        "kind": "component",
+        "location": {
+          "file": "src/app/routes-config.tsx",
+          "line": 22,
+        },
+        "name": "ShellNav",
+        "serviceId": "service:react-router-basic-fixture",
+        "signature": "()",
+      },
+      {
+        "doc": "Регистрирует секцию админки (паттерн Korbor admin).",
+        "id": "symbol:src/features/shell/route-config.ts#def",
+        "kind": "function",
+        "location": {
+          "file": "src/features/shell/route-config.ts",
+          "line": 8,
+        },
+        "name": "def",
+        "serviceId": "service:react-router-basic-fixture",
+        "signature": "(id: string, section: string, relPath: string, index = false)",
+      },
+      {
+        "id": "symbol:src/features/shell/route-config.ts#ADMIN_ROUTES",
+        "kind": "variable",
+        "location": {
+          "file": "src/features/shell/route-config.ts",
+          "line": 12,
+        },
+        "name": "ADMIN_ROUTES",
+        "serviceId": "service:react-router-basic-fixture",
+      },
+    ],
+    "tables": [],
+  },
+  "diagnostics": [],
+  "files": 2,
+}
+`;
+
+exports[`scanSource: снимок фикстур source-guarded 1`] = `
+{
+  "code": {
+    "apiCalls": [],
+    "root": "<root>",
+    "routes": [
+      {
+        "access": {
+          "auth": true,
+          "roles": [
+            "admin",
+            "employer",
+          ],
+        },
+        "dbCalls": [],
+        "doc": "Вакансия заказчика.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/guarded.ts",
+            "line": 47,
+          },
+        },
+        "id": "api:@g/api GET /api/me/vacancies/:vacancyId",
+        "input": {
+          "params": {
+            "fields": [
+              {
+                "name": "vacancyId",
+                "type": "string",
+              },
+            ],
+            "kind": "typebox",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 45,
+        },
+        "method": "GET",
+        "path": "/api/me/vacancies/:vacancyId",
+        "serviceId": "service:@g/api",
+      },
+      {
+        "access": {
+          "auth": true,
+          "checks": [
+            "requireAdminAccess",
+            "requirePermission",
+          ],
+          "permissions": [
+            "admin.access",
+            "admin.vacancies.write",
+          ],
+        },
+        "dbCalls": [],
+        "doc": "Создаёт вакансию из админки.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/guarded.ts",
+            "line": 60,
+          },
+        },
+        "id": "api:@g/api POST /api/admin/vacancies",
+        "input": {
+          "body": {
+            "fields": [
+              {
+                "name": "level",
+                "type": "'junior' | 'senior'",
+              },
+              {
+                "name": "title",
+                "rules": [
+                  "minLength 1",
+                ],
+                "type": "string",
+              },
+              {
+                "name": "salary",
+                "optional": true,
+                "type": "number",
+              },
+              {
+                "name": "tags",
+                "type": "string[]",
+              },
+              {
+                "name": "status",
+                "type": "'draft' | 'open'",
+              },
+            ],
+            "kind": "typebox",
+            "name": "CreateVacancyBody",
+          },
+          "query": {
+            "fields": [
+              {
+                "name": "dryRun",
+                "optional": true,
+                "type": "boolean",
+              },
+            ],
+            "kind": "typebox",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 58,
+        },
+        "method": "POST",
+        "path": "/api/admin/vacancies",
+        "response": {
+          "values": [
+            "body",
+          ],
+        },
+        "serviceId": "service:@g/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/guarded.ts",
+            "line": 66,
+          },
+        },
+        "id": "api:@g/api GET /api/public/health",
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 66,
+        },
+        "method": "GET",
+        "path": "/api/public/health",
+        "serviceId": "service:@g/api",
+      },
+      {
+        "access": {
+          "auth": true,
+          "checks": [
+            "requirePermissionPlugin",
+          ],
+          "permissions": [
+            "reports.read",
+          ],
+        },
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/guarded.ts",
+            "line": 68,
+          },
+        },
+        "id": "api:@g/api GET /api/admin/reports",
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 68,
+        },
+        "method": "GET",
+        "path": "/api/admin/reports",
+        "serviceId": "service:@g/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "hono",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/guarded.ts",
+            "line": 73,
+          },
+        },
+        "id": "api:@g/api POST /api/hono/items",
+        "input": {
+          "body": {
+            "fields": [
+              {
+                "name": "name",
+                "rules": [
+                  "min 1",
+                ],
+                "type": "string",
+              },
+              {
+                "name": "count",
+                "optional": true,
+                "rules": [
+                  "int",
+                ],
+                "type": "number",
+              },
+              {
+                "name": "kind",
+                "type": "'a' | 'b'",
+              },
+            ],
+            "kind": "zod",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 70,
+        },
+        "method": "POST",
+        "path": "/api/hono/items",
+        "serviceId": "service:@g/api",
+      },
+    ],
+    "services": [
+      {
+        "id": "service:@g/api",
+        "name": "@g/api",
+        "root": "apps/api",
+      },
+    ],
+    "symbols": [
+      {
+        "id": "symbol:apps/api/src/guarded.ts#app",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 43,
+        },
+        "name": "app",
+        "serviceId": "service:@g/api",
+      },
+      {
+        "id": "symbol:apps/api/src/guarded.ts#hono",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/guarded.ts",
+          "line": 70,
+        },
+        "name": "hono",
+        "serviceId": "service:@g/api",
+      },
+    ],
+    "tables": [],
+  },
+  "diagnostics": [],
+  "files": 1,
+}
+`;
+
+exports[`scanSource: снимок фикстур source-monorepo 1`] = `
+{
+  "code": {
+    "apiCalls": [
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/pages/audit-store.ts:13 GET /api/admin/audit/events",
+        "location": {
+          "file": "apps/admin/src/pages/audit-store.ts",
+          "line": 13,
+        },
+        "method": "GET",
+        "path": "/api/admin/audit/events",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/pages/audit-store.ts:16 POST /api/admin/audit/events/:id/ack",
+        "location": {
+          "file": "apps/admin/src/pages/audit-store.ts",
+          "line": 16,
+        },
+        "method": "POST",
+        "path": "/api/admin/audit/events/:id/ack",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/pages/audit.tsx:11 GET /api/admin/audit",
+        "location": {
+          "file": "apps/admin/src/pages/audit.tsx",
+          "line": 11,
+        },
+        "method": "GET",
+        "path": "/api/admin/audit",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "wrapper",
+        "id": "call:apps/admin/src/pages/audit.tsx:16 GET /api/admin/audit/export",
+        "location": {
+          "file": "apps/admin/src/pages/audit.tsx",
+          "line": 16,
+        },
+        "method": "GET",
+        "path": "/api/admin/audit/export",
+        "serviceId": "service:@fx/admin",
+        "via": "api.getRaw",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/pages/tabs.tsx:12 GET /api/admin/decoy",
+        "location": {
+          "file": "apps/admin/src/pages/tabs.tsx",
+          "line": 12,
+        },
+        "method": "GET",
+        "path": "/api/admin/decoy",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/pages/users.tsx:5 GET /api/admin/users",
+        "location": {
+          "file": "apps/admin/src/pages/users.tsx",
+          "line": 5,
+        },
+        "method": "GET",
+        "path": "/api/admin/users",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/admin/src/widgets/activity.tsx:3 GET /api/admin/activity",
+        "location": {
+          "file": "apps/admin/src/widgets/activity.tsx",
+          "line": 3,
+        },
+        "method": "GET",
+        "path": "/api/admin/activity",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/screens/Orders.tsx:6 GET /v1/orders/count",
+        "location": {
+          "file": "apps/miniapp/src/screens/Orders.tsx",
+          "line": 6,
+        },
+        "method": "GET",
+        "path": "/v1/orders/count",
+        "routeId": "api:@fx/express GET /v1/orders/count",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "eden",
+        "id": "call:apps/miniapp/src/screens/Profile.tsx:6 GET /api/users/:id",
+        "location": {
+          "file": "apps/miniapp/src/screens/Profile.tsx",
+          "line": 6,
+        },
+        "method": "GET",
+        "path": "/api/users/:id",
+        "routeId": "api:@fx/api GET /api/users/:id",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "eden",
+        "id": "call:apps/miniapp/src/screens/Profile.tsx:7 GET /api/users",
+        "location": {
+          "file": "apps/miniapp/src/screens/Profile.tsx",
+          "line": 7,
+        },
+        "method": "GET",
+        "path": "/api/users",
+        "routeId": "api:@fx/api GET /api/users",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "hono-rpc",
+        "id": "call:apps/miniapp/src/screens/Profile.tsx:8 POST /orders",
+        "location": {
+          "file": "apps/miniapp/src/screens/Profile.tsx",
+          "line": 8,
+        },
+        "method": "POST",
+        "path": "/orders",
+        "routeId": "api:@fx/hono POST /orders",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "hono-rpc",
+        "id": "call:apps/miniapp/src/screens/Profile.tsx:9 GET /health",
+        "location": {
+          "file": "apps/miniapp/src/screens/Profile.tsx",
+          "line": 9,
+        },
+        "method": "GET",
+        "path": "/health",
+        "routeId": "api:@fx/hono GET /health",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/screens/Settings.tsx:8 GET /v1/settings",
+        "location": {
+          "file": "apps/miniapp/src/screens/Settings.tsx",
+          "line": 8,
+        },
+        "method": "GET",
+        "path": "/v1/settings",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/cards.ts:5 POST /api/cards/auto-renew",
+        "location": {
+          "file": "apps/miniapp/src/stores/cards.ts",
+          "line": 5,
+        },
+        "method": "POST",
+        "path": "/api/cards/auto-renew",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/legacy.ts:3 GET /api/admin/tags",
+        "location": {
+          "file": "apps/miniapp/src/stores/legacy.ts",
+          "line": 3,
+        },
+        "method": "GET",
+        "path": "/api/admin/tags",
+        "routeId": "api:@fx/api GET /api/admin/tags",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/orders-store.ts:9 GET /v1/orders-store",
+        "location": {
+          "file": "apps/miniapp/src/stores/orders-store.ts",
+          "line": 9,
+        },
+        "method": "GET",
+        "path": "/v1/orders-store",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/orders-store.ts:10 DELETE /v1/orders-store/:id",
+        "location": {
+          "file": "apps/miniapp/src/stores/orders-store.ts",
+          "line": 10,
+        },
+        "method": "DELETE",
+        "path": "/v1/orders-store/:id",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/profile-api.ts:9 GET /v1/profile",
+        "location": {
+          "file": "apps/miniapp/src/stores/profile-api.ts",
+          "line": 9,
+        },
+        "method": "GET",
+        "path": "/v1/profile",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/profile-api.ts:10 PUT /v1/profile",
+        "location": {
+          "file": "apps/miniapp/src/stores/profile-api.ts",
+          "line": 10,
+        },
+        "method": "PUT",
+        "path": "/v1/profile",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/shared-client.ts:4 GET /v1/me",
+        "location": {
+          "file": "apps/miniapp/src/stores/shared-client.ts",
+          "line": 4,
+        },
+        "method": "GET",
+        "path": "/v1/me",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/shared-client.ts:5 GET /v1/ping",
+        "location": {
+          "file": "apps/miniapp/src/stores/shared-client.ts",
+          "line": 5,
+        },
+        "method": "GET",
+        "path": "/v1/ping",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/wallet-store.ts:4 GET /v1/wallet",
+        "location": {
+          "file": "apps/miniapp/src/stores/wallet-store.ts",
+          "line": 4,
+        },
+        "method": "GET",
+        "path": "/v1/wallet",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/stores/wallet-store.ts:5 POST /v1/wallet/top-up",
+        "location": {
+          "file": "apps/miniapp/src/stores/wallet-store.ts",
+          "line": 5,
+        },
+        "method": "POST",
+        "path": "/v1/wallet/top-up",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/miniapp/src/tanstack-routes.tsx:6 GET /v1/settings/defaults",
+        "location": {
+          "file": "apps/miniapp/src/tanstack-routes.tsx",
+          "line": 6,
+        },
+        "method": "GET",
+        "path": "/v1/settings/defaults",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "client": "ky",
+        "id": "call:apps/web/src/app/orders/page.tsx:7 POST /orders",
+        "location": {
+          "file": "apps/web/src/app/orders/page.tsx",
+          "line": 7,
+        },
+        "method": "POST",
+        "path": "/orders",
+        "routeId": "api:@fx/hono POST /orders",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/web/src/app/orders/page.tsx:8 GET /v1/orders/count",
+        "location": {
+          "file": "apps/web/src/app/orders/page.tsx",
+          "line": 8,
+        },
+        "method": "GET",
+        "path": "/v1/orders/count",
+        "routeId": "api:@fx/express GET /v1/orders/count",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "client": "wrapper",
+        "id": "call:apps/web/src/app/orders/page.tsx:9 GET /users/:userId/posts",
+        "location": {
+          "file": "apps/web/src/app/orders/page.tsx",
+          "line": 9,
+        },
+        "method": "GET",
+        "path": "/users/:userId/posts",
+        "routeId": "api:@fx/api GET /users/:id/posts",
+        "serviceId": "service:@fx/web",
+        "via": "client.request",
+      },
+      {
+        "client": "fetch",
+        "id": "call:apps/web/src/app/users/page.tsx:7 GET /api/unknown-thing",
+        "location": {
+          "file": "apps/web/src/app/users/page.tsx",
+          "line": 7,
+        },
+        "method": "GET",
+        "path": "/api/unknown-thing",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "client": "wrapper",
+        "id": "call:apps/web/src/lib/users.ts:6 GET /api/users",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 6,
+        },
+        "method": "GET",
+        "path": "/api/users",
+        "routeId": "api:@fx/api GET /api/users",
+        "serviceId": "service:@fx/web",
+        "via": "apiFetch",
+      },
+      {
+        "client": "wrapper",
+        "id": "call:apps/web/src/lib/users.ts:11 GET /api/users/:id",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 11,
+        },
+        "method": "GET",
+        "path": "/api/users/:id",
+        "routeId": "api:@fx/api GET /api/users/:id",
+        "serviceId": "service:@fx/web",
+        "via": "apiFetch",
+      },
+      {
+        "client": "wrapper",
+        "id": "call:apps/web/src/lib/users.ts:16 DELETE /api/admin/users/:id",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 16,
+        },
+        "method": "DELETE",
+        "path": "/api/admin/users/:id",
+        "routeId": "api:@fx/api DELETE /api/admin/users/:id",
+        "serviceId": "service:@fx/web",
+        "via": "api.delete",
+      },
+      {
+        "client": "axios",
+        "id": "call:apps/web/src/lib/users.ts:21 POST /users",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 21,
+        },
+        "method": "POST",
+        "path": "/users",
+        "routeId": "api:@fx/api POST /users",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "client": "fetch",
+        "id": "call:scripts/cleanup.ts:3 DELETE /orders/1",
+        "location": {
+          "file": "scripts/cleanup.ts",
+          "line": 3,
+        },
+        "method": "DELETE",
+        "path": "/orders/1",
+        "routeId": "api:@fx/express DELETE /orders/:id",
+        "serviceId": "service:fx-monorepo",
+      },
+    ],
+    "root": "<root>",
+    "routes": [
+      {
+        "dbCalls": [
+          {
+            "inLoop": true,
+            "location": {
+              "file": "apps/api/src/batch.ts",
+              "line": 9,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "users",
+          },
+          {
+            "inLoop": true,
+            "location": {
+              "file": "apps/api/src/repo.ts",
+              "line": 11,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "users",
+            "via": "findUserById",
+          },
+          {
+            "location": {
+              "file": "apps/api/src/batch.ts",
+              "line": 12,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "posts",
+          },
+        ],
+        "doc": "Пакетная выдача — с запросами в цикле (N+1).",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/batch.ts",
+            "line": 7,
+          },
+        },
+        "id": "api:@fx/api POST /users/batch",
+        "location": {
+          "file": "apps/api/src/batch.ts",
+          "line": 7,
+        },
+        "method": "POST",
+        "path": "/users/batch",
+        "response": {
+          "fields": [
+            "found",
+            "all",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/catalog.ts",
+            "line": 10,
+          },
+        },
+        "id": "api:@fx/api GET /api/admin/tags",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 10,
+        },
+        "method": "GET",
+        "path": "/api/admin/tags",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/catalog.ts",
+            "line": 10,
+          },
+        },
+        "id": "api:@fx/api GET /api/admin/colors",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 10,
+        },
+        "method": "GET",
+        "path": "/api/admin/colors",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/catalog.ts",
+            "line": 11,
+          },
+        },
+        "id": "api:@fx/api PATCH /api/admin/tags/:id",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 11,
+        },
+        "method": "PATCH",
+        "path": "/api/admin/tags/:id",
+        "response": {
+          "fields": [
+            "ok",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/catalog.ts",
+            "line": 11,
+          },
+        },
+        "id": "api:@fx/api PATCH /api/admin/colors/:id",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 11,
+        },
+        "method": "PATCH",
+        "path": "/api/admin/colors/:id",
+        "response": {
+          "fields": [
+            "ok",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/api/src/posts.ts",
+              "line": 14,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "posts",
+            "via": "PostRepository.listByAuthor",
+          },
+        ],
+        "doc": "Посты автора.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/posts.ts",
+            "line": 29,
+          },
+        },
+        "id": "api:@fx/api GET /users/:id/posts",
+        "location": {
+          "file": "apps/api/src/posts.ts",
+          "line": 29,
+        },
+        "method": "GET",
+        "path": "/users/:id/posts",
+        "response": {
+          "values": [
+            "repo.listByAuthor()",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/api/src/users.ts",
+              "line": 19,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "users",
+          },
+          {
+            "location": {
+              "file": "apps/api/src/users.ts",
+              "line": 20,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "posts",
+          },
+        ],
+        "doc": "Список пользователей с постами.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/users.ts",
+            "line": 18,
+          },
+        },
+        "id": "api:@fx/api GET /api/users",
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 18,
+        },
+        "method": "GET",
+        "path": "/api/users",
+        "response": {
+          "fields": [
+            "rows",
+            "all",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/api/src/repo.ts",
+              "line": 11,
+            },
+            "operation": "select",
+            "orm": "drizzle",
+            "table": "users",
+            "via": "findUserById",
+          },
+        ],
+        "doc": "Карточка пользователя по id.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/users.ts",
+            "line": 24,
+          },
+        },
+        "id": "api:@fx/api GET /api/users/:id",
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 24,
+        },
+        "method": "GET",
+        "path": "/api/users/:id",
+        "response": {
+          "fields": [
+            "error",
+          ],
+          "statuses": [
+            404,
+          ],
+          "values": [
+            "user",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/api/src/users.ts",
+              "line": 8,
+            },
+            "operation": "delete",
+            "orm": "drizzle",
+            "table": "posts",
+            "via": "purgePosts",
+          },
+          {
+            "location": {
+              "file": "apps/api/src/users.ts",
+              "line": 35,
+            },
+            "operation": "delete",
+            "orm": "drizzle",
+            "table": "users",
+          },
+        ],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/users.ts",
+            "line": 33,
+          },
+        },
+        "id": "api:@fx/api DELETE /api/admin/users/:id",
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 33,
+        },
+        "method": "DELETE",
+        "path": "/api/admin/users/:id",
+        "response": {
+          "fields": [
+            "ok",
+          ],
+        },
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/api/src/users.ts",
+              "line": 44,
+            },
+            "operation": "insert",
+            "orm": "drizzle",
+            "table": "users",
+          },
+        ],
+        "doc": "Создаёт пользователя.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/users.ts",
+            "line": 43,
+          },
+          "name": "createUser",
+        },
+        "id": "api:@fx/api POST /users",
+        "input": {
+          "body": {
+            "fields": [],
+            "kind": "typebox",
+            "name": "undefined",
+            "text": "undefined",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 50,
+        },
+        "method": "POST",
+        "path": "/users",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/express/src/server.ts",
+              "line": 9,
+            },
+            "operation": "count",
+            "orm": "prisma",
+            "table": "Order",
+          },
+        ],
+        "doc": "Число заказов.",
+        "framework": "express",
+        "handler": {
+          "location": {
+            "file": "apps/express/src/server.ts",
+            "line": 8,
+          },
+        },
+        "id": "api:@fx/express GET /v1/orders/count",
+        "location": {
+          "file": "apps/express/src/server.ts",
+          "line": 8,
+        },
+        "method": "GET",
+        "path": "/v1/orders/count",
+        "serviceId": "service:@fx/express",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/express/src/server.ts",
+              "line": 14,
+            },
+            "operation": "delete",
+            "orm": "prisma",
+            "table": "Order",
+          },
+        ],
+        "doc": "Отменяет заказ.",
+        "framework": "express",
+        "handler": {
+          "location": {
+            "file": "apps/express/src/server.ts",
+            "line": 13,
+          },
+        },
+        "id": "api:@fx/express DELETE /orders/:id",
+        "location": {
+          "file": "apps/express/src/server.ts",
+          "line": 13,
+        },
+        "method": "DELETE",
+        "path": "/orders/:id",
+        "response": {
+          "statuses": [
+            204,
+          ],
+        },
+        "serviceId": "service:@fx/express",
+      },
+      {
+        "dbCalls": [],
+        "doc": "Проверка живости.",
+        "framework": "hono",
+        "handler": {
+          "location": {
+            "file": "apps/hono/src/index.ts",
+            "line": 7,
+          },
+        },
+        "id": "api:@fx/hono GET /health",
+        "location": {
+          "file": "apps/hono/src/index.ts",
+          "line": 7,
+        },
+        "method": "GET",
+        "path": "/health",
+        "response": {
+          "values": [
+            "c.text()",
+          ],
+        },
+        "serviceId": "service:@fx/hono",
+      },
+      {
+        "dbCalls": [
+          {
+            "location": {
+              "file": "apps/hono/src/index.ts",
+              "line": 11,
+            },
+            "operation": "insert",
+            "orm": "prisma",
+            "table": "Order",
+          },
+        ],
+        "doc": "Оформляет заказ.",
+        "framework": "hono",
+        "handler": {
+          "location": {
+            "file": "apps/hono/src/index.ts",
+            "line": 10,
+          },
+        },
+        "id": "api:@fx/hono POST /orders",
+        "location": {
+          "file": "apps/hono/src/index.ts",
+          "line": 10,
+        },
+        "method": "POST",
+        "path": "/orders",
+        "response": {
+          "values": [
+            "order",
+          ],
+        },
+        "serviceId": "service:@fx/hono",
+      },
+    ],
+    "services": [
+      {
+        "id": "service:@fx/admin",
+        "name": "@fx/admin",
+        "root": "apps/admin",
+      },
+      {
+        "id": "service:@fx/api",
+        "name": "@fx/api",
+        "root": "apps/api",
+      },
+      {
+        "id": "service:@fx/express",
+        "name": "@fx/express",
+        "root": "apps/express",
+      },
+      {
+        "id": "service:@fx/hono",
+        "name": "@fx/hono",
+        "root": "apps/hono",
+      },
+      {
+        "id": "service:@fx/miniapp",
+        "name": "@fx/miniapp",
+        "root": "apps/miniapp",
+      },
+      {
+        "id": "service:@fx/web",
+        "name": "@fx/web",
+        "root": "apps/web",
+      },
+      {
+        "id": "service:@fx/db",
+        "name": "@fx/db",
+        "root": "packages/db",
+      },
+    ],
+    "symbols": [
+      {
+        "doc": "fetch с токеном: передаёт оболочка (сессия админки).",
+        "id": "symbol:apps/admin/src/pages/audit-store.ts#AuthedFetch",
+        "kind": "type",
+        "location": {
+          "file": "apps/admin/src/pages/audit-store.ts",
+          "line": 2,
+        },
+        "name": "AuthedFetch",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "doc": "Стор журнала: fetch приходит параметром, путь — шаблон с хвостом query.",
+        "id": "symbol:apps/admin/src/pages/audit-store.ts#createAuditStore",
+        "kind": "function",
+        "location": {
+          "file": "apps/admin/src/pages/audit-store.ts",
+          "line": 10,
+        },
+        "name": "createAuditStore",
+        "serviceId": "service:@fx/admin",
+        "signature": "(fetchWithAuth: AuthedFetch)",
+      },
+      {
+        "doc": "Журнал аудита.",
+        "id": "symbol:apps/admin/src/pages/audit.tsx#AuditPage",
+        "kind": "component",
+        "location": {
+          "file": "apps/admin/src/pages/audit.tsx",
+          "line": 10,
+        },
+        "name": "AuditPage",
+        "serviceId": "service:@fx/admin",
+        "signature": "(props: { readonly fetchWithAuth: (input: string, init?: RequestInit) => Promise<Response>; readonly api: AdminApi })",
+      },
+      {
+        "doc": "Вкладки карточки: switch по вкладке — не диспетчер экранов (совпал один раздел).",
+        "id": "symbol:apps/admin/src/pages/tabs.tsx#Tabs",
+        "kind": "component",
+        "location": {
+          "file": "apps/admin/src/pages/tabs.tsx",
+          "line": 2,
+        },
+        "name": "Tabs",
+        "serviceId": "service:@fx/admin",
+        "signature": "(props: { readonly tab: string })",
+      },
+      {
+        "doc": "Пользователи: список и карточка; виджет подключён через алиас пути из tsconfig.",
+        "id": "symbol:apps/admin/src/pages/users.tsx#UsersPage",
+        "kind": "component",
+        "location": {
+          "file": "apps/admin/src/pages/users.tsx",
+          "line": 4,
+        },
+        "name": "UsersPage",
+        "serviceId": "service:@fx/admin",
+        "signature": "()",
+      },
+      {
+        "doc": "Реестр экранов админки — только данные, без компонентов.",
+        "id": "symbol:apps/admin/src/route-config.ts#ADMIN_ROUTES",
+        "kind": "variable",
+        "location": {
+          "file": "apps/admin/src/route-config.ts",
+          "line": 2,
+        },
+        "name": "ADMIN_ROUTES",
+        "serviceId": "service:@fx/admin",
+      },
+      {
+        "doc": "Раздел пути → экран: компонент выбирается по первому сегменту.",
+        "id": "symbol:apps/admin/src/routing.tsx#renderRoute",
+        "kind": "function",
+        "location": {
+          "file": "apps/admin/src/routing.tsx",
+          "line": 5,
+        },
+        "name": "renderRoute",
+        "serviceId": "service:@fx/admin",
+        "signature": "(pathname: string)",
+      },
+      {
+        "doc": "Лента действий пользователя: виджет карточки.",
+        "id": "symbol:apps/admin/src/widgets/activity.tsx#ActivityFeed",
+        "kind": "component",
+        "location": {
+          "file": "apps/admin/src/widgets/activity.tsx",
+          "line": 2,
+        },
+        "name": "ActivityFeed",
+        "serviceId": "service:@fx/admin",
+        "signature": "()",
+      },
+      {
+        "doc": "Пакетная выдача — с запросами в цикле (N+1).",
+        "id": "symbol:apps/api/src/batch.ts#batchPlugin",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/batch.ts",
+          "line": 7,
+        },
+        "name": "batchPlugin",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Опции фабрики каталога.",
+        "id": "symbol:apps/api/src/catalog.ts#CatalogOptions",
+        "kind": "type",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 4,
+        },
+        "name": "CatalogOptions",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Фабрика CRUD-плагина: путь приходит из опций.",
+        "id": "symbol:apps/api/src/catalog.ts#createCatalogPlugin",
+        "kind": "function",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 7,
+        },
+        "name": "createCatalogPlugin",
+        "serviceId": "service:@fx/api",
+        "signature": "(options: CatalogOptions)",
+      },
+      {
+        "doc": "Каталог тегов.",
+        "id": "symbol:apps/api/src/catalog.ts#tagsPlugin",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 15,
+        },
+        "name": "tagsPlugin",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Каталог цветов.",
+        "id": "symbol:apps/api/src/catalog.ts#colorsPlugin",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/catalog.ts",
+          "line": 18,
+        },
+        "name": "colorsPlugin",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Клиент БД.",
+        "id": "symbol:apps/api/src/db.ts#db",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/db.ts",
+          "line": 2,
+        },
+        "name": "db",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Доступ к постам.",
+        "id": "symbol:apps/api/src/posts.ts#PostRepository",
+        "kind": "interface",
+        "location": {
+          "file": "apps/api/src/posts.ts",
+          "line": 6,
+        },
+        "name": "PostRepository",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Репозиторий постов на Drizzle.",
+        "id": "symbol:apps/api/src/posts.ts#createDrizzlePostRepository",
+        "kind": "function",
+        "location": {
+          "file": "apps/api/src/posts.ts",
+          "line": 11,
+        },
+        "name": "createDrizzlePostRepository",
+        "serviceId": "service:@fx/api",
+        "signature": "(client: typeof db) => PostRepository",
+      },
+      {
+        "doc": "Репозиторий в памяти для тестов — без БД.",
+        "id": "symbol:apps/api/src/posts.ts#MemoryPostRepository",
+        "kind": "class",
+        "location": {
+          "file": "apps/api/src/posts.ts",
+          "line": 20,
+        },
+        "name": "MemoryPostRepository",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Посты автора.",
+        "id": "symbol:apps/api/src/posts.ts#postsPlugin",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/posts.ts",
+          "line": 29,
+        },
+        "name": "postsPlugin",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": 
+"Ищет пользователя по id.
+
+@param id - id пользователя"
+,
+        "id": "symbol:apps/api/src/repo.ts#findUserById",
+        "kind": "function",
+        "location": {
+          "file": "apps/api/src/repo.ts",
+          "line": 10,
+        },
+        "name": "findUserById",
+        "serviceId": "service:@fx/api",
+        "signature": "(id: string) => Promise<unknown>",
+      },
+      {
+        "doc": "Плагин пользователей.",
+        "id": "symbol:apps/api/src/users.ts#usersPlugin",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 16,
+        },
+        "name": "usersPlugin",
+        "serviceId": "service:@fx/api",
+      },
+      {
+        "doc": "Отдельный плагин записи.",
+        "id": "symbol:apps/api/src/users.ts#writePlugin",
+        "kind": "function",
+        "location": {
+          "file": "apps/api/src/users.ts",
+          "line": 48,
+        },
+        "name": "writePlugin",
+        "serviceId": "service:@fx/api",
+        "signature": "()",
+      },
+      {
+        "id": "symbol:apps/express/src/prisma.ts#prisma",
+        "kind": "variable",
+        "location": {
+          "file": "apps/express/src/prisma.ts",
+          "line": 1,
+        },
+        "name": "prisma",
+        "serviceId": "service:@fx/express",
+      },
+      {
+        "id": "symbol:apps/hono/src/prisma.ts#prisma",
+        "kind": "variable",
+        "location": {
+          "file": "apps/hono/src/prisma.ts",
+          "line": 1,
+        },
+        "name": "prisma",
+        "serviceId": "service:@fx/hono",
+      },
+      {
+        "doc": "Eden treaty к API, база из env.",
+        "id": "symbol:apps/miniapp/src/api.ts#eden",
+        "kind": "variable",
+        "location": {
+          "file": "apps/miniapp/src/api.ts",
+          "line": 5,
+        },
+        "name": "eden",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "doc": "Hono RPC к сервису заказов.",
+        "id": "symbol:apps/miniapp/src/api.ts#rpc",
+        "kind": "variable",
+        "location": {
+          "file": "apps/miniapp/src/api.ts",
+          "line": 8,
+        },
+        "name": "rpc",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "doc": "Контекст клиента профиля; значение кладёт оболочка.",
+        "id": "symbol:apps/miniapp/src/app/Shell.tsx#ProfileApiContext",
+        "kind": "variable",
+        "location": {
+          "file": "apps/miniapp/src/app/Shell.tsx",
+          "line": 5,
+        },
+        "name": "ProfileApiContext",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "doc": "Оболочка внедряет клиент профиля через контекст.",
+        "id": "symbol:apps/miniapp/src/app/Shell.tsx#Shell",
+        "kind": "component",
+        "location": {
+          "file": "apps/miniapp/src/app/Shell.tsx",
+          "line": 8,
+        },
+        "name": "Shell",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "(props: { readonly children: unknown })",
+      },
+      {
+        "doc": "Дерево роутов React Router мини-приложения.",
+        "id": "symbol:apps/miniapp/src/routes.tsx#routes",
+        "kind": "variable",
+        "location": {
+          "file": "apps/miniapp/src/routes.tsx",
+          "line": 19,
+        },
+        "name": "routes",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "doc": "Экран заказов мини-приложения (грузится лениво).",
+        "id": "symbol:apps/miniapp/src/screens/Orders.tsx#OrdersScreen",
+        "kind": "component",
+        "location": {
+          "file": "apps/miniapp/src/screens/Orders.tsx",
+          "line": 4,
+        },
+        "name": "OrdersScreen",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Экран профиля в мини-приложении.",
+        "id": "symbol:apps/miniapp/src/screens/Profile.tsx#Profile",
+        "kind": "component",
+        "location": {
+          "file": "apps/miniapp/src/screens/Profile.tsx",
+          "line": 5,
+        },
+        "name": "Profile",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "(props: { readonly id: string })",
+      },
+      {
+        "doc": "Страница настроек: файл экрана — сам компонент (как у TanStack Router).",
+        "id": "symbol:apps/miniapp/src/screens/Settings.tsx#SettingsPage",
+        "kind": "component",
+        "location": {
+          "file": "apps/miniapp/src/screens/Settings.tsx",
+          "line": 6,
+        },
+        "name": "SettingsPage",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Таб кошелька: стор создаётся в useMemo, тип стора сканеру не виден.",
+        "id": "symbol:apps/miniapp/src/screens/Wallet.tsx#WalletScreen",
+        "kind": "component",
+        "location": {
+          "file": "apps/miniapp/src/screens/Wallet.tsx",
+          "line": 6,
+        },
+        "name": "WalletScreen",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Привязка карты: адрес кабинета — параметр (пусто — тот же origin), путь — литерал.",
+        "id": "symbol:apps/miniapp/src/stores/cards.ts#postAutoRenew",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/cards.ts",
+          "line": 4,
+        },
+        "name": "postAutoRenew",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "(enabled: boolean, origin: string = '')",
+      },
+      {
+        "id": "symbol:apps/miniapp/src/stores/cards.ts#callCards",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/cards.ts",
+          "line": 8,
+        },
+        "name": "callCards",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Старый загрузчик тегов: ни один экран его не импортирует.",
+        "id": "symbol:apps/miniapp/src/stores/legacy.ts#loadTags",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/legacy.ts",
+          "line": 2,
+        },
+        "name": "loadTags",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Стор заказов с интерфейсом: метод \`load\` есть и у стора кошелька.",
+        "id": "symbol:apps/miniapp/src/stores/orders-store.ts#OrdersStore",
+        "kind": "interface",
+        "location": {
+          "file": "apps/miniapp/src/stores/orders-store.ts",
+          "line": 2,
+        },
+        "name": "OrdersStore",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "id": "symbol:apps/miniapp/src/stores/orders-store.ts#createOrdersStore",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/orders-store.ts",
+          "line": 7,
+        },
+        "name": "createOrdersStore",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "() => OrdersStore",
+      },
+      {
+        "doc": "Клиент профиля: создаёт оболочка, экраны получают его из контекста.",
+        "id": "symbol:apps/miniapp/src/stores/profile-api.ts#ProfileApi",
+        "kind": "interface",
+        "location": {
+          "file": "apps/miniapp/src/stores/profile-api.ts",
+          "line": 2,
+        },
+        "name": "ProfileApi",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "id": "symbol:apps/miniapp/src/stores/profile-api.ts#createProfileApi",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/profile-api.ts",
+          "line": 7,
+        },
+        "name": "createProfileApi",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "() => ProfileApi",
+      },
+      {
+        "doc": "Общий клиент: им пользуются все экраны, каждому достаются только его методы.",
+        "id": "symbol:apps/miniapp/src/stores/shared-client.ts#createSharedClient",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/shared-client.ts",
+          "line": 2,
+        },
+        "name": "createSharedClient",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Стор кошелька: методы ходят в API.",
+        "id": "symbol:apps/miniapp/src/stores/wallet-store.ts#createWalletStore",
+        "kind": "function",
+        "location": {
+          "file": "apps/miniapp/src/stores/wallet-store.ts",
+          "line": 2,
+        },
+        "name": "createWalletStore",
+        "serviceId": "service:@fx/miniapp",
+        "signature": "()",
+      },
+      {
+        "doc": "Маршрут TanStack: данные грузит loader, компонент страницы — в своём файле.",
+        "id": "symbol:apps/miniapp/src/tanstack-routes.tsx#settingsRoute",
+        "kind": "variable",
+        "location": {
+          "file": "apps/miniapp/src/tanstack-routes.tsx",
+          "line": 10,
+        },
+        "name": "settingsRoute",
+        "serviceId": "service:@fx/miniapp",
+      },
+      {
+        "doc": "Карточка пользователя: имя и почта.",
+        "id": "symbol:apps/web/src/UserCard.tsx#UserCard",
+        "kind": "component",
+        "location": {
+          "file": "apps/web/src/UserCard.tsx",
+          "line": 4,
+        },
+        "name": "UserCard",
+        "serviceId": "service:@fx/web",
+        "signature": "(props: { name: string; email: string })",
+      },
+      {
+        "comments": [
+          "Форматирует имя для заголовка.",
+        ],
+        "id": "symbol:apps/web/src/UserCard.tsx#formatName",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/UserCard.tsx",
+          "line": 9,
+        },
+        "name": "formatName",
+        "serviceId": "service:@fx/web",
+        "signature": "(name: string) => string",
+      },
+      {
+        "doc": "Состояние формы профиля.",
+        "id": "symbol:apps/web/src/UserCard.tsx#ProfileStore",
+        "kind": "class",
+        "location": {
+          "file": "apps/web/src/UserCard.tsx",
+          "line": 12,
+        },
+        "name": "ProfileStore",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Пропсы карточки.",
+        "id": "symbol:apps/web/src/UserCard.tsx#UserCardProps",
+        "kind": "interface",
+        "location": {
+          "file": "apps/web/src/UserCard.tsx",
+          "line": 17,
+        },
+        "name": "UserCardProps",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Экран заказов.",
+        "id": "symbol:apps/web/src/app/orders/page.tsx#OrdersPage",
+        "kind": "component",
+        "location": {
+          "file": "apps/web/src/app/orders/page.tsx",
+          "line": 6,
+        },
+        "name": "OrdersPage",
+        "serviceId": "service:@fx/web",
+        "signature": "(props: { readonly status: string; readonly userId: string })",
+      },
+      {
+        "doc": "Экран списка пользователей.",
+        "id": "symbol:apps/web/src/app/users/page.tsx#UsersPage",
+        "kind": "component",
+        "location": {
+          "file": "apps/web/src/app/users/page.tsx",
+          "line": 5,
+        },
+        "name": "UsersPage",
+        "serviceId": "service:@fx/web",
+        "signature": "()",
+      },
+      {
+        "doc": "Строка пользователя с удалением.",
+        "id": "symbol:apps/web/src/components/UserRow.tsx#UserRow",
+        "kind": "component",
+        "location": {
+          "file": "apps/web/src/components/UserRow.tsx",
+          "line": 4,
+        },
+        "name": "UserRow",
+        "serviceId": "service:@fx/web",
+        "signature": "(props: { readonly id: string })",
+      },
+      {
+        "doc": "Опции запроса обёртки.",
+        "id": "symbol:apps/web/src/lib/api.ts#RequestOptions",
+        "kind": "type",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 11,
+        },
+        "name": "RequestOptions",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Обёртка над fetch: путь целиком от вызывающего, метод из опций.",
+        "id": "symbol:apps/web/src/lib/api.ts#apiFetch",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 14,
+        },
+        "name": "apiFetch",
+        "serviceId": "service:@fx/web",
+        "signature": "(path: string, options: RequestOptions = {}) => Promise<unknown>",
+      },
+      {
+        "doc": "Объект-обёртка с базой /api.",
+        "id": "symbol:apps/web/src/lib/api.ts#api",
+        "kind": "variable",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 26,
+        },
+        "name": "api",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Запрос, собранный билдером.",
+        "id": "symbol:apps/web/src/lib/api.ts#ApiRequest",
+        "kind": "type",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 32,
+        },
+        "name": "ApiRequest",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Клиент, принимающий готовый запрос.",
+        "id": "symbol:apps/web/src/lib/api.ts#ApiClient",
+        "kind": "class",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 35,
+        },
+        "name": "ApiClient",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "id": "symbol:apps/web/src/lib/api.ts#client",
+        "kind": "variable",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 41,
+        },
+        "name": "client",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Билдер: посты пользователя.",
+        "id": "symbol:apps/web/src/lib/api.ts#requests",
+        "kind": "variable",
+        "location": {
+          "file": "apps/web/src/lib/api.ts",
+          "line": 44,
+        },
+        "name": "requests",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "axios с базой из env (origin без пути).",
+        "id": "symbol:apps/web/src/lib/http.ts#http",
+        "kind": "variable",
+        "location": {
+          "file": "apps/web/src/lib/http.ts",
+          "line": 5,
+        },
+        "name": "http",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "ky с префиксом.",
+        "id": "symbol:apps/web/src/lib/http.ts#shop",
+        "kind": "variable",
+        "location": {
+          "file": "apps/web/src/lib/http.ts",
+          "line": 8,
+        },
+        "name": "shop",
+        "serviceId": "service:@fx/web",
+      },
+      {
+        "doc": "Список пользователей.",
+        "id": "symbol:apps/web/src/lib/users.ts#useUsers",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 5,
+        },
+        "name": "useUsers",
+        "serviceId": "service:@fx/web",
+        "signature": "() => Promise<unknown>",
+      },
+      {
+        "doc": "Карточка пользователя.",
+        "id": "symbol:apps/web/src/lib/users.ts#loadUser",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 10,
+        },
+        "name": "loadUser",
+        "serviceId": "service:@fx/web",
+        "signature": "(id: string) => Promise<unknown>",
+      },
+      {
+        "doc": "Удаление из админки.",
+        "id": "symbol:apps/web/src/lib/users.ts#removeUser",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 15,
+        },
+        "name": "removeUser",
+        "serviceId": "service:@fx/web",
+        "signature": "(id: string) => Promise<Response>",
+      },
+      {
+        "doc": "Создание пользователя.",
+        "id": "symbol:apps/web/src/lib/users.ts#createUser",
+        "kind": "function",
+        "location": {
+          "file": "apps/web/src/lib/users.ts",
+          "line": 20,
+        },
+        "name": "createUser",
+        "serviceId": "service:@fx/web",
+        "signature": "(email: string) => Promise<unknown>",
+      },
+      {
+        "id": "symbol:packages/db/src/comments.ts#comments",
+        "kind": "variable",
+        "location": {
+          "file": "packages/db/src/comments.ts",
+          "line": 6,
+        },
+        "name": "comments",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "doc": "Статусы поста.",
+        "id": "symbol:packages/db/src/schema.ts#POST_STATUSES",
+        "kind": "variable",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 4,
+        },
+        "name": "POST_STATUSES",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "doc": "Пользователи сервиса. Одна строка — один аккаунт.",
+        "id": "symbol:packages/db/src/schema.ts#users",
+        "kind": "variable",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 9,
+        },
+        "name": "users",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "comments": [
+          "Посты пользователей.",
+        ],
+        "id": "symbol:packages/db/src/schema.ts#posts",
+        "kind": "variable",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 16,
+        },
+        "name": "posts",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "doc": "Теги поста: составной первичный ключ.",
+        "id": "symbol:packages/db/src/schema.ts#postTags",
+        "kind": "variable",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 27,
+        },
+        "name": "postTags",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "doc": "Скрипт обслуживания: удаляет тестовый заказ (не экран).",
+        "id": "symbol:scripts/cleanup.ts#cleanup",
+        "kind": "function",
+        "location": {
+          "file": "scripts/cleanup.ts",
+          "line": 2,
+        },
+        "name": "cleanup",
+        "serviceId": "service:fx-monorepo",
+        "signature": "() => Promise<void>",
+      },
+    ],
+    "tables": [
+      {
+        "columns": [
+          {
+            "default": "uuid()",
+            "name": "id",
+            "notNull": true,
+            "primaryKey": true,
+            "type": "String",
+          },
+          {
+            "doc": "Почта для чеков.",
+            "name": "email",
+            "notNull": true,
+            "type": "String",
+            "unique": true,
+          },
+        ],
+        "doc": "Покупатель.",
+        "exportName": "Customer",
+        "id": "table:prisma:Customer",
+        "location": {
+          "file": "packages/db/prisma/schema.prisma",
+          "line": 13,
+        },
+        "name": "customers",
+        "orm": "prisma",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "columns": [
+          {
+            "default": "autoincrement()",
+            "name": "id",
+            "notNull": true,
+            "primaryKey": true,
+            "type": "Int",
+          },
+          {
+            "name": "total",
+            "notNull": true,
+            "type": "Int",
+          },
+          {
+            "name": "note",
+            "type": "String",
+          },
+          {
+            "default": "NEW",
+            "enumValues": [
+              "NEW",
+              "PAID",
+            ],
+            "name": "status",
+            "notNull": true,
+            "type": "OrderStatus",
+          },
+          {
+            "name": "userId",
+            "notNull": true,
+            "references": {
+              "column": "id",
+              "onDelete": "Cascade",
+              "table": "Customer",
+            },
+            "sqlName": "user_id",
+            "type": "String",
+          },
+        ],
+        "doc": "Заказ покупателя.",
+        "exportName": "Order",
+        "id": "table:prisma:Order",
+        "location": {
+          "file": "packages/db/prisma/schema.prisma",
+          "line": 23,
+        },
+        "name": "orders",
+        "orm": "prisma",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "columns": [
+          {
+            "name": "body",
+            "type": "text",
+          },
+        ],
+        "doc": "Таблица \`comments\` — комментарии к постам.",
+        "exportName": "comments",
+        "id": "table:drizzle:comments",
+        "location": {
+          "file": "packages/db/src/comments.ts",
+          "line": 6,
+        },
+        "name": "comments",
+        "orm": "drizzle",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "columns": [
+          {
+            "name": "id",
+            "notNull": true,
+            "primaryKey": true,
+            "type": "uuid",
+          },
+          {
+            "name": "email",
+            "notNull": true,
+            "type": "text",
+            "unique": true,
+          },
+          {
+            "default": "now()",
+            "name": "createdAt",
+            "sqlName": "created_at",
+            "type": "timestamp",
+          },
+        ],
+        "doc": "Пользователи сервиса. Одна строка — один аккаунт.",
+        "exportName": "users",
+        "id": "table:drizzle:users",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 9,
+        },
+        "name": "users",
+        "orm": "drizzle",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "columns": [
+          {
+            "name": "id",
+            "notNull": true,
+            "primaryKey": true,
+            "type": "integer",
+          },
+          {
+            "doc": "Автор поста.",
+            "name": "authorId",
+            "notNull": true,
+            "references": {
+              "column": "id",
+              "onDelete": "cascade",
+              "table": "users",
+            },
+            "sqlName": "author_id",
+            "type": "uuid",
+          },
+          {
+            "name": "title",
+            "type": "text",
+          },
+          {
+            "default": "'draft'",
+            "enumValues": [
+              "draft",
+              "published",
+            ],
+            "name": "status",
+            "notNull": true,
+            "type": "text",
+          },
+        ],
+        "comments": [
+          "Посты пользователей.",
+        ],
+        "exportName": "posts",
+        "id": "table:drizzle:posts",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 16,
+        },
+        "name": "blog_posts",
+        "orm": "drizzle",
+        "serviceId": "service:@fx/db",
+      },
+      {
+        "columns": [
+          {
+            "name": "postId",
+            "notNull": true,
+            "primaryKey": true,
+            "references": {
+              "column": "id",
+              "table": "posts",
+            },
+            "sqlName": "post_id",
+            "type": "integer",
+          },
+          {
+            "name": "tag",
+            "notNull": true,
+            "primaryKey": true,
+            "type": "text",
+          },
+        ],
+        "doc": "Теги поста: составной первичный ключ.",
+        "exportName": "postTags",
+        "id": "table:drizzle:postTags",
+        "location": {
+          "file": "packages/db/src/schema.ts",
+          "line": 27,
+        },
+        "name": "post_tags",
+        "orm": "drizzle",
+        "serviceId": "service:@fx/db",
+      },
+    ],
+  },
+  "diagnostics": [],
+  "files": 41,
+}
+`;
+
+exports[`scanSource: снимок фикстур source-schemas 1`] = `
+{
+  "code": {
+    "apiCalls": [],
+    "root": "<root>",
+    "routes": [
+      {
+        "dbCalls": [],
+        "doc": "Рассылка: необязательное тело, вложенный объект по имени константы, массив объектов.",
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 19,
+          },
+        },
+        "id": "api:@s/api POST /api/admin/broadcasts",
+        "input": {
+          "body": {
+            "fields": [
+              {
+                "fields": [
+                  {
+                    "name": "roles",
+                    "type": "('recruiter' | 'employer')[]",
+                  },
+                  {
+                    "fields": [
+                      {
+                        "name": "id",
+                        "rules": [
+                          "format uuid",
+                        ],
+                        "type": "string",
+                      },
+                    ],
+                    "name": "city",
+                    "optional": true,
+                    "type": "object",
+                  },
+                ],
+                "name": "audience",
+                "optional": true,
+                "type": "AudienceFilter",
+              },
+              {
+                "fields": [
+                  {
+                    "name": "id",
+                    "rules": [
+                      "minLength 1",
+                    ],
+                    "type": "string",
+                  },
+                  {
+                    "name": "weight",
+                    "optional": true,
+                    "rules": [
+                      "minimum 0",
+                    ],
+                    "type": "number",
+                  },
+                ],
+                "name": "recipients",
+                "type": "object[]",
+              },
+              {
+                "name": "markup",
+                "type": "'html' | 'markdown'",
+              },
+            ],
+            "kind": "typebox",
+            "optional": true,
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 19,
+        },
+        "method": "POST",
+        "path": "/api/admin/broadcasts",
+        "response": {
+          "values": [
+            "body",
+          ],
+        },
+        "serviceId": "service:@s/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 28,
+          },
+        },
+        "id": "api:@s/api GET /api/admin/registry/:name",
+        "input": {
+          "query": {
+            "fields": [],
+            "kind": "typebox",
+            "type": "record<string, string>",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 28,
+        },
+        "method": "GET",
+        "path": "/api/admin/registry/:name",
+        "response": {
+          "values": [
+            "query",
+          ],
+        },
+        "serviceId": "service:@s/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 29,
+          },
+        },
+        "id": "api:@s/api PATCH /api/admin/presets/:id",
+        "input": {
+          "body": {
+            "fields": [],
+            "kind": "typebox",
+            "type": "unknown",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 29,
+        },
+        "method": "PATCH",
+        "path": "/api/admin/presets/:id",
+        "response": {
+          "values": [
+            "body",
+          ],
+        },
+        "serviceId": "service:@s/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 30,
+          },
+        },
+        "id": "api:@s/api PUT /api/admin/profile",
+        "input": {
+          "body": {
+            "fields": [
+              {
+                "name": "name",
+                "optional": true,
+                "type": "string",
+              },
+              {
+                "name": "age",
+                "optional": true,
+                "type": "number",
+              },
+            ],
+            "kind": "typebox",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 30,
+        },
+        "method": "PUT",
+        "path": "/api/admin/profile",
+        "response": {
+          "values": [
+            "body",
+          ],
+        },
+        "serviceId": "service:@s/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "elysia",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 31,
+          },
+        },
+        "id": "api:@s/api POST /api/admin/take",
+        "input": {
+          "body": {
+            "fields": [],
+            "kind": "typebox",
+            "name": "TakeBody",
+            "optional": true,
+            "type": "{}",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 31,
+        },
+        "method": "POST",
+        "path": "/api/admin/take",
+        "response": {
+          "values": [
+            "body",
+          ],
+        },
+        "serviceId": "service:@s/api",
+      },
+      {
+        "dbCalls": [],
+        "framework": "hono",
+        "handler": {
+          "location": {
+            "file": "apps/api/src/schemas.ts",
+            "line": 36,
+          },
+        },
+        "id": "api:@s/api POST /api/hono/orders",
+        "input": {
+          "body": {
+            "fields": [
+              {
+                "fields": [
+                  {
+                    "name": "sku",
+                    "rules": [
+                      "max 32",
+                    ],
+                    "type": "string",
+                  },
+                  {
+                    "name": "qty",
+                    "rules": [
+                      "int",
+                      "min 1",
+                    ],
+                    "type": "number",
+                  },
+                ],
+                "name": "lines",
+                "type": "object[]",
+              },
+              {
+                "name": "note",
+                "optional": true,
+                "type": "string",
+              },
+            ],
+            "kind": "zod",
+          },
+        },
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 33,
+        },
+        "method": "POST",
+        "path": "/api/hono/orders",
+        "serviceId": "service:@s/api",
+      },
+    ],
+    "services": [
+      {
+        "id": "service:@s/api",
+        "name": "@s/api",
+        "root": "apps/api",
+      },
+    ],
+    "symbols": [
+      {
+        "id": "symbol:apps/api/src/schemas.ts#app",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 17,
+        },
+        "name": "app",
+        "serviceId": "service:@s/api",
+      },
+      {
+        "id": "symbol:apps/api/src/schemas.ts#hono",
+        "kind": "variable",
+        "location": {
+          "file": "apps/api/src/schemas.ts",
+          "line": 33,
+        },
+        "name": "hono",
+        "serviceId": "service:@s/api",
+      },
+    ],
+    "tables": [],
+  },
+  "diagnostics": [],
+  "files": 1,
+}
+`;
