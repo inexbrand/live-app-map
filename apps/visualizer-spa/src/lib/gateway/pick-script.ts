@@ -1,5 +1,4 @@
-
-import { cssSelectorFor, domPathOf, installPicker, reactComponentOf } from './pick-dom';
+import { cssEscape, cssSelectorFor, domPathOf, installPicker, nthOfType, qualifierOf, reactComponentOf, selectorPart } from './pick-dom';
 import { componentNameOf, frameFromStack, mapFrame, originalPosition } from './pick-source';
 export { cssSelectorFor, domPathOf, installPicker, reactComponentOf } from './pick-dom';
 export { isLamPickCancelMessage, isLamPickedMessage } from './pick-messages';
@@ -20,7 +19,7 @@ export { componentNameOf, frameFromStack, mapFrame, originalPosition } from './p
  * Текст пикера для скрипта страницы: объявления функций и вызов установки.
  */
 export function pickerScriptText(): string {
-  return [componentNameOf, frameFromStack, originalPosition, mapFrame, cssSelectorFor, domPathOf, reactComponentOf, installPicker]
+  return [componentNameOf, frameFromStack, originalPosition, mapFrame, cssEscape, qualifierOf, nthOfType, selectorPart, cssSelectorFor, domPathOf, reactComponentOf, installPicker]
     .map((f) => f.toString())
     .join('\n') + '\ntry{installPicker();}catch(e){}';
 }

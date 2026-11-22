@@ -47,32 +47,10 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
   if (!s.document) {
     return { sets: { livePageIds: new Set(), warmPageIds: new Set(), warmLruOrder: [], mountedPageIds: new Set() }, deferredPins: [] };
   }
-  const candidates = s.document.nodes
-    .filter((n) => n.kind === 'page' || n.kind === 'not-found')
-    .map((n) => n.id);
-  const iframeAllowed: Record<string, boolean> = {};
-  for (const n of s.document.nodes) {
-    iframeAllowed[n.id] =
-      n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id));
-  }
-
-  // Prefetch 1-hop соседей selected — прогрев без pin
-  const prefetch = new Set<string>();
-  if (s.selectedPageId !== null && s.index !== null) {
-    for (const id of neighbors(s.index, s.selectedPageId)) {
-      prefetch.add(id);
-    }
-  }
-
-  // Hysteresis: уже LIVE чуть приоритетнее — меньше thrash при pan
-  const recentLiveScore: Record<string, number> = {};
-  for (const id of s.livePageIds) {
-    recentLiveScore[id] = 5;
-  }
-  for (const id of s.warmPageIds) {
-    recentLiveScore[id] = Math.max(recentLiveScore[id] ?? 0, 2);
-  }
-
+  const candidates = s.document.nodes.filter((n) => n.kind === 'page' || n.kind === 'not-found').map((n) => n.id);
+  const iframeAllowed: Record<string, boolean> = Object.fromEntries(
+    s.document.nodes.map((n) => [n.id, n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id))]),
+  );
   const result = reconcile({
     mode: s.mode,
     maxLiveIframes: s.maxLiveIframes,
@@ -81,11 +59,10 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
     pinned: s.pinnedPageIds,
     visible: s.visiblePageIds,
     selected: s.selectedPageId,
-    prefetch,
+    prefetch: prefetchOf(s),
     iframeAllowed,
-    recentLiveScore,
+    recentLiveScore: recentLiveScoreOf(s),
   });
-
   const warm = reconcileWarmPool({
     liveIds: result.liveIds,
     previousLiveIds: s.livePageIds,
@@ -94,7 +71,6 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
     maxWarm: s.maxWarmIframes,
     iframeAllowed,
   });
-
   return {
     sets: {
       livePageIds: result.liveIds,
@@ -104,4 +80,21 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
     },
     deferredPins: result.deferredPins,
   };
+}
+
+/** Prefetch 1-hop соседей selected — прогрев без pin. */
+function prefetchOf(s: LiveBudgetInput): Set<string> {
+  return new Set(s.selectedPageId !== null && s.index !== null ? neighbors(s.index, s.selectedPageId) : []);
+}
+
+/** Hysteresis: уже LIVE чуть приоритетнее — меньше thrash при pan. */
+function recentLiveScoreOf(s: LiveBudgetInput): Record<string, number> {
+  const score: Record<string, number> = {};
+  for (const id of s.livePageIds) {
+    score[id] = 5;
+  }
+  for (const id of s.warmPageIds) {
+    score[id] = Math.max(score[id] ?? 0, 2);
+  }
+  return score;
 }

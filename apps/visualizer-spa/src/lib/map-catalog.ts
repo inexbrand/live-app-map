@@ -113,20 +113,18 @@ function parseEntry(v: unknown): MapCatalogEntry | null {
     return null;
   }
   const { id, label, path, baseUrl, pageCount } = v;
-  if (
-    typeof id !== 'string' ||
-    id === '' ||
-    typeof label !== 'string' ||
-    typeof path !== 'string' ||
-    !path.startsWith('/') ||
-    typeof baseUrl !== 'string' ||
-    typeof pageCount !== 'number' ||
-    !Number.isInteger(pageCount) ||
-    pageCount < 0
-  ) {
+  if (typeof id !== 'string' || id === '' || typeof label !== 'string' || typeof baseUrl !== 'string') {
     return null;
   }
-  return { id, label, path, baseUrl, pageCount };
+  return isMapPath(path) && isCount(pageCount) ? { id, label, path, baseUrl, pageCount } : null;
+}
+
+function isMapPath(v: unknown): v is string {
+  return typeof v === 'string' && v.startsWith('/');
+}
+
+function isCount(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
 }
 
 function parseSkipped(v: unknown): SkippedMapFile | null {

@@ -26,24 +26,36 @@ function parseBugRequest(v: unknown): BugRequest | string {
   if (typeof v !== 'object' || v === null) {
     return 'тело — JSON {root, path, line, text, state}';
   }
-  const root = 'root' in v ? v.root : undefined;
-  const file = 'path' in v ? v.path : undefined;
-  const line = 'line' in v ? v.line : undefined;
-  const text = 'text' in v ? v.text : undefined;
-  const state = 'state' in v ? v.state : undefined;
-  if (typeof root !== 'string' || !path.isAbsolute(root)) {
+  const [root, file, line, text, state]: unknown[] = ['root', 'path', 'line', 'text', 'state'].map((k) => Reflect.get(v, k));
+  if (!isAbsoluteDir(root)) {
     return 'root — абсолютный каталог проекта (docs.root карты)';
   }
-  if (typeof file !== 'string' || !BUGS_FILE.test(file)) {
+  if (!isBugsFile(file)) {
     return 'path — docs/epoch/<эпоха>/09-bugs.md';
   }
-  if (typeof line !== 'number' || !Number.isInteger(line) || line < 0 || typeof text !== 'string' || text === '') {
+  if (!isLineNumber(line) || !isFilled(text)) {
     return 'line — номер строки пункта с нуля, text — текст пункта';
   }
   if (state !== 'open' && state !== 'closed') {
     return 'state — open или closed';
   }
   return { root, path: file, line, text, state };
+}
+
+function isAbsoluteDir(v: unknown): v is string {
+  return typeof v === 'string' && path.isAbsolute(v);
+}
+
+function isBugsFile(v: unknown): v is string {
+  return typeof v === 'string' && BUGS_FILE.test(v);
+}
+
+function isLineNumber(v: unknown): v is number {
+  return typeof v === 'number' && Number.isInteger(v) && v >= 0;
+}
+
+function isFilled(v: unknown): v is string {
+  return typeof v === 'string' && v !== '';
 }
 
 /** Корень проекта, который есть на этой машине. */
@@ -74,19 +86,24 @@ function applyBug(req: BugRequest): { status: number; body: unknown } {
 }
 
 /** Middleware документации с диска. */
+/** Документация проекта с диска: root — абсолютный каталог проекта. */
+function sendLiveDocs(req: Parameters<DevMiddleware>[0], res: Parameters<DevMiddleware>[1]): void {
+  const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root');
+  if (root === null || root === '') {
+    sendError(res, 400, 'не задан root — абсолютный путь к каталогу проекта');
+    return;
+  }
+  if (!existingRoot(root)) {
+    sendError(res, 404, `каталога проекта нет на этой машине: ${root}`);
+    return;
+  }
+  sendJson(res, 200, { ok: true, docs: scanDocs(root) });
+}
+
 export const docsWriteMiddleware: DevMiddleware = (req, res, next) => {
   const p = requestPath(req);
   if (p === DOCS_LIVE_PATH) {
-    const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root');
-    if (root === null || root === '') {
-      sendError(res, 400, 'не задан root — абсолютный путь к каталогу проекта');
-      return;
-    }
-    if (!existingRoot(root)) {
-      sendError(res, 404, `каталога проекта нет на этой машине: ${root}`);
-      return;
-    }
-    sendJson(res, 200, { ok: true, docs: scanDocs(root) });
+    sendLiveDocs(req, res);
     return;
   }
   if (p !== DOCS_BUG_PATH) {

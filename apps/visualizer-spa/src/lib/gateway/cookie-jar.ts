@@ -25,29 +25,32 @@ export function parseSetCookie(header: string, now: number): StoredCookie | null
   if (pair === undefined || eq <= 0) {
     return null;
   }
-  let path = '/';
-  let expiresAt: number | undefined;
+  const a: CookieAttrs = { path: '/', expiresAt: undefined };
   for (const raw of attrs) {
-    const [k = '', ...rest] = raw.trim().split('=');
-    const v = rest.join('=');
-    const key = k.toLowerCase();
-    if (key === 'path' && v.startsWith('/')) {
-      path = v;
-    } else if (key === 'max-age' && /^-?\d+$/.test(v)) {
-      expiresAt = now + Number(v) * 1000;
-    } else if (key === 'expires' && expiresAt === undefined) {
-      const t = Date.parse(v);
-      if (!Number.isNaN(t)) {
-        expiresAt = t;
-      }
-    }
+    applyCookieAttr(a, raw, now);
   }
   return {
     name: pair.slice(0, eq).trim(),
     value: pair.slice(eq + 1).trim(),
-    path,
-    ...(expiresAt === undefined ? {} : { expiresAt }),
+    path: a.path,
+    ...(a.expiresAt === undefined ? {} : { expiresAt: a.expiresAt }),
   };
+}
+
+type CookieAttrs = { path: string; expiresAt: number | undefined };
+
+/** Path, Max-Age (главнее Expires) и Expires; прочие атрибуты не нужны. */
+function applyCookieAttr(a: CookieAttrs, raw: string, now: number): void {
+  const [k = '', ...rest] = raw.trim().split('=');
+  const v = rest.join('=');
+  const key = k.toLowerCase();
+  if (key === 'path' && v.startsWith('/')) {
+    a.path = v;
+  } else if (key === 'max-age' && /^-?\d+$/.test(v)) {
+    a.expiresAt = now + Number(v) * 1000;
+  } else if (key === 'expires' && a.expiresAt === undefined && !Number.isNaN(Date.parse(v))) {
+    a.expiresAt = Date.parse(v);
+  }
 }
 
 /**

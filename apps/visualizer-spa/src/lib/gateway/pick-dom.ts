@@ -15,48 +15,64 @@ import { componentNameOf, frameFromStack, mapFrame } from './pick-source';
  * @param count - сколько элементов находит селектор (document.querySelectorAll)
  */
 export function cssSelectorFor(el: PickElement, count: (selector: string) => number): string {
-  const esc = (s: string): string => s.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
-  const part = (e: PickElement): string => {
-    const tag = e.tagName.toLowerCase();
-    if (e.id !== '' && !/\d{3,}/.test(e.id)) {
-      return tag + '#' + esc(e.id);
-    }
-    let base = tag;
-    const testId = e.getAttribute('data-testid');
-    if (testId !== null && testId !== '') {
-      base += '[data-testid="' + testId.replace(/"/g, '\\"') + '"]';
-    } else {
-      // Два осмысленных класса; утилиты с вариантами (md:, group/x, [..]) и хэши — шум
-      let n = 0;
-      for (let i = 0; i < e.classList.length && n < 2; i++) {
-        const c = e.classList[i] ?? '';
-        if (c !== '' && !/[:/[\]()!.%]|[0-9a-f]{5,}|__|_[a-zA-Z0-9]{5}$/.test(c)) {
-          base += '.' + esc(c);
-          n++;
-        }
-      }
-    }
-    let nth = 1;
-    let twins = false;
-    for (let s = e.previousElementSibling; s !== null; s = s.previousElementSibling) {
-      if (s.tagName === e.tagName) {
-        nth++;
-        twins = true;
-      }
-    }
-    for (let s = e.nextElementSibling; s !== null && !twins; s = s.nextElementSibling) {
-      twins = s.tagName === e.tagName;
-    }
-    return twins ? base + ':nth-of-type(' + nth + ')' : base;
-  };
   let selector = '';
   for (let e: PickElement | null = el; e !== null && e.tagName.toLowerCase() !== 'html'; e = e.parentElement) {
-    selector = selector === '' ? part(e) : part(e) + ' > ' + selector;
+    selector = selector === '' ? selectorPart(e) : selectorPart(e) + ' > ' + selector;
     if (count(selector) === 1) {
       return selector;
     }
   }
   return selector === '' ? el.tagName.toLowerCase() : selector;
+}
+
+export function cssEscape(s: string): string {
+  return s.replace(/([^a-zA-Z0-9_-])/g, '\\$1');
+}
+
+/** Звено селектора: #id (если не сгенерирован), иначе тег с data-testid или классами и :nth-of-type среди близнецов. */
+export function selectorPart(e: PickElement): string {
+  const tag = e.tagName.toLowerCase();
+  if (e.id !== '' && !/\d{3,}/.test(e.id)) {
+    return tag + '#' + cssEscape(e.id);
+  }
+  const base = tag + qualifierOf(e);
+  const nth = nthOfType(e);
+  return nth === null ? base : base + ':nth-of-type(' + nth + ')';
+}
+
+/** data-testid, иначе два осмысленных класса. */
+export function qualifierOf(e: PickElement): string {
+  const testId = e.getAttribute('data-testid');
+  if (testId !== null && testId !== '') {
+    return '[data-testid="' + testId.replace(/"/g, '\\"') + '"]';
+  }
+  // Два осмысленных класса; утилиты с вариантами (md:, group/x, [..]) и хэши — шум
+  let out = '';
+  let n = 0;
+  for (let i = 0; i < e.classList.length && n < 2; i++) {
+    const c = e.classList[i] ?? '';
+    if (c !== '' && !/[:/[\]()!.%]|[0-9a-f]{5,}|__|_[a-zA-Z0-9]{5}$/.test(c)) {
+      out += '.' + cssEscape(c);
+      n++;
+    }
+  }
+  return out;
+}
+
+/** Номер среди соседей того же тега; один такой — null. */
+export function nthOfType(e: PickElement): number | null {
+  let nth = 1;
+  let twins = false;
+  for (let s = e.previousElementSibling; s !== null; s = s.previousElementSibling) {
+    if (s.tagName === e.tagName) {
+      nth++;
+      twins = true;
+    }
+  }
+  for (let s = e.nextElementSibling; s !== null && !twins; s = s.nextElementSibling) {
+    twins = s.tagName === e.tagName;
+  }
+  return twins ? nth : null;
 }
 
 /**

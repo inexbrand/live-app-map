@@ -71,26 +71,27 @@ export function navFromSearch(search: string | URLSearchParams): NavState {
 export function searchWithNav(nav: NavState, current: string): string {
   const q = new URLSearchParams(current);
   KEYS.forEach((k) => q.delete(k));
-  if (nav.view !== 'screens') {
-    q.set('view', nav.view);
-  }
-  if (nav.view === 'api' && nav.route !== null) {
-    q.set('route', nav.route);
-  }
-  if (nav.view === 'database' && nav.table !== null) {
-    q.set('table', nav.table);
-  }
-  if (nav.view === 'docs') {
-    if (nav.doc !== null) {
-      q.set('doc', nav.doc);
+  for (const [key, value] of navParams(nav)) {
+    if (value !== null) {
+      q.set(key, value);
     }
-    if (nav.docsMode === 'graph') {
-      q.set('docs', 'graph');
-    }
-  }
-  if (nav.view === 'screens' && nav.screen !== null) {
-    q.set('screen', nav.screen);
   }
   const s = q.toString();
   return s === '' ? '' : `?${s}`;
+}
+
+/** Параметры адреса вида: свой набор у каждого вида; null — не писать. */
+function navParams(nav: NavState): [string, string | null][] {
+  switch (nav.view) {
+    case 'screens':
+      return [['screen', nav.screen]];
+    case 'api':
+      return [['view', nav.view], ['route', nav.route]];
+    case 'database':
+      return [['view', nav.view], ['table', nav.table]];
+    case 'docs':
+      return [['view', nav.view], ['doc', nav.doc], ['docs', nav.docsMode === 'graph' ? 'graph' : null]];
+    default:
+      return [['view', nav.view]];
+  }
 }

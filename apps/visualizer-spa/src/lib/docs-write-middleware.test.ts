@@ -63,4 +63,23 @@ describe('docs-write middleware', () => {
     expect((await fetch(`${server.url}/__lam_docs/live?root=relative`)).status).toBe(404);
     expect(readFileSync(path.join(root, BUGS), 'utf8')).toBe(before);
   });
+
+  test('тело не по форме — 400 с подсказкой по полю', async () => {
+    const ok = { root, path: BUGS, line: 4, text: 'Кнопка не нажимается', state: 'closed' };
+    const bad = async (body: unknown): Promise<string> => {
+      const r = await post(body);
+      expect(r.status).toBe(400);
+      const j: unknown = await r.json();
+      return typeof j === 'object' && j !== null && 'error' in j ? String(j.error) : '';
+    };
+    expect(await bad('строка')).toContain('тело — JSON');
+    expect(await bad({ ...ok, root: 'relative' })).toContain('root');
+    expect(await bad({ ...ok, line: -1 })).toContain('line');
+    expect(await bad({ ...ok, line: 1.5 })).toContain('line');
+    expect(await bad({ ...ok, text: '' })).toContain('text');
+    expect(await bad({ ...ok, state: 'done' })).toContain('state');
+    const raw = await fetch(`${server.url}/__lam_docs/bug`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: '{не json' });
+    expect(raw.status).toBe(400);
+    expect((await fetch(`${server.url}/__lam_docs/bug`)).status).toBe(405);
+  });
 });

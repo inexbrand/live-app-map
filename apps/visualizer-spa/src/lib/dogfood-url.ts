@@ -46,45 +46,37 @@ function isAdminUrl(u: URL): boolean {
  * @param absoluteUrl - live URL miniapp
  */
 export function ensureMiniappHashRoute(absoluteUrl: string): string {
+  let u: URL;
   try {
-    const u = new URL(absoluteUrl);
-    if (!isMiniappUrl(u)) {
-      return absoluteUrl;
-    }
-
-    // Уже hash-route
-    if (u.hash.startsWith('#/')) {
-      // На proxy: pathname должен быть префикс или /
-      if (u.pathname.startsWith('/__lam_proxy/miniapp')) {
-        const rest = u.pathname.slice('/__lam_proxy/miniapp'.length);
-        if (rest !== '' && rest !== '/') {
-          u.pathname = '/__lam_proxy/miniapp/';
-        }
-      } else if (u.pathname !== '/' && u.pathname !== '') {
-        u.pathname = '/';
-      }
-      return u.href;
-    }
-
-    let productPath = u.pathname;
-    if (productPath.startsWith('/__lam_proxy/miniapp')) {
-      productPath = productPath.slice('/__lam_proxy/miniapp'.length);
-      if (productPath === '') {
-        productPath = '/';
-      }
-      u.pathname = '/__lam_proxy/miniapp/';
-    } else {
-      u.pathname = '/';
-    }
-
-    if (!productPath.startsWith('/')) {
-      productPath = `/${productPath}`;
-    }
-    u.hash = productPath === '/' ? '#/' : `#${productPath}`;
-    return u.href;
+    u = new URL(absoluteUrl);
   } catch {
     return absoluteUrl;
   }
+  if (!isMiniappUrl(u)) {
+    return absoluteUrl;
+  }
+  // Уже hash-route: pathname — префикс proxy или /
+  if (u.hash.startsWith('#/')) {
+    u.pathname = rootOf(u.pathname, u.pathname);
+    return u.href;
+  }
+  const onProxy = u.pathname.startsWith(MINIAPP_PROXY);
+  const productPath = (onProxy ? u.pathname.slice(MINIAPP_PROXY.length) : u.pathname) || '/';
+  u.pathname = onProxy ? `${MINIAPP_PROXY}/` : '/';
+  const hashPath = productPath.startsWith('/') ? productPath : `/${productPath}`;
+  u.hash = hashPath === '/' ? '#/' : `#${hashPath}`;
+  return u.href;
+}
+
+const MINIAPP_PROXY = '/__lam_proxy/miniapp';
+
+/** Корень мини-аппа для hash-route: на proxy — его префикс, иначе «/»; уже корень — как есть. */
+function rootOf(pathname: string, keep: string): string {
+  if (pathname.startsWith(MINIAPP_PROXY)) {
+    const rest = pathname.slice(MINIAPP_PROXY.length);
+    return rest !== '' && rest !== '/' ? `${MINIAPP_PROXY}/` : keep;
+  }
+  return pathname !== '/' && pathname !== '' ? '/' : keep;
 }
 
 /**

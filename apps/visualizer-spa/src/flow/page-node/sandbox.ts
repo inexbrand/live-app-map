@@ -11,39 +11,27 @@ export const SANDBOX_STRICT =
   'allow-scripts allow-forms allow-popups allow-modals';
 
 export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): boolean {
-  if (baseUrl === null || baseUrl === undefined) {
-    return false;
-  }
-  const trimmed = baseUrl.trim();
+  const trimmed = baseUrl?.trim() ?? '';
   if (trimmed === '') {
     return false;
   }
   // Same-origin Vite TLS proxy (self-signed target, secure:false)
-  if (
-    trimmed.includes('/__lam_proxy/miniapp') ||
-    trimmed.includes('/__lam_proxy/admin') ||
-    trimmed.includes('/__lam_proxy/site') ||
-    trimmed.includes('/__lam_proxy/https/')
-  ) {
+  if (TRUSTED_PROXY_PATHS.some((p) => trimmed.includes(p))) {
     return true;
   }
   try {
-    const host = new URL(
-      trimmed,
-      typeof location !== 'undefined' ? location.href : 'http://localhost',
-    ).hostname.toLowerCase();
-    if (
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === '[::1]' ||
-      host === '::1'
-    ) {
-      return true;
-    }
-    return host.endsWith('.localhost');
+    return isLocalHostname(new URL(trimmed, typeof location !== 'undefined' ? location.href : 'http://localhost').hostname.toLowerCase());
   } catch {
     return false;
   }
+}
+
+const TRUSTED_PROXY_PATHS = ['/__lam_proxy/miniapp', '/__lam_proxy/admin', '/__lam_proxy/site', '/__lam_proxy/https/'];
+
+const LOCAL_HOSTS = new Set(['localhost', '127.0.0.1', '[::1]', '::1']);
+
+function isLocalHostname(host: string): boolean {
+  return LOCAL_HOSTS.has(host) || host.endsWith('.localhost');
 }
 
 export function resolveIframeSandboxPreset(
