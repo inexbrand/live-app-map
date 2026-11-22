@@ -2,9 +2,20 @@
 
 ## Чеклист brief
 
+- [x] crapper до/после — команда из 02-research по apps packages scripts. До: 1078 функций, CRAP ≥ 10 — 381. После (ветка, 2026-11-22): 1885 функций, CRAP ≥ 10 — **0**, худшая — functionsOf (value-evaluator) 9.0. Отчёт: scratchpad crap-after.txt.
+- [x] компоненты visualizer-spa — тесты поведения (happy-dom + Testing Library, userEvent), логика вынесена в функции модулей; каждая правка — тесты зелёные на старом и новом коде (журнал 07).
+- [x] mutator по изменённому — прокси SPA, замеры e2e, scripts, scanner-source (api-match, tables-prisma), чистые модули lib SPA; остаток выживших — эквивалентные ?? / ?. и тексты логов, список в 07. Не прогонялись компоненты и хуки SPA (DOM-тесты, ~11 с на мутанта, тысячи точек) и остальные модули scanner-source — честно в 07.
+- [x] Reassure: вид «API» 51.8 мс/6 рендеров, «База данных» 13.1 мс/5, глобальный поиск 3.3 мс/11 — без значимых изменений и лишних рендеров (.reassure/output.md).
+- [x] typecheck всех пакетов — 0 ошибок (починен rpc.test.ts mcp-server).
+- [x] unit: 1067/0 (bun test packages apps/visualizer-spa/src scripts).
+- [x] dryer apps packages scripts — 0 дублей ≥ 0.8 (было 7 после разбиения, убраны).
+- [x] e2e ветки (свой dev-сервер :4312, korbor живой): 35/35. Первый полный прогон — 34/35, упал compare.e2e «старый коммит против свежего скана» («Было» осталось disk 15 с); отдельно 4/4, повтор полного 35/35. git log карты — 10 мс; падение наблюдалось и на master (память worktree-git-and-korbor-scan) — плавающее, не регрессия.
+- [ ] после слияния — проверка в /Users/macbook/orca/live-app-map (ниже).
+
 ## Тесты: реальные вызовы?
+
+Да: компоненты рендерятся с настоящим store и картами из public/maps, middleware — настоящий HTTP, сканеры — временные проекты и фикстуры, пикер и колесо — скрипт страницы в happy-dom.
 
 ## Баги
 
-См. 09-bugs.md
-
+См. 09-bugs.md (открытых нет).

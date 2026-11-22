@@ -76,3 +76,9 @@
 - viewport.ts: убито/выжило/без покрытия/всего 26 14 0 40 — 65.0%
 - voice/whisper-handler.ts: убито/выжило/без покрытия/всего 15 2 0 17 — 88.2%
 - Прочие изменённые файлы SPA (компоненты, хуки, middleware, gateway) mutator не прогонялся: тесты компонентов — DOM, 11 с на мутанта по lib+store, тысячи точек. global-search проверяется в основном через shell.test.tsx (палитра), который в прямой набор не входит.
+## Финал: dryer, typecheck, e2e
+
+- typecheck: rpc.test.ts mcp-server падал (route?/epoch? → string | undefined) — фикстура обязательна через present().
+- dryer дал 7 копий от разбиения: parseUrl ×2 → URL.parse, текст ошибки доступа → lib/error-text.ts, optional/optionalField → scanner-source/optional-field.ts, argString = strOf, schemaConst = constInitOf, NoRoutes/NoDocs → ui/empty-view.tsx, крошки → crumbOf. dryer — 0, тесты 578/0.
+- crapper полный: 0 функций ≥ 10 (1885 функций, max 9.0); unit 1067/0.
+- korbor поднят лаунчером без бота (копия scripts/dev.ts без bot и call), OrbStack был остановлен. e2e ветки 35/35 (первый прогон — плавающий compare.e2e, см. 08).
