@@ -114,12 +114,12 @@ function assignedStatus(node: ts.Node): number[] {
   return n === undefined ? [] : [n];
 }
 
-/** Тело функции-обработчика: сам узел, если это не функция. */
-function bodyOf(node: ts.Node): ts.Node | undefined {
-  if (ts.isArrowFunction(node) || ts.isFunctionExpression(node) || ts.isFunctionDeclaration(node) || ts.isMethodDeclaration(node)) {
-    return node.body;
-  }
-  return node;
+/**
+ * Тело стрелки-обработчика (`() => ({…})` отдаёт выражение без return); иначе сам узел —
+ * return внутри функции обход найдёт и так.
+ */
+function bodyOf(node: ts.Node): ts.Node {
+  return ts.isArrowFunction(node) ? node.body : node;
 }
 
 /**
@@ -129,8 +129,7 @@ function bodyOf(node: ts.Node): ts.Node | undefined {
  * @returns поля, значения и статусы; undefined — ничего не найдено
  */
 export function routeResponse(handlerBody: ts.Node): RouteResponse | undefined {
-  const root = bodyOf(handlerBody);
-  return root === undefined ? undefined : responseOf(collect(root));
+  return responseOf(collect(bodyOf(handlerBody)));
 }
 
 /** Тела и статусы по обработчику: return, `res.json()` без return, статусы; вложенные функции — нет. */

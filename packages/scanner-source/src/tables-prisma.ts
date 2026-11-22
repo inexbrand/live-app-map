@@ -39,7 +39,7 @@ function splitBlocks(text: string, file: string): Block[] {
     } else if (line.startsWith('}')) {
       out.push(current);
       current = undefined;
-    } else if (line !== '' && !line.startsWith('//')) {
+    } else {
       current.lines.push({ text: line, doc });
     }
   });
