@@ -78,9 +78,8 @@ function upstreamHeaders(req: Request, target: GatewayTarget, store: SessionStor
 async function forward(req: Request, target: GatewayTarget, store: SessionStore): Promise<Response> {
   const url = new URL(req.url);
   const gatewayOrigin = `${url.protocol}//${req.headers.get('host') ?? url.host}`;
-  const upstreamUrl = `${target.origin}${url.pathname}${url.search}`;
   const hasBody = req.method !== 'GET' && req.method !== 'HEAD';
-  const res = await fetch(upstreamUrl, {
+  const res = await fetch(`${target.origin}${url.pathname}${url.search}`, {
     method: req.method,
     headers: upstreamHeaders(req, target, store, gatewayOrigin, url.pathname),
     ...(hasBody ? { body: await req.arrayBuffer() } : {}),
@@ -89,8 +88,18 @@ async function forward(req: Request, target: GatewayTarget, store: SessionStore)
   });
   const setCookies = res.headers.getSetCookie();
   store.absorbSetCookies(target.profile, target.origin, setCookies);
+  const headers = browserHeaders(res.headers, setCookies, target, gatewayOrigin);
+  const type = res.headers.get('content-type') ?? '';
+  if (type.includes('text/html') && req.method === 'GET') {
+    return htmlWithSession(res, headers, target, store);
+  }
+  return new Response(res.body, { status: res.status, headers });
+}
+
+/** Заголовки ответа браузеру: без служебных, Location и Set-Cookie — на шлюз, метка профиля. */
+function browserHeaders(upstream: Headers, setCookies: readonly string[], target: GatewayTarget, gatewayOrigin: string): Headers {
   const headers = new Headers();
-  res.headers.forEach((v, k) => {
+  upstream.forEach((v, k) => {
     if (!DROPPED_RESPONSE.has(k.toLowerCase())) {
       headers.set(k, k.toLowerCase() === 'location' ? v.replace(target.origin, gatewayOrigin) : v);
     }
@@ -99,19 +108,20 @@ async function forward(req: Request, target: GatewayTarget, store: SessionStore)
     headers.append('set-cookie', rewriteSetCookieForBrowser(c));
   }
   headers.set('x-lam-gateway', target.profile);
-  const type = res.headers.get('content-type') ?? '';
-  if (type.includes('text/html') && req.method === 'GET') {
-    const renewError = await store.ensureFresh(target.profile, target.origin);
-    if (renewError !== null) {
-      headers.set('x-lam-renew-error', encodeURIComponent(renewError.slice(0, 200)));
-    }
-    const profile = store.get(target.profile);
-    const storage = profile?.storage[target.origin] ?? {};
-    const hasSession = Object.keys(storage).length > 0 || (profile?.cookies[target.origin] ?? []).length > 0;
-    const html = injectIntoHtml(await res.text(), injectScript(storage, target.profile, hasSession));
-    return new Response(html, { status: res.status, headers });
+  return headers;
+}
+
+/** HTML страницы: вход освежается, в страницу встраивается скрипт сессии профиля. */
+async function htmlWithSession(res: Response, headers: Headers, target: GatewayTarget, store: SessionStore): Promise<Response> {
+  const renewError = await store.ensureFresh(target.profile, target.origin);
+  if (renewError !== null) {
+    headers.set('x-lam-renew-error', encodeURIComponent(renewError.slice(0, 200)));
   }
-  return new Response(res.body, { status: res.status, headers });
+  const profile = store.get(target.profile);
+  const storage = profile?.storage[target.origin] ?? {};
+  const hasSession = Object.keys(storage).length > 0 || (profile?.cookies[target.origin] ?? []).length > 0;
+  const html = injectIntoHtml(await res.text(), injectScript(storage, target.profile, hasSession));
+  return new Response(html, { status: res.status, headers });
 }
 
 /**

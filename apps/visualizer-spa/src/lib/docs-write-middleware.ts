@@ -85,7 +85,6 @@ function applyBug(req: BugRequest): { status: number; body: unknown } {
   return { status: 200, body: { ok: true, changed: r.changed, epoch: readEpoch(req.root, path.dirname(abs)) } };
 }
 
-/** Middleware документации с диска. */
 /** Документация проекта с диска: root — абсолютный каталог проекта. */
 function sendLiveDocs(req: Parameters<DevMiddleware>[0], res: Parameters<DevMiddleware>[1]): void {
   const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root');
@@ -100,6 +99,7 @@ function sendLiveDocs(req: Parameters<DevMiddleware>[0], res: Parameters<DevMidd
   sendJson(res, 200, { ok: true, docs: scanDocs(root) });
 }
 
+/** Middleware документации с диска. */
 export const docsWriteMiddleware: DevMiddleware = (req, res, next) => {
   const p = requestPath(req);
   if (p === DOCS_LIVE_PATH) {

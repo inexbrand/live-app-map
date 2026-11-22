@@ -5,7 +5,7 @@
  */
 import { dumpDom, useDom } from '../../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { act, fireEvent, render, within } from '@testing-library/react';
+import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';
@@ -171,9 +171,9 @@ describe('холст графа', () => {
     await frames();
     fireEvent.pointerDown(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
     fireEvent.pointerUp(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
-    await frames();
+    // Под нагрузкой полного прогона кадр и перерисовка приходят позже 40 мс
+    await waitFor(() => expect(ui.getByTestId('graph-node-card')).toBeTruthy());
     expect(el.getAttribute('data-selected')).not.toBe('');
-    expect(ui.getByTestId('graph-node-card')).toBeTruthy();
     fireEvent.pointerLeave(el);
     fireEvent.doubleClick(el, { clientX: p.x, clientY: p.y });
     expect(useViewStore.getState().doc).not.toBeNull();

@@ -61,50 +61,48 @@ export function withBaseUrl(
   if (!trimmed) {
     return { document: doc, error: null };
   }
+  const base = parseHttpBase(trimmed);
+  if (typeof base === 'string') {
+    return { document: doc, error: base };
+  }
+  const forceRewrite = options.forceRewrite === true;
+  const nodes = doc.nodes.map((n) => (n.kind !== 'page' && n.kind !== 'not-found') || keepsOwnUrl(n, forceRewrite) ? n : withNodeUrl(n, base));
+  return { document: { ...doc, baseUrl: trimmed, nodes }, error: null };
+}
 
+/** Base как URL http(s); иначе текст ошибки. */
+function parseHttpBase(trimmed: string): URL | string {
   let base: URL;
   try {
     base = new URL(trimmed);
   } catch {
-    return {
-      document: doc,
-      error: `Некорректный Base URL: «${trimmed}»`,
-    };
+    return `Некорректный Base URL: «${trimmed}»`;
   }
+  return base.protocol !== 'http:' && base.protocol !== 'https:' ? `Base URL: только http/https («${trimmed}»)` : base;
+}
 
-  if (base.protocol !== 'http:' && base.protocol !== 'https:') {
-    return {
-      document: doc,
-      error: `Base URL: только http/https («${trimmed}»)`,
-    };
+/** Multi-surface maps: keep absolute live URLs unless user forced base override. */
+function keepsOwnUrl(n: AppMapDocument['nodes'][number], forceRewrite: boolean): boolean {
+  if (forceRewrite || !n.url) {
+    return false;
   }
+  try {
+    const existing = new URL(n.url);
+    return existing.protocol === 'http:' || existing.protocol === 'https:';
+  } catch {
+    // fall through — materialize from path
+    return false;
+  }
+}
 
-  const forceRewrite = options.forceRewrite === true;
-
-  const nodes = doc.nodes.map((n) => {
-    if (n.kind !== 'page' && n.kind !== 'not-found') {
-      return n;
-    }
-    // Multi-surface maps: keep absolute live URLs unless user forced base override
-    if (!forceRewrite && n.url) {
-      try {
-        const existing = new URL(n.url);
-        if (existing.protocol === 'http:' || existing.protocol === 'https:') {
-          return n;
-        }
-      } catch {
-        // fall through — materialize from path
-      }
-    }
-    const path = n.pathExample ?? n.pathPattern;
-    try {
-      const url = new URL(path.startsWith('/') ? path : `/${path}`, base).href;
-      return { ...n, url };
-    } catch {
-      return n;
-    }
-  });
-  return { document: { ...doc, baseUrl: trimmed, nodes }, error: null };
+/** URL ноды из её пути на base; путь не собирается — нода как есть. */
+function withNodeUrl<N extends AppMapDocument['nodes'][number]>(n: N, base: URL): N {
+  const path = n.pathExample ?? n.pathPattern;
+  try {
+    return { ...n, url: new URL(path.startsWith('/') ? path : `/${path}`, base).href };
+  } catch {
+    return n;
+  }
 }
 
 /** Ошибка введённого base без открытой карты: сообщение для toast и диагностика. */

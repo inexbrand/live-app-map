@@ -67,6 +67,66 @@ export function summarize(p: SessionProfile): ProfileSummary {
   };
 }
 
+/** Что записать в профиль: подпись, роль и данные одного origin. */
+export type ProfileInput = {
+  readonly id: string;
+  readonly label: string;
+  readonly role?: string;
+  readonly origin?: string;
+  readonly cookies?: readonly StoredCookie[];
+  readonly storage?: Readonly<Record<string, string>>;
+  readonly renewal?: KorborRenewal;
+};
+
+function checkProfileInput(input: ProfileInput): void {
+  if (!isValidProfileId(input.id)) {
+    throw new Error('id профиля: строчные латинские буквы, цифры и дефис, например recruiter');
+  }
+  if (input.label.trim() === '') {
+    throw new Error('label профиля обязателен: например «Рекрутер»');
+  }
+}
+
+/** Куки, storage и продление прежнего профиля с данными нового origin поверх. */
+function mergeOrigin(prev: SessionProfile | undefined, input: ProfileInput): Pick<SessionProfile, 'cookies' | 'storage'> & { renewals: Record<string, KorborRenewal> } {
+  const cookies = { ...(prev?.cookies ?? {}) };
+  const storage = { ...(prev?.storage ?? {}) };
+  const renewals = { ...(prev?.renewals ?? {}) };
+  if (input.origin !== undefined) {
+    putOrigin(input, input.origin, { cookies, storage, renewals });
+  }
+  return { cookies, storage, renewals };
+}
+
+/** Данные одного origin поверх прежних: продление и куки заменяются, storage дополняется. */
+function putOrigin(input: ProfileInput, origin: string, into: { cookies: Record<string, readonly StoredCookie[]>; storage: Record<string, Readonly<Record<string, string>>>; renewals: Record<string, KorborRenewal> }): void {
+  if (input.renewal !== undefined) {
+    into.renewals[origin] = input.renewal;
+  }
+  if (input.cookies !== undefined) {
+    into.cookies[origin] = input.cookies;
+  }
+  if (input.storage !== undefined) {
+    into.storage[origin] = { ...into.storage[origin], ...input.storage };
+  }
+}
+
+/** Профили файла: только с допустимым id. */
+function profilesOf(raw: unknown): SessionProfile[] {
+  const list: unknown[] = typeof raw === 'object' && raw !== null && 'profiles' in raw && Array.isArray(raw.profiles) ? raw.profiles : [];
+  return list.filter((p): p is SessionProfile => typeof p === 'object' && p !== null && 'id' in p && typeof p.id === 'string' && isValidProfileId(p.id));
+}
+
+/** Продление origin, если вход устарел; свежий или без продления — undefined. */
+function staleRenewal(profile: SessionProfile, origin: string): KorborRenewal | undefined {
+  const renewal = profile.renewals?.[origin];
+  if (renewal === undefined) {
+    return undefined;
+  }
+  const value = profile.storage[origin]?.[KORBOR_DOGFOOD_STORAGE[renewal.kind]];
+  return isDogfoodValueStale(renewal.kind, value, Date.now()) ? renewal : undefined;
+}
+
 /** Хранилище профилей в файле. */
 export class SessionStore {
   private profiles = new Map<string, SessionProfile>();
@@ -98,36 +158,9 @@ export class SessionStore {
    * @returns профиль
    * @throws Error при плохом id или пустой подписи
    */
-  upsert(input: {
-    readonly id: string;
-    readonly label: string;
-    readonly role?: string;
-    readonly origin?: string;
-    readonly cookies?: readonly StoredCookie[];
-    readonly storage?: Readonly<Record<string, string>>;
-    readonly renewal?: KorborRenewal;
-  }): SessionProfile {
-    if (!isValidProfileId(input.id)) {
-      throw new Error('id профиля: строчные латинские буквы, цифры и дефис, например recruiter');
-    }
-    if (input.label.trim() === '') {
-      throw new Error('label профиля обязателен: например «Рекрутер»');
-    }
-    const prev = this.profiles.get(input.id);
-    const cookies = { ...(prev?.cookies ?? {}) };
-    const storage = { ...(prev?.storage ?? {}) };
-    const renewals = { ...(prev?.renewals ?? {}) };
-    if (input.origin !== undefined) {
-      if (input.renewal !== undefined) {
-        renewals[input.origin] = input.renewal;
-      }
-      if (input.cookies !== undefined) {
-        cookies[input.origin] = input.cookies;
-      }
-      if (input.storage !== undefined) {
-        storage[input.origin] = { ...(storage[input.origin] ?? {}), ...input.storage };
-      }
-    }
+  upsert(input: ProfileInput): SessionProfile {
+    checkProfileInput(input);
+    const { cookies, storage, renewals } = mergeOrigin(this.profiles.get(input.id), input);
     const next: SessionProfile = {
       id: input.id,
       label: input.label.trim(),
@@ -180,21 +213,19 @@ export class SessionStore {
 
   private async renew(id: string, origin: string): Promise<string | null> {
     const profile = this.profiles.get(id);
-    const renewal = profile?.renewals?.[origin];
+    const renewal = profile === undefined ? undefined : staleRenewal(profile, origin);
     if (profile === undefined || renewal === undefined) {
-      return null;
-    }
-    const storageKey = KORBOR_DOGFOOD_STORAGE[renewal.kind];
-    if (!isDogfoodValueStale(renewal.kind, profile.storage[origin]?.[storageKey], Date.now())) {
       return null;
     }
     const minted = await mintKorbor(renewal).catch((err: unknown): MintResult => ({ ok: false, error: err instanceof Error ? err.message : String(err) }));
     if (!minted.ok) {
       return minted.error;
     }
+    const storageKey = KORBOR_DOGFOOD_STORAGE[renewal.kind];
     this.upsert({ id, label: profile.label, ...(profile.role === undefined ? {} : { role: profile.role }), origin, storage: { [storageKey]: minted.value } });
     return null;
   }
+
 
   /** Удаляет профиль. */
   remove(id: string): boolean {
@@ -209,14 +240,11 @@ export class SessionStore {
     if (!existsSync(this.file)) {
       return;
     }
-    const raw: unknown = JSON.parse(readFileSync(this.file, 'utf8'));
-    const list = typeof raw === 'object' && raw !== null && 'profiles' in raw && Array.isArray(raw.profiles) ? raw.profiles : [];
-    for (const p of list as SessionProfile[]) {
-      if (typeof p?.id === 'string' && isValidProfileId(p.id)) {
-        this.profiles.set(p.id, p);
-      }
+    for (const p of profilesOf(JSON.parse(readFileSync(this.file, 'utf8')))) {
+      this.profiles.set(p.id, p);
     }
   }
+
 
   private save(): void {
     mkdirSync(this.dir, { recursive: true, mode: 0o700 });

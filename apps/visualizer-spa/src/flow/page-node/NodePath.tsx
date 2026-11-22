@@ -26,6 +26,22 @@ export function NodePath(props: NodePathProps) {
   const { node, url, status, openComments, isLive, isWarm, viewport } = props;
   return (
   <div className="page-node__path" title={url ?? node.pathPattern}>
+    <StatusBadges status={status} openComments={openComments} isLive={isLive} isWarm={isWarm} />
+    <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
+    <span className="page-node__size">
+      {' '}
+      · {viewport.width}×{viewport.height}
+      {viewport.heightMode === 'auto' ? ' auto' : ''}
+      {viewport.label ? ` ${viewport.label}` : ''}
+    </span>
+  </div>
+  );
+}
+
+/** Метки состояния окна: вход, обрезка, замечания, live/warm. */
+function StatusBadges({ status, openComments, isLive, isWarm }: Pick<NodePathProps, 'status' | 'openComments' | 'isLive' | 'isWarm'>) {
+  return (
+  <>
     {status.unauthorized !== null ? (
       <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
         не авторизован
@@ -46,13 +62,6 @@ export function NodePath(props: NodePathProps) {
     ) : isWarm ? (
       <Badge>warm</Badge>
     ) : null}
-    <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
-    <span className="page-node__size">
-      {' '}
-      · {viewport.width}×{viewport.height}
-      {viewport.heightMode === 'auto' ? ' auto' : ''}
-      {viewport.label ? ` ${viewport.label}` : ''}
-    </span>
-  </div>
+  </>
   );
 }

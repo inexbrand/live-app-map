@@ -14,9 +14,7 @@ import type { OriginalPosition, StackFrame, StackSource } from './pick-messages'
  */
 export function componentNameOf(type: unknown): string | null {
   if (typeof type === 'function') {
-    const named = type as { displayName?: unknown; name?: unknown };
-    const n = typeof named.displayName === 'string' ? named.displayName : typeof named.name === 'string' ? named.name : '';
-    return /^[A-Z]/.test(n) ? n : null;
+    return functionComponentName(type);
   }
   if (typeof type === 'object' && type !== null) {
     const o = type as { displayName?: unknown; render?: unknown; type?: unknown };
@@ -26,6 +24,13 @@ export function componentNameOf(type: unknown): string | null {
     return componentNameOf(o.render === undefined ? o.type : o.render);
   }
   return null;
+}
+
+/** Имя функции-компонента: displayName, иначе name; с заглавной — компонент, иначе null. */
+export function functionComponentName(fn: object): string | null {
+  const named = fn as { displayName?: unknown; name?: unknown };
+  const n = typeof named.displayName === 'string' ? named.displayName : typeof named.name === 'string' ? named.name : '';
+  return /^[A-Z]/.test(n) ? n : null;
 }
 
 /**
@@ -39,22 +44,30 @@ export function componentNameOf(type: unknown): string | null {
 export function frameFromStack(stack: string): StackFrame | null {
   const lines = stack.split('\n');
   for (let i = 0; i < lines.length; i++) {
-    const m = /(?:\(|@|at )((?:https?|file):\/\/[^\s)]+?):(\d+):(\d+)\)?\s*$/.exec(lines[i] ?? '');
-    if (m === null) {
-      continue;
+    const f = appFrameOf(lines[i] ?? '');
+    if (f !== null) {
+      return f;
     }
-    let p = '';
-    try {
-      p = new URL(m[1] ?? '').pathname;
-    } catch (e) {
-      continue;
-    }
-    if (p.indexOf('/node_modules/') !== -1 || p.indexOf('/@') === 0 || !/\.(t|j)sx?$/.test(p)) {
-      continue;
-    }
-    return { url: m[1] ?? '', file: decodeURIComponent(p.replace(/^\/+/, '')), line: Number(m[2]), column: Number(m[3]) };
   }
   return null;
+}
+
+/** Кадр строки стека, если это модуль приложения (не node_modules, не /@vite, ts/js). */
+export function appFrameOf(line: string): StackFrame | null {
+  const m = /(?:\(|@|at )((?:https?|file):\/\/[^\s)]+?):(\d+):(\d+)\)?\s*$/.exec(line);
+  if (m === null) {
+    return null;
+  }
+  let p = '';
+  try {
+    p = new URL(m[1] ?? '').pathname;
+  } catch (e) {
+    return null;
+  }
+  if (p.indexOf('/node_modules/') !== -1 || p.indexOf('/@') === 0 || !/\.(t|j)sx?$/.test(p)) {
+    return null;
+  }
+  return { url: m[1] ?? '', file: decodeURIComponent(p.replace(/^\/+/, '')), line: Number(m[2]), column: Number(m[3]) };
 }
 
 /**
@@ -66,54 +79,65 @@ export function frameFromStack(stack: string): StackFrame | null {
  * @param column - столбец, с 1
  */
 export function originalPosition(map: { readonly sources: readonly string[]; readonly mappings: string }, line: number, column: number): OriginalPosition | null {
-  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
   const rows = map.mappings.split(';');
-  let src = 0;
-  let srcLine = 0;
-  let srcCol = 0;
+  // Поля сегментов — дельты от предыдущего сегмента всей карты, не строки
+  const acc = { src: 0, line: 0, col: 0 };
   for (let l = 0; l < rows.length && l < line; l++) {
-    let genCol = 0;
-    let best: OriginalPosition | null = null;
-    let first: OriginalPosition | null = null;
-    const segs = (rows[l] ?? '').split(',');
-    for (let s = 0; s < segs.length; s++) {
-      const seg = segs[s] ?? '';
-      if (seg === '') {
-        continue;
-      }
-      const v: number[] = [];
-      let shift = 0;
-      let value = 0;
-      for (let c = 0; c < seg.length; c++) {
-        const d = B64.indexOf(seg.charAt(c));
-        value += (d & 31) << shift;
-        if ((d & 32) !== 0) {
-          shift += 5;
-        } else {
-          v.push((value & 1) === 1 ? -(value >> 1) : value >> 1);
-          value = 0;
-          shift = 0;
-        }
-      }
-      genCol += v[0] ?? 0;
-      if (v.length >= 4) {
-        src += v[1] ?? 0;
-        srcLine += v[2] ?? 0;
-        srcCol += v[3] ?? 0;
-        const pos = { source: map.sources[src] ?? '', line: srcLine + 1, column: srcCol + 1 };
-        if (first === null) {
-          first = pos;
-        }
-        if (genCol <= column - 1) {
-          best = pos;
-        }
-      }
-    }
+    const hit = scanMappingRow(map.sources, rows[l] ?? '', acc, column);
     if (l === line - 1) {
-      return best ?? first;
+      return hit;
     }
   }
   return null;
+}
+
+/**
+ * Строка mappings: позиция последнего сегмента не правее column, иначе первого.
+ *
+ * @param acc - накопленные source/строка/колонка (меняется)
+ */
+export function scanMappingRow(sources: readonly string[], row: string, acc: { src: number; line: number; col: number }, column: number): OriginalPosition | null {
+  let genCol = 0;
+  let best: OriginalPosition | null = null;
+  let first: OriginalPosition | null = null;
+  for (const seg of row.split(',')) {
+    const v = seg === '' ? [] : decodeVlq(seg);
+    genCol += v[0] ?? 0;
+    const pos = v.length >= 4 ? advanceMapping(sources, v, acc) : null;
+    first = first ?? pos;
+    if (pos !== null && genCol <= column - 1) {
+      best = pos;
+    }
+  }
+  return best ?? first;
+}
+
+/** Сдвиг source/строки/колонки на дельты сегмента; позиция с 1. */
+export function advanceMapping(sources: readonly string[], v: readonly number[], acc: { src: number; line: number; col: number }): OriginalPosition {
+  acc.src += v[1] ?? 0;
+  acc.line += v[2] ?? 0;
+  acc.col += v[3] ?? 0;
+  return { source: sources[acc.src] ?? '', line: acc.line + 1, column: acc.col + 1 };
+}
+
+/** Числа сегмента base64-VLQ. */
+export function decodeVlq(seg: string): number[] {
+  const B64 = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
+  const v: number[] = [];
+  let shift = 0;
+  let value = 0;
+  for (let c = 0; c < seg.length; c++) {
+    const d = B64.indexOf(seg.charAt(c));
+    value += (d & 31) << shift;
+    if ((d & 32) !== 0) {
+      shift += 5;
+    } else {
+      v.push((value & 1) === 1 ? -(value >> 1) : value >> 1);
+      value = 0;
+      shift = 0;
+    }
+  }
+  return v;
 }
 
 /**

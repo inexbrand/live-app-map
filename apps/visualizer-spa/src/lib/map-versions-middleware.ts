@@ -26,6 +26,40 @@ function sendMapText(res: Parameters<DevMiddleware>[1], text: string): void {
   res.end(text);
 }
 
+/** Файл карты каталога по id; нет id или карты — статус и текст ошибки. */
+function mapFileOf(mapsDir: string, id: string | null): { readonly id: string; readonly file: string } | { readonly status: number; readonly error: string } {
+  if (id === null || id === '') {
+    return { status: 400, error: 'не задан id карты — например, korbor-all' };
+  }
+  const file = path.join(mapsDir, `${id}.liveappmap.json`);
+  return !MAP_ID.test(id) || !existsSync(file) ? { status: 404, error: `карты ${id} нет в каталоге` } : { id, file };
+}
+
+/** Скан карты; повторный запрос во время скана ждёт тот же. */
+function sharedScan(scans: Map<string, ReturnType<typeof freshScan>>, id: string, recipes: ScanRecipes): ReturnType<typeof freshScan> {
+  const running = scans.get(id) ?? freshScan(id, recipes).finally(() => scans.delete(id));
+  scans.set(id, running);
+  return running;
+}
+
+/** Список версий карты в git или текст одной версии (ref). */
+function sendVersions(res: Parameters<DevMiddleware>[1], p: string, file: string, ref: string | null): void {
+  if (p === MAP_VERSIONS_PATH) {
+    void listMapVersions(file).then((r) => sendJson(res, r.ok ? 200 : 502, r));
+    return;
+  }
+  void readMapVersion(file, ref ?? '').then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 400, r.error)));
+}
+
+/** Скан — только POST с локальной страницы; ответ — свежая карта или 502. */
+function startScan(req: Parameters<DevMiddleware>[0], res: Parameters<DevMiddleware>[1], scan: () => ReturnType<typeof freshScan>): void {
+  if (req.method !== 'POST' || !isLocalOrigin(req)) {
+    sendError(res, req.method !== 'POST' ? 405 : 403, 'скан — POST с локальной страницы');
+    return;
+  }
+  void scan().then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 502, r.error)));
+}
+
 /**
  * Middleware версий карт.
  *
@@ -42,30 +76,15 @@ export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes): De
       return;
     }
     const q = new URL(req.url ?? '/', 'http://localhost').searchParams;
-    const id = q.get('id');
-    if (id === null || id === '') {
-      sendError(res, 400, 'не задан id карты — например, korbor-all');
-      return;
-    }
-    const file = path.join(mapsDir, `${id}.liveappmap.json`);
-    if (!MAP_ID.test(id) || !existsSync(file)) {
-      sendError(res, 404, `карты ${id} нет в каталоге`);
+    const map = mapFileOf(mapsDir, q.get('id'));
+    if ('status' in map) {
+      sendError(res, map.status, map.error);
       return;
     }
     if (p === MAP_SCAN_PATH) {
-      if (req.method !== 'POST' || !isLocalOrigin(req)) {
-        sendError(res, req.method !== 'POST' ? 405 : 403, 'скан — POST с локальной страницы');
-        return;
-      }
-      const running = scans.get(id) ?? freshScan(id, recipes).finally(() => scans.delete(id));
-      scans.set(id, running);
-      void running.then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 502, r.error)));
+      startScan(req, res, () => sharedScan(scans, map.id, recipes));
       return;
     }
-    if (p === MAP_VERSIONS_PATH) {
-      void listMapVersions(file).then((r) => sendJson(res, r.ok ? 200 : 502, r));
-      return;
-    }
-    void readMapVersion(file, q.get('ref') ?? '').then((r) => (r.ok ? sendMapText(res, r.stdout) : sendError(res, 400, r.error)));
+    sendVersions(res, p, map.file, q.get('ref'));
   };
 }
