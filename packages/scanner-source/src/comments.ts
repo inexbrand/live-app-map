@@ -16,14 +16,6 @@ export function cleanBlockComment(raw: string): string {
   return lines.join('\n').replace(/\n{3,}/g, '\n\n').trim();
 }
 
-/**
- * Комментарии, стоящие перед позицией `pos` (до первого токена).
- * Подряд идущие `//`-строки склеиваются в один комментарий.
- *
- * @param text - текст файла
- * @param pos - позиция, с которой ищем (обычно getFullStart узла)
- * @returns последний JSDoc как doc, обычные комментарии как comments
- */
 /** Комментарий начинается на следующей строке после предыдущего строчного (prevEnd < 0 — его не было). */
 function isNextLine(text: string, prevEnd: number, pos: number): boolean {
   return prevEnd >= 0 && /^[ \t]*\r?\n[ \t]*$/.test(text.slice(prevEnd, pos));
@@ -45,6 +37,14 @@ function addLineComment(comments: string[], raw: string, adjacent: boolean): voi
   }
 }
 
+/**
+ * Комментарии, стоящие перед позицией `pos` (до первого токена).
+ * Подряд идущие `//`-строки склеиваются в один комментарий.
+ *
+ * @param text - текст файла
+ * @param pos - позиция, с которой ищем (обычно getFullStart узла)
+ * @returns последний JSDoc как doc, обычные комментарии как comments
+ */
 export function commentsAt(text: string, pos: number): CodeComments {
   const ranges = ts.getLeadingCommentRanges(text, pos) ?? [];
   let doc: string | undefined;

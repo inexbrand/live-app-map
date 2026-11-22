@@ -258,11 +258,8 @@ function findHandler(ctx: SourceContext, call: ts.CallExpression): Handler | und
   return decl === undefined ? { name, decl: last, body: last } : namedHandler(name, decl);
 }
 
-/** Обработчик по объявлению: функция или метод с телом, константа (с её оператором), прочее как есть. */
+/** Обработчик по объявлению: константа (с её оператором) — тело из инициализатора, прочее (функция, метод) — само объявление. */
 function namedHandler(name: string, decl: ts.Declaration): Handler {
-  if ((ts.isFunctionDeclaration(decl) || ts.isMethodDeclaration(decl)) && decl.body !== undefined) {
-    return { name, decl, body: decl.body };
-  }
   if (ts.isVariableDeclaration(decl) && decl.initializer !== undefined) {
     const stmt = decl.parent.parent;
     return { name, decl: ts.isVariableStatement(stmt) ? stmt : decl, body: decl.initializer };
@@ -298,7 +295,7 @@ function topStatement(node: ts.Node): ts.Statement | undefined {
 type RawRoute = {
   readonly call: ts.CallExpression;
   /** Имя метода в вызове (`get`) — по нему строка роута. */
-  readonly methodName: ts.Identifier;
+  readonly methodName: ts.MemberName;
   readonly app: AppRef;
   readonly method: HttpMethod;
   readonly path: string;
@@ -337,23 +334,21 @@ export function collectRoutes(ctx: SourceContext, sf: ts.SourceFile, paths: Rout
 /** Роуты вызова `app.get(path, handler)`: путь литералом или из фабрики, приложение и обработчик найдены. */
 function routesAt(ctx: SourceContext, node: ts.CallExpression, st: ResolveState, paths: RoutePaths): RawRoute[] {
   const callee = node.expression;
-  const method = routeMethod(callee);
-  if (method === undefined || !ts.isPropertyAccessExpression(callee) || !ts.isIdentifier(callee.name)) {
+  if (!ts.isPropertyAccessExpression(callee)) {
+    return [];
+  }
+  const method = METHODS.get(callee.name.text);
+  if (method === undefined) {
     return [];
   }
   const routePaths = routePathsOf(ctx, node.arguments[0], paths);
-  const app = routePaths.length > 0 ? resolveApp(ctx, callee.expression, st) : undefined;
+  const app = routePaths.length === 0 ? undefined : resolveApp(ctx, callee.expression, st);
   const handler = app === undefined ? undefined : findHandler(ctx, node);
   if (app === undefined || handler === undefined) {
     return [];
   }
   const methodName = callee.name;
   return routePaths.map((routePath) => ({ call: node, methodName, app, method, path: joinPath(app.prefix, routePath), handler }));
-}
-
-/** HTTP-метод вызова `x.get(…)`; не метод роута — undefined. */
-function routeMethod(callee: ts.Expression): HttpMethod | undefined {
-  return ts.isPropertyAccessExpression(callee) && ts.isIdentifier(callee.name) ? METHODS.get(callee.name.text) : undefined;
 }
 
 /** Пути роута: литерал (или константа) первого аргумента, иначе пути фабрики. */
