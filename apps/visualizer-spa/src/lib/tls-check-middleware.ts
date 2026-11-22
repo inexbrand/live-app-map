@@ -13,15 +13,6 @@ function isAllowedHost(hostname: string): boolean {
   return host === 'localhost' || host === '127.0.0.1' || host === 'vite.localhost' || host.endsWith('.localhost');
 }
 
-/** Разобранный URL или undefined. */
-function parseUrl(text: string): URL | undefined {
-  try {
-    return new URL(text);
-  } catch {
-    return undefined;
-  }
-}
-
 /**
  * Адрес проверки из запроса или отказ: нет url, не URL, не http(s), не локальный хост.
  *
@@ -33,7 +24,7 @@ export function checkTarget(rawUrl: string): URL | JsonReply {
   if (!target) {
     return { status: 400, body: { ok: false, error: 'url required' } };
   }
-  const parsed = parseUrl(target);
+  const parsed = URL.parse(target) ?? undefined;
   if (parsed === undefined) {
     return { status: 400, body: { ok: false, error: 'invalid url' } };
   }

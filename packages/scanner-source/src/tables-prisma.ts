@@ -3,6 +3,7 @@
  */
 import type { DbColumn, DbReference, SourceLocation } from '@live-app-map/schema';
 import type { FoundTable } from './tables-drizzle';
+import { optionalField } from './optional-field';
 
 /** Блок `model` или `enum` схемы. */
 type Block = {
@@ -122,15 +123,6 @@ function referenceOf(name: string, relations: readonly Relation[]): DbReference 
   const rel = relations.find((r) => r.fields.includes(name));
   const column = rel?.references[rel.fields.indexOf(name)];
   return rel === undefined || column === undefined ? undefined : { table: rel.target, column, ...(rel.onDelete === undefined ? {} : { onDelete: rel.onDelete }) };
-}
-
-/** `{ key: value }`, если значение есть, иначе `{}`. */
-function optionalField<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
-  const out: Partial<Record<K, V>> = {};
-  if (value !== undefined) {
-    out[key] = value;
-  }
-  return out;
 }
 
 /** `{ key: true }` при условии, иначе `{}`. */

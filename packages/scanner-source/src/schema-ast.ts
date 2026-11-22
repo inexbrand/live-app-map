@@ -69,7 +69,7 @@ function mappedSource(expr: ts.Expression): ts.Expression {
 }
 
 /** Инициализатор константы без обёрток. */
-function constInitOf(ctx: SourceContext, id: ts.Identifier): ts.Expression | undefined {
+export function constInitOf(ctx: SourceContext, id: ts.Node): ts.Expression | undefined {
   const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
   return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
 }

@@ -4,6 +4,7 @@
  * Браузер спрашивает разрешение; поток живёт от open() до close().
  */
 import { cropForFrame, type Rect } from './region';
+import { errorText } from '../error-text';
 
 /** Результат операции захвата. */
 export type GrabResult =
@@ -25,13 +26,6 @@ export type TabGrabber = {
   grab(rect: Rect): Promise<GrabResult>;
   close(): void;
 };
-
-function describeError(err: unknown): string {
-  if (err instanceof DOMException && err.name === 'NotAllowedError') {
-    return 'доступ к экрану не дан';
-  }
-  return err instanceof Error ? err.message : String(err);
-}
 
 /** Дольше нового кадра не ждём: неподвижная вкладка кадров не шлёт, берём последний. */
 const FRAME_WAIT_MS = 250;
@@ -83,7 +77,7 @@ export function createTabGrabber(doc: Document = document): TabGrabber {
       return { ok: true };
     } catch (err) {
       close();
-      return { ok: false, error: describeError(err) };
+      return { ok: false, error: errorText(err, 'доступ к экрану не дан') };
     }
   };
 

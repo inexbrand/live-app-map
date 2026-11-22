@@ -13,6 +13,7 @@ import { apiViewState, routeCard, routeOneLine } from '../lib/api-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Button, Chip, Input, Select } from '../ui';
+import { EmptyView } from '../ui/empty-view';
 import { Card, Marks, Method } from './ApiRouteCard';
 
 /** Пустой фильтр. */
@@ -279,17 +280,6 @@ function codeIndexOf(mapDocument: ReturnType<typeof useAppStore.getState>['docum
   return mapDocument === null || mapDocument.code === undefined || mapDocument.code.routes.length === 0 ? null : buildCodeIndex(mapDocument);
 }
 
-/** В карте нет роутов. */
-function NoRoutes() {
-  return (
-    <div className="api-view api-view--empty" data-testid="api-view">
-      <p>
-        В карте нет роутов API. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code>.
-      </p>
-    </div>
-  );
-}
-
 /** Вид «API». */
 export function ApiView() {
   const mapDocument = useAppStore((s) => s.document);
@@ -305,7 +295,11 @@ export function ApiView() {
   }, [selected]);
 
   if (index === null || state === null) {
-    return <NoRoutes />;
+    return (
+      <EmptyView view="api-view">
+        В карте нет роутов API. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code>.
+      </EmptyView>
+    );
   }
   return <ApiLayout index={index} state={state} filter={filter} selected={selected} listRef={listRef} />;
 }

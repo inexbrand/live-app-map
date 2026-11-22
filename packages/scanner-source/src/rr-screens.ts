@@ -78,22 +78,11 @@ function localFunction(ctx: SourceContext, id: ts.Identifier): ReturnType<typeof
   return decl === undefined ? undefined : functionOfDeclaration(decl);
 }
 
-/** Строковый аргумент: литерал или параметр внешней фабрики. */
-function argString(a: ts.Expression | undefined, binds: ReadonlyMap<string, string>): string | undefined {
-  if (a === undefined) {
-    return undefined;
-  }
-  if (ts.isStringLiteralLike(a)) {
-    return a.text;
-  }
-  return ts.isIdentifier(a) ? binds.get(a.text) : undefined;
-}
-
 /** Параметры функции → строковые аргументы вызова (поверх внешних привязок). */
 function bindArgs(fn: NonNullable<ReturnType<typeof functionOfDeclaration>>, call: ts.CallExpression, binds: ReadonlyMap<string, string>): Map<string, string> {
   const inner = new Map(binds);
   fn.parameters.forEach((p, i) => {
-    const v = argString(call.arguments[i], binds);
+    const v = strOf(call.arguments[i], binds);
     if (ts.isIdentifier(p.name) && v !== undefined) {
       inner.set(p.name.text, v);
     }

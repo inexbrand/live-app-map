@@ -179,18 +179,9 @@ export type MergedSurfaces = {
   readonly groups: { id: string; title: string; order: number }[];
 };
 
-/** Разобранный URL или undefined. */
-function parseUrl(url: string): URL | undefined {
-  try {
-    return new URL(url);
-  } catch {
-    return undefined;
-  }
-}
-
 /** Абсолютный URL экрана на хосте своей поверхности (чужой хост заменяется). */
 function surfaceUrl(p: LiveAppMapPage, host: string): string | undefined {
-  const u = p.url === undefined || p.url === '' ? undefined : parseUrl(p.url);
+  const u = p.url === undefined || p.url === '' ? undefined : URL.parse(p.url) ?? undefined;
   if (u === undefined || u.host === host) {
     return p.url;
   }

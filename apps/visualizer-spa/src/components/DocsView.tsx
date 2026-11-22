@@ -9,6 +9,7 @@ import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Chip, Input } from '../ui';
 import { fetchLiveDocs } from '../lib/docs-live-client';
+import { EmptyView } from '../ui/empty-view';
 import { DocPane } from './DocPane';
 import { DocGraphView } from './graph/DocGraphView';
 
@@ -99,18 +100,6 @@ function useLiveDocs(root: string | undefined): true | string {
     };
   }, [root, setDocs]);
   return live;
-}
-
-/** Документации в карте нет. */
-function NoDocs() {
-  return (
-    <div className="docs-view docs-view--empty" data-testid="docs-view">
-      <p>
-        В карте нет документации. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code> — в карту попадут
-        docs/epoch, docs/agent-notes, CLAUDE.md и README.
-      </p>
-    </div>
-  );
 }
 
 type Sections = ReturnType<typeof docsSections>;
@@ -246,7 +235,12 @@ export function DocsView() {
   const [query, setQuery] = useState('');
   const [readiness, setReadiness] = useState<EpochReadiness | null>(null);
   if (docs === undefined) {
-    return <NoDocs />;
+    return (
+      <EmptyView view="docs-view">
+        В карте нет документации. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code> — в карту попадут
+        docs/epoch, docs/agent-notes, CLAUDE.md и README.
+      </EmptyView>
+    );
   }
   if (docsMode === 'graph') {
     return (

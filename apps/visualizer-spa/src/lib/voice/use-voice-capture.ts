@@ -7,6 +7,7 @@ import { useVoiceStore } from '../../store/voice-store';
 import { whisperLanguage } from './models';
 import { startRecording, type Recording } from './recorder';
 import { isVoiceModelLoaded, transcribe } from './voice-engine';
+import { errorText } from '../error-text';
 
 /** Состояние записи. */
 export type VoiceCapture = {
@@ -35,14 +36,6 @@ type CaptureSetters = {
   readonly setLevel: (v: number) => void;
   readonly setError: (v: string | null) => void;
 };
-
-/** Текст ошибки записи: отказ в доступе к микрофону — словами. */
-function micErrorText(err: unknown): string {
-  if (err instanceof DOMException && err.name === 'NotAllowedError') {
-    return 'Нет доступа к микрофону';
-  }
-  return err instanceof Error ? err.message : String(err);
-}
 
 /** Модель готова к распознаванию: загружена или загрузилась сейчас. */
 async function ensureModel(): Promise<void> {
@@ -186,7 +179,7 @@ export function useVoiceCapture(onFinal: (text: string) => void): VoiceCapture {
       })
       .catch((err: unknown) => {
         starting.current = false;
-        setError(micErrorText(err));
+        setError(errorText(err, 'Нет доступа к микрофону'));
       });
   }, [finish]);
 

@@ -45,16 +45,19 @@ function screenCrumbs(doc: Doc, selectedPage: string | null): Crumb[] {
   return out;
 }
 
+/** Одна крошка найденного объекта; не найден — пусто. */
+function crumbOf<T>(found: T | undefined, crumb: (x: T) => Crumb): Crumb[] {
+  return found === undefined ? [] : [crumb(found)];
+}
+
 /** Крошка роута API. */
 function routeCrumbs(doc: Doc, route: string | null): Crumb[] {
-  const r = doc.code?.routes.find((x) => x.id === route);
-  return r === undefined ? [] : [{ label: `${r.method} ${r.path}`, title: r.location.file }];
+  return crumbOf(doc.code?.routes.find((x) => x.id === route), (r) => ({ label: `${r.method} ${r.path}`, title: r.location.file }));
 }
 
 /** Крошка таблицы. */
 function tableCrumbs(doc: Doc, table: string | null): Crumb[] {
-  const t = doc.code?.tables.find((x) => x.exportName === table);
-  return t === undefined ? [] : [{ label: t.name, title: t.location.file }];
+  return crumbOf(doc.code?.tables.find((x) => x.exportName === table), (t) => ({ label: t.name, title: t.location.file }));
 }
 
 /** Крошки графа документации: «Граф» и выбранный узел. */

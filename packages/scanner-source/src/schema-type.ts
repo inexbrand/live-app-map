@@ -4,7 +4,7 @@
 import ts from 'typescript';
 import type { RouteInputSchema, RouteSchemaField, RouteSchemaKind } from '@live-app-map/schema';
 import { resolvedSymbol, type SourceContext } from './source-context';
-import { baseCtor, constValues, literalText, MAX_DEPTH, short, unwrap, type Ctor } from './schema-ast';
+import { baseCtor, constInitOf, constValues, literalText, MAX_DEPTH, short, unwrap, type Ctor } from './schema-ast';
 
 /** Тип TypeBox по имени конструктора. */
 const TYPEBOX_TYPES: ReadonlyMap<string, string> = new Map([
@@ -116,19 +116,13 @@ function arrayOf(item: FieldType): FieldType {
  */
 function namedType(ctx: SourceContext, expr: ts.Identifier | ts.PropertyAccessExpression, depth: number): FieldType {
   const id = ts.isIdentifier(expr) ? expr : expr.name;
-  const init = depth < MAX_DEPTH ? schemaConst(ctx, id) : undefined;
+  const init = depth < MAX_DEPTH ? constInitOf(ctx, id) : undefined;
   if (init === undefined) {
     return { type: id.text, optional: false };
   }
   const name = id.text;
   const resolved = fieldType(ctx, init, depth + 1);
   return resolved.fields === undefined || resolved.type !== 'object' ? resolved : { ...resolved, type: name };
-}
-
-/** Инициализатор константы-схемы (без обёрток). */
-function schemaConst(ctx: SourceContext, id: ts.Node): ts.Expression | undefined {
-  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
-  return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
 }
 
 /** Поля, слитые из нескольких объектов: `t.Intersect([A, B])`, `t.Composite([A, B])`. */
@@ -304,7 +298,7 @@ export function describeSchema(ctx: SourceContext, expr: ts.Expression, fallback
 
 /** Вид схемы константы по её инициализатору. */
 function schemaKindOf(ctx: SourceContext, id: ts.Identifier, fallback: RouteSchemaKind): RouteSchemaKind {
-  const init = schemaConst(ctx, id);
+  const init = constInitOf(ctx, id);
   return init === undefined ? fallback : kindOfExpr(init, fallback);
 }
 

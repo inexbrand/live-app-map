@@ -9,17 +9,9 @@ import { collectDbCalls } from './db-calls';
 import { locationOf, resolvedSymbol, type SourceContext } from './source-context';
 import type { RoutePaths } from './route-factories';
 import { routeAccess } from './route-access';
+import { optionalField } from './optional-field';
 import { routeInput } from './route-input';
 import { routeResponse } from './route-response';
-
-/** Поле объекта только со значением: `{}` для undefined. */
-function optional<K extends string, V>(key: K, value: V | undefined): Partial<Record<K, V>> {
-  const out: Partial<Record<K, V>> = {};
-  if (value !== undefined) {
-    out[key] = value;
-  }
-  return out;
-}
 
 const METHODS: ReadonlyMap<string, HttpMethod> = new Map<string, HttpMethod>([
   ['get', 'GET'],
@@ -391,14 +383,14 @@ function foundRoute(ctx: SourceContext, r: RawRoute, docs: RouteDocs): FoundRout
     path: r.path,
     location: locationOf(ctx, r.methodName),
     handler: {
-      ...optional('name', r.handler.name),
+      ...optionalField('name', r.handler.name),
       location: locationOf(ctx, r.handler.decl),
     },
-    ...optional('doc', doc),
+    ...optionalField('doc', doc),
     ...(rest.length === 0 ? {} : { comments: rest }),
     dbCalls: collectDbCalls(ctx, r.handler.body),
-    ...optional('input', routeInput(ctx, r.call, r.app.framework)),
-    ...optional('access', routeAccess(ctx, r.call, r.handler.body)),
-    ...optional('response', routeResponse(r.handler.body)),
+    ...optionalField('input', routeInput(ctx, r.call, r.app.framework)),
+    ...optionalField('access', routeAccess(ctx, r.call, r.handler.body)),
+    ...optionalField('response', routeResponse(r.handler.body)),
   };
 }
