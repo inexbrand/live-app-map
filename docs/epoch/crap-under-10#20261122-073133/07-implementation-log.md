@@ -82,3 +82,4 @@
 - dryer дал 7 копий от разбиения: parseUrl ×2 → URL.parse, текст ошибки доступа → lib/error-text.ts, optional/optionalField → scanner-source/optional-field.ts, argString = strOf, schemaConst = constInitOf, NoRoutes/NoDocs → ui/empty-view.tsx, крошки → crumbOf. dryer — 0, тесты 578/0.
 - crapper полный: 0 функций ≥ 10 (1885 функций, max 9.0); unit 1067/0.
 - korbor поднят лаунчером без бота (копия scripts/dev.ts без bot и call), OrbStack был остановлен. e2e ветки 35/35 (первый прогон — плавающий compare.e2e, см. 08).
+- После слияния: #15 тест графа, #16 кэш Bearer шлюза, #17 e2e голоса; основной checkout de9de22 — typecheck 0, crapper 0 функций ≥ 10, unit 1066/0, dryer 0, e2e 35/35.
