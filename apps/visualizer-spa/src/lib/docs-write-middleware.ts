@@ -10,7 +10,7 @@
 import { existsSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { readEpoch, scanDocs, setBugItemState } from '@live-app-map/scanner-docs';
-import { isLocalOrigin, parseJsonText, readBody, requestPath, sendJson, type DevMiddleware } from './dev-http';
+import { isLocalOrigin, parseJsonText, readBody, requestPath, sendError, sendJson, type DevMiddleware } from './dev-http';
 
 export const DOCS_LIVE_PATH = '/__lam_docs/live';
 export const DOCS_BUG_PATH = '/__lam_docs/bug';
@@ -79,11 +79,11 @@ export const docsWriteMiddleware: DevMiddleware = (req, res, next) => {
   if (p === DOCS_LIVE_PATH) {
     const root = new URL(req.url ?? '/', 'http://localhost').searchParams.get('root');
     if (root === null || root === '') {
-      sendJson(res, 400, { ok: false, error: 'не задан root — абсолютный путь к каталогу проекта' });
+      sendError(res, 400, 'не задан root — абсолютный путь к каталогу проекта');
       return;
     }
     if (!existingRoot(root)) {
-      sendJson(res, 404, { ok: false, error: `каталога проекта нет на этой машине: ${root}` });
+      sendError(res, 404, `каталога проекта нет на этой машине: ${root}`);
       return;
     }
     sendJson(res, 200, { ok: true, docs: scanDocs(root) });
@@ -94,14 +94,14 @@ export const docsWriteMiddleware: DevMiddleware = (req, res, next) => {
     return;
   }
   if (req.method !== 'POST' || !isLocalOrigin(req)) {
-    sendJson(res, req.method !== 'POST' ? 405 : 403, { ok: false, error: 'отметка — POST с локальной страницы' });
+    sendError(res, req.method !== 'POST' ? 405 : 403, 'отметка — POST с локальной страницы');
     return;
   }
   void readBody(req, 64 * 1024).then((body) => {
     const json = body.ok ? parseJsonText(body.text) : null;
     const parsed = json === null ? 'тело — JSON {root, path, line, text, state}' : parseBugRequest(json.value);
     if (typeof parsed === 'string') {
-      sendJson(res, 400, { ok: false, error: parsed });
+      sendError(res, 400, parsed);
       return;
     }
     const out = applyBug(parsed);

@@ -4,21 +4,10 @@
  * горячие клавиши и тема. Скриншоты — в LAM_SHOTS_DIR, если задана.
  */
 import { expect, test, type Page } from '@playwright/test';
-import path from 'node:path';
+import { collectPageErrors, openMap, shot, WIDE_VIEWPORT } from './helpers';
 
-const SHOTS = process.env['LAM_SHOTS_DIR'];
-
-async function shot(page: Page, name: string): Promise<void> {
-  if (SHOTS !== undefined) {
-    await page.screenshot({ path: path.join(SHOTS, name) });
-  }
-}
-
-async function openKorbor(page: Page, query = ''): Promise<void> {
-  await page.setViewportSize({ width: 1600, height: 1000 });
-  await page.goto(`/?map=/maps/korbor-all.liveappmap.json${query}`);
-  await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
-  await page.keyboard.press('Escape');
+function openKorbor(page: Page, query = ''): Promise<void> {
+  return openMap(page, 'korbor-all.liveappmap.json', { query });
 }
 
 /** Открыть результат глобального поиска нужного типа. */
@@ -32,8 +21,7 @@ async function palettePick(page: Page, query: string, kind: string): Promise<voi
 
 test.describe('понять проект', () => {
   test('поиск → роут → таблица → назад; адрес хранит место, крошки ведут обратно', async ({ page }) => {
-    const errors: string[] = [];
-    page.on('pageerror', (e) => errors.push(e.message));
+    const errors = collectPageErrors(page);
     await openKorbor(page);
 
     await palettePick(page, 'telegram-login', 'route');
@@ -103,7 +91,7 @@ test.describe('закрыть задачу', () => {
     const url = page.url();
     expect(url).toContain('09-bugs.md');
     const again = await page.context().newPage();
-    await again.setViewportSize({ width: 1600, height: 1000 });
+    await again.setViewportSize(WIDE_VIEWPORT);
     await again.goto(url);
     await expect(again.getByTestId('docs-doc')).toContainText('in-memory rate limiter', { timeout: 30_000 });
     await again.close();

@@ -1,13 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  connectorWorldSize,
-  DEFAULT_VIEWPORT,
-  DEFAULT_WIDTH,
-  isConnectorNode,
-  resolveDefaultWidth,
-  resolveNodeViewport,
-  resolveViewportPresets,
-} from './viewport';
+import { DEFAULT_VIEWPORT, DEFAULT_WIDTH, resolveDefaultWidth, resolveNodeViewport } from './viewport';
+import { resolveViewportPresets } from './viewport-presets';
+import { connectorWorldSize, isConnectorNode } from './node-layout';
 import type { AppMapNode } from '@live-app-map/schema';
 
 describe('resolveNodeViewport (JSON fixed + optional auto)', () => {

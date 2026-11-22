@@ -6,6 +6,7 @@
  * раздела «Open»/«Открытые» (кроме `[закрыт]`, зачёркнутых, заглушек).
  * Закрытые: `- [x]`, пункты раздела «Closed»/«Закрытые» и помеченные в Open.
  */
+import { plain } from './plain-text';
 
 /** Состояние пункта: вне разделов Open/Closed — `other` («вне рамок», «замечено»). */
 export type BugItemState = 'open' | 'closed' | 'other';
@@ -21,8 +22,6 @@ export type BugItem = {
   readonly checkbox: boolean;
 };
 
-/** Предел длины текста пункта. */
-const LINE_MAX = 240;
 const OPEN_HEADING = /^(open|открыт|todo|в работе)/i;
 const CLOSED_HEADING = /^(closed|закрыт|исправлен|done|fixed|решено|готово)/i;
 const HEADING = /^(#{1,6})\s+(.*)$/;
@@ -34,11 +33,6 @@ const EMPTY_ITEM = /^\(?(пусто|нет|none|—|-)\)?\.?$/i;
 /** Строка-заглушка раздела: «(нет)», «- (пусто)», «Открытых нет.». */
 const PLACEHOLDER_LINE = /^(?:[-*+]\s+)?(?:\(?(?:пусто|нет|none|—)\)?|открытых( пунктов)? нет)\.?$/i;
 
-/** Строка без markdown-выделения, обрезанная до предела. */
-function plain(s: string): string {
-  const t = s.replace(/\*\*|__/g, '').replace(/\s+/g, ' ').trim();
-  return t.length > LINE_MAX ? `${t.slice(0, LINE_MAX - 1)}…` : t;
-}
 
 /** Вид раздела по заголовку. */
 function sectionKind(title: string): BugItemState {

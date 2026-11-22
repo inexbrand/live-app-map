@@ -3,6 +3,7 @@
  * .lam-feedback/error-reports.jsonl). Одна и та же ошибка отправляется
  * один раз за загрузку страницы, всего не больше MAX_REPORTS_PER_PAGE.
  */
+import { requestOk } from './dev-api';
 import { ErrorReportSource, type ErrorReport } from './error-report';
 
 /** Путь эндпоинта (совпадает с ERROR_REPORTS_PATH, без импорта Node-модуля). */
@@ -55,16 +56,7 @@ export function createErrorReporter(fetchFn: typeof fetch = fetch): (report: Err
       return false;
     }
     seen.add(key);
-    try {
-      const res = await fetchFn(CLIENT_ERROR_REPORTS_URL, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(report),
-      });
-      return res.ok;
-    } catch {
-      return false;
-    }
+    return requestOk(CLIENT_ERROR_REPORTS_URL, { method: 'POST', json: report, fetchFn });
   };
 }
 /**

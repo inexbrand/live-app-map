@@ -6,9 +6,10 @@
  */
 import { handleRpcText, resolveLamDir } from '@live-app-map/mcp-server';
 import {
-  isLocalOrigin,
+  localEndpointMiddleware,
   readBody,
-  requestPath,
+  rejectMethod,
+  sendError,
   sendJson,
   type DevMiddleware,
 } from './dev-http';
@@ -25,23 +26,17 @@ const MAX_BODY_BYTES = 1024 * 1024;
  */
 export function createMcpAgentMiddleware(options: { readonly lamDir: string }): DevMiddleware {
   const ctx = { lamDir: options.lamDir };
-  return (req, res, next) => {
-    if (requestPath(req) !== MCP_PATH) {
-      next();
-      return;
-    }
-    if (!isLocalOrigin(req)) {
-      sendJson(res, 403, { ok: false, error: 'origin не локальный' });
-      return;
-    }
-    if (req.method !== 'POST') {
-      res.setHeader('allow', 'POST');
-      sendJson(res, 405, { ok: false, error: 'только POST (JSON-RPC)' });
-      return;
-    }
-    void readBody(req, MAX_BODY_BYTES).then((body) => {
+  return localEndpointMiddleware({
+    matches: (p) => p === MCP_PATH,
+    errorStatus: 500,
+    handle: async (req, res) => {
+      if (req.method !== 'POST') {
+        rejectMethod(res, 'POST', 'только POST (JSON-RPC)');
+        return;
+      }
+      const body = await readBody(req, MAX_BODY_BYTES);
       if (!body.ok) {
-        sendJson(res, body.status, { ok: false, error: body.error });
+        sendError(res, body.status, body.error);
         return;
       }
       const response = handleRpcText(body.text, ctx);
@@ -52,8 +47,8 @@ export function createMcpAgentMiddleware(options: { readonly lamDir: string }): 
         return;
       }
       sendJson(res, 200, response);
-    });
-  };
+    },
+  });
 }
 
 /** Middleware для vite.config: папка обмена в корне монорепо. */

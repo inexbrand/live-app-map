@@ -2,6 +2,7 @@
  * Форма входа в профиль: поля → запрос к `/__lam_sessions`. Пустое
  * обязательное поле — ошибка с подсказкой под ним, без подстановок.
  */
+import { isSafeUrl } from '@live-app-map/graph';
 import { isValidProfileId } from './gateway-host';
 
 /** Способ входа. */
@@ -32,14 +33,6 @@ function fail(field: keyof SessionFormFields, error: string): SessionRequest {
   return { ok: false, field, error };
 }
 
-function isHttpUrl(s: string): boolean {
-  try {
-    const u = new URL(s);
-    return u.protocol === 'http:' || u.protocol === 'https:';
-  } catch {
-    return false;
-  }
-}
 
 /**
  * Проверяет поля и строит запрос.
@@ -54,7 +47,7 @@ export function buildSessionRequest(f: SessionFormFields): SessionRequest {
   if (f.label.trim() === '') {
     return fail('label', 'Впишите подпись профиля, например «Рекрутер»');
   }
-  if (!isHttpUrl(f.origin.trim())) {
+  if (!isSafeUrl(f.origin.trim())) {
     return fail('origin', 'Выберите приложение — адрес вида http://localhost:16002');
   }
   const base = { label: f.label.trim(), role: f.role.trim(), origin: new URL(f.origin.trim()).origin };
@@ -64,7 +57,7 @@ export function buildSessionRequest(f: SessionFormFields): SessionRequest {
     if ((kind !== 'admin' && kind !== 'user') || actorId === undefined || actorId === '') {
       return fail('actor', 'Выберите пользователя из базы korbor');
     }
-    if (!isHttpUrl(f.apiBase.trim())) {
+    if (!isSafeUrl(f.apiBase.trim())) {
       return fail('apiBase', 'Впишите адрес API korbor, например http://127.0.0.1:16000');
     }
     return { ok: true, method: 'POST', path: `${path}/korbor-dogfood`, body: { ...base, kind, actorId, apiBase: f.apiBase.trim() } };

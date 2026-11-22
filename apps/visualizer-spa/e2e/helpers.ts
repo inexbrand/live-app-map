@@ -1,7 +1,60 @@
 /**
- * Общие шаги e2e: открыть карту мини-приложения, выбрать экран, вызвать MCP.
+ * Общие шаги e2e: открыть карту, выбрать экран, снять скриншот, собрать ошибки страницы, вызвать MCP.
  */
+import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
+
+/** Папка скриншотов для отчёта эпохи; без неё скриншоты не снимаются. */
+const SHOTS = process.env['LAM_SHOTS_DIR'];
+
+/** Окно, в котором снимаются скриншоты и меряются виды. */
+export const WIDE_VIEWPORT = { width: 1600, height: 1000 };
+
+/**
+ * Скриншот страницы в LAM_SHOTS_DIR, если она задана.
+ *
+ * @param page - страница
+ * @param name - имя файла
+ */
+export async function shot(page: Page, name: string): Promise<void> {
+  if (SHOTS !== undefined) {
+    await page.screenshot({ path: path.join(SHOTS, name) });
+  }
+}
+
+/**
+ * Копит сообщения необработанных ошибок страницы.
+ *
+ * @param page - страница
+ * @returns живой список ошибок
+ */
+export function collectPageErrors(page: Page): string[] {
+  const errors: string[] = [];
+  page.on('pageerror', (e) => errors.push(e.message));
+  return errors;
+}
+
+/**
+ * Открывает карту каталога в широком окне: ждёт переключатель видов и закрывает всплывающее Esc.
+ *
+ * @param page - страница
+ * @param map - файл карты в public/maps, например korbor-all.liveappmap.json
+ * @param options - добавка к адресу (`&view=api`) и своё ожидание готовности вместо переключателя видов
+ */
+export async function openMap(
+  page: Page,
+  map: string,
+  options: { readonly query?: string; readonly ready?: (page: Page) => Promise<void> } = {},
+): Promise<void> {
+  await page.setViewportSize(WIDE_VIEWPORT);
+  await page.goto(`/?map=/maps/${map}${options.query ?? ''}`);
+  if (options.ready === undefined) {
+    await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
+  } else {
+    await options.ready(page);
+  }
+  await page.keyboard.press('Escape');
+}
 
 /** Открывает карту korbor-miniapp и выбирает первую целиком видимую ноду. */
 export async function openMiniappAndSelectNode(page: Page): Promise<string> {

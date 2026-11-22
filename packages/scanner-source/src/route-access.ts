@@ -3,6 +3,7 @@
  * в `beforeHandle` опций и в плагинах цепочки до роута (`.use(requirePermissionPlugin('x'))`).
  */
 import ts from 'typescript';
+import { calleeName } from './ts-call';
 import type { RouteAccess } from '@live-app-map/schema';
 import { calledFunctions } from './db-calls';
 import type { SourceContext } from './source-context';
@@ -27,11 +28,6 @@ const CHAIN_HOOKS: ReadonlySet<string> = new Set(['use', 'guard', 'onBeforeHandl
 /** Собранное по обходу. */
 type Found = { auth: boolean; roles: Set<string>; permissions: Set<string>; checks: Set<string> };
 
-/** Имя вызываемой функции: `f()` → f, `a.b()` → b. */
-function calleeName(call: ts.CallExpression): string | undefined {
-  const c = call.expression;
-  return ts.isIdentifier(c) ? c.text : ts.isPropertyAccessExpression(c) ? c.name.text : undefined;
-}
 
 /** Строковые литералы аргументов вызова. */
 function stringArgs(call: ts.CallExpression): string[] {

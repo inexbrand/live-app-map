@@ -7,6 +7,7 @@
  * API :16000 и профиль recruiter в .lam-sessions.
  */
 import { expect, test, type Frame, type Locator, type Page } from '@playwright/test';
+import { WIDE_VIEWPORT } from './helpers';
 
 const NODE = 'route:/feed';
 const SCROLLER = '.tab-canvas__scroll';
@@ -40,7 +41,7 @@ async function center(l: Locator): Promise<{ x: number; y: number }> {
 
 test('колесо: над экраном в «окне» — страница, вне — холст, «целиком» — без обрезки и меню не закрывает контент', async ({ page }) => {
   test.setTimeout(120_000);
-  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.setViewportSize(WIDE_VIEWPORT);
   await page.goto('/?map=/maps/korbor-miniapp.liveappmap.json');
   const node = page.locator(`[data-lam-node="${NODE}"]`);
   await node.locator('.page-node__title').click();

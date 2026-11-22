@@ -5,6 +5,7 @@
  * молча выключается: эндпоинт отвечает 404.
  */
 import type { SnapshotRequest, VisualizerState } from '@live-app-map/mcp-server';
+import { requestJson, requestOk } from './dev-api';
 
 /** Путь состояния на dev-сервере. */
 export const AGENT_STATE_URL = '/api/agent-state';
@@ -81,30 +82,17 @@ function parseRequest(v: unknown): SnapshotRequest | null {
  * @param fetchFn - fetch (подменяется в тестах)
  */
 export async function pollAgentRequest(fetchFn: typeof fetch = fetch): Promise<AgentPollResult> {
-  try {
-    const res = await fetchFn(AGENT_STATE_URL, { cache: 'no-store' });
-    if (res.status === 404) {
-      return { ok: false, unavailable: true, error: 'нет dev-сервера' };
-    }
-    if (!res.ok) {
-      return { ok: false, unavailable: false, error: `HTTP ${res.status}` };
-    }
-    const body: unknown = await res.json();
-    const raw = typeof body === 'object' && body !== null && 'pendingSnapshotRequest' in body
-      ? body.pendingSnapshotRequest
-      : null;
-    return { ok: true, request: parseRequest(raw) };
-  } catch (err) {
-    return { ok: false, unavailable: false, error: err instanceof Error ? err.message : String(err) };
+  const r = await requestJson(AGENT_STATE_URL, { cache: 'no-store', fetchFn });
+  if (!r.ok) {
+    return r.status === 404
+      ? { ok: false, unavailable: true, error: 'нет dev-сервера' }
+      : { ok: false, unavailable: false, error: r.status === null ? r.error : `HTTP ${r.status}` };
   }
-}
-
-async function postJson(url: string, body: unknown, fetchFn: typeof fetch): Promise<Response> {
-  return fetchFn(url, {
-    method: 'POST',
-    headers: { 'content-type': 'application/json' },
-    body: JSON.stringify(body),
-  });
+  const body = r.value;
+  const raw = typeof body === 'object' && body !== null && 'pendingSnapshotRequest' in body
+    ? body.pendingSnapshotRequest
+    : null;
+  return { ok: true, request: parseRequest(raw) };
 }
 
 /**
@@ -118,11 +106,7 @@ export async function publishVisualizerState(
   state: VisualizerState,
   fetchFn: typeof fetch = fetch,
 ): Promise<boolean> {
-  try {
-    return (await postJson(AGENT_STATE_URL, state, fetchFn)).ok;
-  } catch {
-    return false;
-  }
+  return requestOk(AGENT_STATE_URL, { method: 'POST', json: state, fetchFn });
 }
 
 /** Результат отправки снимка. */
@@ -138,17 +122,12 @@ export async function uploadSnapshot(
   upload: { readonly requestId: string | null; readonly pageId: string | null; readonly dataUrl: string },
   fetchFn: typeof fetch = fetch,
 ): Promise<UploadResult> {
-  try {
-    const res = await postJson(AGENT_SNAPSHOT_URL, upload, fetchFn);
-    const body: unknown = await res.json();
-    if (!res.ok) {
-      const error = typeof body === 'object' && body !== null && 'error' in body ? String(body.error) : `HTTP ${res.status}`;
-      return { ok: false, error };
-    }
-    const snap = typeof body === 'object' && body !== null && 'snapshot' in body ? body.snapshot : null;
-    const file = typeof snap === 'object' && snap !== null && 'file' in snap ? String(snap.file) : '';
-    return { ok: true, file };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
+  const r = await requestJson(AGENT_SNAPSHOT_URL, { method: 'POST', json: upload, fetchFn });
+  if (!r.ok) {
+    return { ok: false, error: r.error };
   }
+  const body = r.value;
+  const snap = typeof body === 'object' && body !== null && 'snapshot' in body ? body.snapshot : null;
+  const file = typeof snap === 'object' && snap !== null && 'file' in snap ? String(snap.file) : '';
+  return { ok: true, file };
 }

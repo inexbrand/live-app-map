@@ -3,21 +3,25 @@
  * через dev-сервер (docs-write-middleware).
  */
 import type { DocEpoch, DocsModel } from '@live-app-map/schema';
+import { apiField, requestJson } from './dev-api';
 
 /** Итог запроса: значение или текст ошибки. */
 export type Result<T> = { readonly ok: true; readonly value: T } | { readonly ok: false; readonly error: string };
 
-/** Текст ошибки из JSON-ответа. */
-async function errorOf(res: Response): Promise<string> {
-  const body: unknown = await res.json().catch(() => null);
-  const msg = typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string' ? body.error : '';
-  return msg === '' ? `HTTP ${res.status}` : msg;
-}
-
-/** Поле JSON-ответа, прошедшее проверку вида. */
-function field<T>(body: unknown, key: string, check: (v: unknown) => v is T): T | null {
-  const v = typeof body === 'object' && body !== null ? Object.entries(body).find(([k]) => k === key)?.[1] : undefined;
-  return check(v) ? v : null;
+/** Поле ответа нужного вида или ошибка (`missing` — если 2xx без поля). */
+async function fieldOf<T>(
+  url: string,
+  init: Parameters<typeof requestJson>[1],
+  key: string,
+  check: (v: unknown) => v is T,
+  missing: string,
+): Promise<Result<T>> {
+  const r = await requestJson(url, init);
+  if (!r.ok) {
+    return { ok: false, error: r.error };
+  }
+  const value = apiField(r.value, key, check);
+  return value === null ? { ok: false, error: missing } : { ok: true, value };
 }
 
 function isDocsModel(v: unknown): v is DocsModel {
@@ -35,13 +39,7 @@ function isEpoch(v: unknown): v is DocEpoch {
  * @returns docs или ошибка (каталога нет на этой машине, dev-сервера нет)
  */
 export async function fetchLiveDocs(root: string): Promise<Result<DocsModel>> {
-  try {
-    const res = await fetch(`/__lam_docs/live?root=${encodeURIComponent(root)}`, { cache: 'no-store' });
-    const docs = res.ok ? field(await res.json(), 'docs', isDocsModel) : null;
-    return docs === null ? { ok: false, error: res.ok ? 'ответ без docs' : await errorOf(res) } : { ok: true, value: docs };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
-  }
+  return fieldOf(`/__lam_docs/live?root=${encodeURIComponent(root)}`, { cache: 'no-store' }, 'docs', isDocsModel, 'ответ без docs');
 }
 
 /** Отметка пункта. */
@@ -54,13 +52,7 @@ export type BugMark = { readonly root: string; readonly path: string; readonly l
  * @returns эпоха заново (готовность пересчитана) или ошибка
  */
 export async function markBug(mark: BugMark): Promise<Result<DocEpoch>> {
-  try {
-    const res = await fetch('/__lam_docs/bug', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(mark) });
-    const epoch = res.ok ? field(await res.json(), 'epoch', isEpoch) : null;
-    return epoch === null ? { ok: false, error: res.ok ? 'ответ без эпохи' : await errorOf(res) } : { ok: true, value: epoch };
-  } catch (err) {
-    return { ok: false, error: err instanceof Error ? err.message : String(err) };
-  }
+  return fieldOf('/__lam_docs/bug', { method: 'POST', json: mark }, 'epoch', isEpoch, 'ответ без эпохи');
 }
 
 /**

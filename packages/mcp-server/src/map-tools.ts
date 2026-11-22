@@ -90,11 +90,37 @@ export function loadMapDocument(mapPath: string): AppMapDocument {
   throw new Error(`не карта Live App Map: ${mapPath}`);
 }
 
-/** Индекс code последней прочитанной карты: путь + mtime → индекс. */
-const indexCache = new Map<string, { readonly mtimeMs: number; readonly index: CodeIndex }>();
+/** Значение, собранное из файла карты, и время изменения файла на момент сборки. */
+type Cached<T> = { readonly mtimeMs: number; readonly value: T };
 
-/** Раздел docs по пути карты и времени изменения файла. */
-const docsCache = new Map<string, { readonly mtimeMs: number; readonly docs: DocsModel }>();
+/**
+ * Значение из карты, пересобираемое, только если файл изменился.
+ *
+ * @param cache - кэш по абсолютному пути
+ * @param mapPath - путь к карте
+ * @param build - сборка значения из документа карты
+ */
+function cachedByMtime<T>(
+  cache: Map<string, Cached<T>>,
+  mapPath: string,
+  build: (doc: AppMapDocument) => T,
+): T {
+  const abs = path.resolve(mapPath);
+  const mtimeMs = statSync(abs).mtimeMs;
+  const cached = cache.get(abs);
+  if (cached !== undefined && cached.mtimeMs === mtimeMs) {
+    return cached.value;
+  }
+  const value = build(loadMapDocument(abs));
+  cache.set(abs, { mtimeMs, value });
+  return value;
+}
+
+/** Индекс code по пути карты. */
+const indexCache = new Map<string, Cached<CodeIndex>>();
+
+/** Раздел docs по пути карты. */
+const docsCache = new Map<string, Cached<DocsModel>>();
 
 /**
  * Раздел docs карты; перечитывает файл, только если он изменился.
@@ -104,18 +130,12 @@ const docsCache = new Map<string, { readonly mtimeMs: number; readonly docs: Doc
  * @throws Error если в карте нет раздела docs
  */
 export function loadDocs(mapPath: string): DocsModel {
-  const abs = path.resolve(mapPath);
-  const mtimeMs = statSync(abs).mtimeMs;
-  const cached = docsCache.get(abs);
-  if (cached !== undefined && cached.mtimeMs === mtimeMs) {
-    return cached.docs;
-  }
-  const docs = loadMapDocument(abs).docs;
-  if (docs === undefined) {
-    throw new Error(`в карте нет раздела docs: ${mapPath}. Пересоберите её с --code-dir <корень репо> (scan или code)`);
-  }
-  docsCache.set(abs, { mtimeMs, docs });
-  return docs;
+  return cachedByMtime(docsCache, mapPath, (doc) => {
+    if (doc.docs === undefined) {
+      throw new Error(`в карте нет раздела docs: ${mapPath}. Пересоберите её с --code-dir <корень репо> (scan или code)`);
+    }
+    return doc.docs;
+  });
 }
 
 /**
@@ -126,17 +146,10 @@ export function loadDocs(mapPath: string): DocsModel {
  * @throws Error если в карте нет раздела code
  */
 export function loadCodeIndex(mapPath: string): CodeIndex {
-  const abs = path.resolve(mapPath);
-  const mtimeMs = statSync(abs).mtimeMs;
-  const cached = indexCache.get(abs);
-  if (cached !== undefined && cached.mtimeMs === mtimeMs) {
-    return cached.index;
-  }
-  const doc = loadMapDocument(abs);
-  if (doc.code === undefined) {
-    throw new Error(`в карте нет раздела code: ${mapPath}. Пересоберите её со сканом исходников (scan --code-dir <корень репо>)`);
-  }
-  const index = buildCodeIndex(doc);
-  indexCache.set(abs, { mtimeMs, index });
-  return index;
+  return cachedByMtime(indexCache, mapPath, (doc) => {
+    if (doc.code === undefined) {
+      throw new Error(`в карте нет раздела code: ${mapPath}. Пересоберите её со сканом исходников (scan --code-dir <корень репо>)`);
+    }
+    return buildCodeIndex(doc);
+  });
 }

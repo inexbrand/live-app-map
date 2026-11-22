@@ -3,7 +3,7 @@
  */
 import { MessageSquare } from 'lucide-react';
 import { useCommentsStore } from '../../store/comments-store';
-import { Button } from '../../ui';
+import { ToolbarButton } from '../toolbar/ToolbarButton';
 
 /**
  * Открывает и закрывает общий список (⇧C).
@@ -13,18 +13,16 @@ export function CommentsToolbarButton() {
   const setOpen = useCommentsStore((s) => s.setListOpen);
   const openCount = useCommentsStore((s) => s.threads.filter((t) => t.status === 'open').length);
   return (
-    <Button
-      type="button"
-      size="sm"
-      variant={open ? 'primary' : 'outline'}
+    <ToolbarButton
+      icon={MessageSquare}
+      selected={open}
       aria-expanded={open}
       onClick={() => setOpen(!open)}
       title="Все замечания проекта (⇧C)"
       aria-label={openCount > 0 ? `Замечания: открыто ${openCount}` : 'Замечания'}
       data-testid="open-comments"
     >
-      <MessageSquare size={16} strokeWidth={1.75} />
       {openCount > 0 ? <span className="toolbar__count" data-testid="open-comments-count">{openCount}</span> : null}
-    </Button>
+    </ToolbarButton>
   );
 }

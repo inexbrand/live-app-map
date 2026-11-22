@@ -6,7 +6,8 @@
  */
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type Simulation } from 'd3-force';
 import { useEffect, useMemo, useRef } from 'react';
-import { graphNeighbors, NODE_KIND_LABELS, type DocGraph } from '../../lib/doc-graph';
+import { NODE_KIND_LABELS, type DocGraph } from '../../lib/doc-graph';
+import { graphNeighbors } from '../../lib/doc-graph-query';
 import { drawGraph, readPalette, type Camera, type SimLink, type SimNode } from './graph-draw';
 
 /** Свойства холста графа. */

@@ -1,17 +1,8 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  applyMapDeviceViewport,
-  assertShellConsistency,
-  clampViewport,
-  computeNodeLayout,
-  contentDisplaySize,
-  DEFAULT_VIEWPORT,
-  fitTo16x9,
-  NODE_PAD_X,
-  nodeOuterSize,
-  resolveNodeViewport,
-  viewportFromPresetId,
-} from './viewport';
+import type { LayoutHints } from '@live-app-map/schema';
+import { applyMapDeviceViewport, clampViewport, DEFAULT_VIEWPORT, fitTo16x9, resolveNodeViewport } from './viewport';
+import { viewportFromPresetId } from './viewport-presets';
+import { assertShellConsistency, computeNodeLayout, contentDisplaySize, NODE_PAD_X, nodeOuterSize } from './node-layout';
 
 describe('viewport', () => {
   test('default is 390×844 fixed (JSON path, no measure)', () => {
@@ -163,9 +154,9 @@ describe('viewport', () => {
   });
 
   test('viewportFromPresetId w1024 with incomplete miniapp-like presets', () => {
-    const layout = {
+    const layout: LayoutHints = {
       viewportPresets: [
-        { id: 'w390', label: '390', width: 390, height: 844, heightMode: 'fixed' as const },
+        { id: 'w390', label: '390', width: 390, height: 844, heightMode: 'fixed' },
       ],
     };
     const v = viewportFromPresetId('w1024', layout);

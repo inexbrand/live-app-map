@@ -3,6 +3,7 @@
  * (dev-вход korbor или вставка кук/токена), выход.
  */
 import { useActionState, useMemo, useState } from 'react';
+import { requestJson, requestOk } from '../lib/dev-api';
 import type { DogfoodActor } from '../lib/dogfood-api';
 import { buildSessionRequest, type SessionFormFields, type SessionMethod } from '../lib/gateway/session-form';
 import { useAppStore } from '../store/app-store';
@@ -15,9 +16,6 @@ type FormState = { readonly field: keyof SessionFormFields | null; readonly erro
 const EMPTY: FormState = { field: null, error: null, done: null };
 
 /** Ответ REST профилей. */
-function errorOf(body: unknown): string | null {
-  return typeof body === 'object' && body !== null && 'error' in body && typeof body.error === 'string' ? body.error : null;
-}
 
 /** Origin экранов открытой карты — из чего выбирать приложение. */
 function useMapOrigins(): string[] {
@@ -85,10 +83,12 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
     if (!req.ok) {
       return { field: req.field, error: req.error, done: null };
     }
-    const res = await fetch(req.path, { method: req.method, headers: { 'content-type': 'application/json' }, body: JSON.stringify(req.body) });
-    const body: unknown = await res.json().catch(() => null);
-    if (!res.ok) {
-      return { field: null, error: errorOf(body) ?? `HTTP ${res.status}`, done: null };
+    const r = await requestJson(req.path, { method: req.method, json: req.body });
+    if (!r.ok && r.status === null) {
+      throw new Error(r.error);
+    }
+    if (!r.ok) {
+      return { field: null, error: r.error, done: null };
     }
     await refresh();
     return { field: null, error: null, done: `Профиль «${text('label')}» сохранён — экраны откроются под ним` };
@@ -128,7 +128,7 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
               variant="outline"
               size="sm"
               onClick={() => {
-                void fetch(`/__lam_sessions/${p.id}`, { method: 'DELETE' }).then(() => refresh());
+                void requestOk(`/__lam_sessions/${p.id}`, { method: 'DELETE' }).then(() => refresh());
               }}
             >
               Выйти

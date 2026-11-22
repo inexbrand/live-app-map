@@ -21,25 +21,22 @@ import {
 } from '@live-app-map/graph';
 import type { ApiRoute, DbTable, HttpMethod } from '@live-app-map/schema';
 import { loadCodeIndex } from './map-tools';
-import type { ToolDef, ToolResult } from './tools';
+import { fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
 
-/** Аргументы tool. */
-type Args = Readonly<Record<string, unknown>>;
-
-const mapPathProp = {
-  type: 'string',
-  description: 'Путь к карте с разделом code, например maps/korbor-all.liveappmap.json',
-};
+const mapPath = mapPathParam('Путь к карте с разделом code, например maps/korbor-all.liveappmap.json');
+const mapPathProp = mapPath.prop;
 
 /** Каталог tools базы знаний. */
-export const CODE_TOOLS: readonly ToolDef[] = [
+export const CODE_TOOLS: readonly Tool[] = [
   {
     name: 'list_services',
+    handler: (args) => ok({ ok: true, services: serviceSummaries(indexOf(args)) }),
     description: 'Сервисы проекта (пакеты монорепо) с числом HTTP-роутов, таблиц БД и символов',
     inputSchema: { type: 'object', required: ['mapPath'], properties: { mapPath: mapPathProp } },
   },
   {
     name: 'list_routes',
+    handler: listRoutes,
     description:
       'HTTP-роуты: у какого сервиса какие роуты, кратко что делает каждый и какие таблицы читает/пишет. Фильтр по сервису и подстроке',
     inputSchema: {
@@ -54,6 +51,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'get_route',
+    handler: getRoute,
     description:
       'Роут целиком: авторское описание (комментарии) и описание, собранное из кода (вход, таблицы, доступ, ответ), где обработчик, какие таблицы читает и пишет (с признаком N+1), какие экраны его вызывают, а если ни один — почему',
     inputSchema: {
@@ -64,6 +62,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'describe_api',
+    handler: describeApi,
     description:
       'Архитектура API: сервисы → разделы (/api/v1/admin) → модули (/api/v1/admin/vacancies) с роутами; у роута — авторское описание и описание из кода; покрытие описаниями, проверкой входа, доступом и экранами (без экранов — по причинам). Фильтр по сервису, методу, таблице, «без описания» (авторского), «без экранов»',
     inputSchema: {
@@ -81,6 +80,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'list_tables',
+    handler: listTables,
     description: 'Таблицы БД: имя в БД и в коде, сервис, число колонок, описание. Фильтр по подстроке',
     inputSchema: {
       type: 'object',
@@ -90,6 +90,7 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   },
   {
     name: 'get_table',
+    handler: getTable,
     description:
       'Схема таблицы: колонки (тип, ключ, NOT NULL, default, enum), внешние ключи в обе стороны, роуты, которые её читают и пишут',
     inputSchema: {
@@ -100,27 +101,22 @@ export const CODE_TOOLS: readonly ToolDef[] = [
   },
 ];
 
-function ok(value: unknown): ToolResult {
-  return { content: [{ type: 'text', text: JSON.stringify(value, null, 2) }] };
-}
-
-function fail(text: string): ToolResult {
-  return { isError: true, content: [{ type: 'text', text }] };
-}
-
-/** Строковый аргумент: пустая строка, если не задан. */
-function str(args: Args, key: string): string {
-  const v = args[key];
-  return typeof v === 'string' ? v.trim() : '';
-}
-
 /** Индекс карты; обязательный mapPath проверяется здесь. */
 function indexOf(args: Args): CodeIndex {
-  const mapPath = str(args, 'mapPath');
-  if (mapPath === '') {
-    throw new Error('mapPath обязателен: путь к карте с разделом code, например maps/korbor-all.liveappmap.json');
+  return loadCodeIndex(mapPath.read(args));
+}
+
+/**
+ * Необязательный фильтр по сервису: пустая строка или имя/id существующего сервиса.
+ *
+ * @throws Error со списком сервисов, если такого нет
+ */
+function serviceFilter(index: CodeIndex, args: Args): string {
+  const service = str(args, 'service');
+  if (service !== '' && findService(index, service) === undefined) {
+    throw new Error(`сервис не найден: ${service}. Есть: ${index.code.services.map((s) => s.name).join(', ')}`);
   }
-  return loadCodeIndex(mapPath);
+  return service;
 }
 
 /** Роут одной строкой для списков. */
@@ -164,10 +160,7 @@ function similarRoutes(index: CodeIndex, ref: string): string[] {
 
 function listRoutes(args: Args): ToolResult {
   const index = indexOf(args);
-  const service = str(args, 'service');
-  if (service !== '' && findService(index, service) === undefined) {
-    return fail(`сервис не найден: ${service}. Есть: ${index.code.services.map((s) => s.name).join(', ')}`);
-  }
+  const service = serviceFilter(index, args);
   const routes = findRoutes(index, {
     ...(service === '' ? {} : { service }),
     ...(str(args, 'query') === '' ? {} : { query: str(args, 'query') }),
@@ -177,10 +170,7 @@ function listRoutes(args: Args): ToolResult {
 
 function getRoute(args: Args): ToolResult {
   const index = indexOf(args);
-  const ref = str(args, 'route');
-  if (ref === '') {
-    return fail('route обязателен: id роута или «GET /api/v1/…»');
-  }
+  const ref = requiredStr(args, 'route', 'id роута или «GET /api/v1/…»');
   const detail = routeDetail(index, ref);
   if (detail === undefined) {
     return fail(`роут не найден: ${ref}. Похожие: ${similarRoutes(index, ref).join('; ') || 'нет'}`);
@@ -230,10 +220,7 @@ const METHODS: readonly HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE',
 
 function describeApi(args: Args): ToolResult {
   const index = indexOf(args);
-  const service = str(args, 'service');
-  if (service !== '' && findService(index, service) === undefined) {
-    return fail(`сервис не найден: ${service}. Есть: ${index.code.services.map((s) => s.name).join(', ')}`);
-  }
+  const service = serviceFilter(index, args);
   const methodArg = str(args, 'method').toUpperCase();
   const method = METHODS.find((m) => m === methodArg);
   if (methodArg !== '' && method === undefined) {
@@ -275,10 +262,7 @@ function listTables(args: Args): ToolResult {
 
 function getTable(args: Args): ToolResult {
   const index = indexOf(args);
-  const name = str(args, 'table');
-  if (name === '') {
-    return fail('table обязателен: имя таблицы в БД или в коде');
-  }
+  const name = requiredStr(args, 'table', 'имя таблицы в БД или в коде');
   const d = tableDetail(index, name);
   if (d === undefined) {
     const near = index.code.tables.filter((t) => t.name.includes(name.toLowerCase())).map((t) => t.name).slice(0, 10);
@@ -301,13 +285,3 @@ function getTable(args: Args): ToolResult {
     writtenBy: d.writtenBy.map((r) => `${r.method} ${r.path}`),
   });
 }
-
-/** Обработчики tools базы знаний. */
-export const CODE_HANDLERS: ReadonlyMap<string, (args: Args) => ToolResult> = new Map([
-  ['list_services', (args: Args) => ok({ ok: true, services: serviceSummaries(indexOf(args)) })],
-  ['list_routes', listRoutes],
-  ['get_route', getRoute],
-  ['describe_api', describeApi],
-  ['list_tables', listTables],
-  ['get_table', getTable],
-]);

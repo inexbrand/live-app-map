@@ -8,17 +8,11 @@ import { execFileSync } from 'node:child_process';
 import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test } from '@playwright/test';
+import { shot, WIDE_VIEWPORT } from './helpers';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 const monorepo = path.resolve(dir, '../../..');
-const SHOTS = process.env['LAM_SHOTS_DIR'];
-
-async function shot(page: Page, name: string): Promise<void> {
-  if (SHOTS !== undefined) {
-    await page.screenshot({ path: path.join(SHOTS, name) });
-  }
-}
 
 const EPOCH = 'docs/epoch/demo-task#20261121-120000';
 const BUGS = `${EPOCH}/09-bugs.md`;
@@ -36,7 +30,7 @@ test('закрыть и открыть пункт 09-bugs: файл на дис�
   const mapFile = path.join(info.outputDir, 'demo.liveappmap.json');
   execFileSync('bun', ['packages/cli/src/bin.ts', 'code', '--dir', root, '--format', 'liveappmap', '-o', mapFile], { cwd: monorepo });
 
-  await page.setViewportSize({ width: 1600, height: 1000 });
+  await page.setViewportSize(WIDE_VIEWPORT);
   await page.goto('/');
   await page.locator('#lam-file-input').setInputFiles(mapFile);
   // Селект карт показывает импортированный файл, а не «Выберите карту…».

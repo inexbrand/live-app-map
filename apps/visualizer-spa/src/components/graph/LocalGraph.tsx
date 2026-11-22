@@ -3,7 +3,8 @@
  * на одну-две ступени и списки «ссылается на» / «ссылаются сюда».
  */
 import { useMemo } from 'react';
-import { docNodeId, localGraph, type GraphNode } from '../../lib/doc-graph';
+import { docNodeId, type GraphNode } from '../../lib/doc-graph';
+import { localGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';

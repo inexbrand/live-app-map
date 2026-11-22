@@ -2,6 +2,7 @@
  * Кнопка UI-kit (shadcn-like, monochrome).
  */
 import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import { cx } from './class-names';
 
 export type ButtonVariant = 'default' | 'primary' | 'ghost' | 'outline';
 export type ButtonSize = 'default' | 'sm' | 'icon' | 'icon-sm';
@@ -12,10 +13,6 @@ export type ButtonProps = ButtonHTMLAttributes<HTMLButtonElement> & {
   readonly active?: boolean;
   readonly children?: ReactNode;
 };
-
-function classNames(...parts: Array<string | false | null | undefined>): string {
-  return parts.filter(Boolean).join(' ');
-}
 
 /**
  * Универсальная кнопка.
@@ -34,7 +31,7 @@ export function Button(props: ButtonProps) {
   return (
     <button
       type={type}
-      className={classNames(
+      className={cx(
         'ui-btn',
         variant === 'primary' && 'ui-btn--primary',
         variant === 'ghost' && 'ui-btn--ghost',

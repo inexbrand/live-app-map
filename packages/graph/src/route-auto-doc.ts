@@ -86,19 +86,29 @@ function inputLines(route: ApiRoute): AutoDocLine[] {
   return text === '' ? [] : [{ label: 'Вход', text }];
 }
 
+/** «подпись a, b» или пусто, если списка нет. */
+function listPart(label: string, items: readonly (string | number)[] | undefined): string {
+  return items === undefined || items.length === 0 ? '' : `${label} ${items.join(', ')}`;
+}
+
+/** Непустые части через «; » или undefined, если частей нет. */
+function joinParts(parts: readonly string[]): string | undefined {
+  const kept = parts.filter((p) => p !== '');
+  return kept.length === 0 ? undefined : kept.join('; ');
+}
+
 /** Строка доступа. */
 function accessText(route: ApiRoute): string | undefined {
   const a = route.access;
   if (a === undefined) {
     return undefined;
   }
-  const parts = [
+  return joinParts([
     a.auth === true ? 'нужен вход' : '',
-    (a.roles?.length ?? 0) > 0 ? `роли ${a.roles?.join(', ')}` : '',
-    (a.permissions?.length ?? 0) > 0 ? `права ${a.permissions?.join(', ')}` : '',
-    (a.checks?.length ?? 0) > 0 ? `проверки ${a.checks?.join(', ')}` : '',
-  ].filter((p) => p !== '');
-  return parts.length === 0 ? undefined : parts.join('; ');
+    listPart('роли', a.roles),
+    listPart('права', a.permissions),
+    listPart('проверки', a.checks),
+  ]);
 }
 
 /** Строка ответа. */
@@ -107,12 +117,7 @@ function responseText(route: ApiRoute): string | undefined {
   if (r === undefined) {
     return undefined;
   }
-  const parts = [
-    (r.fields?.length ?? 0) > 0 ? `поля ${r.fields?.join(', ')}` : '',
-    (r.values?.length ?? 0) > 0 ? `возвращает ${r.values?.join(', ')}` : '',
-    (r.statuses?.length ?? 0) > 0 ? `статусы ${r.statuses?.join(', ')}` : '',
-  ].filter((p) => p !== '');
-  return parts.length === 0 ? undefined : parts.join('; ');
+  return joinParts([listPart('поля', r.fields), listPart('возвращает', r.values), listPart('статусы', r.statuses)]);
 }
 
 /**

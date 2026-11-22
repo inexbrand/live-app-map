@@ -9,7 +9,7 @@
  */
 import { request as httpsRequest } from 'node:https';
 import type { IncomingMessage } from 'node:http';
-import { requestPath, sendJson, type DevMiddleware } from './dev-http';
+import { requestPath, sendError, type DevMiddleware } from './dev-http';
 import { finalizeProxiedBody, sanitizeProxiedHeaders } from './proxy-response';
 import { isTlsProxyAllowedHost } from './tls-proxy';
 
@@ -76,12 +76,12 @@ function forward(req: IncomingMessage, res: Parameters<DevMiddleware>[1], target
         res.writeHead(up.statusCode ?? 502, { ...sanitizeProxiedHeaders(up.headers), 'content-length': body.length });
         res.end(body);
       });
-      up.on('error', (err) => sendJson(res, 502, { ok: false, error: err.message }));
+      up.on('error', (err) => sendError(res, 502, err.message));
     },
   );
   upstream.on('error', (err) => {
     if (!res.headersSent) {
-      sendJson(res, 502, { ok: false, error: `upstream ${target.hostname}:${target.port}: ${err.message}` });
+      sendError(res, 502, `upstream ${target.hostname}:${target.port}: ${err.message}`);
     }
   });
   req.pipe(upstream);
@@ -97,7 +97,7 @@ export const httpsPathProxyMiddleware: DevMiddleware = (req, res, next) => {
   }
   const target = parseHttpsProxyTarget(req.url ?? '');
   if (target === null) {
-    sendJson(res, 403, { ok: false, error: 'хост не в allowlist (только localhost / *.localhost / 127.0.0.1)' });
+    sendError(res, 403, 'хост не в allowlist (только localhost / *.localhost / 127.0.0.1)');
     return;
   }
   forward(req, res, target);

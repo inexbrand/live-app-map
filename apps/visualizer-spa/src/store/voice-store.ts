@@ -3,6 +3,7 @@
  * загрузка с прогрессом, окно согласия на скачивание.
  */
 import { create } from 'zustand';
+import { anyBody, requestJson } from '../lib/dev-api';
 import { detectVoiceDevice, disposeVoiceEngine, loadVoiceModel } from '../lib/voice/voice-engine';
 import {
   VOICE_LANGUAGES,
@@ -112,8 +113,11 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
     const files = voiceModelFiles(model, device);
     set({ device });
     try {
-      const res = await fetch(`/__lam_models/size?repo=${encodeURIComponent(repo)}&files=${encodeURIComponent(files.join(','))}`);
-      const body: unknown = await res.json();
+      const r = await requestJson(`/__lam_models/size?repo=${encodeURIComponent(repo)}&files=${encodeURIComponent(files.join(','))}`);
+      if (!r.ok && r.status === null) {
+        throw new Error(r.error);
+      }
+      const body = anyBody(r);
       const bytes = typeof body === 'object' && body !== null && 'bytes' in body && typeof body.bytes === 'number' ? body.bytes : null;
       const onDisk = typeof body === 'object' && body !== null && 'bytesOnDisk' in body && typeof body.bytesOnDisk === 'number' ? body.bytesOnDisk : 0;
       const present = (bytes !== null && bytes > 0 && onDisk === bytes) || (await inBrowserCache(repo, files));
@@ -148,7 +152,10 @@ export const useVoiceStore = create<VoiceState>((set, get) => ({
         }
       }
     }
-    await fetch(`/__lam_models/hf/${repo}`, { method: 'DELETE' });
+    const removed = await requestJson(`/__lam_models/hf/${repo}`, { method: 'DELETE' });
+    if (!removed.ok && removed.status === null) {
+      throw new Error(removed.error);
+    }
     set({ phase: 'idle', present: false, progress: null });
     await get().inspect();
   },

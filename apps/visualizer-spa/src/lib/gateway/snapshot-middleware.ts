@@ -4,7 +4,7 @@
  * ходит по произвольным URL.
  */
 import { readFileSync } from 'node:fs';
-import { isLocalOrigin, requestPath, sendJson, type DevMiddleware } from '../dev-http';
+import { isLocalOrigin, requestPath, sendError, type DevMiddleware } from '../dev-http';
 import { parseGatewayHost } from './gateway-host';
 import { isValidSnapshotSize, type SnapshotService } from './snapshot-service';
 import { SNAPSHOT_PATH } from './snapshot-url';
@@ -51,12 +51,12 @@ export function createSnapshotMiddleware(service: SnapshotService, gatewayPort: 
       return;
     }
     if (!isLocalOrigin(req) || req.method !== 'GET') {
-      sendJson(res, 403, { ok: false, error: 'только GET со страницы визуализатора' });
+      sendError(res, 403, 'только GET со страницы визуализатора');
       return;
     }
     const parsed = parseSnapshotQuery(new URL(req.url ?? '', 'http://x').searchParams, gatewayPort);
     if (!parsed.ok) {
-      sendJson(res, 400, { ok: false, error: parsed.error });
+      sendError(res, 400, parsed.error);
       return;
     }
     service
@@ -68,7 +68,7 @@ export function createSnapshotMiddleware(service: SnapshotService, gatewayPort: 
         res.end(readFileSync(file));
       })
       .catch((err: unknown) => {
-        sendJson(res, 502, { ok: false, error: `снимок не получился: ${err instanceof Error ? err.message.slice(0, 200) : String(err)}` });
+        sendError(res, 502, `снимок не получился: ${err instanceof Error ? err.message.slice(0, 200) : String(err)}`);
       });
   };
 }

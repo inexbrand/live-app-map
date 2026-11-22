@@ -116,8 +116,11 @@ function mockFetchJson(
   );
 }
 
+const originalFetch = globalThis.fetch;
+
 afterEach(() => {
   mock.restore();
+  globalThis.fetch = originalFetch;
 });
 
 describe('fetchAppMapDocument (graphUrl path)', () => {

@@ -25,6 +25,7 @@ import { useNavHistory } from './lib/use-nav-history';
 import { useHotkeys } from './lib/use-hotkeys';
 import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsHelp } from './components/ShortcutsHelp';
+import { requestJson } from './lib/dev-api';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
 import { loadMapPresetIntoStore } from './lib/load-map-preset';
@@ -142,16 +143,15 @@ export function App() {
       useAppStore.getState().setGlobalRole(role);
     }
     if (map) {
-      void fetch(map)
+      void requestJson(map)
         .then(async (r) => {
           if (!r.ok) {
-            const msg = `Не удалось загрузить карту ${map}: HTTP ${r.status}`;
+            const msg = r.status === null ? r.error : `Не удалось загрузить карту ${map}: HTTP ${r.status}`;
             setLastLoadError(msg);
             setToast(msg);
             return;
           }
-          const json = (await r.json()) as unknown;
-          loadUnknownJson(json);
+          loadUnknownJson(r.value);
           setMode('live');
           // Deep-link / refresh: auto dogfood (раньше только через select карты)
           await runDogfoodAfterMapLoad();

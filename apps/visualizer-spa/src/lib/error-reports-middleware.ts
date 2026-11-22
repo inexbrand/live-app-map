@@ -10,10 +10,11 @@ import { resolveLamDir } from '@live-app-map/mcp-server';
 import { z } from 'zod';
 import { ErrorReportSource, type ErrorReport } from './error-report';
 import {
+  endpointMiddleware,
   isLocalOrigin,
-  parseJsonText,
-  readBody,
-  requestPath,
+  readValidJson,
+  rejectMethod,
+  sendError,
   sendJson,
   type DevMiddleware,
 } from './dev-http';
@@ -49,31 +50,24 @@ async function handle(
   res: Parameters<DevMiddleware>[1],
   options: ErrorReportsOptions,
 ): Promise<void> {
+  // Метод проверяется раньше origin: GET с чужой страницы — 405, как и прежде.
   if (req.method !== 'POST') {
-    res.setHeader('allow', 'POST');
-    sendJson(res, 405, { ok: false, error: 'только POST' });
+    rejectMethod(res, 'POST', 'только POST');
     return;
   }
   if (!isLocalOrigin(req)) {
-    sendJson(res, 403, { ok: false, error: 'origin не локальный' });
+    sendError(res, 403, 'origin не локальный');
     return;
   }
-  const body = await readBody(req, MAX_BODY_BYTES);
-  if (!body.ok) {
-    sendJson(res, body.status, { ok: false, error: body.error });
-    return;
-  }
-  const json = parseJsonText(body.text);
-  const parsed = errorReportSchema.safeParse(json?.value);
-  if (!parsed.success) {
-    sendJson(res, 400, { ok: false, error: parsed.error.issues[0]?.message ?? 'неверный отчёт' });
+  const report = await readValidJson(req, res, errorReportSchema, MAX_BODY_BYTES, (issues) => issues[0]?.message ?? 'неверный отчёт');
+  if (report === null) {
     return;
   }
   const id = randomUUID();
-  const record = { id, receivedAt: new Date().toISOString(), ...parsed.data };
+  const record = { id, receivedAt: new Date().toISOString(), ...report };
   mkdirSync(options.lamDir, { recursive: true });
   appendFileSync(path.join(options.lamDir, ERROR_REPORTS_FILE), `${JSON.stringify(record)}\n`, 'utf8');
-  (options.log ?? console.error)(`[lam-error-report] ${parsed.data.source}: ${parsed.data.message}`);
+  (options.log ?? console.error)(`[lam-error-report] ${report.source}: ${report.message}`);
   sendJson(res, 201, { ok: true, id });
 }
 
@@ -83,15 +77,11 @@ async function handle(
  * @param options - папка обмена и логгер
  */
 export function createErrorReportsMiddleware(options: ErrorReportsOptions): DevMiddleware {
-  return (req, res, next) => {
-    if (requestPath(req) !== ERROR_REPORTS_PATH) {
-      next();
-      return;
-    }
-    void handle(req, res, options).catch((err: unknown) => {
-      sendJson(res, 500, { ok: false, error: err instanceof Error ? err.message : String(err) });
-    });
-  };
+  return endpointMiddleware({
+    matches: (p) => p === ERROR_REPORTS_PATH,
+    errorStatus: 500,
+    handle: (req, res) => handle(req, res, options),
+  });
 }
 
 /** Middleware для vite.config: папка обмена в корне монорепо. */

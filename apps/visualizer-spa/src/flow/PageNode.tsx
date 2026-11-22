@@ -1,148 +1,47 @@
 /**
  * Нода карты: live iframe, размер окна (адаптив), лог load/error.
+ * Части — в flow/page-node: sandbox, шапка, строка пути, живой экран, панель окна, стейты, хуки.
  */
 import type { AppMapNode, AppMapPageState, DeviceViewport } from '@live-app-map/schema';
-import {
-  Handle,
-  Position,
-  type Node,
-  type NodeProps,
-} from '@xyflow/react';
-import {
-  ExternalLink,
-  Pin,
-  PinOff,
-  Smartphone,
-  Terminal,
-  MessageSquarePlus,
-} from 'lucide-react';
-import { memo, useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from 'react';
-import {
-  measureIframeContentHeight,
-} from '../lib/measure-iframe-height';
-import { wheelToPage } from '../lib/iframe-wheel';
-import {
-  computeNodeLayout,
-  resolveNodeViewport,
-  resolveViewportPresets,
-} from '../lib/viewport';
-import { Badge, Chip } from '../ui';
-import { NODE_IFRAME_ATTR } from '../lib/gateway/use-gateway-frames';
-import { snapshotSrc } from '../lib/gateway/snapshot-url';
-import { pageStatus } from '../lib/gateway/page-status';
-import { MAX_CONTENT_HEIGHT } from '../lib/viewport';
-import { useAppStore } from '../store/app-store';
-import { useGatewayStore } from '../store/gateway-store';
-import { useCommentsStore } from '../store/comments-store';
-import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
+import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
+import { memo, useEffect, useRef, useState } from 'react';
 import { CommentMarkers } from '../components/comments/CommentMarkers';
-import { commentsLabel } from '../lib/comments/format';
-import { startComment } from '../components/comments/start-comment';
+import { pageStatus } from '../lib/gateway/page-status';
+import { snapshotSrc } from '../lib/gateway/snapshot-url';
+import { measureIframeContentHeight } from '../lib/measure-iframe-height';
+import { computeNodeLayout } from '../lib/node-layout';
+import { MAX_CONTENT_HEIGHT, resolveNodeViewport, type ViewportPreset } from '../lib/viewport';
+import { resolveViewportPresets } from '../lib/viewport-presets';
+import { useAppStore } from '../store/app-store';
+import { useCommentsStore } from '../store/comments-store';
+import { useGatewayStore } from '../store/gateway-store';
+import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
+import { LiveFrame } from './page-node/LiveFrame';
+import { NodeActions } from './page-node/NodeActions';
+import { NodePath } from './page-node/NodePath';
+import { resolveIframeSandboxPreset, resolvePagePlaceholder, sandboxAttrForPreset, sandboxPresetLabel } from './page-node/sandbox';
+import { StateChips } from './page-node/StateChips';
+import { useNodeResize } from './page-node/use-node-resize';
+import { useNodeVisibility } from './page-node/use-node-visibility';
+import { useWheelToPage } from './page-node/use-wheel-to-page';
+import { ViewportBar } from './page-node/ViewportBar';
+
+export {
+  isTrustedIframeBaseUrl,
+  resolveIframeSandboxPreset,
+  resolvePagePlaceholder,
+  SANDBOX_STRICT,
+  SANDBOX_TRUSTED,
+  sandboxAttrForPreset,
+  sandboxPresetLabel,
+  type IframeSandboxPreset,
+} from './page-node/sandbox';
 
 export type PageNodeData = {
   readonly node: AppMapNode;
 };
 
 export type PageFlowNode = Node<PageNodeData, 'page'>;
-
-export type IframeSandboxPreset = 'strict' | 'trusted';
-
-export const SANDBOX_TRUSTED =
-  'allow-scripts allow-same-origin allow-forms allow-popups allow-modals allow-downloads';
-
-export const SANDBOX_STRICT =
-  'allow-scripts allow-forms allow-popups allow-modals';
-
-export function isTrustedIframeBaseUrl(baseUrl: string | null | undefined): boolean {
-  if (baseUrl === null || baseUrl === undefined) {
-    return false;
-  }
-  const trimmed = baseUrl.trim();
-  if (trimmed === '') {
-    return false;
-  }
-  // Same-origin Vite TLS proxy (self-signed target, secure:false)
-  if (
-    trimmed.includes('/__lam_proxy/miniapp') ||
-    trimmed.includes('/__lam_proxy/admin') ||
-    trimmed.includes('/__lam_proxy/site') ||
-    trimmed.includes('/__lam_proxy/https/')
-  ) {
-    return true;
-  }
-  try {
-    const host = new URL(
-      trimmed,
-      typeof location !== 'undefined' ? location.href : 'http://localhost',
-    ).hostname.toLowerCase();
-    if (
-      host === 'localhost' ||
-      host === '127.0.0.1' ||
-      host === '[::1]' ||
-      host === '::1'
-    ) {
-      return true;
-    }
-    return host.endsWith('.localhost');
-  } catch {
-    return false;
-  }
-}
-
-export function resolveIframeSandboxPreset(
-  baseUrl: string | null | undefined,
-  override?: IframeSandboxPreset | null,
-): IframeSandboxPreset {
-  if (override === 'strict' || override === 'trusted') {
-    return override;
-  }
-  return isTrustedIframeBaseUrl(baseUrl) ? 'trusted' : 'strict';
-}
-
-export function sandboxAttrForPreset(preset: IframeSandboxPreset): string {
-  return preset === 'trusted' ? SANDBOX_TRUSTED : SANDBOX_STRICT;
-}
-
-export function resolvePagePlaceholder(args: {
-  readonly mode: 'live' | 'map-only' | 'compact';
-  readonly hasUrl: boolean;
-  readonly iframeError: boolean;
-  /** Нода в viewport, но не в live-бюджете */
-  readonly inViewport?: boolean;
-  readonly isPinned?: boolean;
-  /** Keep-alive: iframe в DOM, state сохранён */
-  readonly isWarm?: boolean;
-}): string {
-  if (args.iframeError) {
-    return 'Ошибка загрузки iframe';
-  }
-  if (args.mode === 'live') {
-    if (!args.hasUrl) {
-      return 'Нет URL';
-    }
-    if (args.isWarm) {
-      return 'В памяти (заморожен, без перезагрузки)';
-    }
-    if (args.isPinned) {
-      return 'Pin в очереди (бюджет iframe)';
-    }
-    if (args.inViewport) {
-      return 'В кадре · ждёт слот (бюджет iframe)';
-    }
-    return 'Вне кадра · live при приближении';
-  }
-  if (args.mode === 'compact') {
-    return 'Компакт';
-  }
-  return 'Только карта';
-}
-
-export function sandboxPresetLabel(preset: IframeSandboxPreset): string {
-  if (preset === 'trusted') {
-    return 'Sandbox trusted (localhost)';
-  }
-  return 'Sandbox strict';
-}
 
 function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const node = props.data.node;
@@ -166,17 +65,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const measuredHeight = useAppStore((s) => s.contentHeights.get(node.id));
   const mapLayout = useAppStore((s) => s.document?.layout);
   const selectPage = useAppStore((s) => s.selectPage);
-  const togglePin = useAppStore((s) => s.togglePin);
-  const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
   const applyPageState = useAppStore((s) => s.applyPageState);
   const setInteract = useAppStore((s) => s.setInteract);
-  const setVisible = useAppStore((s) => s.setVisible);
-  const loadSeq = useAppStore((s) => s.loadSeq);
   const setNodeViewport = useAppStore((s) => s.setNodeViewport);
   const setContentHeight = useAppStore((s) => s.setContentHeight);
   const pushLog = useAppStore((s) => s.pushLog);
-  const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
-  const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
   const baseUrlOverride = useAppStore((s) => s.baseUrlOverride);
   const documentBaseUrl = useAppStore((s) => s.document?.baseUrl ?? '');
   // Порт и профили шлюза входят в адрес: подписка перестраивает его при входе.
@@ -227,55 +120,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     setIframeError(false);
   }, [url, viewport.width, viewport.height]);
 
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) {
-      return;
-    }
-    const io = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          const next = new Set(useAppStore.getState().visiblePageIds);
-          if (entry.intersectionRatio >= 0.15) {
-            next.add(node.id);
-          } else if (entry.intersectionRatio <= 0.02) {
-            next.delete(node.id);
-          }
-          const prev = useAppStore.getState().visiblePageIds;
-          if (prev.size !== next.size || [...next].some((id) => !prev.has(id))) {
-            setVisible(next);
-          }
-        }
-      },
-      { root: null, threshold: [0, 0.02, 0.15, 0.5, 1], rootMargin: '80px' },
-    );
-    io.observe(el);
-    return () => io.disconnect();
-  }, [node.id, setVisible, loadSeq]);
-
-  // Колесо над живым экраном, который длиннее своего окна, прокручивает страницу, а не холст.
-  // Нативный слушатель: d3-zoom холста ловит колесо раньше делегированных событий React.
-  const wheelTarget = useRef({ scrollable: false, pageWidth: viewport.width });
-  wheelTarget.current = { scrollable: status.cropped !== null, pageWidth: viewport.width };
-  useEffect(() => {
-    const el = bodyRef.current;
-    if (!el) {
-      return;
-    }
-    const onWheel = (e: WheelEvent) => {
-      const frame = iframeRef.current;
-      const { scrollable, pageWidth } = wheelTarget.current;
-      const msg = frame === null || !scrollable ? null : wheelToPage(e, frame.getBoundingClientRect(), pageWidth);
-      if (msg === null || frame === null) {
-        return;
-      }
-      e.stopPropagation();
-      e.preventDefault();
-      frame.contentWindow?.postMessage(msg, '*');
-    };
-    el.addEventListener('wheel', onWheel, { passive: false });
-    return () => el.removeEventListener('wheel', onWheel);
-  }, []);
+  useNodeVisibility(bodyRef, node.id);
+  useWheelToPage(bodyRef, iframeRef, status.cropped !== null, viewport.width);
 
   // Во всю высоту (heightMode=auto): высота из отчёта шлюза — страница кросс-доменная.
   const reportedHeight = status.contentHeight;
@@ -314,13 +160,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   /** Warm вне live: держим DOM, visually «приглушён» если не в кадре */
   const iframeDimmed = isWarm && !isLive;
 
-  const applyPreset = (p: {
-    readonly id: string;
-    readonly label: string;
-    readonly width: number;
-    readonly height: number;
-    readonly heightMode?: 'auto' | 'fixed';
-  }) => {
+  const applyPreset = (p: ViewportPreset) => {
     const next: DeviceViewport = {
       width: p.width,
       height: p.height,
@@ -332,47 +172,36 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
     window.setTimeout(() => applyMeasuredHeight(), 400);
   };
 
-  /** Resize по ширине; высота auto переизмеряется. Shift — free height (fixed). */
-  const onResizePointerDown = (e: ReactPointerEvent<HTMLDivElement>) => {
-    e.stopPropagation();
-    e.preventDefault();
-    const startX = e.clientX;
-    const startY = e.clientY;
-    const startW = viewport.width;
-    const startH = viewport.height;
-    const freeHeight = e.shiftKey;
-    const pointerId = e.pointerId;
-    const target = e.currentTarget;
-    target.setPointerCapture(pointerId);
+  const onResizePointerDown = useNodeResize(node.id, viewport, scale, applyMeasuredHeight);
 
-    const onMove = (ev: PointerEvent) => {
-      const dw = (ev.clientX - startX) / scale;
-      const nextW = Math.max(200, Math.min(2560, startW + dw));
-      if (freeHeight) {
-        const dh = (ev.clientY - startY) / scale;
-        setNodeViewport(node.id, {
-          width: Math.round(nextW),
-          height: Math.max(120, startH + dh),
-          label: 'Свой',
-          heightMode: 'fixed',
-        });
-        return;
-      }
-      setNodeViewport(node.id, {
-        width: Math.round(nextW),
-        height: viewport.height,
-        label: String(Math.round(nextW)),
-        heightMode: 'auto',
-      });
-    };
-    const onUp = () => {
-      target.releasePointerCapture(pointerId);
-      window.removeEventListener('pointermove', onMove);
-      window.removeEventListener('pointerup', onUp);
-      window.setTimeout(() => applyMeasuredHeight(), 200);
-    };
-    window.addEventListener('pointermove', onMove);
-    window.addEventListener('pointerup', onUp);
+  const toggleFullHeight = () => {
+    // Обратно в окно — высота без замера страницы (та, что была до «целиком»).
+    const windowHeight = resolveNodeViewport({ nodeViewport: node.viewport, override, layout: mapLayout, measuredHeight: undefined }).height;
+    setNodeViewport(node.id, viewport.heightMode === 'auto' ? { ...viewport, height: windowHeight, heightMode: 'fixed' } : { ...viewport, heightMode: 'auto' });
+  };
+
+  const onFrameLoad = () => {
+    setIframeError(false);
+    pushLog({
+      level: 'info',
+      source: node.id,
+      message: `iframe load ${viewport.width}×${viewport.height}${viewport.heightMode === 'auto' ? ' auto' : ''} · ${url}`,
+    });
+    // measure полной высоты страницы (same-origin / proxy)
+    window.requestAnimationFrame(() => {
+      applyMeasuredHeight();
+      window.setTimeout(() => applyMeasuredHeight(), 350);
+      window.setTimeout(() => applyMeasuredHeight(), 1200);
+    });
+  };
+
+  const onFrameError = () => {
+    setIframeError(true);
+    pushLog({
+      level: 'error',
+      source: node.id,
+      message: `iframe error · ${url ?? 'no url'}`,
+    });
   };
 
   return (
@@ -394,94 +223,10 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
         <div className="page-node__title" title={node.title}>{node.title}</div>
-        <div className="page-node__actions">
-          <button
-            type="button"
-            className="icon-btn"
-            title="Замечание к компоненту этого экрана (C)"
-            aria-label="Замечание к компоненту"
-            data-testid="node-comment"
-            onClick={(e) => {
-              e.stopPropagation();
-              startComment('element', node.id);
-            }}
-          >
-            <MessageSquarePlus size={15} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            title="Лог экрана"
-            aria-label="Лог экрана"
-            onClick={(e) => {
-              e.stopPropagation();
-              setLogFilterPageId(node.id);
-              setDiagnosticsOpen(true);
-            }}
-          >
-            <Terminal size={15} strokeWidth={1.75} />
-          </button>
-          <button
-            type="button"
-            className={`icon-btn${isPinned ? ' icon-btn--on' : ''}`}
-            title="Закрепить live"
-            aria-label={isPinned ? 'Открепить' : 'Закрепить'}
-            aria-pressed={isPinned}
-            onClick={(e) => {
-              e.stopPropagation();
-              togglePin(node.id);
-            }}
-          >
-            {isPinned ? (
-              <PinOff size={15} strokeWidth={1.75} />
-            ) : (
-              <Pin size={15} strokeWidth={1.75} />
-            )}
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            title="Открыть во вкладке"
-            aria-label="Открыть во вкладке"
-            onClick={(e) => {
-              e.stopPropagation();
-              openPageInNewTab(node.id);
-            }}
-          >
-            <ExternalLink size={15} strokeWidth={1.75} />
-          </button>
-        </div>
+        <NodeActions nodeId={node.id} isPinned={isPinned} />
       </div>
       {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
-      <div className="page-node__path" title={url ?? node.pathPattern}>
-        {status.unauthorized !== null ? (
-          <Badge className="ui-badge--alert" title={status.unauthorized} data-lam-auth="none">
-            не авторизован
-          </Badge>
-        ) : null}
-        {status.cropped !== null ? (
-          <Badge className="ui-badge--warn" title={`${status.cropped}. Выберите ноду и нажмите «целиком» — она вырастет до высоты страницы`} data-lam-cropped="1">
-            обрезано
-          </Badge>
-        ) : null}
-        {openComments > 0 ? (
-          <Badge className="ui-badge--comments" data-lam-comments={openComments} title="Открытые замечания к экрану">
-            {commentsLabel(openComments)}
-          </Badge>
-        ) : null}
-        {isLive ? (
-          <Badge>live</Badge>
-        ) : isWarm ? (
-          <Badge>warm</Badge>
-        ) : null}
-        <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
-        <span className="page-node__size">
-          {' '}
-          · {viewport.width}×{viewport.height}
-          {viewport.heightMode === 'auto' ? ' auto' : ''}
-          {viewport.label ? ` ${viewport.label}` : ''}
-        </span>
-      </div>
+      <NodePath node={node} url={url} status={status} openComments={openComments} isLive={isLive} isWarm={isWarm} viewport={viewport} />
       <div
         className="page-node__body"
         ref={bodyRef}
@@ -495,85 +240,22 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         }}
       >
         {showIframe ? (
-          <div
-            className="page-node__iframe-shell"
-            data-sandbox-preset={sandboxPreset}
-            data-lam-iframe-shell
-            style={{
-              width: layout.contentWidth,
-              height: layout.contentHeight,
-            }}
-          >
-            {/* Под живым iframe — его снимок: во время зума iframe прячется (дорогой слой), виден снимок. */}
-            {gatewaySnapshot === null ? null : (
-              <img
-                className="page-node__snapshot page-node__snapshot--under"
-                src={gatewaySnapshot}
-                alt=""
-                aria-hidden={true}
-                loading="lazy"
-                decoding="async"
-                draggable={false}
-                onError={() => setSnapshotFailed(true)}
-                style={{ width: viewport.width, height: viewport.height, transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`, transformOrigin: '0 0' }}
-              />
-            )}
-            <iframe
-              ref={iframeRef}
-              key={`${url}:${sandboxPreset}:${viewport.width}:${viewport.heightMode ?? 'auto'}`}
-              title={node.title}
-              src={url}
-              {...{ [NODE_IFRAME_ATTR]: node.id }}
-              width={viewport.width}
-              height={viewport.height}
-              referrerPolicy="strict-origin-when-cross-origin"
-              allow="clipboard-read; clipboard-write"
-              className={
-                isInteract
-                  ? 'page-node__iframe page-node__iframe--interact nodrag nopan nowheel'
-                  : 'page-node__iframe nodrag nopan nowheel'
-              }
-              data-lam-interact={isInteract ? '1' : '0'}
-              style={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                width: viewport.width,
-                height: viewport.height,
-                border: 0,
-                transform: `scale(${layout.iframeScaleX}, ${layout.iframeScaleY})`,
-                transformOrigin: '0 0',
-                /* Только explicit «Клики в iframe» — hover/click доходят в app */
-                pointerEvents: isInteract || picking ? 'auto' : 'none',
-                zIndex: isInteract || picking ? 2 : 0,
-                /* Warm keep-alive: DOM жив; чуть тусклее если не live-слот */
-                opacity: iframeDimmed ? 0.92 : 1,
-              }}
-              sandbox={sandboxValue}
-              onLoad={() => {
-                setIframeError(false);
-                pushLog({
-                  level: 'info',
-                  source: node.id,
-                  message: `iframe load ${viewport.width}×${viewport.height}${viewport.heightMode === 'auto' ? ' auto' : ''} · ${url}`,
-                });
-                // measure полной высоты страницы (same-origin / proxy)
-                window.requestAnimationFrame(() => {
-                  applyMeasuredHeight();
-                  window.setTimeout(() => applyMeasuredHeight(), 350);
-                  window.setTimeout(() => applyMeasuredHeight(), 1200);
-                });
-              }}
-              onError={() => {
-                setIframeError(true);
-                pushLog({
-                  level: 'error',
-                  source: node.id,
-                  message: `iframe error · ${url ?? 'no url'}`,
-                });
-              }}
-            />
-          </div>
+          <LiveFrame
+            node={node}
+            url={url}
+            viewport={viewport}
+            layout={layout}
+            sandboxPreset={sandboxPreset}
+            sandboxValue={sandboxValue}
+            gatewaySnapshot={gatewaySnapshot}
+            isInteract={isInteract}
+            picking={picking}
+            iframeDimmed={iframeDimmed}
+            iframeRef={iframeRef}
+            onSnapshotError={() => setSnapshotFailed(true)}
+            onLoad={onFrameLoad}
+            onError={onFrameError}
+          />
         ) : snapshot !== null ? (
           // Замороженная нода: снимок вместо живого iframe — память вкладки не растёт.
           <img
@@ -606,60 +288,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
         />
       </div>
       {isSelected ? (
-        <div
-          className="page-node__viewport-bar"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <Smartphone size={12} strokeWidth={1.75} aria-hidden={true} />
-          {widthPresets.map((p) => (
-            <button
-              key={p.id}
-              type="button"
-              className={`page-node__vp-btn${
-                viewport.width === p.width ? ' page-node__vp-btn--on' : ''
-              }`}
-              title={`${p.label} · ${p.width}px · height ${p.heightMode ?? 'auto'}`}
-              onClick={() => applyPreset(p)}
-            >
-              {p.label}
-            </button>
-          ))}
-          {/* Целиком — нода растёт до высоты страницы; окно — фиксированная высота, страница прокручивается внутри (двойной клик — взаимодействие). */}
-          <button
-            type="button"
-            className={`page-node__vp-btn${viewport.heightMode === 'auto' ? ' page-node__vp-btn--on' : ''}`}
-            aria-pressed={viewport.heightMode === 'auto'}
-            data-lam-full-height
-            title={viewport.heightMode === 'auto' ? 'Сейчас: страница целиком. Нажмите — окно с прокруткой' : 'Сейчас: окно с прокруткой. Нажмите — страница целиком'}
-            onClick={() => {
-              // Обратно в окно — высота без замера страницы (та, что была до «целиком»).
-              const windowHeight = resolveNodeViewport({ nodeViewport: node.viewport, override, layout: mapLayout, measuredHeight: undefined }).height;
-              setNodeViewport(node.id, viewport.heightMode === 'auto' ? { ...viewport, height: windowHeight, heightMode: 'fixed' } : { ...viewport, heightMode: 'auto' });
-            }}
-          >
-            целиком
-          </button>
-        </div>
+        <ViewportBar viewport={viewport} presets={widthPresets} applyPreset={applyPreset} toggleFullHeight={toggleFullHeight} />
       ) : node.states && node.states.length > 0 ? (
-        <div className="page-node__states">
-          {node.states.map((st) => (
-            <Chip
-              key={st.name}
-              active={activeStateName === st.name}
-              title={st.note ?? st.name}
-              onClick={(e) => {
-                e.stopPropagation();
-                onState(st);
-              }}
-            >
-              {st.name === 'recruiter'
-                ? 'рекрутер'
-                : st.name === 'employer'
-                  ? 'клиент'
-                  : st.name}
-            </Chip>
-          ))}
-        </div>
+        <StateChips states={node.states} activeStateName={activeStateName} onState={onState} />
       ) : null}
       <Handle type="source" position={Position.Right} />
     </div>
