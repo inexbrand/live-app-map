@@ -6,7 +6,13 @@ import { useDom } from './dom';
 import '@testing-library/react';
 import { afterEach, describe, expect, test } from 'bun:test';
 import {
+  blurActive,
   drawerEdges,
+  inside,
+  intersects,
+  isClickable,
+  mcpResult,
+  scrollTopOf,
   firstClickable,
   firstNodeInView,
   freeBand,
@@ -124,5 +130,150 @@ describe('выбор ноды и компонента', () => {
     const good = { x: 400, y: 200, width: 100, height: 40 };
     expect(firstClickable([null, under, small, good], band, 900)).toEqual({ x: 450, y: 212 });
     expect(firstClickable([under, { ...good, y: 50 }, { ...good, y: 880 }], band, 900)).toBeUndefined();
+  });
+});
+
+describe('границы', () => {
+  test('layoutItems: элемент без ширины или высоты не виден; точка проверки — центр по X, не ниже 20 px от верха', () => {
+    placed(document.body, 'p', 0, 0, 0, 10);
+    placed(document.body, 'p', 0, 0, 10, 0);
+    placed(document.body, 'p', 100, 50, 200, 100);
+    placed(document.body, 'p', 400, 50, 1, 10);
+    placed(document.body, 'p', 500, 50, 10, 1);
+    const points: [number, number][] = [];
+    Object.defineProperty(document, 'elementFromPoint', {
+      configurable: true,
+      value: (x: number, y: number) => {
+        points.push([x, y]);
+        return null;
+      },
+    });
+    expect(layoutItems(['.p']).map((i) => i.name)).toEqual(['.p[2]', '.p[3]', '.p[4]']);
+    expect(points).toEqual([
+      [200, 70],
+      [400.5, 55],
+      [505, 50.5],
+    ]);
+  });
+
+  test('intersects: по каждой стороне перекрытие ровно 1 px — нет, больше — да', () => {
+    const a = { name: 'a', left: 0, top: 0, right: 100, bottom: 100, related: [], covered: false };
+    const shifted = [
+      { left: 99, top: 0, right: 200, bottom: 100 },
+      { left: -100, top: 0, right: 1, bottom: 100 },
+      { left: 0, top: 99, right: 100, bottom: 200 },
+      { left: 0, top: -100, right: 100, bottom: 1 },
+    ];
+    for (const s of shifted) {
+      expect(intersects(a, { ...a, ...s })).toBe(false);
+    }
+    const deeper = [
+      { left: 98.5, top: 0, right: 200, bottom: 100 },
+      { left: -100, top: 0, right: 1.5, bottom: 100 },
+      { left: 0, top: 98.5, right: 100, bottom: 200 },
+      { left: 0, top: -100, right: 100, bottom: 1.5 },
+    ];
+    for (const s of deeper) {
+      expect(intersects(a, { ...a, ...s })).toBe(true);
+    }
+  });
+
+  test('minimapRaw: нет любой из частей — ошибка; нет viewBox — пустая строка', () => {
+    const parts = () => {
+      document.body.innerHTML = '';
+      const flow = placed(document.body, 'react-flow', 0, 0, 10, 10);
+      const vp = placed(flow, 'react-flow__viewport', 0, 0, 1, 1);
+      const box = placed(document.body, 'react-flow__minimap', 0, 0, 10, 10);
+      const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      box.append(svg);
+      return { flow, vp, box, svg };
+    };
+    for (const drop of ['flow', 'vp', 'box', 'svg'] as const) {
+      const p = parts();
+      if (drop === 'flow') {
+        p.flow.className = 'other';
+      } else {
+        p[drop].remove();
+      }
+      expect(() => minimapRaw()).toThrow('нет мини-карты или холста');
+    }
+    parts();
+    expect(minimapRaw().viewBox).toBe('');
+  });
+
+  test('matrixOf: нулевой зум не подменяется; viewBoxOf: недостающие числа — 0', () => {
+    expect(matrixOf('matrix(0, 0, 0, 0, 3, 4)')).toEqual({ zoom: 0, tx: 3, ty: 4 });
+    expect(viewBoxOf('5')).toEqual({ x: 5, y: 0, w: 0, h: 0 });
+  });
+
+  test('firstNodeInView: края окна и шапки', () => {
+    const at = (x: number, y: number, w: number) => placed(document.body, 'n', x, y, w, 10);
+    expect(firstNodeInView([at(0, 70, 10)])).toEqual({ x: 5, y: 82, id: '' });
+    expect(firstNodeInView([at(-1, 70, 10)])).toBeNull();
+    expect(firstNodeInView([at(0, 69, 10)])).toBeNull();
+    expect(firstNodeInView([at(window.innerWidth - 10, 100, 10)])).toBeNull();
+    expect(firstNodeInView([at(window.innerWidth - 11, 100, 10)])).not.toBeNull();
+    expect(firstNodeInView([at(0, window.innerHeight - 20, 10)])).toBeNull();
+    expect(firstNodeInView([at(0, window.innerHeight - 21, 10)])).not.toBeNull();
+  });
+
+  test('freeBand: панель ровно посередине не сужает полосу', () => {
+    expect(freeBand([{ left: 800, right: 900 }], 1600)).toEqual({ left: 0, right: 1600 });
+  });
+
+  test('inside: допуск 1 px по умолчанию на каждой стороне', () => {
+    const outer = { x: 10, y: 10, w: 100, h: 100 };
+    expect(inside({ x: 9, y: 9, w: 102, h: 102 }, outer)).toBe(true);
+    for (const r of [
+      { x: 8.5, y: 10, w: 10, h: 10 },
+      { x: 10, y: 8.5, w: 10, h: 10 },
+      { x: 10, y: 10, w: 101.5, h: 10 },
+      { x: 10, y: 10, w: 10, h: 101.5 },
+    ]) {
+      expect(inside(r, outer)).toBe(false);
+    }
+    expect(inside({ x: 9, y: 10, w: 10, h: 10 }, outer, 0)).toBe(false);
+  });
+
+  test('scrollTopOf: прокрутка 0 и 5, нет элемента — -1; blurActive снимает фокус', () => {
+    const box = document.createElement('div');
+    box.className = 'scroller';
+    document.body.append(box);
+    expect(scrollTopOf('.scroller')).toBe(0);
+    box.scrollTop = 5;
+    expect(scrollTopOf('.scroller')).toBe(5);
+    expect(scrollTopOf('.none')).toBe(-1);
+    const input = document.createElement('input');
+    document.body.append(input);
+    input.focus();
+    expect(document.activeElement).toBe(input);
+    blurActive();
+    expect(document.activeElement).toBe(document.body);
+    blurActive();
+    expect(document.activeElement).toBe(document.body);
+  });
+
+  test('mcpResult: JSON первого блока; блоков нет — пустой объект', () => {
+    expect(mcpResult({ result: { content: [{ text: '{"a":1}' }, { text: '{"b":2}' }] } })).toEqual({ a: 1 });
+    expect(mcpResult({ result: { content: [] } })).toEqual({});
+  });
+
+  test('isClickable: пороги размера, шапки, полосы и окна; точка — не ниже 12 px и середина высоты', () => {
+    const band = { left: 100, right: 500 };
+    const ok = { x: 101, y: 81, width: 21, height: 11 };
+    expect(isClickable(ok, band, 900)).toBe(true);
+    for (const b of [
+      { ...ok, width: 20 },
+      { ...ok, height: 10 },
+      { ...ok, x: 100 },
+      { ...ok, y: 80 },
+      { ...ok, x: 479 },
+      { ...ok, y: 889 },
+    ]) {
+      expect(isClickable(b, band, 900)).toBe(false);
+    }
+    expect(isClickable({ ...ok, x: 478 }, band, 900)).toBe(true);
+    expect(isClickable({ ...ok, y: 888 }, band, 900)).toBe(true);
+    expect(firstClickable([{ x: 200, y: 200, width: 40, height: 20 }], band, 900)).toEqual({ x: 220, y: 210 });
   });
 });

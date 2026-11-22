@@ -46,3 +46,8 @@
 - Зачем: бриф требует perf-тесты Reassure для ключевых экранов.
 - Что: src/perf/screens.perf-test.tsx — вид «API» (314 роутов), «База данных» (74 таблицы), глобальный поиск; сценарий — ввод запроса userEvent, список сужается. src/perf/perf-test.ts — замер под bun (у bun нет expect.getState и global.gc). perf/bun-runner.mjs — TEST_RUNNER_PATH для CLI reassure, bun test --conditions=require (ESM-обёртка pretty-format под bun теряет plugins). Скрипты test:perf и test:perf:baseline, .reassure/ в .gitignore.
 - Проверка: test:perf:baseline и test:perf — сравнение без значимых изменений: API ~51 мс/6 рендеров, БД ~13 мс/5, поиск ~3 мс/11; лишних рендеров нет. Файлы *.perf-test.tsx не попадают в bun test по умолчанию.
+## Mutator: прокси SPA, замеры e2e, scripts
+
+- Зачем: бриф — mutator по изменённому коду; выжившие — пробелы в тестах.
+- Что: dev-proxy.test — самоподписанный HTTPS (openssl), текст ошибки fetch, лог прокси; удалён недостижимый catch→500 в tlsCheckMiddleware. e2e-probes.test — границы (1 px наложения, допуск inside, пороги isClickable/firstNodeInView, scrollTop 0, blurActive, mcpResult). korbor-scripts.test — keptSymbols/surfaceCode (экспортированы), роли, ребро «лента → вакансия», закрепление и iframe страниц сайта, хост поверхности, liveOnly, cmsPagesOf, parseScanStdout, probeHttp 200/499/500 и HTTPS; убран лишний набор EMPLOYER_PATHS (все пути с /employer/). Тест-хелпер appMap — полный AppMapDocument (тест не проходил tsc).
+- Итог: прокси 32/36 (4 эквивалентных ?? / ?.), probes 112/121 → остались эквивалентные ?? / ||, scripts 127/163 (81%): остаток — эквивалентные ??, текст логов, ветка отказа CLI в smokeScanFixture и main (только при запуске скриптом).

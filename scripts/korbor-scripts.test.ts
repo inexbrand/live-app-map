@@ -6,12 +6,14 @@
 import { afterAll, describe, expect, test } from 'bun:test';
 import path from 'node:path';
 import type { LiveAppMapDocument } from '../packages/schema/src/index';
-import type { AppMapDocument, AppMapNode } from '../packages/schema/src/types';
+import { FORMAT_VERSION, type AppMapDocument, type AppMapNode } from '../packages/schema/src/types';
 import { runScan } from '../packages/cli/src/index';
 import { enrichMiniapp, enrichSite, korborAllDocument, mergeSurfaces } from './korbor-enrich';
 import { cmsPagesOf, fetchCmsPages, withCmsPages } from './korbor-site-pages';
-import { attachKorborCode } from './korbor-code';
-import { parseScanStdout, probeHttp, probeLine, smokeScanFixture, spaKindOf, summaryOf, tallyOf } from './runtime-smoke';
+import { attachKorborCode, keptSymbols, surfaceCode } from './korbor-code';
+import type { CodeModel, CodeSymbol } from '../packages/schema/src/index';
+import { execFileSync } from 'node:child_process';
+import { isPlainObject, parseScanStdout, probeHttp, probeLine, smokeScanFixture, spaKindOf, summaryOf, tallyOf } from './runtime-smoke';
 import { optionsFromEnv, runKorborScan } from './scan-korbor';
 import { cpSync, existsSync, mkdirSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import os from 'node:os';
@@ -25,8 +27,13 @@ function page(id: string, p: string, extra: Partial<AppMapNode> = {}): AppMapNod
 
 function appMap(nodes: AppMapNode[]): AppMapDocument {
   return {
-    version: '1.0',
+    formatVersion: FORMAT_VERSION,
+    kind: 'live-app-map',
+    generatedAt: '2026-11-22T00:00:00.000Z',
+    generator: { name: 'test', version: '0' },
+    revision: 'r',
     project: { name: 'x', root: '/x', framework: 'react-router' },
+    baseUrl: null,
     nodes,
     edges: [],
   };
@@ -196,9 +203,9 @@ describe('mergeSurfaces', () => {
 
   test('korborAllDocument: общий документ с code, docs и временем сборки', () => {
     const code = { root: '/k', services: [], symbols: [], routes: [], tables: [] };
-    const docs = { epochs: [], notes: [], guides: [] };
+    const docs = { root: '/k', epochs: [], notes: [], guides: [] };
     const doc = korborAllDocument(merged, code, docs, '2026-11-22T00:00:00.000Z');
-    expect(doc.app.generatedAt).toBe('2026-11-22T00:00:00.000Z');
+    expect(doc.app?.generatedAt).toBe('2026-11-22T00:00:00.000Z');
     expect(doc.pages).toBe(merged.pages);
     expect(doc.code).toBe(code);
   });
@@ -317,4 +324,118 @@ describe('runtime smoke', () => {
     expect(r.exitCode).toBe(0);
     expect(r.pages).toBeGreaterThan(0);
   }, 60_000);
+});
+
+describe('границы обогащения и слияния', () => {
+  const sym = (name: string, file: string, extra: Partial<CodeSymbol> = {}): CodeSymbol => ({ id: name, kind: 'function', name, serviceId: 's', location: { file, line: 1 }, ...extra });
+
+  test('keptSymbols: остаётся символ с описанием, с комментариями или из файла экрана', () => {
+    const symbols = [sym('doc', 'a.ts', { doc: 'd' }), sym('note', 'b.ts', { comments: ['c'] }), sym('screen', 'screen.tsx'), sym('bare', 'c.ts')];
+    expect(keptSymbols(symbols, [{ file: 'screen.tsx', calls: [] }]).map((s) => s.name)).toEqual(['doc', 'note', 'screen']);
+  });
+
+  test('surfaceCode: экраны своей приставки без неё, экран без nodeId не берётся, символы их файлов', () => {
+    const code: CodeModel = {
+      root: '/k',
+      services: [],
+      symbols: [sym('own', 'own.tsx'), sym('other', 'other.tsx')],
+      routes: [],
+      tables: [],
+      screens: [
+        { nodeId: 'miniapp:route:/feed', file: 'own.tsx', calls: [] },
+        { nodeId: 'admin:route:/', file: 'other.tsx', calls: [] },
+        { file: 'loose.tsx', calls: [] },
+      ],
+    };
+    const own = surfaceCode(code, 'miniapp');
+    expect(own.screens).toEqual([{ nodeId: 'route:/feed', file: 'own.tsx', calls: [] }]);
+    expect(own.symbols.map((s) => s.name)).toEqual(['own']);
+  });
+
+  test('enrichMiniapp: клиент — пути /employer/, рекрутер — свой набор; без вакансии и без ленты — нет ребра «лента → вакансия»', () => {
+    const roles = (p: string) => enrichMiniapp(appMap([page('x', p)])).nodes[0]?.states?.map((s) => s.name);
+    expect(roles('/employer/x')).toEqual(['employer']);
+    expect(roles('/verification')).toEqual(['recruiter']);
+    expect(roles('/employer')).toBeUndefined();
+    const label = 'Open vacancy';
+    expect(enrichMiniapp(appMap([page('feed', '/feed')])).edges.some((e) => e.label === label)).toBe(false);
+    expect(enrichMiniapp(appMap([page('vac', '/vacancies/[id]', { pathExample: '/vacancies/1' })])).edges.some((e) => e.label === label)).toBe(false);
+  });
+
+  test('enrichSite: только главная закреплена, у всех страниц включён iframe, группы по порядку', () => {
+    const doc = enrichSite(appMap([page('home', '/')]), 'http://s');
+    const site = doc.nodes.filter((n) => n.id.startsWith('site-'));
+    expect(site.map((n) => [n.id, n.defaultPinned === true, n.iframePolicy?.enabled])).toEqual([
+      ['site-home', true, true],
+      ['site-payload-admin', false, true],
+      ['site-payload-login', false, true],
+      ['site-payload-collections', false, true],
+    ]);
+    expect(doc.groups?.map((g) => g.order)).toEqual([0, 1]);
+  });
+
+  test('mergeSurfaces: пустой url остаётся, свой хост — как есть, чужой — путь страницы или адреса', () => {
+    const doc = (pages: LiveAppMapDocument['pages']): LiveAppMapDocument => ({ version: '1.0', baseUrl: 'http://localhost:16001', app: { name: 'x' }, pages, edges: [] });
+    const merged = mergeSurfaces([
+      {
+        id: 'site',
+        title: 'Сайт',
+        expectedHost: 'localhost:16001',
+        doc: doc([
+          { id: 'empty', title: 'e', url: '' },
+          { id: 'own', title: 'o', url: 'http://localhost:16001/a?x=1' },
+          { id: 'path', title: 'p', path: 'b', url: 'http://other/zzz' },
+          { id: 'url', title: 'u', url: 'http://other/c' },
+        ]),
+      },
+    ]);
+    expect(merged.pages.map((p) => p.url)).toEqual(['', 'http://localhost:16001/a?x=1', 'http://localhost:16001/b', 'http://localhost:16001/c']);
+  });
+
+  test('korborAllDocument: только живые экраны', () => {
+    const doc = korborAllDocument({ pages: [], edges: [], groups: [] }, { root: '/k', services: [], symbols: [], routes: [], tables: [] }, { root: '/k', epochs: [], notes: [], guides: [] }, '2026-11-22T00:00:00.000Z');
+    expect(doc.extensions?.['korbor']).toMatchObject({ liveOnly: true });
+  });
+
+  test('cmsPagesOf: slug и title должны быть строками; у страницы CMS включён iframe', () => {
+    expect(cmsPagesOf({ docs: [{ slug: 1 }, { slug: 'a', title: 2 }, null] })).toEqual([{ slug: 'a', title: 'a' }]);
+    const added = withCmsPages(appMap([page('home', '/')]), 'http://s', [{ slug: 'about', title: 'О нас' }]).nodes.find((n) => n.id === 'site-cms:about');
+    expect(added?.iframePolicy).toEqual({ enabled: true });
+  });
+
+  test('isPlainObject и parseScanStdout: null, массив, «}» до «{», одна страница — ok, нечисловое pages', () => {
+    expect([isPlainObject(null), isPlainObject([]), isPlainObject('x'), isPlainObject({})]).toEqual([false, false, false, true]);
+    expect(parseScanStdout('} {')).toBeNull();
+    expect(parseScanStdout('{')).toBeNull();
+    expect(parseScanStdout('{"pages":1}')).toEqual({ pages: 1, ok: true });
+    expect(parseScanStdout('{"pages":0,"ok":true}')).toEqual({ pages: 0, ok: true });
+    expect(parseScanStdout('{"pages":1e999}')).toBeNull();
+    expect(parseScanStdout('null {"x":1}')).toBeNull();
+  });
+
+  test('probeHttp: 200 и 499 — ok, 500 — bad; самоподписанный HTTPS принимается; текст ошибки — как у fetch', async () => {
+    const server = Bun.serve({ port: 0, fetch: (req) => new Response('', { status: Number(new URL(req.url).pathname.slice(1)) }) });
+    const dir = mkdtempSync(path.join(os.tmpdir(), 'lam-tls-'));
+    const [key, cert] = [path.join(dir, 'key.pem'), path.join(dir, 'cert.pem')];
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=localhost'], { stdio: 'ignore' });
+    const secure = Bun.serve({ port: 0, tls: { key: Bun.file(key), cert: Bun.file(cert) }, fetch: () => new Response('ok') });
+    try {
+      const at = (s: number) => probeHttp(`http://localhost:${server.port}/${s}`, 2000);
+      expect([await at(200), await at(499), await at(500)]).toEqual([
+        { kind: 'ok', status: 200 },
+        { kind: 'ok', status: 499 },
+        { kind: 'bad', status: 500, message: 'HTTP 500' },
+      ]);
+      expect(await probeHttp(`https://localhost:${secure.port}/`, 2000)).toEqual({ kind: 'ok', status: 200 });
+    } finally {
+      server.stop(true);
+      secure.stop(true);
+      rmSync(dir, { recursive: true, force: true });
+    }
+    const refused = await fetch('http://127.0.0.1:1/').then(
+      () => '',
+      (e: unknown) => (e instanceof Error ? e.message : String(e)),
+    );
+    expect(await probeHttp('http://127.0.0.1:1/', 2000)).toEqual({ kind: 'skip', message: refused.slice(0, 120) });
+  });
 });

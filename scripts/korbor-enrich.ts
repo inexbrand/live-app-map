@@ -27,8 +27,6 @@ const ROLE_STATES: AppMapPageState[] = [
   },
 ];
 
-const EMPLOYER_PATHS = new Set(['/employer/create', '/employer/vacancies', '/employer/vacancies/[id]']);
-
 const RECRUITER_PATHS = new Set(['/feed', '/applications', '/applications/[id]/submit', '/verification', '/wallet', '/vacancies/[id]']);
 
 /** Табы, общие для обеих ролей. */
@@ -40,7 +38,7 @@ const TAB_ORDER = ['/feed', '/applications', '/wallet', '/chats', '/verification
 /** Роли экрана по пути: клиент, рекрутер, общий таб — обе. */
 function roleNames(p: string): string[] {
   return [
-    ...(EMPLOYER_PATHS.has(p) || p.startsWith('/employer/') ? ['employer'] : []),
+    ...(p.startsWith('/employer/') ? ['employer'] : []),
     ...(RECRUITER_PATHS.has(p) || p === '/chats' || p.startsWith('/chat') ? ['recruiter'] : []),
     ...(SHARED_TABS.has(p) ? ROLE_STATES.map((s) => s.name) : []),
   ];

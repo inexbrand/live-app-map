@@ -2,7 +2,8 @@
  * Dev-сервер SPA: проверка TLS локальных сервисов, каталог карт, ответ path-proxy
  * для iframe — на настоящем HTTP-сервере и событиях прокси.
  */
-import { afterAll, describe, expect, test } from 'bun:test';
+import { afterAll, describe, expect, spyOn, test } from 'bun:test';
+import { execFileSync } from 'node:child_process';
 import { EventEmitter } from 'node:events';
 import { mkdtempSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -40,8 +41,30 @@ describe('GET /__lam_tls_check', () => {
       body: { ok: true, status: 204, protocol: 'http:', host: `127.0.0.1:${upstream.port}`, selfSignedOk: false, message: 'HTTP доступен' },
     });
     const down = await check(`?url=${encodeURIComponent('http://app.localhost:1/')}`);
-    expect(down.status).toBe(200);
-    expect(down.body).toMatchObject({ ok: false, host: 'app.localhost:1', hint: 'Проверьте, что miniapp/admin запущен. Для self-signed в iframe включите TLS-proxy.' });
+    const refused = await fetch('http://app.localhost:1/').then(
+      () => '',
+      (e: unknown) => (e instanceof Error ? e.message : String(e)),
+    );
+    expect(down).toEqual({
+      status: 200,
+      body: { ok: false, host: 'app.localhost:1', error: refused.slice(0, 200), hint: 'Проверьте, что miniapp/admin запущен. Для self-signed в iframe включите TLS-proxy.' },
+    });
+  });
+
+  test('HTTPS с самоподписанным сертификатом принимается', async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), 'lam-tls-'));
+    const [key, cert] = [path.join(dir, 'key.pem'), path.join(dir, 'cert.pem')];
+    execFileSync('openssl', ['req', '-x509', '-newkey', 'rsa:2048', '-nodes', '-keyout', key, '-out', cert, '-days', '1', '-subj', '/CN=localhost'], { stdio: 'ignore' });
+    const secure = Bun.serve({ port: 0, tls: { key: Bun.file(key), cert: Bun.file(cert) }, fetch: () => new Response('ok') });
+    try {
+      const r = await check(`?url=${encodeURIComponent(`https://localhost:${secure.port}/`)}`);
+      expect(r).toEqual({
+        status: 200,
+        body: { ok: true, status: 200, protocol: 'https:', host: `localhost:${secure.port}`, selfSignedOk: true, message: 'HTTPS доступен (self-signed accepted server-side)' },
+      });
+    } finally {
+      secure.stop(true);
+    }
   });
 
   test('чужой путь — следующему обработчику', async () => {
@@ -123,7 +146,8 @@ describe('attachFrameBypass', () => {
     expect(res.body).toContain('src="/__lam_proxy/site/main.js"');
   });
 
-  test('обрыв upstream — 502; ответ уже отдан — не трогается', () => {
+  test('обрыв upstream — 502 и запись в лог; ответ уже отдан — не трогается', () => {
+    const warn = spyOn(console, 'warn').mockImplementation(() => undefined);
     const proxy = new EventEmitter();
     attachFrameBypass(proxy, 'admin', '/__lam_proxy/admin');
     proxy.emit('error', new Error('нет связи'));
@@ -136,6 +160,12 @@ describe('attachFrameBypass', () => {
     upstream.emit('end');
     upstream.emit('error', 'ещё');
     expect(res.head?.[0]).toBe(502);
+    expect(warn.mock.calls).toEqual([
+      ['[lam-proxy admin]', 'нет связи'],
+      ['[lam-proxy admin] proxyRes', 'обрыв'],
+      ['[lam-proxy admin] proxyRes', 'ещё'],
+    ]);
+    warn.mockRestore();
   });
 
   test('stripProxyPrefix: путь без префикса, пусто — корень', () => {

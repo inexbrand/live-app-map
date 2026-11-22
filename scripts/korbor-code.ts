@@ -27,13 +27,13 @@ export type KorborCode = {
  * Символы для карты. Символы без комментариев — 4/5 веса карты и ничего не объясняют:
  * остаются документированные и символы файлов экранов (панель экрана показывает их).
  */
-function keptSymbols(symbols: readonly CodeSymbol[], screens: readonly ScreenApi[]): CodeSymbol[] {
+export function keptSymbols(symbols: readonly CodeSymbol[], screens: readonly ScreenApi[]): CodeSymbol[] {
   const screenFiles = new Set(screens.map((s) => s.file));
   return symbols.filter((s) => s.doc !== undefined || s.comments !== undefined || screenFiles.has(s.location.file));
 }
 
 /** code поверхности: свои экраны (nodeId без приставки) и символы только их файлов; полный набор — в общей карте. */
-function surfaceCode(code: CodeModel, id: string): CodeModel {
+export function surfaceCode(code: CodeModel, id: string): CodeModel {
   const prefix = `${id}:`;
   const own = (code.screens ?? [])
     .filter((sc) => sc.nodeId?.startsWith(prefix) === true)

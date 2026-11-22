@@ -103,10 +103,6 @@ export async function tlsCheckMiddleware(req: IncomingMessage, res: ServerRespon
     next();
     return;
   }
-  try {
-    const target = checkTarget(rawUrl);
-    sendJson(res, target instanceof URL ? await probeTarget(target) : target);
-  } catch (err) {
-    sendJson(res, { status: 500, body: { ok: false, error: err instanceof Error ? err.message : String(err) } });
-  }
+  const target = checkTarget(rawUrl);
+  sendJson(res, target instanceof URL ? await probeTarget(target) : target);
 }
