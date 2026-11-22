@@ -4,6 +4,9 @@
  */
 import { describe, expect, test } from 'bun:test';
 import { injectScript } from './inject-script';
+import * as pickDom from './pick-dom';
+import * as pickSource from './pick-source';
+import { pickerScriptText } from './pick-script';
 import { componentNameOf, cssSelectorFor, domPathOf, frameFromStack, originalPosition, type PickElement } from './pick-script';
 
 type Fake = PickElement & { children: Fake[] };
@@ -107,5 +110,12 @@ describe('pick-script', () => {
     const body = /<script data-lam-gateway>([\s\S]*)<\/script>$/.exec(script)?.[1] ?? '';
     expect(body).toContain('installPicker');
     expect(() => new Function(body)).not.toThrow();
+  });
+
+  test('скрипт страницы объявляет каждую функцию пикера, которую зовёт', () => {
+    const text = pickerScriptText();
+    const names = Object.entries({ ...pickDom, ...pickSource }).filter(([, v]) => typeof v === 'function').map(([k]) => k);
+    const missing = names.filter((n) => new RegExp(`\\b${n}\\(`).test(text) && !text.includes(`function ${n}(`));
+    expect(missing).toEqual([]);
   });
 });
