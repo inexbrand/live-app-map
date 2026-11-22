@@ -52,16 +52,26 @@ export function buildSessionRequest(f: SessionFormFields): SessionRequest {
   }
   const base = { label: f.label.trim(), role: f.role.trim(), origin: new URL(f.origin.trim()).origin };
   const path = `/__lam_sessions/${id}`;
-  if (f.method === 'korbor-dogfood') {
-    const [kind, actorId] = f.actor.split(':');
-    if ((kind !== 'admin' && kind !== 'user') || actorId === undefined || actorId === '') {
-      return fail('actor', 'Выберите пользователя из базы korbor');
-    }
-    if (!isSafeUrl(f.apiBase.trim())) {
-      return fail('apiBase', 'Впишите адрес API korbor, например http://127.0.0.1:16000');
-    }
-    return { ok: true, method: 'POST', path: `${path}/korbor-dogfood`, body: { ...base, kind, actorId, apiBase: f.apiBase.trim() } };
+  return f.method === 'korbor-dogfood' ? dogfoodRequest(f, base, path) : pasteRequest(f, base, path);
+}
+
+/** Общие поля тела запроса профиля. */
+type SessionBase = { readonly label: string; readonly role: string; readonly origin: string };
+
+/** Вход пользователем из базы korbor: POST …/korbor-dogfood. */
+function dogfoodRequest(f: SessionFormFields, base: SessionBase, path: string): SessionRequest {
+  const [kind, actorId] = f.actor.split(':');
+  if ((kind !== 'admin' && kind !== 'user') || actorId === undefined || actorId === '') {
+    return fail('actor', 'Выберите пользователя из базы korbor');
   }
+  if (!isSafeUrl(f.apiBase.trim())) {
+    return fail('apiBase', 'Впишите адрес API korbor, например http://127.0.0.1:16000');
+  }
+  return { ok: true, method: 'POST', path: `${path}/korbor-dogfood`, body: { ...base, kind, actorId, apiBase: f.apiBase.trim() } };
+}
+
+/** Вставленные куки и/или токен sessionStorage: PUT профиля. */
+function pasteRequest(f: SessionFormFields, base: SessionBase, path: string): SessionRequest {
   const cookies = f.cookies.trim();
   const key = f.storageKey.trim();
   const value = f.storageValue.trim();
