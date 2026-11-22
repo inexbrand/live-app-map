@@ -98,47 +98,37 @@ export function assembleDocument(input: {
  * Детект framework в каталоге (next / hybrid / react-router / unknown).
  */
 export function detectFramework(absRoot: string): FrameworkKind {
-  const hasApp =
-    existsSync(path.join(absRoot, 'app')) ||
-    existsSync(path.join(absRoot, 'src', 'app'));
-  const hasPages =
-    existsSync(path.join(absRoot, 'pages')) ||
-    existsSync(path.join(absRoot, 'src', 'pages'));
-  const hasNextConfig =
-    existsSync(path.join(absRoot, 'next.config.js')) ||
-    existsSync(path.join(absRoot, 'next.config.mjs')) ||
-    existsSync(path.join(absRoot, 'next.config.ts'));
-  const pkgPath = path.join(absRoot, 'package.json');
-  let deps = '';
-  if (existsSync(pkgPath)) {
-    try {
-      deps = JSON.stringify(JSON.parse(readFileSync(pkgPath, 'utf8')) as unknown);
-    } catch {
-      // битый package.json — не считаем deps, detekt по layout
-      deps = '';
-    }
-  }
-  const hasRR =
-    deps.includes('react-router') ||
-    existsSync(path.join(absRoot, 'src', 'app', 'router.tsx')) ||
-    existsSync(path.join(absRoot, 'src', 'app', 'routes-config.tsx'));
+  const any = (...rels: string[][]): boolean => rels.some((r) => existsSync(path.join(absRoot, ...r)));
+  const hasApp = any(['app'], ['src', 'app']);
+  const hasPages = any(['pages'], ['src', 'pages']);
+  const hasNextConfig = any(['next.config.js'], ['next.config.mjs'], ['next.config.ts']);
+  const hasRR = packageDeps(absRoot).includes('react-router') || any(['src', 'app', 'router.tsx'], ['src', 'app', 'routes-config.tsx']);
+  return frameworkOf(hasApp, hasPages, hasNextConfig, hasRR);
+}
 
-  if ((hasApp || hasPages) && hasNextConfig) {
-    if (hasApp && hasPages) {
-      return 'hybrid';
-    }
-    return 'next';
+/** Зависимости package.json одной строкой; нет файла или он битый — пусто (решает раскладка). */
+function packageDeps(absRoot: string): string {
+  const pkgPath = path.join(absRoot, 'package.json');
+  if (!existsSync(pkgPath)) {
+    return '';
   }
-  if (hasApp && !hasRR) {
-    return 'next';
+  try {
+    return JSON.stringify(JSON.parse(readFileSync(pkgPath, 'utf8')) as unknown);
+  } catch {
+    return '';
+  }
+}
+
+/** Фреймворк по признакам раскладки: next.config решает за Next, роутер — за React Router. */
+function frameworkOf(hasApp: boolean, hasPages: boolean, hasNextConfig: boolean, hasRR: boolean): FrameworkKind {
+  const routerDirs = hasApp || hasPages;
+  if (routerDirs && hasNextConfig) {
+    return hasApp && hasPages ? 'hybrid' : 'next';
   }
   if (hasRR) {
     return 'react-router';
   }
-  if (hasApp || hasPages) {
-    return 'next';
-  }
-  return 'unknown';
+  return routerDirs ? 'next' : 'unknown';
 }
 
 export { diag, DEFAULT_EXCLUDE };

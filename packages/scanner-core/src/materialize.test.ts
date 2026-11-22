@@ -37,4 +37,12 @@ describe('extractDynamicParams', () => {
   test('collects names', () => {
     expect(extractDynamicParams('/a/[id]/b/[...slug]')).toEqual(['id', 'slug']);
   });
+
+  test('необязательный catch-all: без значения — сегмента нет, массив — через /, строка — как есть', () => {
+    expect(materializePath('/docs/[[...slug]]')).toEqual({ path: '/docs', missing: [] });
+    expect(materializePath('/docs/[[...slug]]', { slug: ['a', 'b'] }).path).toBe('/docs/a/b');
+    expect(materializePath('/docs/[[...slug]]', { slug: [] }).path).toBe('/docs');
+    expect(materializePath('/docs/[[...slug]]', { slug: 'intro' }).path).toBe('/docs/intro');
+    expect(materializePath('/[[...all]]').path).toBe('/');
+  });
 });

@@ -51,6 +51,12 @@ function scanLines(text: string): { readonly raw: string; readonly fenced: boole
   });
 }
 
+/** Пункт-чекбокс: [ ] — открыт, [x] — закрыт; без текста — не пункт. */
+function checkboxItem(body: string, mark: string | undefined, line: number): BugItem | null {
+  const text = plain(body.replace(CHECKBOX, ''));
+  return text === '' ? null : { line, text, state: mark === ' ' ? 'open' : 'closed', checkbox: true };
+}
+
 /** Пункт строки или null. */
 function itemOf(raw: string, line: number, section: BugItemState): BugItem | null {
   const body = LIST_ITEM.exec(raw.trim())?.[1]?.trim();
@@ -59,8 +65,7 @@ function itemOf(raw: string, line: number, section: BugItemState): BugItem | nul
   }
   const box = CHECKBOX.exec(body);
   if (box !== null) {
-    const text = plain(body.replace(CHECKBOX, ''));
-    return text === '' ? null : { line, text, state: box[1] === ' ' ? 'open' : 'closed', checkbox: true };
+    return checkboxItem(body, box[1], line);
   }
   if (/^(\s{2,}|\t)/.test(raw) || EMPTY_ITEM.test(body)) {
     return null;
@@ -107,25 +112,29 @@ function blockEnd(lines: readonly string[], start: number): number {
   return end;
 }
 
+/** Раздел заголовка строки (открыто/закрыто) или undefined. */
+function headingKind(l: string): BugItemState | undefined {
+  const title = HEADING.exec(l.trim())?.[2];
+  return title === undefined ? undefined : sectionKind(title.trim());
+}
+
+/** Уровень заголовка строки (число #) или undefined. */
+function headingLevel(l: string | undefined): number | undefined {
+  return HEADING.exec(l?.trim() ?? '')?.[1]?.length;
+}
+
 /** Границы раздела: [заголовок, конец) или null. */
 function sectionRange(lines: readonly string[], kind: BugItemState): { readonly start: number; readonly end: number } | null {
-  const start = lines.findIndex((l) => {
-    const h = HEADING.exec(l.trim());
-    return h?.[2] !== undefined && sectionKind(h[2].trim()) === kind;
-  });
+  const start = lines.findIndex((l) => headingKind(l) === kind);
   if (start < 0) {
     return null;
   }
-  const level = HEADING.exec(lines[start]?.trim() ?? '')?.[1]?.length ?? 2;
-  let end = start + 1;
-  while (end < lines.length) {
-    const h = HEADING.exec(lines[end]?.trim() ?? '');
-    if (h?.[1] !== undefined && h[1].length <= level) {
-      break;
-    }
-    end += 1;
-  }
-  return { start, end };
+  const level = headingLevel(lines[start]) ?? 2;
+  const after = lines.slice(start + 1).findIndex((l) => {
+    const lv = headingLevel(l);
+    return lv !== undefined && lv <= level;
+  });
+  return { start, end: after < 0 ? lines.length : start + 1 + after };
 }
 
 /** Без пустых строк в конце. */
@@ -166,6 +175,28 @@ function unmark(raw: string): string {
   return raw.replace(/~~(.*?)~~/, '$1').replace(/\[закрыт[^\]]*\]\s*/i, '');
 }
 
+/** Чекбокс меняется на месте; пункт раздела «открыто» при открытии — тоже (снимается отметка). */
+function staysInPlace(lines: readonly string[], line: number, checkbox: boolean, target: 'open' | 'closed'): boolean {
+  const open = sectionRange(lines, 'open');
+  return checkbox || (target === 'open' && open !== null && line > open.start && line < open.end);
+}
+
+function editInPlace(lines: readonly string[], line: number, checkbox: boolean, target: 'open' | 'closed'): string[] {
+  const out = [...lines];
+  const raw = out[line] ?? '';
+  out[line] = checkbox ? raw.replace(/\[[ xX]\]/, target === 'closed' ? '[x]' : '[ ]') : unmark(raw);
+  return out;
+}
+
+/** Пункт с продолжением — в раздел состояния; пустая строка до и после пункта — после переноса остаётся одна. */
+function moveToSection(lines: readonly string[], line: number, target: 'open' | 'closed'): string[] {
+  const end = blockEnd(lines, line);
+  const block = lines.slice(line, end).map((l, i) => (i === 0 && target === 'open' ? unmark(l) : l));
+  const gap = (lines[line - 1] ?? '').trim() === '' && (lines[end] ?? 'x').trim() === '' ? 1 : 0;
+  const without = [...lines.slice(0, line), ...lines.slice(end + gap)];
+  return insertIntoSection(without, target, block);
+}
+
 /**
  * Переводит пункт в состояние: чекбокс — отметкой на месте, пометку «закрыт» в Open —
  * снятием на месте, иначе — переносом в раздел Open/Closed (раздел создаётся, если
@@ -187,16 +218,6 @@ export function setBugItemState(text: string, line: number, expected: string, ta
   }
   const eol = text.includes('\r\n') ? '\r\n' : '\n';
   const lines = text.split(/\r?\n/);
-  const open = sectionRange(lines, 'open');
-  const inOpen = open !== null && line > open.start && line < open.end;
-  if (item.checkbox || (target === 'open' && inOpen)) {
-    lines[line] = item.checkbox ? (lines[line] ?? '').replace(/\[[ xX]\]/, target === 'closed' ? '[x]' : '[ ]') : unmark(lines[line] ?? '');
-    return { ok: true, changed: true, text: lines.join(eol) };
-  }
-  const end = blockEnd(lines, line);
-  const block = lines.slice(line, end).map((l, i) => (i === 0 && target === 'open' ? unmark(l) : l));
-  // Пустая строка до и после пункта — после переноса остаётся одна.
-  const gap = (lines[line - 1] ?? '').trim() === '' && (lines[end] ?? 'x').trim() === '' ? 1 : 0;
-  const without = [...lines.slice(0, line), ...lines.slice(end + gap)];
-  return { ok: true, changed: true, text: insertIntoSection(without, target, block).join(eol) };
+  const next = staysInPlace(lines, line, item.checkbox, target) ? editInPlace(lines, line, item.checkbox, target) : moveToSection(lines, line, target);
+  return { ok: true, changed: true, text: next.join(eol) };
 }

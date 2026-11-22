@@ -87,6 +87,44 @@ export function isExcluded(
   return false;
 }
 
+type WalkContext = {
+  readonly exclude: readonly string[];
+  readonly out: string[];
+  readonly report: (absPath: string, relativePath: string, phase: WalkFsError['phase'], error: unknown) => void;
+};
+
+/** Файлы папки и подпапок (кроме исключённых) — в ctx.out; ошибки ФС — в отчёт, обход идёт дальше. */
+function walkDir(ctx: WalkContext, abs: string, rel: string): void {
+  let entries: string[];
+  try {
+    entries = readdirSync(abs);
+  } catch (error: unknown) {
+    ctx.report(abs, rel, 'readdir', error);
+    return;
+  }
+  for (const name of entries) {
+    const relPosix = rel ? `${rel}/${name}` : name;
+    if (!isExcluded(relPosix, ctx.exclude)) {
+      walkEntry(ctx, path.join(abs, name), relPosix);
+    }
+  }
+}
+
+function walkEntry(ctx: WalkContext, full: string, relPosix: string): void {
+  let st;
+  try {
+    st = statSync(full);
+  } catch (error: unknown) {
+    ctx.report(full, relPosix, 'stat', error);
+    return;
+  }
+  if (st.isDirectory()) {
+    walkDir(ctx, full, relPosix);
+  } else if (st.isFile()) {
+    ctx.out.push(relPosix);
+  }
+}
+
 /**
  * Рекурсивный walk файлов (posix relative paths).
  * Ошибки readdir/stat не глотаются молча: вызывается `onFsError` с reason, каталог/файл пропускается.
@@ -99,54 +137,13 @@ export function walkFiles(
   excludeOrOptions: readonly string[] | WalkFilesOptions = DEFAULT_EXCLUDE,
 ): string[] {
   const { exclude, onFsError } = resolveWalkOptions(excludeOrOptions);
-  const out: string[] = [];
-
-  function reportFsError(
-    absPath: string,
-    relativePath: string,
-    phase: WalkFsError['phase'],
-    error: unknown,
-  ): void {
-    const reason = formatFsSkipReason(phase, error);
-    onFsError?.({
-      absPath,
-      relativePath,
-      phase,
-      error,
-      reason,
-    });
-  }
-
-  function walk(abs: string, rel: string): void {
-    let entries: string[];
-    try {
-      entries = readdirSync(abs);
-    } catch (error: unknown) {
-      reportFsError(abs, rel, 'readdir', error);
-      return;
-    }
-    for (const name of entries) {
-      const relPosix = rel ? `${rel}/${name}` : name;
-      if (isExcluded(relPosix, exclude)) {
-        continue;
-      }
-      const full = path.join(abs, name);
-      let st;
-      try {
-        st = statSync(full);
-      } catch (error: unknown) {
-        reportFsError(full, relPosix, 'stat', error);
-        continue;
-      }
-      if (st.isDirectory()) {
-        walk(full, relPosix);
-      } else if (st.isFile()) {
-        out.push(relPosix);
-      }
-    }
-  }
+  const ctx: WalkContext = {
+    exclude,
+    out: [],
+    report: (absPath, relativePath, phase, error) => onFsError?.({ absPath, relativePath, phase, error, reason: formatFsSkipReason(phase, error) }),
+  };
   if (existsSync(absRoot)) {
-    walk(absRoot, '');
+    walkDir(ctx, absRoot, '');
   }
-  return out.sort();
+  return ctx.out.sort();
 }
