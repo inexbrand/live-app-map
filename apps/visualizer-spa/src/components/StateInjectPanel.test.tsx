@@ -147,7 +147,7 @@ describe('панель кода', () => {
       expect(useAppStore.getState().selectedPageId).not.toBe(svc.id);
       act(() => useAppStore.getState().selectPage(svc.id));
     }
-    await userEvent.setup().type(ui.getByLabelText('Фильтр кода'), 'нет-такого-zzz');
+    await userEvent.setup({ document }).type(ui.getByLabelText('Фильтр кода'), 'нет-такого-zzz');
     expect(ui.queryAllByTestId('code-route')).toHaveLength(0);
     expect(ui.queryAllByTestId('code-table')).toHaveLength(0);
   });

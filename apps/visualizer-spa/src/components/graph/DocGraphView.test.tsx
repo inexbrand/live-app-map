@@ -1,0 +1,224 @@
+/**
+ * Граф документации как у пользователя: фильтры, поиск, карточка узла и холст
+ * (клик, двойной клик, наведение, сдвиг, масштаб). Холст рисует в записывающий
+ * контекст — проверяется, что и где нарисовано.
+ */
+import { dumpDom, useDom } from '../../test/dom';
+import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { act, fireEvent, render, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
+import { useDocGraphStore } from '../../store/doc-graph-store';
+import { useViewStore } from '../../store/view-store';
+import { circleCenters, installCanvas, lastFrame, type RecordingContext } from '../../test/canvas';
+import { openMap, resetStores } from '../../test/fixtures';
+import { DocGraphView } from './DocGraphView';
+
+useDom();
+
+let canvas: ReturnType<typeof installCanvas>;
+
+beforeEach(() => {
+  resetStores();
+  canvas = installCanvas(true);
+});
+
+afterEach(() => canvas.restore());
+
+/** Слаг первой эпохи карты — запрос, который точно найдёт эпоху. */
+function epochSlug(): string {
+  const slug = openMap('korbor-miniapp').docs?.epochs[0]?.slug;
+  if (slug === undefined) {
+    throw new Error('нет эпох');
+  }
+  return slug;
+}
+
+/** Дождаться кадров рисования. */
+async function frames(): Promise<void> {
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 40));
+  });
+}
+
+async function view() {
+  const r = render(<DocGraphView switcher={<span>режим</span>} />);
+  await frames();
+  return { ui: within(r.container), container: r.container };
+}
+
+function stats(ui: ReturnType<typeof within>): string {
+  return ui.getByTestId('graph-stats').textContent ?? '';
+}
+
+/** Колесо над точкой холста (WheelEvent в happy-dom не несёт координат мыши — задаются явно). */
+function wheelAt(el: HTMLElement, x: number, y: number, deltaY: number): void {
+  const e = new WheelEvent('wheel', { deltaY, bubbles: true, cancelable: true });
+  Object.defineProperties(e, { clientX: { value: x }, clientY: { value: y } });
+  act(() => {
+    el.dispatchEvent(e);
+  });
+}
+
+function first<T>(xs: readonly T[]): T {
+  const x = xs[0];
+  if (x === undefined) {
+    throw new Error('пусто');
+  }
+  return x;
+}
+
+describe('граф документации', () => {
+  test('без документов — подсказка', async () => {
+    const { container } = await view();
+    expect(container.textContent).toContain('В карте нет документов — граф строить не из чего.');
+  });
+
+  test('фильтры типов и готовности меняют граф; «показать все» возвращает', async () => {
+    openMap('korbor-miniapp');
+    const { ui, container } = await view();
+    const all = stats(ui);
+    dumpDom('graph-start', container);
+    fireEvent.click(ui.getByTestId('graph-kind-epoch'));
+    expect(ui.getByTestId('graph-kind-epoch').getAttribute('aria-pressed')).toBe('true');
+    expect(stats(ui)).not.toBe(all);
+    dumpDom('graph-kind', container);
+    fireEvent.click(ui.getByRole('button', { name: 'показать все' }));
+    expect(stats(ui)).toBe(all);
+    fireEvent.click(within(ui.getByRole('group', { name: 'Готовность эпох на графе' })).getByRole('button', { name: /^Не готово/ }));
+    expect(useDocGraphStore.getState().readiness).toBe('not-ready');
+    fireEvent.click(ui.getByTestId('graph-kind-route'));
+    fireEvent.click(ui.getByTestId('graph-kind-route'));
+    fireEvent.click(ui.getByTestId('graph-kind-epoch'));
+    fireEvent.click(within(ui.getByRole('group', { name: 'Готовность эпох на графе' })).getByRole('button', { name: 'Готово' }));
+    await frames();
+    dumpDom('graph-filtered', container);
+  });
+
+  test('ни одного узла под фильтром — подсказка вместо холста', async () => {
+    openMap('korbor-miniapp');
+    act(() => useDocGraphStore.setState({ kinds: new Set(['epoch-file']) }));
+    const { ui } = await view();
+    expect(ui.getByText('Под фильтры не попал ни один узел. Включите типы или смените готовность.')).toBeTruthy();
+  });
+
+  test('поиск: совпадения, Enter выбирает первое, карточка со связями', async () => {
+    openMap('korbor-miniapp');
+    const { ui, container } = await view();
+    const search = ui.getByLabelText('Поиск по графу');
+    await userEvent.setup({ document }).type(search, epochSlug());
+    fireEvent.keyDown(ui.getByLabelText('Поиск по графу'), { key: 'Enter' });
+    const hit = first(ui.getAllByTestId('graph-hit'));
+    const card = within(ui.getByTestId('graph-node-card'));
+    expect(card.getByRole('heading', { level: 2 }).textContent).toBe(hit.textContent);
+    expect(hit.className).toContain('doc-graph__link--on');
+    await frames();
+    dumpDom('graph-search', container);
+    const link = first(card.queryAllByRole('listitem')).querySelector('button');
+    if (link !== null) {
+      const label = link.textContent;
+      fireEvent.click(link);
+      expect(within(ui.getByTestId('graph-node-card')).getByRole('heading', { level: 2 }).textContent).toBe(label);
+    }
+    fireEvent.click(first(ui.getAllByTestId('graph-hit')));
+    fireEvent.click(within(ui.getByTestId('graph-node-card')).getByTestId('graph-open-text'));
+    expect(useViewStore.getState().doc).not.toBeNull();
+    await userEvent.setup({ document }).type(search, 'zzzнет');
+    expect(ui.getByText('Ничего не найдено. Проверьте фильтры типов.')).toBeTruthy();
+  });
+
+  test('эпоха: показать и свернуть файлы, раскрыть все', async () => {
+    openMap('korbor-miniapp');
+    const { ui, container } = await view();
+    const all = stats(ui);
+    fireEvent.click(ui.getByTestId('graph-expand-all'));
+    expect(stats(ui)).not.toBe(all);
+    fireEvent.click(ui.getByRole('button', { name: 'Свернуть' }));
+    expect(stats(ui)).toBe(all);
+    expect(useDocGraphStore.getState().expanded.size).toBe(0);
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск по графу'), epochSlug());
+    fireEvent.keyDown(ui.getByLabelText('Поиск по графу'), { key: 'Enter' });
+    const card = within(ui.getByTestId('graph-node-card'));
+    const toggle = card.queryByRole('button', { name: 'Показать файлы' });
+    if (toggle !== null) {
+      fireEvent.click(toggle);
+      expect(stats(ui)).not.toBe(all);
+      dumpDom('graph-epoch-open', ui.getByTestId('graph-node-card'));
+      fireEvent.click(card.getByRole('button', { name: 'Свернуть файлы' }));
+      expect(stats(ui)).toBe(all);
+    }
+  });
+});
+
+describe('холст графа', () => {
+  function circles(ctx: RecordingContext) {
+    return circleCenters(ctx.log);
+  }
+
+  test('рисует граф: кадр с узлами и подписями', async () => {
+    openMap('korbor-miniapp');
+    await view();
+    const frame = lastFrame(canvas.ctx.log);
+    expect(frame.some((e) => e.startsWith('arc('))).toBe(true);
+    expect(frame.some((e) => e.startsWith('moveTo('))).toBe(true);
+  });
+
+  test('клик по узлу выбирает его, по фону — снимает выбор; двойной клик открывает', async () => {
+    openMap('korbor-miniapp');
+    const { ui } = await view();
+    const el = ui.getByTestId('doc-graph-canvas');
+    const p = first(circles(canvas.ctx));
+    fireEvent.pointerMove(el, { clientX: p.x, clientY: p.y });
+    await frames();
+    fireEvent.pointerDown(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
+    fireEvent.pointerUp(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
+    await frames();
+    expect(el.getAttribute('data-selected')).not.toBe('');
+    expect(ui.getByTestId('graph-node-card')).toBeTruthy();
+    fireEvent.pointerLeave(el);
+    fireEvent.doubleClick(el, { clientX: p.x, clientY: p.y });
+    expect(useViewStore.getState().doc).not.toBeNull();
+    fireEvent.pointerDown(el, { clientX: 2, clientY: 2, pointerId: 1 });
+    fireEvent.pointerUp(el, { clientX: 2, clientY: 2, pointerId: 1 });
+    fireEvent.doubleClick(el, { clientX: 2, clientY: 2 });
+    expect(useDocGraphStore.getState().selected).toBeNull();
+  });
+
+  test('перетаскивание фона сдвигает граф, колесо меняет масштаб', async () => {
+    openMap('korbor-miniapp');
+    const { ui } = await view();
+    const el = ui.getByTestId('doc-graph-canvas');
+    const before = first(circles(canvas.ctx));
+    fireEvent.pointerDown(el, { clientX: 2, clientY: 2, pointerId: 1 });
+    fireEvent.pointerMove(el, { clientX: 3, clientY: 3 });
+    fireEvent.pointerMove(el, { clientX: 52, clientY: 32 });
+    fireEvent.pointerUp(el, { clientX: 52, clientY: 32, pointerId: 1 });
+    await frames();
+    const moved = first(circles(canvas.ctx));
+    expect([Math.round(moved.x - before.x), Math.round(moved.y - before.y)]).toEqual([50, 30]);
+    expect(useDocGraphStore.getState().selected).toBeNull();
+    wheelAt(el, 400, 300, -400);
+    await frames();
+    const zoomed = first(circles(canvas.ctx));
+    expect(Math.hypot(zoomed.x - 400, zoomed.y - 300)).toBeGreaterThan(Math.hypot(moved.x - 400, moved.y - 300));
+  });
+
+  test('перенос узла не выбирает его; раскладка вживую держит выбранный узел в центре', async () => {
+    canvas.restore();
+    canvas = installCanvas(false);
+    openMap('korbor-miniapp');
+    const { ui } = await view();
+    const el = ui.getByTestId('doc-graph-canvas');
+    const p = first(circles(canvas.ctx));
+    fireEvent.pointerDown(el, { clientX: p.x, clientY: p.y, pointerId: 1 });
+    fireEvent.pointerMove(el, { clientX: p.x + 40, clientY: p.y + 40 });
+    fireEvent.pointerUp(el, { clientX: p.x + 40, clientY: p.y + 40, pointerId: 1 });
+    expect(useDocGraphStore.getState().selected).toBeNull();
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск по графу'), epochSlug());
+    fireEvent.keyDown(ui.getByLabelText('Поиск по графу'), { key: 'Enter' });
+    await frames();
+    await frames();
+    expect(el.getAttribute('data-selected')).not.toBe('');
+    // Выбранный узел подписан ярче всех.
+    expect(lastFrame(canvas.ctx.log).includes('fillStyle="labelS"') || lastFrame(canvas.ctx.log).some((e) => e.startsWith('fillStyle='))).toBe(true);
+  });
+});

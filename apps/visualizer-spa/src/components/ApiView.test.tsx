@@ -87,12 +87,12 @@ describe('вид «API»', () => {
     expect(useViewStore.getState().apiFilter.noScreens).toBe(true);
     const table = doc.code?.tables[0]?.name ?? '';
     const tableInput = ui.getByLabelText('Таблица');
-    await userEvent.setup().type(tableInput, table);
+    await userEvent.setup({ document }).type(tableInput, table);
     expect(useViewStore.getState().apiFilter.table).toBe(table);
     dumpDom('api-filtered', container);
     fireEvent.click(ui.getByRole('button', { name: 'Сбросить (3)' }));
     expect(useViewStore.getState().apiFilter).toEqual({});
-    await userEvent.setup().type(ui.getByLabelText('Поиск роутов'), 'нет-такого-роута-zzz');
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск роутов'), 'нет-такого-роута-zzz');
     expect(rows(ui)).toHaveLength(0);
     expect(ui.getByText('Ничего не найдено по «нет-такого-роута-zzz».')).toBeTruthy();
     dumpDom('api-nothing', container);

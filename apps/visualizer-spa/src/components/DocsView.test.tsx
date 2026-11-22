@@ -87,14 +87,14 @@ describe('вид «Документация»', () => {
     expect(ui.queryAllByTestId('docs-epoch-row')).toHaveLength(docs.epochs.filter((e) => e.readiness === 'ready').length);
     fireEvent.click(ui.getByRole('button', { name: 'Все' }));
     const word = docs.epochs[0]?.slug.split('-')[0] ?? 'epoch';
-    await userEvent.setup().type(ui.getByLabelText('Поиск по документации'), word);
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск по документации'), word);
     const hits = ui.queryAllByTestId('docs-hit');
     dumpDom('docs-search', container);
     if (hits[0] !== undefined) {
       fireEvent.click(hits[0]);
       expect(useViewStore.getState().doc).not.toBeNull();
     }
-    await userEvent.setup().type(ui.getByLabelText('Поиск по документации'), 'zzzнет-такого');
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск по документации'), 'zzzнет-такого');
     expect(ui.getByText('Ничего не найдено.')).toBeTruthy();
   });
 

@@ -52,7 +52,7 @@ describe('вид «База данных»', () => {
     expect(container.querySelector('.db-view__row--on')).not.toBeNull();
     expect(ui.getByTestId('db-table')).toBeTruthy();
     dumpDom('db-first', container);
-    await userEvent.setup().type(ui.getByLabelText('Поиск таблиц'), 'нет-такой-таблицы-zzz');
+    await userEvent.setup({ document }).type(ui.getByLabelText('Поиск таблиц'), 'нет-такой-таблицы-zzz');
     expect(container.querySelectorAll('.db-view__row')).toHaveLength(0);
     expect(ui.queryByTestId('db-table')).toBeNull();
   });
