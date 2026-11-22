@@ -14,6 +14,13 @@ import { dragRegion, openMiniappAndSelectNode, startRegion } from './helpers';
 /** Загрузка в чистом checkout (80 МБ с Hugging Face). */
 const DOWNLOAD_MS = 240_000;
 
+/**
+ * Сколько держать запись. Chromium крутит wav по кругу (7 с: 2 с тишины, фраза 3 с,
+ * 2 с тишины) с любого места: за круг и длину фразы (10 с) в запись всегда попадает
+ * целая фраза. Короче — фраза рвётся на стыке, и base распознаёт обрывок.
+ */
+const HOLD_MS = 10_500;
+
 async function openComposer(page: Page): Promise<void> {
   await openMiniappAndSelectNode(page);
   await startRegion(page);
@@ -81,7 +88,7 @@ test.describe('голос', () => {
     await area.focus();
     await page.keyboard.down('Alt');
     await expect(page.getByTestId('voice-draft')).toBeVisible();
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(HOLD_MS);
     await page.keyboard.up('Alt');
     await expect.poll(async () => area.inputValue(), { timeout: 60_000 }).not.toBe('');
     expectPhrase(await area.inputValue());
@@ -106,7 +113,7 @@ test.describe('голос', () => {
     await page.mouse.down();
     // Модель грузится с диска (без диалога), затем пишет
     await expect(page.getByTestId('voice-draft')).toBeVisible({ timeout: 60_000 });
-    await page.waitForTimeout(6000);
+    await page.waitForTimeout(HOLD_MS);
     await page.mouse.up();
     const area = page.getByRole('textbox', { name: 'Что не так' });
     await expect.poll(async () => area.inputValue(), { timeout: 60_000 }).not.toBe('');

@@ -12,7 +12,7 @@
 import { defineConfig, devices } from '@playwright/test';
 import { fileURLToPath } from 'node:url';
 
-/** Речь для voice.e2e: микрофон Chromium читает этот файл (macOS say, 16 кГц). */
+/** Речь для voice.e2e: микрофон Chromium читает этот файл по кругу (macOS say, 16 кГц, по 2 с тишины по краям). */
 const VOICE_WAV = fileURLToPath(new URL('./e2e/fixtures/voice-ru.wav', import.meta.url));
 
 
