@@ -10,9 +10,9 @@ import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';
 import { Chip } from '../../ui';
 import { DocGraphCanvas } from './DocGraphCanvas';
+import { KindMark } from './KindMark';
 
 const NO_MATCHES: ReadonlySet<string> = new Set();
-import { KindMark } from './KindMark';
 
 /** Список связей одного направления. */
 function LinkList(props: { readonly title: string; readonly nodes: readonly GraphNode[]; readonly onOpen: (n: GraphNode) => void; readonly testId: string }) {
