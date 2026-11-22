@@ -2,7 +2,7 @@
  * Лист «Настройки просмотра»: масштаб, адаптив, бюджет iframe, роль, базовый URL, proxy, профили.
  */
 import { getKorborApiBase } from '../../lib/dogfood-api';
-import { resolveViewportPresets } from '../../lib/viewport';
+import { resolveViewportPresets } from '../../lib/viewport-presets';
 import { useAppStore } from '../../store/app-store';
 import { Field, Input, Select } from '../../ui';
 import { EdgeSheet } from '../EdgeSheet';

@@ -3,7 +3,8 @@
  * Одна функция и для холста, и для теста наложений.
  */
 import type { AppMapDocument, AppMapEdge, AppMapNode, DeviceViewport } from '@live-app-map/schema';
-import { computeNodeLayout, resolveNodeViewport } from '../lib/viewport';
+import { resolveNodeViewport } from '../lib/viewport';
+import { computeNodeLayout } from '../lib/node-layout';
 import { packLayout, type LayoutBox, type PackedLayout } from './pack-layout';
 import { SERVICE_NODE_SIZE } from './service-node-size';
 

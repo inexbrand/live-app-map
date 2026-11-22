@@ -1,7 +1,8 @@
 /**
  * Срез размеров окон: адаптив карты, override ноды, измеренная высота контента.
  */
-import { applyMapDeviceViewport, clampViewport, viewportFromPresetId } from '../../lib/viewport';
+import { applyMapDeviceViewport, clampViewport } from '../../lib/viewport';
+import { viewportFromPresetId } from '../../lib/viewport-presets';
 import type { AppSlice, ViewportSlice } from './types';
 
 /** Срез размеров окон. */

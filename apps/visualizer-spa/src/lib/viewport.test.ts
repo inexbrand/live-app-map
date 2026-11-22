@@ -1,17 +1,7 @@
 import { describe, expect, test } from 'bun:test';
-import {
-  applyMapDeviceViewport,
-  assertShellConsistency,
-  clampViewport,
-  computeNodeLayout,
-  contentDisplaySize,
-  DEFAULT_VIEWPORT,
-  fitTo16x9,
-  NODE_PAD_X,
-  nodeOuterSize,
-  resolveNodeViewport,
-  viewportFromPresetId,
-} from './viewport';
+import { applyMapDeviceViewport, clampViewport, DEFAULT_VIEWPORT, fitTo16x9, resolveNodeViewport } from './viewport';
+import { viewportFromPresetId } from './viewport-presets';
+import { assertShellConsistency, computeNodeLayout, contentDisplaySize, NODE_PAD_X, nodeOuterSize } from './node-layout';
 
 describe('viewport', () => {
   test('default is 390×844 fixed (JSON path, no measure)', () => {

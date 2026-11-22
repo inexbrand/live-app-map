@@ -21,11 +21,9 @@ import {
   measureIframeContentHeight,
 } from '../lib/measure-iframe-height';
 import { wheelToPage } from '../lib/iframe-wheel';
-import {
-  computeNodeLayout,
-  resolveNodeViewport,
-  resolveViewportPresets,
-} from '../lib/viewport';
+import { resolveNodeViewport } from '../lib/viewport';
+import { resolveViewportPresets } from '../lib/viewport-presets';
+import { computeNodeLayout } from '../lib/node-layout';
 import { Badge, Chip } from '../ui';
 import { NODE_IFRAME_ATTR } from '../lib/gateway/use-gateway-frames';
 import { snapshotSrc } from '../lib/gateway/snapshot-url';
