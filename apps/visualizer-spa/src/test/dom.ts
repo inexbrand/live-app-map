@@ -27,6 +27,16 @@ function register(): void {
 // Первый импорт: React DOM и Testing Library загружаются уже при наличии DOM.
 register();
 
+// Предупреждение React об обновлении вне act — шум: асинхронные ответы (fetch) приходят
+// между шагами теста, а проверки ждут их через waitFor.
+const consoleError = console.error.bind(console);
+console.error = (...args: unknown[]): void => {
+  if (typeof args[0] === 'string' && args[0].includes('not wrapped in act(')) {
+    return;
+  }
+  consoleError(...args);
+};
+
 /**
  * Снимок разметки для доказательства «DOM до и после рефакторинга тот же»: при заданной
  * LAM_DOM_DUMP пишет HTML в эту папку под именем снимка; без неё ничего не делает.
@@ -52,6 +62,9 @@ export function useDom(): void {
     document.body.innerHTML = '';
   });
   afterAll(async () => {
+    // Дать React доделать запланированную работу, пока window ещё есть.
+    await new Promise((resolve) => setImmediate(resolve));
+    await new Promise((resolve) => setTimeout(resolve, 20));
     if (GlobalRegistrator.isRegistered) {
       await GlobalRegistrator.unregister();
     }

@@ -3,7 +3,7 @@
  * на одну-две ступени и списки «ссылается на» / «ссылаются сюда».
  */
 import { useMemo } from 'react';
-import { docNodeId, type GraphNode } from '../../lib/doc-graph';
+import { docNodeId, type DocGraph, type GraphNode } from '../../lib/doc-graph';
 import { localGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
@@ -27,7 +27,7 @@ function LinkList(props: { readonly title: string; readonly nodes: readonly Grap
       <ul>
         {props.nodes.map((n) => (
           <li key={n.id}>
-            <button type="button" className="doc-graph__link" onClick={() => props.onOpen(n)} title={n.detail} disabled={n.docPath === undefined && (n.target === undefined || n.target.kind === 'file')}>
+            <button type="button" className="doc-graph__link" onClick={() => props.onOpen(n)} title={n.detail} disabled={!canOpen(n)}>
               <KindMark kind={n.kind} />
               <span>{n.label}</span>
             </button>
@@ -36,6 +36,39 @@ function LinkList(props: { readonly title: string; readonly nodes: readonly Grap
       </ul>
     </section>
   );
+}
+
+/** Прямые связи документа без «входит в»: куда он ссылается и кто ссылается на него. */
+function directLinks(full: DocGraph, center: string): { readonly outgoing: GraphNode[]; readonly incoming: GraphNode[] } {
+  const byId = new Map(full.nodes.map((n) => [n.id, n]));
+  const pick = (id: string, into: GraphNode[]): void => {
+    const n = byId.get(id);
+    if (n !== undefined) {
+      into.push(n);
+    }
+  };
+  const outgoing: GraphNode[] = [];
+  const incoming: GraphNode[] = [];
+  for (const e of full.edges.filter((x) => x.kind !== 'belongs')) {
+    if (e.source === center) {
+      pick(e.target, outgoing);
+    } else if (e.target === center) {
+      pick(e.source, incoming);
+    }
+  }
+  return { outgoing, incoming };
+}
+
+/** Открыть узел, если он есть. */
+function openGraphNode(n: GraphNode | undefined, open: (n: GraphNode) => void): void {
+  if (n !== undefined) {
+    open(n);
+  }
+}
+
+/** Ссылку на узел можно открыть: документ или место карты (не файл). */
+function canOpen(n: GraphNode): boolean {
+  return n.docPath !== undefined || (n.target !== undefined && n.target.kind !== 'file');
 }
 
 /** Локальный граф документа. */
@@ -48,29 +81,14 @@ export function LocalGraph(props: { readonly docPath: string }) {
   const open = useOpenGraphNode();
   const center = docNodeId(props.docPath);
   const local = useMemo(() => localGraph(full, center, depth), [full, center, depth]);
-  const { outgoing, incoming } = useMemo(() => {
-    const byId = new Map(full.nodes.map((n) => [n.id, n]));
-    const out: GraphNode[] = [];
-    const inc: GraphNode[] = [];
-    for (const e of full.edges) {
-      if (e.kind === 'belongs') {
-        continue;
-      }
-      if (e.source === center) {
-        const n = byId.get(e.target);
-        if (n !== undefined) {
-          out.push(n);
-        }
-      } else if (e.target === center) {
-        const n = byId.get(e.source);
-        if (n !== undefined) {
-          inc.push(n);
-        }
-      }
-    }
-    return { outgoing: out, incoming: inc };
-  }, [full, center]);
+  const { outgoing, incoming } = useMemo(() => directLinks(full, center), [full, center]);
   const nodeOf = (id: string): GraphNode | undefined => local.nodes.find((n) => n.id === id);
+  const openId = (id: string | null): void => {
+    const n = id === null || id === center ? undefined : nodeOf(id);
+    if (n !== undefined) {
+      open(n);
+    }
+  };
 
   return (
     <aside className="local-graph" data-testid="local-graph" aria-label="Связи документа">
@@ -93,18 +111,8 @@ export function LocalGraph(props: { readonly docPath: string }) {
           selectedId={center}
           matches={NO_MATCHES}
           compact
-          onSelect={(id) => {
-            const n = id === null || id === center ? undefined : nodeOf(id);
-            if (n !== undefined) {
-              open(n);
-            }
-          }}
-          onOpen={(id) => {
-            const n = nodeOf(id);
-            if (n !== undefined) {
-              open(n);
-            }
-          }}
+          onSelect={openId}
+          onOpen={(id) => openGraphNode(nodeOf(id), open)}
           testId="local-graph-canvas"
           ariaLabel={`Связи документа: ${local.nodes.length - 1} узлов`}
         />

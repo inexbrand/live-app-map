@@ -15,6 +15,91 @@ const STATE_WORDS: Readonly<Record<BugItemState, string>> = { open: 'откры�
 /** Что подтверждается. */
 type Pending = { readonly item: BugItem; readonly state: 'open' | 'closed' };
 
+/** Подтверждение записи отметки в файл. */
+function BugConfirm(props: { readonly file: string; readonly item: BugItem; readonly next: 'open' | 'closed'; readonly busy: boolean; readonly error: string | null; readonly onApply: () => void; readonly onCancel: () => void }) {
+  const { item, next, busy } = props;
+  return (
+    <div className="docs-bugs__confirm" role="alertdialog" aria-label="Подтверждение записи" data-testid="docs-bug-confirm">
+      <p>
+        Записать в {props.file}: пункт станет {next === 'closed' ? 'закрытым' : 'открытым'}
+        {item.checkbox ? ' (отметка чекбокса).' : ` (перенос в раздел ${next === 'closed' ? 'Closed' : 'Open'}).`}
+      </p>
+      <div className="docs-bugs__actions">
+        <Button type="button" size="sm" variant="primary" disabled={busy} onClick={props.onApply}>
+          {busy ? 'Записываю…' : 'Записать'}
+        </Button>
+        <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={props.onCancel}>
+          Отмена
+        </Button>
+      </div>
+      {props.error === null ? null : (
+        <p className="docs-bugs__error" role="alert">
+          {props.error}
+        </p>
+      )}
+    </div>
+  );
+}
+
+/** Состояние списка отметок: что подтверждается, идёт ли запись, ошибка. */
+type MarksState = {
+  readonly pending: Pending | null;
+  readonly busy: boolean;
+  readonly error: string | null;
+  readonly ask: (p: Pending) => void;
+  readonly cancel: () => void;
+  readonly apply: (p: Pending) => void;
+};
+
+/** Пункт с кнопкой «Закрыть»/«Открыть» и подтверждением. */
+function BugRow(props: { readonly item: BugItem; readonly file: string; readonly writable: true | string; readonly marks: MarksState }) {
+  const { item, marks } = props;
+  const next = item.state === 'closed' ? 'open' : 'closed';
+  return (
+    <li className={`docs-bugs__item docs-bugs__item--${item.state}`} data-testid="docs-bug-item" data-state={item.state}>
+      <span className="docs-bugs__state">{STATE_WORDS[item.state]}</span>
+      <span className="docs-bugs__text">{item.text}</span>
+      <Button type="button" size="sm" variant="outline" disabled={props.writable !== true || marks.busy} onClick={() => marks.ask({ item, state: next })}>
+        {next === 'closed' ? 'Закрыть' : 'Открыть'}
+      </Button>
+      {marks.pending?.item.line === item.line ? (
+        <BugConfirm file={props.file} item={item} next={next} busy={marks.busy} error={marks.error} onApply={() => marks.apply({ item, state: next })} onCancel={marks.cancel} />
+      ) : null}
+    </li>
+  );
+}
+
+/** Отметки пунктов: запись в файл через dev-сервер и замена эпохи в карте. */
+function useBugMarks(docs: DocsModel, file: DocFile): MarksState {
+  const setDocs = useAppStore((s) => s.setDocs);
+  const [pending, setPending] = useState<Pending | null>(null);
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const apply = async (p: Pending): Promise<void> => {
+    setBusy(true);
+    const r = await markBug({ root: docs.root, path: file.path, line: p.item.line, text: p.item.text, state: p.state });
+    setBusy(false);
+    if (!r.ok) {
+      setError(r.error);
+      return;
+    }
+    setError(null);
+    setPending(null);
+    setDocs(withEpoch(docs, r.value));
+  };
+  return {
+    pending,
+    busy,
+    error,
+    ask: (p) => {
+      setError(null);
+      setPending(p);
+    },
+    cancel: () => setPending(null),
+    apply: (p) => void apply(p),
+  };
+}
+
 /**
  * Список пунктов 09-bugs с кнопками отметки.
  *
@@ -24,26 +109,11 @@ type Pending = { readonly item: BugItem; readonly state: 'open' | 'closed' };
  * @param props.writable - true, если документация есть на этой машине (иначе — почему нет)
  */
 export function BugMarks(props: { readonly docs: DocsModel; readonly epoch: DocEpoch; readonly file: DocFile; readonly writable: true | string }) {
-  const setDocs = useAppStore((s) => s.setDocs);
-  const [pending, setPending] = useState<Pending | null>(null);
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const marks = useBugMarks(props.docs, props.file);
   const items = bugItems(props.file.text);
   if (items.length === 0) {
     return null;
   }
-  const apply = async (p: Pending): Promise<void> => {
-    setBusy(true);
-    const r = await markBug({ root: props.docs.root, path: props.file.path, line: p.item.line, text: p.item.text, state: p.state });
-    setBusy(false);
-    if (!r.ok) {
-      setError(r.error);
-      return;
-    }
-    setError(null);
-    setPending(null);
-    setDocs(withEpoch(props.docs, r.value));
-  };
   return (
     <section className="docs-bugs" data-testid="docs-bug-marks">
       <h3>
@@ -53,49 +123,9 @@ export function BugMarks(props: { readonly docs: DocsModel; readonly epoch: DocE
         {props.writable === true ? `Отметка правит файл на диске: ${props.file.path}` : `Отметка недоступна: ${props.writable}`}
       </p>
       <ul className="docs-bugs__list">
-        {items.map((item) => {
-          const next = item.state === 'closed' ? 'open' : 'closed';
-          const asking = pending?.item.line === item.line;
-          return (
-            <li key={item.line} className={`docs-bugs__item docs-bugs__item--${item.state}`} data-testid="docs-bug-item" data-state={item.state}>
-              <span className="docs-bugs__state">{STATE_WORDS[item.state]}</span>
-              <span className="docs-bugs__text">{item.text}</span>
-              <Button
-                type="button"
-                size="sm"
-                variant="outline"
-                disabled={props.writable !== true || busy}
-                onClick={() => {
-                  setError(null);
-                  setPending({ item, state: next });
-                }}
-              >
-                {next === 'closed' ? 'Закрыть' : 'Открыть'}
-              </Button>
-              {asking ? (
-                <div className="docs-bugs__confirm" role="alertdialog" aria-label="Подтверждение записи" data-testid="docs-bug-confirm">
-                  <p>
-                    Записать в {props.file.path}: пункт станет {next === 'closed' ? 'закрытым' : 'открытым'}
-                    {item.checkbox ? ' (отметка чекбокса).' : ` (перенос в раздел ${next === 'closed' ? 'Closed' : 'Open'}).`}
-                  </p>
-                  <div className="docs-bugs__actions">
-                    <Button type="button" size="sm" variant="primary" disabled={busy} onClick={() => void apply({ item, state: next })}>
-                      {busy ? 'Записываю…' : 'Записать'}
-                    </Button>
-                    <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={() => setPending(null)}>
-                      Отмена
-                    </Button>
-                  </div>
-                  {error === null ? null : (
-                    <p className="docs-bugs__error" role="alert">
-                      {error}
-                    </p>
-                  )}
-                </div>
-              ) : null}
-            </li>
-          );
-        })}
+        {items.map((item) => (
+          <BugRow key={item.line} item={item} file={props.file.path} writable={props.writable} marks={marks} />
+        ))}
       </ul>
     </section>
   );
