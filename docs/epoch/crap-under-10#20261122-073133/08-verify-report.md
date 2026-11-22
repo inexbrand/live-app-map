@@ -10,7 +10,15 @@
 - [x] unit: 1067/0 (bun test packages apps/visualizer-spa/src scripts).
 - [x] dryer apps packages scripts — 0 дублей ≥ 0.8 (было 7 после разбиения, убраны).
 - [x] e2e ветки (свой dev-сервер :4312, korbor живой): 35/35. Первый полный прогон — 34/35, упал compare.e2e «старый коммит против свежего скана» («Было» осталось disk 15 с); отдельно 4/4, повтор полного 35/35. git log карты — 10 мс; падение наблюдалось и на master (память worktree-git-and-korbor-scan) — плавающее, не регрессия.
-- [ ] после слияния — проверка в /Users/macbook/orca/live-app-map (ниже).
+- [x] после слияния — проверка в /Users/macbook/orca/live-app-map (ниже).
+
+## После слияния: /Users/macbook/orca/live-app-map, master de9de22
+
+Слито: #14 846c11f (основная работа), #15 953389e (тест клика по графу), #16 3571fca (кэш Bearer шлюза), #17 de9de22 (e2e голоса без звукового выхода).
+
+- Первая проверка 846c11f: unit 1064/1 — плавал «клик по узлу» графа (точка узла с кадра до подгонки камеры) → #15, 32/32 под 8-кратной нагрузкой.
+- e2e: route-params и node-scroll красные — кэш Bearer хранил отклонённый промис после таймаута входа (баг с master) → #16; корень таймаута — завис OrbStack (Postgres korbor молчал), перезапущен. voice.e2e красный — AudioContext с выходом «NDI Audio» стоит → #17.
+- Итог на de9de22: typecheck — 0 ошибок; crapper: 1878 функций, CRAP ≥ 10 — **0**, худшая useWheelToPage 9.8; unit 1066/0; dryer 0; e2e **35/35**.
 
 ## Тесты: реальные вызовы?
 
