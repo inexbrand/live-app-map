@@ -19,19 +19,27 @@ const SKIP_SLUGS: ReadonlySet<string> = new Set(['not-found']);
 export async function fetchCmsPages(baseUrl: string): Promise<CmsPage[] | null> {
   try {
     const res = await fetch(`${baseUrl}/api/pages?limit=200&depth=0&locale=ru`, { signal: AbortSignal.timeout(60_000) });
-    if (!res.ok) {
-      return null;
-    }
-    const body: unknown = await res.json();
-    const docs = typeof body === 'object' && body !== null && 'docs' in body && Array.isArray(body.docs) ? body.docs : [];
-    return docs.flatMap((d: unknown): CmsPage[] =>
-      typeof d === 'object' && d !== null && 'slug' in d && typeof d.slug === 'string'
-        ? [{ slug: d.slug, title: 'title' in d && typeof d.title === 'string' ? d.title : d.slug }]
-        : [],
-    );
+    return res.ok ? cmsPagesOf(await res.json()) : null;
   } catch {
     return null;
   }
+}
+
+/**
+ * Страницы из ответа REST Payload `{ docs: [{ slug, title }] }`: без slug — пропуск,
+ * без title — заголовок равен slug.
+ *
+ * @param body - разобранный JSON ответа
+ * @returns страницы (не тот формат — пусто)
+ */
+export function cmsPagesOf(body: unknown): CmsPage[] {
+  const docs = typeof body === 'object' && body !== null && 'docs' in body && Array.isArray(body.docs) ? body.docs : [];
+  return docs.flatMap((d: unknown): CmsPage[] => (typeof d === 'object' && d !== null && 'slug' in d && typeof d.slug === 'string' ? [{ slug: d.slug, title: titleOf(d, d.slug) }] : []));
+}
+
+/** Заголовок страницы или запасной slug. */
+function titleOf(d: object, slug: string): string {
+  return 'title' in d && typeof d.title === 'string' ? d.title : slug;
 }
 
 /**

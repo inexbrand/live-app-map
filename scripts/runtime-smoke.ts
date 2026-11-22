@@ -20,10 +20,10 @@ type BunFetchInit = RequestInit & {
 };
 
 /** Итог одной optional HTTP-проверки. */
-type HttpProbeKind = 'ok' | 'skip' | 'bad';
+export type HttpProbeKind = 'ok' | 'skip' | 'bad';
 
 /** Сводка smoke для JSON в stdout. */
-interface SmokeSummary {
+export interface SmokeSummary {
   readonly scanOk: boolean;
   readonly pages: number;
   readonly spa: HttpProbeKind;
@@ -35,7 +35,7 @@ interface SmokeSummary {
 /**
  * Узкий type guard: plain object (не null / не array).
  */
-function isPlainObject(value: unknown): value is { readonly [key: string]: unknown } {
+export function isPlainObject(value: unknown): value is { readonly [key: string]: unknown } {
   return value !== null && typeof value === 'object' && !Array.isArray(value);
 }
 
@@ -43,40 +43,40 @@ function isPlainObject(value: unknown): value is { readonly [key: string]: unkno
  * Парсит JSON-сводку CLI scan из stdout (корневой объект с полем pages).
  * Важно: first `{`, не last — иначе ломается на вложенном `timing: {…}`.
  */
-function parseScanStdout(stdout: string): { pages: number; ok: boolean } | null {
-  const trimmed = stdout.trim();
-  if (trimmed.length === 0) {
-    return null;
-  }
-  // CLI печатает один JSON-блок; берём от первого `{` до последнего `}`.
-  const start = trimmed.indexOf('{');
-  const end = trimmed.lastIndexOf('}');
-  if (start < 0 || end <= start) {
+export function parseScanStdout(stdout: string): { pages: number; ok: boolean } | null {
+  const block = jsonBlock(stdout);
+  if (block === undefined) {
     return null;
   }
   try {
-    const raw: unknown = JSON.parse(trimmed.slice(start, end + 1));
-    if (!isPlainObject(raw)) {
-      return null;
-    }
-    const pages = raw['pages'];
-    const okFlag = raw['ok'];
-    if (typeof pages !== 'number' || !Number.isFinite(pages)) {
-      return null;
-    }
-    return {
-      pages,
-      ok: okFlag === true || (okFlag !== false && pages > 0),
-    };
+    return scanSummary(JSON.parse(block));
   } catch {
     return null;
   }
 }
 
+/** CLI печатает один JSON-блок: от первого `{` до последнего `}`. */
+function jsonBlock(stdout: string): string | undefined {
+  const trimmed = stdout.trim();
+  const start = trimmed.indexOf('{');
+  const end = trimmed.lastIndexOf('}');
+  return start < 0 || end <= start ? undefined : trimmed.slice(start, end + 1);
+}
+
+/** Число страниц и флаг ok сводки; нет числа pages — null. */
+function scanSummary(raw: unknown): { pages: number; ok: boolean } | null {
+  const pages = isPlainObject(raw) ? raw['pages'] : undefined;
+  if (!isPlainObject(raw) || typeof pages !== 'number' || !Number.isFinite(pages)) {
+    return null;
+  }
+  const okFlag = raw['ok'];
+  return { pages, ok: okFlag === true || (okFlag !== false && pages > 0) };
+}
+
 /**
  * Critical path: CLI scan next fixture → pages > 0.
  */
-async function smokeScanFixture(): Promise<{
+export async function smokeScanFixture(): Promise<{
   ok: boolean;
   pages: number;
   exitCode: number;
@@ -133,7 +133,7 @@ async function smokeScanFixture(): Promise<{
 /**
  * Optional HTTP probe: connection refused / timeout → skip (soft).
  */
-async function probeHttp(
+export async function probeHttp(
   url: string,
   timeoutMs: number,
 ): Promise<{ kind: HttpProbeKind; status?: number; message?: string }> {
@@ -145,112 +145,130 @@ async function probeHttp(
       tls: { rejectUnauthorized: false },
     };
     const res = await fetch(url, init);
-    const good = res.status >= 200 && res.status < 500;
-    if (good) {
-      return { kind: 'ok', status: res.status };
-    }
-    return { kind: 'bad', status: res.status, message: `HTTP ${res.status}` };
+    return res.status >= 200 && res.status < 500 ? { kind: 'ok', status: res.status } : { kind: 'bad', status: res.status, message: `HTTP ${res.status}` };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
-    // Отсутствующий сервер / abort / DNS / Bun «Unable to connect» — soft skip.
-    const soft =
-      /ECONNREFUSED|ENOTFOUND|ECONNRESET|EHOSTUNREACH|fetch failed|AbortError|timed out|The operation was aborted|Unable to connect|Unable to connect\.|NetworkError|Failed to fetch/i.test(
-        msg,
-      );
-    if (soft) {
-      return { kind: 'skip', message: msg.slice(0, 120) };
-    }
-    return { kind: 'bad', message: msg.slice(0, 120) };
+    return { kind: isSoftError(msg) ? 'skip' : 'bad', message: msg.slice(0, 120) };
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function main(): Promise<void> {
-  let failedCritical = 0;
-  let warnings = 0;
+/** Отсутствующий сервер / abort / DNS / Bun «Unable to connect» — soft skip. */
+function isSoftError(msg: string): boolean {
+  return /ECONNREFUSED|ENOTFOUND|ECONNRESET|EHOSTUNREACH|fetch failed|AbortError|timed out|The operation was aborted|Unable to connect|Unable to connect\.|NetworkError|Failed to fetch/i.test(msg);
+}
 
+/** Итог серии проверок. */
+export type ProbeTally = { readonly anyOk: boolean; readonly anyBad: boolean; readonly warnings: number };
+
+/** Проверяет адреса по очереди и печатает OK / SKIP / WARN. */
+async function probeAll(urls: readonly string[]): Promise<ProbeTally> {
+  const kinds: HttpProbeKind[] = [];
+  for (const url of urls) {
+    const r = await probeHttp(url, 4000);
+    console.log(...probeLine(r, url));
+    kinds.push(r.kind);
+  }
+  return tallyOf(kinds);
+}
+
+/** Строка лога проверки. */
+export function probeLine(r: { kind: HttpProbeKind; status?: number; message?: string }, url: string): unknown[] {
+  if (r.kind === 'ok') {
+    return ['OK', r.status, url];
+  }
+  return r.kind === 'skip' ? ['SKIP', url, r.message ?? 'down'] : ['WARN', url, r.message ?? r.status];
+}
+
+/**
+ * Сводка серии проверок: был ли ответ, была ли ошибка, число предупреждений.
+ *
+ * @param kinds - итоги проверок
+ * @returns сводка
+ */
+export function tallyOf(kinds: readonly HttpProbeKind[]): ProbeTally {
+  return { anyOk: kinds.includes('ok'), anyBad: kinds.includes('bad'), warnings: kinds.filter((k) => k === 'bad').length };
+}
+
+/**
+ * Состояние SPA по сводке: ответил хоть один адрес — ok, иначе ошибка — bad, иначе skip.
+ *
+ * @param t - сводка проверок SPA
+ * @returns состояние
+ */
+export function spaKindOf(t: ProbeTally): HttpProbeKind {
+  if (t.anyOk) {
+    return 'ok';
+  }
+  return t.anyBad ? 'bad' : 'skip';
+}
+
+async function main(): Promise<void> {
   // --- 1) Critical: CLI scan next fixture ---
   console.log('--- scan fixture (critical) ---');
   console.log('DIR', FIXTURE_NEXT);
   const scan = await smokeScanFixture();
-  if (scan.ok) {
-    console.log('OK scan', scan.detail);
-  } else {
-    console.log('FAIL scan', scan.detail);
-    failedCritical++;
-  }
+  console.log(scanLabel(scan.ok), scan.detail);
 
   // --- 2) Optional: SPA :4310 (soft skip if down) ---
   console.log('--- spa optional (:4310) ---');
-  const spaUrls = [
+  const spa = await probeAll([
     `${SPA_BASE}/`,
     `${SPA_BASE}/maps/korbor-miniapp.liveappmap.json`,
     `${SPA_BASE}/maps/korbor-admin.liveappmap.json`,
     `${SPA_BASE}/maps/korbor-site.liveappmap.json`,
-  ];
-
-  let spaKind: HttpProbeKind = 'skip';
-  let spaAnyOk = false;
-  let spaAnyBad = false;
-
-  for (const url of spaUrls) {
-    const r = await probeHttp(url, 4000);
-    if (r.kind === 'ok') {
-      spaAnyOk = true;
-      console.log('OK', r.status, url);
-    } else if (r.kind === 'skip') {
-      console.log('SKIP', url, r.message ?? 'down');
-    } else {
-      spaAnyBad = true;
-      warnings++;
-      console.log('WARN', url, r.message ?? r.status);
-    }
-  }
-
-  if (spaAnyOk) {
-    spaKind = 'ok';
-  } else if (spaAnyBad) {
-    spaKind = 'bad';
-  } else {
-    spaKind = 'skip';
-    console.log('SKIP spa: visualizer не слушает :4310 (soft)');
-  }
+  ]);
+  logSpaSkip(spaKindOf(spa));
 
   // --- 3) Optional Korbor live surfaces (warnings only) ---
   console.log('--- korbor live (optional) ---');
-  const liveOptional = [
+  const live = await probeAll([
     'http://localhost:16002/',
     'http://localhost:16002/vacancies',
     'https://vite.localhost:5175/',
     'https://vite.localhost:5175/feed?lam_role=recruiter',
     'https://vite.localhost:5175/employer/create?lam_role=employer',
     'http://localhost:16001/',
-  ];
+  ]);
 
-  for (const url of liveOptional) {
-    const r = await probeHttp(url, 4000);
-    if (r.kind === 'ok') {
-      console.log('OK', r.status, url);
-    } else if (r.kind === 'skip') {
-      console.log('SKIP', url, r.message ?? 'down');
-    } else {
-      warnings++;
-      console.log('WARN', url, r.message ?? r.status);
-    }
-  }
-
-  const summary: SmokeSummary = {
-    scanOk: scan.ok,
-    pages: scan.pages,
-    spa: spaKind,
-    failedCritical,
-    warnings,
-    ok: failedCritical === 0,
-  };
-
+  const summary = summaryOf(scan, spa, live);
   console.log(JSON.stringify(summary));
   process.exit(summary.ok ? 0 : 1);
 }
 
-await main();
+/** Метка итога скана в логе. */
+function scanLabel(ok: boolean): string {
+  return ok ? 'OK scan' : 'FAIL scan';
+}
+
+/** SPA не поднят — мягкий пропуск. */
+function logSpaSkip(kind: HttpProbeKind): void {
+  if (kind === 'skip') {
+    console.log('SKIP spa: visualizer не слушает :4310 (soft)');
+  }
+}
+
+/**
+ * Сводка smoke: провал — только критичный скан; предупреждения — ошибки SPA и Korbor.
+ *
+ * @param scan - итог скана фикстуры
+ * @param spa - проверки SPA
+ * @param live - проверки живых поверхностей Korbor
+ * @returns сводка для stdout
+ */
+export function summaryOf(scan: { readonly ok: boolean; readonly pages: number }, spa: ProbeTally, live: ProbeTally): SmokeSummary {
+  const failedCritical = scan.ok ? 0 : 1;
+  return {
+    scanOk: scan.ok,
+    pages: scan.pages,
+    spa: spaKindOf(spa),
+    failedCritical,
+    warnings: spa.warnings + live.warnings,
+    ok: failedCritical === 0,
+  };
+}
+
+if (import.meta.main) {
+  await main();
+}

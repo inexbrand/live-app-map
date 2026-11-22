@@ -6,7 +6,7 @@
 import { scanSource } from '../packages/scanner-source/src/index';
 import { attachCode, screenEntries } from '../packages/cli/src/index';
 import { scanDocs } from '../packages/scanner-docs/src/index';
-import type { AppMapDocument, CodeModel, DocsModel } from '../packages/schema/src/index';
+import type { AppMapDocument, CodeModel, CodeSymbol, DocsModel, ScreenApi } from '../packages/schema/src/index';
 
 /** Поверхность: id (приставка нод в общей карте) и её карта экранов. */
 export type KorborSurfaceDoc = {
@@ -24,6 +24,25 @@ export type KorborCode = {
 };
 
 /**
+ * Символы для карты. Символы без комментариев — 4/5 веса карты и ничего не объясняют:
+ * остаются документированные и символы файлов экранов (панель экрана показывает их).
+ */
+function keptSymbols(symbols: readonly CodeSymbol[], screens: readonly ScreenApi[]): CodeSymbol[] {
+  const screenFiles = new Set(screens.map((s) => s.file));
+  return symbols.filter((s) => s.doc !== undefined || s.comments !== undefined || screenFiles.has(s.location.file));
+}
+
+/** code поверхности: свои экраны (nodeId без приставки) и символы только их файлов; полный набор — в общей карте. */
+function surfaceCode(code: CodeModel, id: string): CodeModel {
+  const prefix = `${id}:`;
+  const own = (code.screens ?? [])
+    .filter((sc) => sc.nodeId?.startsWith(prefix) === true)
+    .map((sc) => ({ ...sc, nodeId: sc.nodeId?.slice(prefix.length) }));
+  const files = new Set(own.map((sc) => sc.file));
+  return { ...code, symbols: code.symbols.filter((x) => files.has(x.location.file)), screens: own };
+}
+
+/**
  * Сканирует исходники один раз и раздаёт раздел code поверхностям.
  *
  * @param root - корень репозитория Korbor
@@ -38,26 +57,11 @@ export function attachKorborCode(root: string, surfaces: readonly KorborSurfaceD
     console.log(`[${d.severity}] ${d.code}: ${d.message}`);
   }
   const screens = scan.code.screens ?? [];
-  // Символы без комментариев — 4/5 веса карты и ничего не объясняют: оставляем
-  // документированные и символы файлов экранов (панель экрана показывает их).
-  const screenFiles = new Set(screens.map((s) => s.file));
-  const symbols = scan.code.symbols.filter(
-    (s) => s.doc !== undefined || s.comments !== undefined || screenFiles.has(s.location.file),
-  );
+  const symbols = keptSymbols(scan.code.symbols, screens);
   const code: CodeModel = { ...scan.code, symbols };
   const projectDocs = scanDocs(root);
   console.log(`docs: epochs=${projectDocs.epochs.length} notes=${projectDocs.notes.length} guides=${projectDocs.guides.length}`);
-  const maps = new Map<string, AppMapDocument>();
-  for (const s of surfaces) {
-    const prefix = `${s.id}:`;
-    const own = screens
-      .filter((sc) => sc.nodeId?.startsWith(prefix) === true)
-      .map((sc) => ({ ...sc, nodeId: sc.nodeId?.slice(prefix.length) }));
-    // Карта поверхности несёт символы только своих экранов; полный набор — в общей карте.
-    const files = new Set(own.map((sc) => sc.file));
-    const ownSymbols = code.symbols.filter((x) => files.has(x.location.file));
-    maps.set(s.id, { ...attachCode(s.doc, { ...code, symbols: ownSymbols, screens: own }), docs: projectDocs });
-  }
+  const maps = new Map(surfaces.map((s): [string, AppMapDocument] => [s.id, { ...attachCode(s.doc, surfaceCode(code, s.id)), docs: projectDocs }]));
   const linked = screens.filter((s) => s.calls.length > 0).length;
   console.log(
     `code: symbols=${symbols.length}/${scan.code.symbols.length} routes=${scan.code.routes.length} tables=${scan.code.tables.length} apiCalls=${scan.code.apiCalls?.length ?? 0} screens=${screens.length} linked=${linked} (${Date.now() - t0} ms)`,
