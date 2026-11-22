@@ -63,18 +63,23 @@ export function unwrap(expr: ts.Expression): ts.Expression {
  * @param expr - `TYPES` или `TYPES.map(...)`
  * @returns тип строкой или undefined, если это не константа
  */
-export function constValues(ctx: SourceContext, expr: ts.Expression | undefined): string | undefined {
-  if (expr === undefined) {
-    return undefined;
-  }
-  const id = ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'map'
-    ? expr.expression.expression
-    : expr;
-  if (!ts.isIdentifier(id)) {
-    return undefined;
-  }
+/** `X.map(…)` → X; иначе само выражение. */
+function mappedSource(expr: ts.Expression): ts.Expression {
+  return ts.isCallExpression(expr) && ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'map' ? expr.expression.expression : expr;
+}
+
+/** Инициализатор константы без обёрток. */
+function constInitOf(ctx: SourceContext, id: ts.Identifier): ts.Expression | undefined {
   const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
-  const init = decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
+  return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
+}
+
+export function constValues(ctx: SourceContext, expr: ts.Expression | undefined): string | undefined {
+  const id = expr === undefined ? undefined : mappedSource(expr);
+  if (id === undefined || !ts.isIdentifier(id)) {
+    return undefined;
+  }
+  const init = constInitOf(ctx, id);
   const values = init !== undefined && ts.isArrayLiteralExpression(init) ? init.elements.map((e) => literalText(e)) : [];
   return values.length > 0 && values.every((v) => v !== undefined) ? values.join(' | ') : `одно из ${id.text}`;
 }

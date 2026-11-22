@@ -33,15 +33,17 @@ function packageName(absRoot: string, dir: string): string {
  * @param relFiles - все файлы корня (POSIX, относительные)
  * @returns индекс
  */
-export function indexServices(absRoot: string, relFiles: readonly string[]): ServiceIndex {
+/** Каталоги с package.json (корень — '', есть всегда). */
+function serviceDirs(relFiles: readonly string[]): string[] {
   const dirs = relFiles
     .filter((f) => f === 'package.json' || f.endsWith('/package.json'))
     .map((f) => (f === 'package.json' ? '' : f.slice(0, -'/package.json'.length)));
-  if (!dirs.includes('')) {
-    dirs.push('');
-  }
+  return dirs.includes('') ? dirs : [...dirs, ''];
+}
+
+export function indexServices(absRoot: string, relFiles: readonly string[]): ServiceIndex {
   const services = new Map<string, CodeService>();
-  for (const dir of dirs) {
+  for (const dir of serviceDirs(relFiles)) {
     const name = dir === '' && !relFiles.includes('package.json') ? path.basename(absRoot) : packageName(absRoot, dir);
     services.set(dir, { id: `service:${name}`, name, root: dir === '' ? '.' : dir });
   }
