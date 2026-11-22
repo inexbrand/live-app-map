@@ -9,6 +9,32 @@ import { catalogLabel, FILE_MAP_ID, MAP_FILE_INPUT_ID, type MapLoader } from './
 const OPEN_FILE = '__open_file__';
 const CLEAR = '__clear__';
 
+/**
+ * Выбор в селекте: id карты или действие.
+ *
+ * @param value - значение пункта
+ * @param catalog - каталог карт
+ * @param loader - загрузчик карт шапки
+ */
+function chooseMap(value: string, catalog: readonly MapCatalogEntry[], loader: MapLoader): void {
+  if (value === '' || value === loader.activeMapId) {
+    return;
+  }
+  if (value === OPEN_FILE) {
+    window.document.getElementById(MAP_FILE_INPUT_ID)?.click();
+    return;
+  }
+  if (value === CLEAR) {
+    loader.clear();
+    useAppStore.getState().setToast('Карта очищена');
+    return;
+  }
+  const preset = catalog.find((c) => c.id === value);
+  if (preset) {
+    void loader.loadPreset(preset);
+  }
+}
+
 /** Props селекта карты. */
 export type MapSelectProps = {
   readonly catalog: readonly MapCatalogEntry[];
@@ -24,27 +50,7 @@ export type MapSelectProps = {
 export function MapSelect(props: MapSelectProps) {
   const { catalog, catalogLoading, loader } = props;
   const hasDocument = useAppStore((s) => s.document !== null);
-  const setToast = useAppStore((s) => s.setToast);
-
-  /** Выбор в селекте: id карты или действие. */
-  const choose = (value: string): void => {
-    if (value === '' || value === loader.activeMapId) {
-      return;
-    }
-    if (value === OPEN_FILE) {
-      window.document.getElementById(MAP_FILE_INPUT_ID)?.click();
-      return;
-    }
-    if (value === CLEAR) {
-      loader.clear();
-      setToast('Карта очищена');
-      return;
-    }
-    const preset = catalog.find((c) => c.id === value);
-    if (preset) {
-      void loader.loadPreset(preset);
-    }
-  };
+  const choose = (value: string): void => chooseMap(value, catalog, loader);
 
   return (
     <label className="toolbar-map-select" title="Выбор карты / действия">
