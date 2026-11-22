@@ -5,7 +5,7 @@
 import type { CommentEvent, CommentThread } from '@live-app-map/mcp-server/comments-schema';
 import { ClipboardCopy, Crosshair, RotateCcw, Check } from 'lucide-react';
 import { commentPrompt } from '../../lib/comments/comment-prompt';
-import { timeAgo, quoteText } from '../../lib/comments/format';
+import { timeAgo, quoteText, sourceRef } from '../../lib/comments/format';
 import { flashElement } from '../../lib/comments/use-comments';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
@@ -48,24 +48,71 @@ function EventLine(props: { readonly event: CommentEvent; readonly now: Date }) 
   return null;
 }
 
+type ThreadElement = NonNullable<CommentThread['anchor']['element']>;
+
+/** Где замечание: компонент (или тег), текст, исходник — или экран целиком. */
+function ThreadWhere(props: { readonly el: ThreadElement | null }) {
+  const { el } = props;
+  if (el === null) {
+    return <p className="comment-thread__where">Экран целиком</p>;
+  }
+  const src = el.component?.source ?? null;
+  return (
+    <p className="comment-thread__where" title={el.domPath}>
+      <strong>{el.component?.name ?? (el.tag || 'элемент')}</strong>
+      {el.text !== '' ? <span title={el.text}> «{quoteText(el.text, 48)}»</span> : null}
+      {src !== null ? <span className="comment-thread__src">{sourceRef(src)}</span> : null}
+    </p>
+  );
+}
+
+/** Скопировать текст замечания для агента; итог — подсказкой. */
+function copyForAgent(t: CommentThread, setToast: (text: string) => void): void {
+  void navigator.clipboard.writeText(commentPrompt(t)).then(
+    () => setToast('Замечание скопировано — вставьте агенту'),
+    () => setToast('Не удалось скопировать в буфер'),
+  );
+}
+
+/** Действия ветки: показать компонент, смена статуса, текст для агента. */
+function ThreadActions(props: { readonly thread: CommentThread }) {
+  const t = props.thread;
+  const setStatus = useCommentsStore((s) => s.setStatus);
+  const setToast = useAppStore((s) => s.setToast);
+  const el = t.anchor.element;
+  return (
+    <div className="comment-thread__actions">
+      {el !== null && el.rect.width > 0 ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => flashElement(t.anchor.pageId, el.selector)}>
+          <Crosshair size={14} strokeWidth={1.75} />
+          Показать
+        </Button>
+      ) : null}
+      {t.status === 'open' ? (
+        <Button type="button" size="sm" variant="ghost" onClick={() => void setStatus(t.id, 'fixed')}>
+          <Check size={14} strokeWidth={1.75} />
+          Исправлено
+        </Button>
+      ) : (
+        <Button type="button" size="sm" variant="ghost" onClick={() => void setStatus(t.id, 'open')}>
+          <RotateCcw size={14} strokeWidth={1.75} />
+          Открыть снова
+        </Button>
+      )}
+      <Button type="button" size="sm" variant="ghost" onClick={() => copyForAgent(t, setToast)} title="Скопировать текст с привязкой и id для ответа агента">
+        <ClipboardCopy size={14} strokeWidth={1.75} />
+        Для агента
+      </Button>
+    </div>
+  );
+}
+
 /**
  * Ветка замечания.
  */
 export function CommentThreadItem(props: { readonly thread: CommentThread; readonly focused: boolean }) {
   const t = props.thread;
-  const setStatus = useCommentsStore((s) => s.setStatus);
-  const setToast = useAppStore((s) => s.setToast);
   const now = new Date();
-  const el = t.anchor.element;
-  const src = el?.component?.source ?? null;
-
-  const copy = (): void => {
-    void navigator.clipboard.writeText(commentPrompt(t)).then(
-      () => setToast('Замечание скопировано — вставьте агенту'),
-      () => setToast('Не удалось скопировать в буфер'),
-    );
-  };
-
   return (
     <article className={`comment-thread${props.focused ? ' comment-thread--focus' : ''}`} data-testid="comment-thread" data-comment-id={t.id} data-status={t.status}>
       <div className="comment-thread__head">
@@ -74,42 +121,12 @@ export function CommentThreadItem(props: { readonly thread: CommentThread; reado
         <time className="comment-thread__time" dateTime={t.createdAt}>{timeAgo(t.createdAt, now)}</time>
       </div>
       <p className="comment-thread__text">{t.text}</p>
-      {el !== null ? (
-        <p className="comment-thread__where" title={el.domPath}>
-          {el.component !== null ? <strong>{el.component.name}</strong> : <strong>{el.tag || 'элемент'}</strong>}
-          {el.text !== '' ? <span title={el.text}> «{quoteText(el.text, 48)}»</span> : null}
-          {src !== null ? <span className="comment-thread__src">{src.file}{src.line === null ? '' : `:${src.line}`}</span> : null}
-        </p>
-      ) : (
-        <p className="comment-thread__where">Экран целиком</p>
-      )}
+      <ThreadWhere el={t.anchor.element} />
       {t.shot !== null ? <img className="comment-thread__shot" src={`/api/comments/${encodeURIComponent(t.id)}/shot.png`} alt="Снимок компонента" loading="lazy" /> : null}
       {t.events.slice(1).map((e) => (
         <EventLine key={`${e.seq}-${e.at}`} event={e} now={now} />
       ))}
-      <div className="comment-thread__actions">
-        {el !== null && el.rect.width > 0 ? (
-          <Button type="button" size="sm" variant="ghost" onClick={() => flashElement(t.anchor.pageId, el.selector)}>
-            <Crosshair size={14} strokeWidth={1.75} />
-            Показать
-          </Button>
-        ) : null}
-        {t.status === 'open' ? (
-          <Button type="button" size="sm" variant="ghost" onClick={() => void setStatus(t.id, 'fixed')}>
-            <Check size={14} strokeWidth={1.75} />
-            Исправлено
-          </Button>
-        ) : (
-          <Button type="button" size="sm" variant="ghost" onClick={() => void setStatus(t.id, 'open')}>
-            <RotateCcw size={14} strokeWidth={1.75} />
-            Открыть снова
-          </Button>
-        )}
-        <Button type="button" size="sm" variant="ghost" onClick={copy} title="Скопировать текст с привязкой и id для ответа агента">
-          <ClipboardCopy size={14} strokeWidth={1.75} />
-          Для агента
-        </Button>
-      </div>
+      <ThreadActions thread={t} />
     </article>
   );
 }

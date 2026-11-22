@@ -6,6 +6,23 @@ import { useCommentsStore } from '../../store/comments-store';
 import { isElementPick, useSnapshotStore } from '../../store/snapshot-store';
 import { useViewStore } from '../../store/view-store';
 
+/** Экран замечания: кнопка ноды выбирает свой экран, иначе — выбранный. */
+function pageFor(forPage: string | undefined): string | null {
+  const app = useAppStore.getState();
+  if (forPage !== undefined && app.selectedPageId !== forPage) {
+    app.selectPage(forPage);
+  }
+  return forPage ?? app.selectedPageId;
+}
+
+/** Идущий выбор компонента уступает выделению области. */
+function cancelElementPick(): void {
+  const snap = useSnapshotStore.getState();
+  if (isElementPick(snap.session)) {
+    snap.cancel();
+  }
+}
+
 /**
  * Запускает выбор; область требует выбранного экрана. Идущий выбор
  * компонента можно сменить на область (кнопка в подсказке).
@@ -18,19 +35,15 @@ export function startComment(pick: 'element' | 'region', forPage?: string): void
   if (app.document === null) {
     return;
   }
-  if (forPage !== undefined && app.selectedPageId !== forPage) {
-    app.selectPage(forPage);
-  }
-  const pageId = forPage ?? app.selectedPageId;
+  const pageId = pageFor(forPage);
   if (pick === 'region' && pageId === null) {
     app.setToast('Выберите экран, к которому относится область');
     return;
   }
   useViewStore.getState().setView('screens');
   useCommentsStore.getState().closeDraft();
-  const snap = useSnapshotStore.getState();
-  if (isElementPick(snap.session) && pick === 'region') {
-    snap.cancel();
+  if (pick === 'region') {
+    cancelElementPick();
   }
   if (!useSnapshotStore.getState().request({ kind: 'comment', pick, pageId })) {
     app.setToast('Снимок уже идёт');
