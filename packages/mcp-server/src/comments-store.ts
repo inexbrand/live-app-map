@@ -207,29 +207,25 @@ export function commentShotPath(lamDir: string, thread: CommentThread): string |
 }
 
 function matches(thread: CommentThread, filter: CommentFilter): boolean {
-  if (filter.status !== undefined && thread.status !== filter.status) {
-    return false;
-  }
-  if (filter.pageId !== undefined && thread.anchor.pageId !== filter.pageId) {
-    return false;
-  }
-  if (filter.mapName !== undefined && thread.anchor.mapName !== filter.mapName) {
-    return false;
-  }
-  if (filter.author !== undefined && thread.author !== filter.author) {
-    return false;
-  }
+  const fields: readonly [unknown, unknown][] = [
+    [filter.status, thread.status],
+    [filter.pageId, thread.anchor.pageId],
+    [filter.mapName, thread.anchor.mapName],
+    [filter.author, thread.author],
+  ];
   const q = filter.query?.trim().toLowerCase() ?? '';
-  if (q === '') {
-    return true;
-  }
-  const hay = [
+  return fields.every(([want, have]) => want === undefined || want === have) && (q === '' || searchText(thread).includes(q));
+}
+
+/** Текст замечания для поиска: события, экран, элемент и его компонент — в нижнем регистре. */
+function searchText(thread: CommentThread): string {
+  const element = thread.anchor.element;
+  return [
     ...thread.events.map((e) => (e.type === 'status' ? (e.note ?? '') : e.text)),
     thread.anchor.pageTitle,
-    thread.anchor.element?.text ?? '',
-    thread.anchor.element?.component?.name ?? '',
+    element?.text ?? '',
+    element?.component?.name ?? '',
   ].join('\n').toLowerCase();
-  return hay.includes(q);
 }
 
 /**

@@ -5,7 +5,7 @@
 import { epochList, findEpoch, searchDocs } from '@live-app-map/graph';
 import type { DocEpoch, EpochReadiness } from '@live-app-map/schema';
 import { loadDocs } from './map-tools';
-import { fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
+import { defined, fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
 
 const mapPath = mapPathParam('Путь к карте с разделом docs, например maps/live-app-map.liveappmap.json');
 const mapPathProp = mapPath.prop;
@@ -66,16 +66,16 @@ function docsOf(args: Args): ReturnType<typeof loadDocs> {
 
 /** Эпоха одной строкой для списка. */
 function epochLine(e: DocEpoch): Record<string, unknown> {
-  return {
+  return defined({
     id: e.id,
-    ...(e.date === undefined ? {} : { date: e.date }),
-    ...(e.summary === undefined ? {} : { summary: e.summary }),
-    ...(e.declaredStatus === undefined ? {} : { status: e.declaredStatus }),
+    date: e.date,
+    summary: e.summary,
+    status: e.declaredStatus,
     readiness: e.readiness,
     openBugs: e.openBugs,
     files: e.files.length,
     images: e.images.length,
-  };
+  });
 }
 
 function listEpochs(args: Args): ToolResult {
@@ -97,7 +97,11 @@ function getEpoch(args: Args): ToolResult {
     const near = docs.epochs.filter((x) => x.id.includes(ref.split('#')[0] ?? ref)).map((x) => x.id).slice(0, 10);
     return fail(`эпоха не найдена: ${ref}. Похожие: ${near.join(', ') || 'нет'}`);
   }
-  const fileName = str(args, 'file');
+  return epochFiles(e, str(args, 'file'));
+}
+
+/** Эпоха с файлами: все или один по имени (нет такого — ошибка со списком). */
+function epochFiles(e: DocEpoch, fileName: string): ToolResult {
   const files = fileName === '' ? e.files : e.files.filter((f) => f.path.endsWith(`/${fileName}`));
   if (fileName !== '' && files.length === 0) {
     return fail(`в эпохе ${e.id} нет файла ${fileName}. Есть: ${e.files.map((f) => f.path.slice(e.dir.length + 1)).join(', ')}`);

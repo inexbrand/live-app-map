@@ -21,7 +21,7 @@ import {
 } from '@live-app-map/graph';
 import type { ApiRoute, DbTable, HttpMethod } from '@live-app-map/schema';
 import { loadCodeIndex } from './map-tools';
-import { fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
+import { defined, fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
 
 const mapPath = mapPathParam('Путь к карте с разделом code, например maps/korbor-all.liveappmap.json');
 const mapPathProp = mapPath.prop;
@@ -119,34 +119,42 @@ function serviceFilter(index: CodeIndex, args: Args): string {
   return service;
 }
 
+/** Имя сервиса по id; неизвестный — сам id. */
+function serviceName(index: CodeIndex, serviceId: string): string {
+  return index.servicesById.get(serviceId)?.name ?? serviceId;
+}
+
+/** Имена таблиц в БД (без имени в БД — имя в коде). */
+function tableNames(tables: readonly { readonly dbName?: string; readonly table: string }[] | undefined): string[] {
+  return (tables ?? []).map((t) => t.dbName ?? t.table);
+}
+
 /** Роут одной строкой для списков. */
 function routeLine(index: CodeIndex, r: ApiRoute): Record<string, unknown> {
   const detail = routeDetail(index, r.id);
-  const about = shortSummary(r.doc, r.comments);
-  return {
+  return defined({
     id: r.id,
     method: r.method,
     path: r.path,
-    service: index.servicesById.get(r.serviceId)?.name ?? r.serviceId,
-    ...(about === undefined ? {} : { summary: about }),
+    service: serviceName(index, r.serviceId),
+    summary: shortSummary(r.doc, r.comments),
     autoSummary: routeAutoDoc(index, r).summary,
-    ...(r.access === undefined ? {} : { access: r.access }),
-    reads: detail?.reads.map((t) => t.dbName ?? t.table) ?? [],
-    writes: detail?.writes.map((t) => t.dbName ?? t.table) ?? [],
+    access: r.access,
+    reads: tableNames(detail?.reads),
+    writes: tableNames(detail?.writes),
     screens: detail?.callers.length ?? 0,
-  };
+  });
 }
 
 /** Таблица одной строкой. */
 function tableLine(index: CodeIndex, t: DbTable): Record<string, unknown> {
-  const about = shortSummary(t.doc, t.comments);
-  return {
+  return defined({
     name: t.name,
     exportName: t.exportName,
-    service: index.servicesById.get(t.serviceId)?.name ?? t.serviceId,
+    service: serviceName(index, t.serviceId),
     columns: t.columns.length,
-    ...(about === undefined ? {} : { summary: about }),
-  };
+    summary: shortSummary(t.doc, t.comments),
+  });
 }
 
 /** Похожие роуты для подсказки, когда роут не найден. */
@@ -177,19 +185,21 @@ function getRoute(args: Args): ToolResult {
   }
   const { route } = detail;
   return ok({
-    ok: true,
-    id: route.id,
-    method: route.method,
-    path: route.path,
-    framework: route.framework,
-    service: detail.service?.name ?? route.serviceId,
-    ...(route.doc === undefined ? {} : { doc: route.doc }),
-    ...(route.comments === undefined ? {} : { comments: route.comments }),
-    location: route.location,
-    handler: route.handler,
-    ...(route.input === undefined ? {} : { input: route.input }),
-    ...(route.access === undefined ? {} : { access: route.access }),
-    ...(route.response === undefined ? {} : { response: route.response }),
+    ...defined({
+      ok: true,
+      id: route.id,
+      method: route.method,
+      path: route.path,
+      framework: route.framework,
+      service: detail.service?.name ?? route.serviceId,
+      doc: route.doc,
+      comments: route.comments,
+      location: route.location,
+      handler: route.handler,
+      input: route.input,
+      access: route.access,
+      response: route.response,
+    }),
     autoDoc: { note: AUTO_DOC_NOTE, ...routeAutoDoc(index, route) },
     reads: detail.reads,
     writes: detail.writes,
@@ -218,22 +228,31 @@ function apiRouteLine(index: CodeIndex, r: ApiRoute, withGap: boolean): string {
 
 const METHODS: readonly HttpMethod[] = ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS', 'HEAD', 'ALL'];
 
-function describeApi(args: Args): ToolResult {
-  const index = indexOf(args);
+/** Фильтр describe_api из аргументов; неизвестный метод — текст ошибки. */
+function apiFilterOf(index: CodeIndex, args: Args): ApiFilter | string {
   const service = serviceFilter(index, args);
   const methodArg = str(args, 'method').toUpperCase();
   const method = METHODS.find((m) => m === methodArg);
   if (methodArg !== '' && method === undefined) {
-    return fail(`method: одно из ${METHODS.join(', ')}`);
+    return `method: одно из ${METHODS.join(', ')}`;
   }
-  const filter: ApiFilter = {
+  const table = str(args, 'table');
+  return {
     ...(service === '' ? {} : { service }),
     ...(method === undefined ? {} : { methods: [method] }),
-    ...(str(args, 'table') === '' ? {} : { table: str(args, 'table') }),
+    ...(table === '' ? {} : { table }),
     ...(args['undocumented'] === true ? { undocumented: true } : {}),
     ...(args['noScreens'] === true ? { noScreens: true } : {}),
   };
-  const withGap = args['noScreens'] === true;
+}
+
+function describeApi(args: Args): ToolResult {
+  const index = indexOf(args);
+  const filter = apiFilterOf(index, args);
+  if (typeof filter === 'string') {
+    return fail(filter);
+  }
+  const withGap = filter.noScreens === true;
   const services = apiArchitecture(index, filter).map((s) => ({
     service: s.service.name,
     root: s.service.root,
@@ -271,12 +290,14 @@ function getTable(args: Args): ToolResult {
   const t = d.table;
   const nameOf = (exportName: string): string => findTable(index, exportName)?.name ?? exportName;
   return ok({
-    ok: true,
-    name: t.name,
-    exportName: t.exportName,
-    orm: t.orm,
-    service: d.service?.name ?? t.serviceId,
-    ...(t.doc === undefined ? {} : { doc: t.doc }),
+    ...defined({
+      ok: true,
+      name: t.name,
+      exportName: t.exportName,
+      orm: t.orm,
+      service: d.service?.name ?? t.serviceId,
+      doc: t.doc,
+    }),
     location: t.location,
     columns: t.columns,
     references: d.references.map((r) => ({ ...r, table: nameOf(r.table) })),

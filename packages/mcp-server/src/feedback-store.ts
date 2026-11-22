@@ -11,11 +11,12 @@ export type SavedFeedback = {
 };
 
 function pageIdOf(feedback: object): string {
-  const page = 'page' in feedback ? feedback.page : undefined;
-  if (typeof page === 'object' && page !== null && 'id' in page) {
-    return String(page.id);
-  }
-  return 'feedback';
+  const page: unknown = Reflect.get(feedback, 'page');
+  return isObject(page) && 'id' in page ? String(page.id) : 'feedback';
+}
+
+function isObject(v: unknown): v is object {
+  return typeof v === 'object' && v !== null;
 }
 
 /**
@@ -35,7 +36,7 @@ export function saveFeedback(
   const safe = pageIdOf(feedback).replace(/[^a-zA-Z0-9_-]+/g, '_');
   const jsonPath = path.join(lamDir, `${stamp}-${safe}.json`);
   writeFileSync(jsonPath, `${JSON.stringify(feedback, null, 2)}\n`, 'utf8');
-  const prompt = 'promptMarkdown' in feedback ? feedback.promptMarkdown : undefined;
+  const prompt: unknown = Reflect.get(feedback, 'promptMarkdown');
   if (typeof prompt !== 'string') {
     return { jsonPath, mdPath: null };
   }

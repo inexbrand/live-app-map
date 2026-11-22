@@ -137,12 +137,24 @@ function addChangeNote(args: Args, ctx: ToolContext): ToolResult {
   const commit = optionalStr(args, 'commit');
   const commentId = str(args, 'commentId');
   if (commentId !== '') {
-    addCommentEvent(ctx.lamDir, commentId, { type: 'reply', author: 'agent', text, files, commit });
-    const thread = args['resolve'] === false
-      ? readComment(ctx.lamDir, commentId)
-      : addCommentEvent(ctx.lamDir, commentId, { type: 'status', author: 'agent', status: 'fixed', note: null });
-    return thread === null ? fail(`замечание ${commentId} не найдено`) : ok({ ok: true, comment: summary(thread) });
+    return replyAsFixed(args, ctx, commentId, { text, files, commit });
   }
+  return notePage(args, ctx, { text, files, commit });
+}
+
+type ChangeNote = { readonly text: string; readonly files: string[]; readonly commit: string | null };
+
+/** Ответ агента в замечание и (кроме resolve: false) статус «исправлено». */
+function replyAsFixed(args: Args, ctx: ToolContext, commentId: string, note: ChangeNote): ToolResult {
+  addCommentEvent(ctx.lamDir, commentId, { type: 'reply', author: 'agent', ...note });
+  const thread = args['resolve'] === false
+    ? readComment(ctx.lamDir, commentId)
+    : addCommentEvent(ctx.lamDir, commentId, { type: 'status', author: 'agent', status: 'fixed', note: null });
+  return thread === null ? fail(`замечание ${commentId} не найдено`) : ok({ ok: true, comment: summary(thread) });
+}
+
+/** Новая заметка агента к экрану (и элементу по селектору). */
+function notePage(args: Args, ctx: ToolContext, { text, files, commit }: ChangeNote): ToolResult {
   const pageId = str(args, 'pageId');
   if (pageId === '') {
     return fail('нужен commentId (ответ на замечание) или pageId (новая заметка к экрану)');
