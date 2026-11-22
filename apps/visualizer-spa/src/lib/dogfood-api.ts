@@ -78,6 +78,20 @@ export async function fetchDogfoodActors(
 }
 
 /**
+ * Причина отказа входа: сообщение или код ошибки API, иначе HTTP-статус.
+ *
+ * @param res - ответ с ошибкой
+ */
+async function sessionErrorDetail(res: Response): Promise<string> {
+  try {
+    const errBody = (await res.json()) as { error?: { message?: string; code?: string } };
+    return errBody.error?.message || errBody.error?.code || `HTTP ${res.status}`;
+  } catch {
+    return `HTTP ${res.status}`;
+  }
+}
+
+/**
  * POST /api/v1/dev/dogfood/session
  */
 export async function mintDogfoodSession(
@@ -94,20 +108,7 @@ export async function mintDogfoodSession(
       body: JSON.stringify({ kind: actor.kind, actorId: actor.id }),
     });
     if (!res.ok) {
-      let detail = `HTTP ${res.status}`;
-      try {
-        const errBody = (await res.json()) as {
-          error?: { message?: string; code?: string };
-        };
-        if (errBody.error?.message) {
-          detail = errBody.error.message;
-        } else if (errBody.error?.code) {
-          detail = errBody.error.code;
-        }
-      } catch {
-        /* ignore */
-      }
-      return { ok: false, error: `session: ${detail}` };
+      return { ok: false, error: `session: ${await sessionErrorDetail(res)}` };
     }
     const body = (await res.json()) as { data?: DogfoodSession };
     if (!body.data) {
@@ -142,29 +143,29 @@ export type DogfoodInjectApply = {
  * Админ: token, user: initData + role map.
  */
 export function mapSessionToInject(session: DogfoodSession): DogfoodInjectApply {
-  if (session.kind === 'admin') {
-    const token = session.accessToken?.trim() ?? '';
-    return {
-      adminAccessToken: token,
-      miniappInitData: '',
-      globalRole: '',
-      toast: token
-        ? `Вход как админ: ${session.label}`
-        : `Админ ${session.label}: нет accessToken`,
-    };
-  }
+  return session.kind === 'admin' ? adminInject(session) : userInject(session);
+}
+
+/** Админ: только токен. */
+function adminInject(session: DogfoodSession): DogfoodInjectApply {
+  const token = session.accessToken?.trim() ?? '';
+  return {
+    adminAccessToken: token,
+    miniappInitData: '',
+    globalRole: '',
+    toast: token ? `Вход как админ: ${session.label}` : `Админ ${session.label}: нет accessToken`,
+  };
+}
+
+/** Пользователь: initData и роль мини-приложения (recruiter | employer, иначе пусто). */
+function userInject(session: DogfoodSession): DogfoodInjectApply {
   const initData = session.initData?.trim() ?? '';
-  const role =
-    session.role === 'recruiter' || session.role === 'employer'
-      ? session.role
-      : '';
+  const role = session.role === 'recruiter' || session.role === 'employer' ? session.role : '';
   return {
     adminAccessToken: '',
     miniappInitData: initData,
     globalRole: role,
-    toast: initData
-      ? `Вход как ${session.role}: ${session.label}`
-      : `User ${session.label}: нет initData (нужен telegramId)`,
+    toast: initData ? `Вход как ${session.role}: ${session.label}` : `User ${session.label}: нет initData (нужен telegramId)`,
   };
 }
 

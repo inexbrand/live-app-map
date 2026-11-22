@@ -64,31 +64,41 @@ export function collectSymbols(ctx: SourceContext, sf: ts.SourceFile): FoundSymb
       ...commentsOf(commentNode, sf),
     });
   };
-  for (const stmt of sf.statements) {
-    if (!isExported(stmt)) {
-      continue;
-    }
-    if (ts.isFunctionDeclaration(stmt) && stmt.name !== undefined) {
-      add(functionKind(stmt.name.text, sf), stmt.name, stmt, signatureOf(stmt, sf));
-    } else if (ts.isClassDeclaration(stmt) && stmt.name !== undefined) {
-      add('class', stmt.name, stmt);
-    } else if (ts.isInterfaceDeclaration(stmt)) {
-      add('interface', stmt.name, stmt);
-    } else if (ts.isTypeAliasDeclaration(stmt)) {
-      add('type', stmt.name, stmt);
-    } else if (ts.isVariableStatement(stmt)) {
-      for (const decl of stmt.declarationList.declarations) {
-        if (!ts.isIdentifier(decl.name)) {
-          continue;
-        }
-        const init = decl.initializer;
-        if (init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))) {
-          add(functionKind(decl.name.text, sf), decl.name, stmt, signatureOf(init, sf));
-        } else {
-          add('variable', decl.name, stmt);
-        }
-      }
-    }
+  for (const d of sf.statements.filter(isExported).flatMap((stmt) => declaredSymbols(stmt, sf))) {
+    add(d.kind, d.name, d.stmt, d.signature);
   }
   return out;
+}
+
+/** Символ оператора до местоположения и комментариев. */
+type DeclaredSymbol = { readonly kind: CodeSymbolKind; readonly name: ts.Identifier; readonly stmt: ts.Statement; readonly signature?: string };
+
+/** Символы экспортированного оператора: функция, класс, интерфейс, тип, переменные. */
+function declaredSymbols(stmt: ts.Statement, sf: ts.SourceFile): DeclaredSymbol[] {
+  if (ts.isFunctionDeclaration(stmt) && stmt.name !== undefined) {
+    return [{ kind: functionKind(stmt.name.text, sf), name: stmt.name, stmt, signature: signatureOf(stmt, sf) }];
+  }
+  if (ts.isClassDeclaration(stmt) && stmt.name !== undefined) {
+    return [{ kind: 'class', name: stmt.name, stmt }];
+  }
+  if (ts.isInterfaceDeclaration(stmt)) {
+    return [{ kind: 'interface', name: stmt.name, stmt }];
+  }
+  if (ts.isTypeAliasDeclaration(stmt)) {
+    return [{ kind: 'type', name: stmt.name, stmt }];
+  }
+  return ts.isVariableStatement(stmt) ? variableSymbols(stmt, sf) : [];
+}
+
+/** Переменные оператора: стрелка или function-выражение — функция с сигнатурой. */
+function variableSymbols(stmt: ts.VariableStatement, sf: ts.SourceFile): DeclaredSymbol[] {
+  return stmt.declarationList.declarations.flatMap((decl): DeclaredSymbol[] => {
+    if (!ts.isIdentifier(decl.name)) {
+      return [];
+    }
+    const init = decl.initializer;
+    return init !== undefined && (ts.isArrowFunction(init) || ts.isFunctionExpression(init))
+      ? [{ kind: functionKind(decl.name.text, sf), name: decl.name, stmt, signature: signatureOf(init, sf) }]
+      : [{ kind: 'variable', name: decl.name, stmt }];
+  });
 }

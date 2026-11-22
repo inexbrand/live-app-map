@@ -108,6 +108,23 @@ async function scanUnknownWithDualHeuristic(
   };
 }
 
+/** Скан выбранным сканером; unknown, manual и прочие — двойной скан с выбором лучшего. */
+function scanByFramework(framework: FrameworkKind, request: ScanRequest, abs: string): Promise<ScanResult> {
+  if (framework === 'react-router') {
+    return scanReactRouterApp(request);
+  }
+  if (framework === 'next' || framework === 'hybrid') {
+    return scanNextApp(request);
+  }
+  return scanUnknownWithDualHeuristic(request, abs);
+}
+
+/** Добавляет к карте раздел code (и docs) из каталога исходников. */
+function withCodeDir(result: ScanResult, codeDir: string): ScanResult {
+  const merged = withSourceCode(result.document, codeDir);
+  return { ...result, document: merged.document, diagnostics: [...result.diagnostics, ...merged.diagnostics] };
+}
+
 /**
  * Авто-выбор scanner и запись графа.
  *
@@ -116,11 +133,7 @@ async function scanUnknownWithDualHeuristic(
  */
 export async function runScan(opts: ScanCliOptions): Promise<ScanResult> {
   const abs = path.resolve(opts.dir);
-  const explicit =
-    opts.framework !== undefined && opts.framework !== 'auto'
-      ? opts.framework
-      : null;
-  const framework = explicit ?? detectFramework(abs);
+  const framework = opts.framework === undefined || opts.framework === 'auto' ? detectFramework(abs) : opts.framework;
 
   const request: ScanRequest = {
     projectRoot: abs,
@@ -130,27 +143,8 @@ export async function runScan(opts: ScanCliOptions): Promise<ScanResult> {
     includeRouteHandlers: opts.includeRouteHandlers,
   };
 
-  let result: ScanResult;
-  if (framework === 'react-router') {
-    result = await scanReactRouterApp(request);
-  } else if (framework === 'next' || framework === 'hybrid') {
-    result = await scanNextApp(request);
-  } else if (framework === 'unknown') {
-    result = await scanUnknownWithDualHeuristic(request, abs);
-  } else {
-    // manual / прочие: dual-scan с тем же stable path
-    result = await scanUnknownWithDualHeuristic(request, abs);
-  }
-
-  if (opts.codeDir !== undefined) {
-    const merged = withSourceCode(result.document, opts.codeDir);
-    result = {
-      ...result,
-      document: merged.document,
-      diagnostics: [...result.diagnostics, ...merged.diagnostics],
-    };
-  }
-
+  const scanned = await scanByFramework(framework, request, abs);
+  const result = opts.codeDir === undefined ? scanned : withCodeDir(scanned, opts.codeDir);
   if (opts.out) {
     writeMapFile(result.document, opts.out, opts.format);
   }
@@ -198,28 +192,17 @@ export type DoctorReport = {
 export function runDoctor(dir: string): DoctorReport {
   const abs = path.resolve(dir);
   const framework = detectFramework(abs);
-  const notes: string[] = [];
-  const hasPackageJson = existsSync(path.join(abs, 'package.json'));
-  const hasNextConfig =
-    existsSync(path.join(abs, 'next.config.ts')) ||
-    existsSync(path.join(abs, 'next.config.js')) ||
-    existsSync(path.join(abs, 'next.config.mjs'));
-  const hasAppDir =
-    existsSync(path.join(abs, 'app')) || existsSync(path.join(abs, 'src', 'app'));
-  const hasPagesDir =
-    existsSync(path.join(abs, 'pages')) ||
-    existsSync(path.join(abs, 'src', 'pages'));
-
-  if (!hasPackageJson) {
-    notes.push('package.json не найден');
-  }
-  if (framework === 'unknown') {
-    notes.push('framework не определён — укажите --framework');
-  }
-  if (framework === 'next' && !hasAppDir && !hasPagesDir) {
-    notes.push('Next без app/ и pages/');
-  }
-  notes.push(`framework=${framework}`);
+  const any = (...rels: string[][]): boolean => rels.some((r) => existsSync(path.join(abs, ...r)));
+  const hasPackageJson = any(['package.json']);
+  const hasNextConfig = any(['next.config.ts'], ['next.config.js'], ['next.config.mjs']);
+  const hasAppDir = any(['app'], ['src', 'app']);
+  const hasPagesDir = any(['pages'], ['src', 'pages']);
+  const notes = [
+    ...(hasPackageJson ? [] : ['package.json не найден']),
+    ...(framework === 'unknown' ? ['framework не определён — укажите --framework'] : []),
+    ...(framework === 'next' && !hasAppDir && !hasPagesDir ? ['Next без app/ и pages/'] : []),
+    `framework=${framework}`,
+  ];
 
   return {
     dir: abs,

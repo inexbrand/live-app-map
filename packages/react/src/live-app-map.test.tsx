@@ -13,6 +13,7 @@ import {
   LiveAppMapDevtoolsPanel,
   LiveAppMapView,
   fetchAppMapDocument,
+  syncAppMapDocument,
 } from './index';
 
 const CYRILLIC = /[А-Яа-яЁё]/;
@@ -337,4 +338,46 @@ describe('LIVE_APP_MAP_COPY', () => {
       expect(CYRILLIC.test(LIVE_APP_MAP_COPY[key])).toBe(true);
     }
   });
+});
+
+describe('LiveAppMap: документ и загрузка', () => {
+  test('переданный документ — сразу, без загрузки; без документа и адреса — ничего', () => {
+    const doc = makeValidDocument(1);
+    const got: [AppMapDocument | null, string | null][] = [];
+    expect(syncAppMapDocument(doc, 'http://127.0.0.1:1/never', (d, e) => got.push([d, e]))).toBeUndefined();
+    expect(got).toEqual([[doc, null]]);
+    expect(syncAppMapDocument(undefined, undefined, (d, e) => got.push([d, e]))).toBeUndefined();
+    expect(got.length).toBe(1);
+  });
+
+  test('по адресу: карта или ошибка HTTP; после отмены ответ не применяется', async () => {
+    const doc = makeValidDocument(2);
+    const server = Bun.serve({
+      port: 0,
+      fetch: (req) => (new URL(req.url).pathname === '/map.json' ? Response.json(doc) : new Response('нет', { status: 404 })),
+    });
+    try {
+      const base = `http://127.0.0.1:${server.port}`;
+      const loaded = await new Promise<[AppMapDocument | null, string | null]>((done) => {
+        syncAppMapDocument(undefined, `${base}/map.json`, (d, e) => done([d, e]));
+      });
+      expect(loaded[0]?.nodes.length).toBe(2);
+      expect(loaded[1]).toBeNull();
+      const failed = await new Promise<[AppMapDocument | null, string | null]>((done) => {
+        syncAppMapDocument(undefined, `${base}/missing.json`, (d, e) => done([d, e]));
+      });
+      expect(failed).toEqual([null, 'HTTP 404: не удалось загрузить карту']);
+      let late = false;
+      const cancel = syncAppMapDocument(undefined, `${base}/map.json`, () => {
+        late = true;
+      });
+      cancel?.();
+      await fetch(`${base}/map.json`);
+      await new Promise((r) => setTimeout(r, 20));
+      expect(late).toBe(false);
+    } finally {
+      void server.stop(true);
+    }
+  });
+
 });

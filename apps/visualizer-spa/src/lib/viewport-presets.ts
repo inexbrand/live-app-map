@@ -15,36 +15,17 @@ export function resolveViewportPresets(
   if (fromJson === undefined || fromJson.length === 0) {
     return BUILTIN_VIEWPORT_PRESETS;
   }
-
-  const byId = new Map<string, ViewportPreset>();
-  for (const p of BUILTIN_VIEWPORT_PRESETS) {
-    byId.set(p.id, p);
-  }
-  for (const p of fromJson) {
-    byId.set(p.id, {
-      id: p.id,
-      label: p.label,
-      width: p.width,
-      height: p.height ?? DEFAULT_HEIGHT_FALLBACK,
-      heightMode: p.heightMode ?? 'fixed',
-    });
-  }
-
-  const order: string[] = BUILTIN_VIEWPORT_PRESETS.map((p) => p.id);
-  for (const p of fromJson) {
-    if (!order.includes(p.id)) {
-      order.push(p.id);
-    }
-  }
-
-  const out: ViewportPreset[] = [];
-  for (const id of order) {
+  const byId = new Map<string, ViewportPreset>([...BUILTIN_VIEWPORT_PRESETS.map((p): [string, ViewportPreset] => [p.id, p]), ...fromJson.map((p): [string, ViewportPreset] => [p.id, presetOf(p)])]);
+  // Встроенные — в своём порядке, новые из карты — после них
+  const order = [...new Set([...BUILTIN_VIEWPORT_PRESETS.map((p) => p.id), ...fromJson.map((p) => p.id)])];
+  return order.flatMap((id) => {
     const preset = byId.get(id);
-    if (preset !== undefined) {
-      out.push(preset);
-    }
-  }
-  return out;
+    return preset === undefined ? [] : [preset];
+  });
+}
+
+function presetOf(p: NonNullable<LayoutHints['viewportPresets']>[number]): ViewportPreset {
+  return { id: p.id, label: p.label, width: p.width, height: p.height ?? DEFAULT_HEIGHT_FALLBACK, heightMode: p.heightMode ?? 'fixed' };
 }
 
 /**

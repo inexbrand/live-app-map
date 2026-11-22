@@ -5,7 +5,8 @@ import { describe, expect, test } from 'bun:test';
 import { copyFileSync, mkdtempSync, readFileSync, statSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { buildMapCatalog, writeMapCatalogIndex } from './build-map-catalog-fs';
+import { liveAppMapToAppMap, parseLiveAppMapJson } from '@live-app-map/schema';
+import { buildMapCatalog, summarizeMapFile, writeMapCatalogIndex } from './build-map-catalog-fs';
 import { parseMapCatalog } from './map-catalog';
 
 const publicMaps = path.resolve(import.meta.dir, '../../public/maps');
@@ -86,5 +87,28 @@ describe('writeMapCatalogIndex — временная папка', () => {
 
   test('нет папки — пустой каталог без исключения', () => {
     expect(writeMapCatalogIndex('/nonexistent/lam-maps').maps).toEqual([]);
+  });
+});
+describe('summarizeMapFile — форматы файла', () => {
+  const liveText = readFileSync(path.join(publicMaps, 'korbor-miniapp.liveappmap.json'), 'utf8');
+
+  test('внутренний формат AppMap: имя проекта, baseUrl и экраны — как у исходной карты', () => {
+    const live = parseLiveAppMapJson(liveText);
+    if (!live.ok) {
+      throw new Error('карта не разобралась');
+    }
+    const fromLive = summarizeMapFile('a.json', liveText);
+    const fromApp = summarizeMapFile('a.json', JSON.stringify(liveAppMapToAppMap(live.document)));
+    expect(fromApp.ok).toBe(true);
+    expect(fromApp.ok && fromLive.ok ? fromApp.summary.pageCount : -1).toBe(screensIn('korbor-miniapp'));
+    expect(fromApp.ok && fromLive.ok ? fromApp.summary.baseUrl : 'x').toBe(fromLive.ok ? fromLive.summary.baseUrl : 'y');
+  });
+
+  test('не JSON и JSON без карты — причина отказа', () => {
+    const broken = summarizeMapFile('b.json', '{oops');
+    expect(broken.ok ? '' : broken.reason).toStartWith('JSON:');
+    const other = summarizeMapFile('c.json', '{"hello":1}');
+    expect(other.ok).toBe(false);
+    expect(other.ok ? '' : other.reason).not.toBe('');
   });
 });

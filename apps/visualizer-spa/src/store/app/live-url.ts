@@ -16,6 +16,84 @@ export type LiveUrlInput = Pick<
   'document' | 'index' | 'activeStates' | 'globalRole' | 'baseUrlOverride' | 'dogfoodMiniappInitData' | 'dogfoodAdminAccessToken' | 'useTlsProxy'
 >;
 
+type MapNode = NonNullable<ReturnType<NonNullable<LiveUrlInput['index']>['nodesById']['get']>>;
+type PageState = NonNullable<MapNode['states']>[number];
+
+/** Роль для URL: роль стейта, иначе общая; пусто — без роли. */
+function stateRole(pageState: PageState | undefined, globalRole: string): string | undefined {
+  const own = pageState?.inject?.role;
+  if (own !== undefined && own !== '') {
+    return own;
+  }
+  return globalRole !== '' ? globalRole : undefined;
+}
+
+/** URL с выбранным стейтом: его адрес (или base), роль, query и hash стейта. */
+function urlWithState(base: string, pageState: PageState | undefined, globalRole: string): string {
+  const roleQuery: Record<string, string> = globalRole !== '' ? { lam_role: globalRole } : {};
+  return applyStateToUrl(pageState?.url || base, {
+    role: stateRole(pageState, globalRole),
+    query: { ...roleQuery, ...pageState?.inject?.query },
+    hash: pageState?.inject?.hash,
+  });
+}
+
+/** Шлюз: сессия профиля вместо query-токенов и TLS-прокси. */
+function gatewayUrl(withState: string, node: MapNode, doc: NonNullable<LiveUrlInput['document']>, ctx: { readonly id: string; readonly stateName: string | undefined; readonly globalRole: string; readonly port: number }): string {
+  const gateway = useGatewayStore.getState();
+  const hashed = ensureMiniappHashRoute(withState);
+  let appOrigin = '';
+  try {
+    appOrigin = new URL(hashed).origin;
+  } catch {
+    return hashed;
+  }
+  const profile = pickNodeProfile(node, { profiles: gateway.profiles, appOrigin, stateName: ctx.stateName, globalRole: ctx.globalRole });
+  // Параметры маршрута — реальные id из API под этим профилем, если уже прочитаны.
+  const real = sampledPath(doc, node, gateway.samples.get(profile));
+  const target = real === null ? hashed : ensureMiniappHashRoute(withPathname(withState, real));
+  return toGatewayUrl(target, profile, ctx.port, cellOf(ctx.id)) ?? target;
+}
+
+/** Origin визуализатора для TLS-прокси. */
+function proxyOrigin(): string {
+  return typeof globalThis.location !== 'undefined' && globalThis.location?.origin ? globalThis.location.origin : 'http://localhost:4310';
+}
+
+/** Без шлюза: dogfood-вход в query, HashRouter мини-аппа, TLS-прокси для self-signed HTTPS. */
+function directUrl(withState: string, store: LiveUrlInput): string {
+  // Dogfood inject: miniapp initData + admin token (Korbor читает query)
+  const injected = applyDogfoodToUrl(withState, {
+    miniappInitData: store.dogfoodMiniappInitData,
+    adminAccessToken: store.dogfoodAdminAccessToken,
+  });
+  // Miniapp HashRouter: /feed → /#/feed (query остаётся в search)
+  const url = ensureMiniappHashRoute(injected);
+  if (!store.useTlsProxy || !shouldUseTlsProxyForUrl(url)) {
+    return url;
+  }
+  // Self-signed HTTPS miniapp: same-origin proxy (secure:false на Vite);
+  // proxy path может снова «съесть» product path — нормализуем hash
+  return ensureMiniappHashRoute(rewriteUrlThroughTlsProxy(url, proxyOrigin()));
+}
+
+/** Адрес экрана без стейта: по шаблону и base, иначе свой url ноды; пусто — нет. */
+function baseUrlOf(node: MapNode, baseUrl: string | null | undefined): string | null {
+  return resolveNodeUrl(node, baseUrl ?? null) || node.url || null;
+}
+
+/** Выбранный стейт экрана: имя и описание (нет имени — без стейта). */
+function activeState(node: MapNode, store: LiveUrlInput, id: string): { readonly name: string | undefined; readonly state: PageState | undefined } {
+  const name = store.activeStates.get(id);
+  return { name, state: name ? node.states?.find((s) => s.name === name) : undefined };
+}
+
+/** Экран карты по id; сервис бэкенда — не экран: pathPattern у него каталог в репо, а не URL. */
+function screenOf(store: LiveUrlInput, id: string): MapNode | null {
+  const node = store.document && store.index ? store.index.nodesById.get(id) : undefined;
+  return !node || node.kind === 'service' ? null : node;
+}
+
 /**
  * Live URL экрана; null — нет карты, ноды, URL или это сервис.
  *
@@ -23,97 +101,14 @@ export type LiveUrlInput = Pick<
  * @param id - id ноды
  */
 export function resolveLiveUrl(store: LiveUrlInput, id: string): string | null {
-  const {
-    document,
-    index,
-    activeStates,
-    globalRole,
-    baseUrlOverride,
-    dogfoodMiniappInitData,
-    dogfoodAdminAccessToken,
-  } = store;
-  if (!document || !index) {
+  const node = screenOf(store, id);
+  const doc = store.document;
+  const base = node === null || doc === null ? null : baseUrlOf(node, store.baseUrlOverride || doc.baseUrl);
+  if (node === null || doc === null || base === null) {
     return null;
   }
-  const node = index.nodesById.get(id);
-  // Сервис бэкенда — не экран: pathPattern у него каталог в репо, а не URL.
-  if (!node || node.kind === 'service') {
-    return null;
-  }
-  const base =
-    resolveNodeUrl(node, baseUrlOverride || document.baseUrl) ??
-    node.url ??
-    null;
-  if (!base) {
-    return null;
-  }
-
-  const stateName = activeStates.get(id);
-  const pageState = stateName
-    ? node.states?.find((s) => s.name === stateName)
-    : undefined;
-
-  const role =
-    pageState?.inject?.role !== undefined && pageState.inject.role !== ''
-      ? pageState.inject.role
-      : globalRole !== ''
-        ? globalRole
-        : undefined;
-
-  const withState = pageState?.url
-    ? applyStateToUrl(pageState.url, {
-        role,
-        query: {
-          ...(globalRole !== '' ? { lam_role: globalRole } : {}),
-          ...pageState.inject?.query,
-        },
-        hash: pageState.inject?.hash,
-      })
-    : applyStateToUrl(base, {
-        role,
-        query: {
-          ...(globalRole !== '' ? { lam_role: globalRole } : {}),
-          ...pageState?.inject?.query,
-        },
-        hash: pageState?.inject?.hash,
-      });
-
-  // Шлюз: сессия профиля вместо query-токенов и TLS-прокси.
-  const gateway = useGatewayStore.getState();
-  if (gateway.port !== null) {
-    const hashed = ensureMiniappHashRoute(withState);
-    let appOrigin = '';
-    try {
-      appOrigin = new URL(hashed).origin;
-    } catch {
-      return hashed;
-    }
-    const profile = pickNodeProfile(node, { profiles: gateway.profiles, appOrigin, stateName, globalRole });
-    // Параметры маршрута — реальные id из API под этим профилем, если уже прочитаны.
-    const real = sampledPath(document, node, gateway.samples.get(profile));
-    const target = real === null ? hashed : ensureMiniappHashRoute(withPathname(withState, real));
-    return toGatewayUrl(target, profile, gateway.port, cellOf(id)) ?? target;
-  }
-
-  // Dogfood inject: miniapp initData + admin token (Korbor читает query)
-  let url = applyDogfoodToUrl(withState, {
-    miniappInitData: dogfoodMiniappInitData,
-    adminAccessToken: dogfoodAdminAccessToken,
-  });
-
-  // Miniapp HashRouter: /feed → /#/feed (query остаётся в search)
-  url = ensureMiniappHashRoute(url);
-
-  // Self-signed HTTPS miniapp: same-origin proxy (secure:false на Vite)
-  if (store.useTlsProxy && shouldUseTlsProxyForUrl(url)) {
-    const origin =
-      typeof globalThis.location !== 'undefined' && globalThis.location?.origin
-        ? globalThis.location.origin
-        : 'http://localhost:4310';
-    url = rewriteUrlThroughTlsProxy(url, origin);
-    // proxy path может снова «съесть» product path — нормализуем hash
-    url = ensureMiniappHashRoute(url);
-  }
-
-  return url;
+  const active = activeState(node, store, id);
+  const withState = urlWithState(base, active.state, store.globalRole);
+  const port = useGatewayStore.getState().port;
+  return port === null ? directUrl(withState, store) : gatewayUrl(withState, node, doc, { id, stateName: active.name, globalRole: store.globalRole, port });
 }

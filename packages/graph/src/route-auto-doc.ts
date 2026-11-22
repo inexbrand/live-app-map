@@ -120,6 +120,29 @@ function responseText(route: ApiRoute): string | undefined {
   return joinParts([listPart('поля', r.fields), listPart('возвращает', r.values), listPart('статусы', r.statuses)]);
 }
 
+/** Строки фактов, которые нашлись: таблицы, доступ, ответ. */
+function factLines(route: ApiRoute, reads: readonly TableTouch[], writes: readonly TableTouch[]): AutoDocLine[] {
+  const optional: [string, string | undefined][] = [
+    ['Читает', reads.length > 0 ? tableNames(reads) : undefined],
+    ['Пишет', writes.length > 0 ? tableNames(writes) : undefined],
+    ['Доступ', accessText(route)],
+    ['Ответ', responseText(route)],
+  ];
+  return optional.flatMap(([label, text]) => (text === undefined ? [] : [{ label, text }]));
+}
+
+/** Сводка роута одной строкой: действие, таблицы, поля ответа. */
+function summaryOf(route: ApiRoute, reads: readonly TableTouch[], writes: readonly TableTouch[]): string {
+  return [
+    action(route),
+    reads.length > 0 ? `читает ${tableNames(reads)}` : '',
+    writes.length > 0 ? `пишет ${tableNames(writes)}` : '',
+    route.response?.fields !== undefined ? `ответ {${route.response.fields.join(', ')}}` : '',
+  ]
+    .filter((p) => p !== '')
+    .join('; ');
+}
+
 /**
  * Автоописание роута из кода. Есть у любого роута (как минимум действие и обработчик).
  *
@@ -132,29 +155,12 @@ export function routeAutoDoc(index: CodeIndex, route: ApiRoute): RouteAutoDoc {
   const reads = detail?.reads ?? [];
   const writes = detail?.writes ?? [];
   const handler = route.handler.name ?? 'встроенная функция';
-  const lines: AutoDocLine[] = [{ label: 'Обработчик', text: `${handler} · ${route.handler.location.file}:${route.handler.location.line}` }];
-  lines.push(...inputLines(route));
-  if (reads.length > 0) {
-    lines.push({ label: 'Читает', text: tableNames(reads) });
-  }
-  if (writes.length > 0) {
-    lines.push({ label: 'Пишет', text: tableNames(writes) });
-  }
-  const access = accessText(route);
-  if (access !== undefined) {
-    lines.push({ label: 'Доступ', text: access });
-  }
-  const response = responseText(route);
-  if (response !== undefined) {
-    lines.push({ label: 'Ответ', text: response });
-  }
-  const summaryParts = [
-    action(route),
-    reads.length > 0 ? `читает ${tableNames(reads)}` : '',
-    writes.length > 0 ? `пишет ${tableNames(writes)}` : '',
-    route.response?.fields !== undefined ? `ответ {${route.response.fields.join(', ')}}` : '',
-  ].filter((p) => p !== '');
-  const summary = summaryParts.join('; ');
+  const lines: AutoDocLine[] = [
+    { label: 'Обработчик', text: `${handler} · ${route.handler.location.file}:${route.handler.location.line}` },
+    ...inputLines(route),
+    ...factLines(route, reads, writes),
+  ];
+  const summary = summaryOf(route, reads, writes);
   return {
     summary: summary.length > SUMMARY_MAX ? `${summary.slice(0, SUMMARY_MAX - 1)}…` : summary,
     lines,
@@ -215,6 +221,12 @@ function callsOf(index: CodeIndex, routeId: string): readonly ApiCall[] {
   return m.get(routeId) ?? [];
 }
 
+/** Почему у роута нет вызова в коде: по пути и файлу (вебхук, крон…), иначе общая причина. */
+function noCallerReason(route: ApiRoute): string {
+  const hay = `${route.path} ${route.location.file}`;
+  return NO_CALLER_KINDS.find(([re]) => re.test(hay))?.[1] ?? 'в коде репозитория вызова нет (внешний клиент или не используется)';
+}
+
 /**
  * Почему роут не вызывается экранами карты.
  *
@@ -229,9 +241,7 @@ export function routeScreenGap(index: CodeIndex, route: ApiRoute): ScreenGap | u
   const calls = callsOf(index, route.id);
   const files = [...new Set(calls.map((c) => c.location.file))];
   if (calls.length === 0) {
-    const hay = `${route.path} ${route.location.file}`;
-    const kind = NO_CALLER_KINDS.find(([re]) => re.test(hay))?.[1] ?? 'в коде репозитория вызова нет (внешний клиент или не используется)';
-    return { kind: 'no-caller', text: kind, files };
+    return { kind: 'no-caller', text: noCallerReason(route), files };
   }
   const screens = screenServices(index);
   if (calls.every((c) => !screens.has(c.serviceId))) {

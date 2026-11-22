@@ -28,6 +28,51 @@ export type EnsureDogfoodResult = {
   readonly error?: string;
 };
 
+/** Есть ли у пользователя telegramId (без него нет initData мини-приложения). */
+function hasTelegramId(a: DogfoodActor): boolean {
+  return a.kind === 'user' && a.telegramId !== null && a.telegramId !== undefined && String(a.telegramId).trim() !== '';
+}
+
+/** Вход первым админом: true — токен получен и сохранён. */
+async function mintAdmin(actors: readonly DogfoodActor[], input: EnsureDogfoodInput): Promise<boolean> {
+  const admin = actors.find((a) => a.kind === 'admin');
+  if (!admin) {
+    return false;
+  }
+  const minted = await mintDogfoodSession(admin);
+  if (!minted.ok) {
+    input.onToast?.(`Admin dogfood: ${minted.error}`);
+    return false;
+  }
+  const inj = mapSessionToInject(minted.data);
+  if (!inj.adminAccessToken) {
+    return false;
+  }
+  input.setDogfoodAdminAccessToken(inj.adminAccessToken);
+  return true;
+}
+
+/** Вход пользователем с telegramId: true — initData получен и сохранён. */
+async function mintMiniapp(user: DogfoodActor, input: EnsureDogfoodInput): Promise<boolean> {
+  const minted = await mintDogfoodSession(user);
+  if (!minted.ok) {
+    input.onToast?.(`Miniapp dogfood: ${minted.error}`);
+    return false;
+  }
+  const inj = mapSessionToInject(minted.data);
+  if (inj.globalRole && input.setGlobalRole) {
+    input.setGlobalRole(inj.globalRole);
+  }
+  if (!inj.miniappInitData) {
+    return false;
+  }
+  input.setDogfoodMiniappInitData(inj.miniappInitData);
+  return true;
+}
+
+/** Нет пользователя с telegramId: iframe мини-приложения останется без входа. */
+const NO_TELEGRAM_USER = 'Miniapp: в БД нет user с telegramId — iframe останется без auth';
+
 /**
  * Mint недостающих dogfood-сессий (dev-only).
  */
@@ -35,80 +80,35 @@ export async function ensureDogfoodSessions(
   input: EnsureDogfoodInput,
   env: { readonly PROD?: boolean; readonly MODE?: string } = import.meta.env,
 ): Promise<EnsureDogfoodResult> {
-  if (!isDogfoodClientEnabled(env)) {
-    return { ok: true, mintedAdmin: false, mintedMiniapp: false };
-  }
-
   const needAdmin = input.dogfoodAdminAccessToken.trim() === '';
   const needMini = input.dogfoodMiniappInitData.trim() === '';
-  if (!needAdmin && !needMini) {
+  if (!isDogfoodClientEnabled(env) || (!needAdmin && !needMini)) {
     return { ok: true, mintedAdmin: false, mintedMiniapp: false };
   }
 
   const actorsRes = await fetchDogfoodActors();
   if (!actorsRes.ok) {
-    const error = `Авто-вход недоступен: ${actorsRes.error}. Поднимите API+Postgres и войдите в Настройках.`;
-    input.onError?.(error);
-    input.onToast?.(error);
-    return { ok: false, mintedAdmin: false, mintedMiniapp: false, error };
+    return actorsUnavailable(actorsRes.error, input);
   }
   input.onActors?.(actorsRes.data);
+  const mintedAdmin = needAdmin ? await mintAdmin(actorsRes.data, input) : false;
+  return needMini ? ensureMiniapp(actorsRes.data, input, mintedAdmin) : { ok: true, mintedAdmin, mintedMiniapp: false };
+}
 
-  let mintedAdmin = false;
-  let mintedMiniapp = false;
+/** Список пользователей не получен: ошибка в настройки и в toast. */
+function actorsUnavailable(reason: string, input: EnsureDogfoodInput): EnsureDogfoodResult {
+  const error = `Авто-вход недоступен: ${reason}. Поднимите API+Postgres и войдите в Настройках.`;
+  input.onError?.(error);
+  input.onToast?.(error);
+  return { ok: false, mintedAdmin: false, mintedMiniapp: false, error };
+}
 
-  if (needAdmin) {
-    const admin = actorsRes.data.find((a) => a.kind === 'admin');
-    if (admin) {
-      const minted = await mintDogfoodSession(admin);
-      if (minted.ok) {
-        const inj = mapSessionToInject(minted.data);
-        if (inj.adminAccessToken) {
-          input.setDogfoodAdminAccessToken(inj.adminAccessToken);
-          mintedAdmin = true;
-        }
-      } else {
-        input.onToast?.(`Admin dogfood: ${minted.error}`);
-      }
-    }
+/** Вход в мини-приложение любым пользователем с telegramId (роль потом — из стейтов карты). */
+async function ensureMiniapp(actors: readonly DogfoodActor[], input: EnsureDogfoodInput, mintedAdmin: boolean): Promise<EnsureDogfoodResult> {
+  const user = actors.find(hasTelegramId);
+  if (!user) {
+    input.onToast?.(NO_TELEGRAM_USER);
+    return { ok: false, mintedAdmin, mintedMiniapp: false, error: NO_TELEGRAM_USER };
   }
-
-  if (needMini) {
-    // Prefer any user with telegramId (initData); role later via map states.
-    const user =
-      actorsRes.data.find(
-        (a) =>
-          a.kind === 'user' &&
-          a.telegramId !== null &&
-          a.telegramId !== undefined &&
-          String(a.telegramId).trim() !== '',
-      ) ?? undefined;
-    if (user) {
-      const minted = await mintDogfoodSession(user);
-      if (minted.ok) {
-        const inj = mapSessionToInject(minted.data);
-        if (inj.miniappInitData) {
-          input.setDogfoodMiniappInitData(inj.miniappInitData);
-          mintedMiniapp = true;
-        }
-        if (inj.globalRole && input.setGlobalRole) {
-          input.setGlobalRole(inj.globalRole);
-        }
-      } else {
-        input.onToast?.(`Miniapp dogfood: ${minted.error}`);
-      }
-    } else {
-      const msg =
-        'Miniapp: в БД нет user с telegramId — iframe останется без auth';
-      input.onToast?.(msg);
-      return {
-        ok: false,
-        mintedAdmin,
-        mintedMiniapp: false,
-        error: msg,
-      };
-    }
-  }
-
-  return { ok: true, mintedAdmin, mintedMiniapp };
+  return { ok: true, mintedAdmin, mintedMiniapp: await mintMiniapp(user, input) };
 }

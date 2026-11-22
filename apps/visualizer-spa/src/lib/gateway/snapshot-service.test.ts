@@ -7,7 +7,10 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { chromium } from '@playwright/test';
 import type { Server } from 'bun';
-import { parseSnapshotQuery } from './snapshot-middleware';
+import { serveMiddleware } from '../dev-http.test-helpers';
+import { startGateway } from './gateway-server';
+import { SessionStore } from './session-store';
+import { createSnapshotMiddleware, parseSnapshotQuery } from './snapshot-middleware';
 import { SnapshotService } from './snapshot-service';
 
 let app: Server<undefined>;
@@ -66,4 +69,26 @@ describe('parseSnapshotQuery', () => {
     expect(q({ url: 'http://admin--h16002.localhost:4320/', w: '10', h: '800' }).ok).toBe(false);
     expect(q({ w: '1280', h: '800' }).ok).toBe(false);
   });
+});
+
+describe('createSnapshotMiddleware', () => {
+  test('снимок страницы через шлюз — JPEG; не GET, чужая страница, кривой запрос — отказ', async () => {
+    const gateway = startGateway({ port: 0, store: new SessionStore(mkdtempSync(path.join(tmpdir(), 'lam-snap-sessions-'))) });
+    const http = await serveMiddleware(createSnapshotMiddleware(service, gateway.port ?? 0));
+    try {
+      const page = encodeURIComponent(`http://anon--h${app.port}.localhost:${gateway.port}/`);
+      const ok = await fetch(`${http.url}/__lam_snapshot?url=${page}&w=390&h=300`);
+      expect(ok.status).toBe(200);
+      expect(ok.headers.get('content-type')).toBe('image/jpeg');
+      const jpeg = new Uint8Array(await ok.arrayBuffer());
+      expect([jpeg[0], jpeg[1]]).toEqual([0xff, 0xd8]);
+      expect((await fetch(`${http.url}/__lam_snapshot?url=${page}&w=390&h=300`, { method: 'POST' })).status).toBe(403);
+      expect((await fetch(`${http.url}/__lam_snapshot?url=${page}&w=390&h=300`, { headers: { origin: 'http://evil.example' } })).status).toBe(403);
+      expect((await fetch(`${http.url}/__lam_snapshot?url=${page}&w=10&h=10`)).status).toBe(400);
+      expect((await fetch(`${http.url}/__lam_other`)).status).toBe(404);
+    } finally {
+      await http.close();
+      void gateway.stop(true);
+    }
+  }, 30_000);
 });

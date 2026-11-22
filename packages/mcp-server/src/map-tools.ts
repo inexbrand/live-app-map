@@ -10,6 +10,7 @@ import {
   parseLiveAppMapJson,
   type AppMapDocument,
   type DocsModel,
+  type LiveAppMapDocument,
 } from '@live-app-map/schema';
 
 /** Экран карты в ответе tools. */
@@ -39,35 +40,33 @@ export function loadMap(mapPath: string): LoadedMap {
   const text = readFileSync(path.resolve(mapPath), 'utf8');
   const asApp = parseAppMapDocument(JSON.parse(text));
   if (asApp.ok) {
-    return {
-      name: asApp.document.project.name,
-      baseUrl: asApp.document.baseUrl ?? undefined,
-      pages: asApp.document.nodes
-        .filter((n) => n.kind === 'page')
-        .map((n) => ({
-          id: n.id,
-          title: n.title,
-          path: n.pathExample ?? n.pathPattern,
-          url: n.url,
-          states: n.states,
-        })),
-    };
+    return appMapPages(asApp.document);
   }
   const asLive = parseLiveAppMapJson(text);
   if (asLive.ok) {
-    return {
-      name: asLive.document.app?.name,
-      baseUrl: asLive.document.baseUrl,
-      pages: asLive.document.pages.map((p) => ({
-        id: p.id,
-        title: p.title,
-        path: p.path,
-        url: p.url,
-        states: p.states,
-      })),
-    };
+    return livePages(asLive.document);
   }
   throw new Error(`не карта Live App Map: ${mapPath}`);
+}
+
+/** Экраны документа AppMap: ноды-страницы, путь — пример или шаблон. */
+function appMapPages(doc: AppMapDocument): LoadedMap {
+  return {
+    name: doc.project.name,
+    baseUrl: doc.baseUrl ?? undefined,
+    pages: doc.nodes
+      .filter((n) => n.kind === 'page')
+      .map((n) => ({ id: n.id, title: n.title, path: n.pathExample ?? n.pathPattern, url: n.url, states: n.states })),
+  };
+}
+
+/** Экраны liveappmap как есть. */
+function livePages(doc: LiveAppMapDocument): LoadedMap {
+  return {
+    name: doc.app?.name,
+    baseUrl: doc.baseUrl,
+    pages: doc.pages.map((p) => ({ id: p.id, title: p.title, path: p.path, url: p.url, states: p.states })),
+  };
 }
 
 /**

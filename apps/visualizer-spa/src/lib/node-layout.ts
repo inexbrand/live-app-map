@@ -85,26 +85,13 @@ export function computeNodeLayout(
  * Связующая нода: menu / nav / connector / kind layout + flag.
  */
 export function isConnectorNode(node: AppMapNode): boolean {
-  if (node.connector === true) {
+  if (node.connector === true || node.kind === 'layout') {
     return true;
   }
-  if (node.kind === 'layout') {
-    return true;
-  }
-  const meta = node.metadata;
-  if (meta !== undefined && meta['connector'] === true) {
-    return true;
-  }
-  const tags = node.tags;
-  if (tags !== undefined) {
-    for (const t of tags) {
-      if (t === 'menu' || t === 'nav' || t === 'connector') {
-        return true;
-      }
-    }
-  }
-  return false;
+  return node.metadata?.['connector'] === true || (node.tags ?? []).some((t) => CONNECTOR_TAGS.has(t));
 }
+
+const CONNECTOR_TAGS = new Set(['menu', 'nav', 'connector']);
 
 /**
  * World-size связующей ноды из screen px и zoom (постоянный размер на экране).

@@ -104,38 +104,51 @@ export function LiveAppMapView(props: {
 }
 
 /**
+ * Документ карты для встраивания: переданный — сразу, иначе загрузка по адресу.
+ *
+ * @param document - готовая карта
+ * @param graphUrl - адрес JSON карты
+ * @param apply - карта и ошибка (одна из них null)
+ * @returns отмена: ответ после неё не применяется
+ */
+export function syncAppMapDocument(
+  document: AppMapDocument | undefined,
+  graphUrl: string | undefined,
+  apply: (doc: AppMapDocument | null, error: string | null) => void,
+): (() => void) | undefined {
+  if (document) {
+    apply(document, null);
+    return undefined;
+  }
+  if (!graphUrl) {
+    return undefined;
+  }
+  let cancelled = false;
+  void fetchAppMapDocument(graphUrl).then((result) => {
+    if (!cancelled) {
+      apply(result.ok ? result.document : null, result.ok ? null : result.error);
+    }
+  });
+  return () => {
+    cancelled = true;
+  };
+}
+
+/**
  * Минимальный embed: загружает graph JSON и рендерит summary (SPA — полный UI).
  */
 export function LiveAppMap(props: LiveAppMapProps) {
   const [doc, setDoc] = useState<AppMapDocument | null>(props.document ?? null);
   const [error, setError] = useState<string | null>(null);
 
-  useEffect(() => {
-    if (props.document) {
-      setDoc(props.document);
-      setError(null);
-      return;
-    }
-    if (!props.graphUrl) {
-      return;
-    }
-    let cancelled = false;
-    void fetchAppMapDocument(props.graphUrl).then((result) => {
-      if (cancelled) {
-        return;
-      }
-      if (result.ok) {
-        setDoc(result.document);
-        setError(null);
-        return;
-      }
-      setDoc(null);
-      setError(result.error);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [props.document, props.graphUrl]);
+  useEffect(
+    () =>
+      syncAppMapDocument(props.document, props.graphUrl, (next, err) => {
+        setDoc(next);
+        setError(err);
+      }),
+    [props.document, props.graphUrl],
+  );
 
   return (
     <LiveAppMapView
@@ -201,12 +214,21 @@ export function LiveAppMapDevtoolsPanel(props: DevtoolsPanelProps) {
   );
 }
 
+function initiallyOpen(props: DevtoolsProps): boolean {
+  return props.initialIsOpen ?? false;
+}
+
+/** Сборка для production: devtools не показываются. */
+function isProduction(): boolean {
+  return process.env.NODE_ENV === 'production';
+}
+
 /**
  * Плавающая кнопка Devtools (открыть SPA или in-app panel). Только non-production.
  */
 export function LiveAppMapDevtools(props: DevtoolsProps) {
-  const [open, setOpen] = useState(props.initialIsOpen ?? false);
-  if (process.env.NODE_ENV === 'production') {
+  const [open, setOpen] = useState(initiallyOpen(props));
+  if (isProduction()) {
     return null;
   }
   return (

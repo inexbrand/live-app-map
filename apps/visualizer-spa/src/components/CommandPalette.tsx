@@ -71,21 +71,98 @@ function actions(query: string, hasDocs: boolean): Row[] {
   return out;
 }
 
-/** Глобальный поиск. */
-export function CommandPalette() {
-  const open = useUiStore((s) => s.palette);
+/** Перейти к строке: действие выполняется, результат открывается. */
+function useRunRow(): (r: Row | undefined) => void {
   const setOpen = useUiStore((s) => s.setPalette);
+  const openTarget = useOpenTarget();
+  return (r) => {
+    if (r === undefined) {
+      return;
+    }
+    setOpen(false);
+    if (r.type === 'action') {
+      r.run();
+    } else {
+      openTarget(r.item.target);
+    }
+  };
+}
+
+/** Стрелки — выбор, Enter — переход, Esc — закрыть. */
+function paletteKey(e: React.KeyboardEvent, rowCount: number, setActive: (f: (a: number) => number) => void, enter: () => void, close: () => void): void {
+  const moves: Record<string, (a: number) => number> = {
+    ArrowDown: (a) => Math.min(rowCount - 1, a + 1),
+    ArrowUp: (a) => Math.max(0, a - 1),
+  };
+  const move = moves[e.key];
+  if (move !== undefined) {
+    e.preventDefault();
+    setActive(move);
+  } else if (e.key === 'Enter') {
+    e.preventDefault();
+    enter();
+  } else if (e.key === 'Escape') {
+    e.preventDefault();
+    close();
+  }
+}
+
+/** Строка списка с заголовком группы перед первой строкой группы. */
+function PaletteRow({ r, i, prev, active, onHover, onRun }: { readonly r: Row; readonly i: number; readonly prev: Row | undefined; readonly active: boolean; readonly onHover: () => void; readonly onRun: () => void }) {
+  const group = groupOf(r);
+  const head = prev === undefined || groupOf(prev) !== group;
+  const title = r.type === 'item' ? r.item.title : r.title;
+  const hint = r.type === 'item' ? r.item.detail : r.hint;
+  return (
+    <li role="presentation">
+      {head ? <p className="palette__group">{group}</p> : null}
+      <button
+        type="button"
+        id={`palette-row-${i}`}
+        role="option"
+        aria-selected={active}
+        className={`palette__row${active ? ' palette__row--on' : ''}`}
+        data-testid="palette-row"
+        data-kind={r.type === 'item' ? r.item.kind : 'action'}
+        onMouseMove={onHover}
+        onClick={onRun}
+      >
+        <span className="palette__title">{title}</span>
+        <span className={r.type === 'action' ? 'palette__kbd' : 'palette__hint'}>{hint}</span>
+      </button>
+    </li>
+  );
+}
+
+/** Строки палитры по запросу: результаты поиска, затем действия. */
+function usePaletteRows(query: string): { readonly rows: Row[]; readonly hasMap: boolean } {
   const doc = useAppStore((s) => s.document);
   const index = useMemo(() => (doc === null ? [] : buildSearchIndex(doc)), [doc]);
-  const [query, setQuery] = useState('');
-  const [active, setActive] = useState(0);
-  const listRef = useRef<HTMLUListElement>(null);
-  const openTarget = useOpenTarget();
-
   const rows = useMemo<Row[]>(() => {
     const items = searchIndex(index, query).map((item): Row => ({ type: 'item', item }));
     return [...items, ...actions(query, doc?.docs !== undefined)];
   }, [index, query, doc]);
+  return { rows, hasMap: doc !== null };
+}
+
+/** Запрос есть, а нашлись только действия. */
+function nothingFound(query: string, rows: readonly Row[]): boolean {
+  return query.trim() !== '' && rows.every((r) => r.type === 'action');
+}
+
+function activeRowId(rows: readonly Row[], active: number): string | undefined {
+  return rows[active] === undefined ? undefined : `palette-row-${active}`;
+}
+
+/** Глобальный поиск. */
+export function CommandPalette() {
+  const open = useUiStore((s) => s.palette);
+  const setOpen = useUiStore((s) => s.setPalette);
+  const [query, setQuery] = useState('');
+  const [active, setActive] = useState(0);
+  const listRef = useRef<HTMLUListElement>(null);
+  const { rows, hasMap } = usePaletteRows(query);
+  const run = useRunRow();
 
   useEffect(() => {
     if (open) {
@@ -101,18 +178,6 @@ export function CommandPalette() {
   if (!open) {
     return null;
   }
-  const run = (r: Row | undefined): void => {
-    if (r === undefined) {
-      return;
-    }
-    setOpen(false);
-    if (r.type === 'action') {
-      r.run();
-    } else {
-      openTarget(r.item.target);
-    }
-  };
-
   return (
     <div className="palette-backdrop" onMouseDown={() => setOpen(false)}>
       <div
@@ -130,58 +195,21 @@ export function CommandPalette() {
             className="palette__input"
             data-testid="palette-input"
             value={query}
-            placeholder={doc === null ? 'Сначала откройте карту' : 'Экран, роут, таблица, эпоха, документ, файл'}
+            placeholder={hasMap ? 'Экран, роут, таблица, эпоха, документ, файл' : 'Сначала откройте карту'}
             aria-controls="palette-list"
-            aria-activedescendant={rows[active] === undefined ? undefined : `palette-row-${active}`}
+            aria-activedescendant={activeRowId(rows, active)}
             onChange={(e) => setQuery(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                setActive((a) => Math.min(rows.length - 1, a + 1));
-              } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                setActive((a) => Math.max(0, a - 1));
-              } else if (e.key === 'Enter') {
-                e.preventDefault();
-                run(rows[active]);
-              } else if (e.key === 'Escape') {
-                e.preventDefault();
-                setOpen(false);
-              }
-            }}
+            onKeyDown={(e) => paletteKey(e, rows.length, setActive, () => run(rows[active]), () => setOpen(false))}
           />
           <kbd className="palette__kbd">Esc</kbd>
         </label>
         <ul className="palette__list" id="palette-list" role="listbox" ref={listRef}>
-          {query.trim() !== '' && rows.every((r) => r.type === 'action') ? (
+          {nothingFound(query, rows) ? (
             <li className="palette__empty">Ничего не нашлось. Проверьте написание или ищите по части пути: «vacancies», «/me».</li>
           ) : null}
-          {rows.map((r, i) => {
-            const group = groupOf(r);
-            const prev = rows[i - 1];
-            const head = prev === undefined || groupOf(prev) !== group;
-            const title = r.type === 'item' ? r.item.title : r.title;
-            const hint = r.type === 'item' ? r.item.detail : r.hint;
-            return (
-              <li key={r.type === 'item' ? r.item.id : r.id} role="presentation">
-                {head ? <p className="palette__group">{group}</p> : null}
-                <button
-                  type="button"
-                  id={`palette-row-${i}`}
-                  role="option"
-                  aria-selected={i === active}
-                  className={`palette__row${i === active ? ' palette__row--on' : ''}`}
-                  data-testid="palette-row"
-                  data-kind={r.type === 'item' ? r.item.kind : 'action'}
-                  onMouseMove={() => setActive(i)}
-                  onClick={() => run(r)}
-                >
-                  <span className="palette__title">{title}</span>
-                  <span className={r.type === 'action' ? 'palette__kbd' : 'palette__hint'}>{hint}</span>
-                </button>
-              </li>
-            );
-          })}
+          {rows.map((r, i) => (
+            <PaletteRow key={r.type === 'item' ? r.item.id : r.id} r={r} i={i} prev={rows[i - 1]} active={i === active} onHover={() => setActive(i)} onRun={() => run(r)} />
+          ))}
         </ul>
       </div>
     </div>

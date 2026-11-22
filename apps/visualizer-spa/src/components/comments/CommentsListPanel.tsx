@@ -45,6 +45,60 @@ export function goToComment(t: CommentThread): void {
   window.setTimeout(tick, 600);
 }
 
+/** Автор фильтра по значению селекта. */
+function authorOf(value: string): CommentListFilter['author'] {
+  return value === 'user' || value === 'agent' ? value : 'all';
+}
+
+/** Фильтры списка: статус, автор, текст. */
+function ListFilters() {
+  const filter = useCommentsStore((s) => s.filter);
+  const setFilter = useCommentsStore((s) => s.setFilter);
+  return (
+    <div className="comments-list__filters">
+      <div className="mode-seg" role="radiogroup" aria-label="Статус">
+        {STATUSES.map((s) => (
+          <button key={s.id} type="button" role="radio" aria-checked={filter.status === s.id} className={`mode-seg__btn${filter.status === s.id ? ' mode-seg__btn--on' : ''}`} onClick={() => setFilter({ status: s.id })}>
+            {s.label}
+          </button>
+        ))}
+      </div>
+      <div className="comments-list__row">
+        <Select aria-label="Автор" value={filter.author} onChange={(e) => setFilter({ author: authorOf(e.target.value) })}>
+          <option value="all">Все авторы</option>
+          <option value="user">Мои</option>
+          <option value="agent">От ИИ</option>
+        </Select>
+        <Input aria-label="Поиск по замечаниям" placeholder="Текст, экран, компонент" value={filter.query} onChange={(e) => setFilter({ query: e.target.value })} />
+      </div>
+    </div>
+  );
+}
+
+/** Текст последнего ответа ИИ или null. */
+function lastReply(t: CommentThread): string | null {
+  const replies = t.events.flatMap((e) => (e.type === 'reply' ? [e.text] : []));
+  return replies.at(-1) ?? null;
+}
+
+/** Строка списка: статус, экран и компонент, время, текст, последний ответ ИИ. */
+function ListItem(props: { readonly thread: CommentThread; readonly now: Date }) {
+  const t = props.thread;
+  const component = t.anchor.element?.component;
+  const reply = lastReply(t);
+  return (
+    <button type="button" className="comments-list__item" data-testid="comments-list-item" data-comment-id={t.id} onClick={() => goToComment(t)}>
+      <span className="comments-list__top">
+        <CommentStatusBadge status={t.status} />
+        <span className="comments-list__meta">{t.anchor.pageTitle}{component ? ` · ${component.name}` : ''}</span>
+        <time dateTime={t.updatedAt}>{timeAgo(t.updatedAt, props.now)}</time>
+      </span>
+      <span className="comments-list__text">{t.text}</span>
+      {reply === null ? null : <span className="comments-list__reply">Ответ ИИ: {reply}</span>}
+    </button>
+  );
+}
+
 /**
  * Правая панель всех замечаний.
  */
@@ -52,7 +106,6 @@ export function CommentsListPanel() {
   const open = useCommentsStore((s) => s.listOpen);
   const threads = useCommentsStore((s) => s.threads);
   const filter = useCommentsStore((s) => s.filter);
-  const setFilter = useCommentsStore((s) => s.setFilter);
   const setOpen = useCommentsStore((s) => s.setListOpen);
   const shown = useMemo(() => filterThreads(threads, filter), [threads, filter]);
   if (!open) {
@@ -72,38 +125,12 @@ export function CommentsListPanel() {
           <X size={16} strokeWidth={1.75} />
         </Button>
       </div>
-      <div className="comments-list__filters">
-        <div className="mode-seg" role="radiogroup" aria-label="Статус">
-          {STATUSES.map((s) => (
-            <button key={s.id} type="button" role="radio" aria-checked={filter.status === s.id} className={`mode-seg__btn${filter.status === s.id ? ' mode-seg__btn--on' : ''}`} onClick={() => setFilter({ status: s.id })}>
-              {s.label}
-            </button>
-          ))}
-        </div>
-        <div className="comments-list__row">
-          <Select aria-label="Автор" value={filter.author} onChange={(e) => setFilter({ author: e.target.value === 'user' ? 'user' : e.target.value === 'agent' ? 'agent' : 'all' })}>
-            <option value="all">Все авторы</option>
-            <option value="user">Мои</option>
-            <option value="agent">От ИИ</option>
-          </Select>
-          <Input aria-label="Поиск по замечаниям" placeholder="Текст, экран, компонент" value={filter.query} onChange={(e) => setFilter({ query: e.target.value })} />
-        </div>
-      </div>
+      <ListFilters />
       <div className="comments-list__items">
         {shown.length === 0 ? (
           <p className="drawer__hint comments-list__empty">{threads.length === 0 ? 'Замечаний пока нет. Выберите экран и нажмите C.' : 'Под фильтр ничего не подошло.'}</p>
         ) : (
-          shown.map((t) => (
-            <button key={t.id} type="button" className="comments-list__item" data-testid="comments-list-item" data-comment-id={t.id} onClick={() => goToComment(t)}>
-              <span className="comments-list__top">
-                <CommentStatusBadge status={t.status} />
-                <span className="comments-list__meta">{t.anchor.pageTitle}{t.anchor.element?.component ? ` · ${t.anchor.element.component.name}` : ''}</span>
-                <time dateTime={t.updatedAt}>{timeAgo(t.updatedAt, now)}</time>
-              </span>
-              <span className="comments-list__text">{t.text}</span>
-              {t.events.some((e) => e.type === 'reply') ? <span className="comments-list__reply">Ответ ИИ: {t.events.filter((e) => e.type === 'reply').map((e) => (e.type === 'reply' ? e.text : '')).at(-1)}</span> : null}
-            </button>
-          ))
+          shown.map((t) => <ListItem key={t.id} thread={t} now={now} />)
         )}
       </div>
     </aside>

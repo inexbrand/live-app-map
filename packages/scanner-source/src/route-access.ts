@@ -78,38 +78,46 @@ function rolesIncludes(call: ts.CallExpression): string[] {
  */
 function walk(ctx: SourceContext, root: ts.Node, found: Found, seen: Set<ts.Node>): void {
   const visit = (node: ts.Node, depth: number): void => {
-    if (ts.isBinaryExpression(node)) {
-      const role = roleComparison(node);
-      if (role !== undefined) {
-        found.roles.add(role);
-      }
-    }
-    if ((ts.isStringLiteral(node) && UNAUTHORIZED.test(node.text)) || (ts.isNumericLiteral(node) && node.text === '401')) {
-      found.auth = true;
-    }
-    if (ts.isCallExpression(node)) {
-      rolesIncludes(node).forEach((r) => found.roles.add(r));
-      const name = calleeName(node);
-      if (name !== undefined && CHECK_NAME.test(name) && CHECK_SUBJECT.test(name)) {
-        if (depth <= CHECK_DEPTH) {
-          found.checks.add(name);
-        }
-        stringArgs(node)
-          .filter((s) => PERMISSION.test(s))
-          .forEach((p) => found.permissions.add(p));
-      }
-      if (depth < MAX_DEPTH) {
-        for (const fn of calledFunctions(ctx, node)) {
-          if (!seen.has(fn.node)) {
-            seen.add(fn.node);
-            visit(fn.node, depth + 1);
-          }
-        }
+    noteNode(node, depth, found);
+    const callees = ts.isCallExpression(node) && depth < MAX_DEPTH ? calledFunctions(ctx, node) : [];
+    for (const fn of callees) {
+      if (!seen.has(fn.node)) {
+        seen.add(fn.node);
+        visit(fn.node, depth + 1);
       }
     }
     ts.forEachChild(node, (child) => visit(child, depth));
   };
   visit(root, 0);
+}
+
+/** Признаки доступа в узле: сравнение роли, 401/Unauthorized, проверка в вызове. */
+function noteNode(node: ts.Node, depth: number, found: Found): void {
+  const role = ts.isBinaryExpression(node) ? roleComparison(node) : undefined;
+  if (role !== undefined) {
+    found.roles.add(role);
+  }
+  if ((ts.isStringLiteral(node) && UNAUTHORIZED.test(node.text)) || (ts.isNumericLiteral(node) && node.text === '401')) {
+    found.auth = true;
+  }
+  if (ts.isCallExpression(node)) {
+    noteCall(node, depth, found);
+  }
+}
+
+/** `roles.includes('admin')`, `requireAdmin()` (имя — у верхних уровней), права в аргументах. */
+function noteCall(node: ts.CallExpression, depth: number, found: Found): void {
+  rolesIncludes(node).forEach((r) => found.roles.add(r));
+  const name = calleeName(node);
+  if (name === undefined || !CHECK_NAME.test(name) || !CHECK_SUBJECT.test(name)) {
+    return;
+  }
+  if (depth <= CHECK_DEPTH) {
+    found.checks.add(name);
+  }
+  stringArgs(node)
+    .filter((s) => PERMISSION.test(s))
+    .forEach((p) => found.permissions.add(p));
 }
 
 /** `beforeHandle` из объекта опций роута. */

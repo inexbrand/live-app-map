@@ -140,26 +140,43 @@ function fileOfNode(doc: AppMapDocument, node: AppMapNode): string | null {
  * @returns пункты с роутом, сервисом и запросами в БД
  */
 function screenItems(code: CodeModel, nodeId: string, file: string): ScreenApiItem[] {
-  const calls = new Map((code.apiCalls ?? []).map((c) => [c.id, c]));
-  const routes = new Map(code.routes.map((r) => [r.id, r]));
-  const services = new Map(code.services.map((s) => [s.id, s]));
+  const lookup: CodeLookup = {
+    calls: new Map((code.apiCalls ?? []).map((c) => [c.id, c])),
+    routes: new Map(code.routes.map((r) => [r.id, r])),
+    services: new Map(code.services.map((s) => [s.id, s])),
+  };
   const items = new Map<string, ScreenApiItem>();
   for (const sc of screenOf(code, nodeId, file)?.calls ?? []) {
-    const call = calls.get(sc.callId);
-    if (call === undefined || items.has(`${call.method} ${call.path}`)) {
-      continue;
+    const item = screenItemOf(lookup, sc);
+    const key = item === null ? '' : `${item.call.method} ${item.call.path}`;
+    if (item !== null && !items.has(key)) {
+      items.set(key, item);
     }
-    const route = call.routeId === undefined ? undefined : routes.get(call.routeId);
-    const service = route === undefined ? undefined : services.get(route.serviceId);
-    items.set(`${call.method} ${call.path}`, {
-      call,
-      ...(sc.via === undefined ? {} : { via: sc.via }),
-      ...(route === undefined ? {} : { route }),
-      ...(service === undefined ? {} : { service }),
-      db: route === undefined ? [] : groupDbCalls(route.dbCalls),
-    });
   }
   return [...items.values()].sort((a, b) => a.call.path.localeCompare(b.call.path));
+}
+
+type CodeLookup = {
+  readonly calls: ReadonlyMap<string, NonNullable<CodeModel['apiCalls']>[number]>;
+  readonly routes: ReadonlyMap<string, CodeModel['routes'][number]>;
+  readonly services: ReadonlyMap<string, CodeModel['services'][number]>;
+};
+
+/** Вызов экрана с его роутом, сервисом и запросами к БД; неизвестный вызов — null. */
+function screenItemOf(lookup: CodeLookup, sc: { readonly callId: string; readonly via?: string }): ScreenApiItem | null {
+  const call = lookup.calls.get(sc.callId);
+  if (call === undefined) {
+    return null;
+  }
+  const route = call.routeId === undefined ? undefined : lookup.routes.get(call.routeId);
+  const service = route === undefined ? undefined : lookup.services.get(route.serviceId);
+  return {
+    call,
+    ...(sc.via === undefined ? {} : { via: sc.via }),
+    ...(route === undefined ? {} : { route }),
+    ...(service === undefined ? {} : { service }),
+    db: route === undefined ? [] : groupDbCalls(route.dbCalls),
+  };
 }
 
 /**
@@ -177,19 +194,21 @@ function routeCallers(doc: AppMapDocument, routeIds: ReadonlySet<string>): Map<s
   }
   for (const node of doc.nodes) {
     const file = node.kind === 'service' ? null : fileOfNode(doc, node);
-    if (file === null) {
-      continue;
-    }
-    for (const item of screenItems(code, node.id, file)) {
-      const id = item.route?.id;
+    const ids = file === null ? [] : screenItems(code, node.id, file).map((item) => item.route?.id);
+    for (const id of ids) {
       if (id !== undefined && routeIds.has(id)) {
-        const list = out.get(id) ?? [];
-        if (!list.some((c) => c.nodeId === node.id)) {
-          list.push({ nodeId: node.id, title: node.title });
-        }
-        out.set(id, list);
+        addCaller(out, id, node);
       }
     }
   }
   return out;
+}
+
+/** Экран — в список вызывающих роут (без повторов). */
+function addCaller(out: Map<string, RouteCaller[]>, routeId: string, node: { readonly id: string; readonly title: string }): void {
+  const list = out.get(routeId) ?? [];
+  if (!list.some((c) => c.nodeId === node.id)) {
+    list.push({ nodeId: node.id, title: node.title });
+  }
+  out.set(routeId, list);
 }

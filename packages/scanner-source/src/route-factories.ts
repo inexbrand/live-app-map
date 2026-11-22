@@ -71,18 +71,15 @@ export class RoutePaths {
     }
     const fn = enclosingFunction(expr);
     const name = fn === undefined ? undefined : nameOf(fn);
-    if (fn === undefined || name === undefined) {
-      return [];
-    }
+    return fn === undefined || name === undefined ? [] : this.boundPaths(expr, fn, name);
+  }
+
+  /** Пути выражения внутри фабрики при каждом её вызове с подставленными аргументами (без повторов). */
+  private boundPaths(expr: ts.Expression, fn: FunctionNode, name: string): string[] {
     const out = new Set<string>();
-    for (const call of this.callsNamed(name)) {
-      const target = this.ev.functionsOf(call.expression);
-      if (target?.fns.includes(fn) !== true) {
-        continue;
-      }
+    for (const call of this.callsNamed(name).filter((c) => this.ev.functionsOf(c.expression)?.fns.includes(fn) === true)) {
       const args = call.arguments.map((a) => this.ev.evaluate(a, EMPTY_FRAME, call));
-      const bound = this.ev.bind(fn, args);
-      const v = this.ev.evaluate(expr, bound, expr);
+      const v = this.ev.evaluate(expr, this.ev.bind(fn, args), expr);
       const text = v.kind === 'str' ? pathText(v.parts) : undefined;
       if (text !== undefined) {
         out.add(text);

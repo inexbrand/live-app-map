@@ -93,6 +93,11 @@ describe('архитектура API', () => {
     ]);
     expect(filterRoutes(index, { query: 'заказчика' }).map((r) => r.path)).toEqual(['/api/me/vacancies/:vacancyId']);
     expect(filterRoutes(index, { service: '@нет/такого' })).toEqual([]);
+    // Без экранов — роуты, которые не вызывает ни один экран
+    const unscreened = filterRoutes(index, { noScreens: true });
+    expect(unscreened.length).toBeGreaterThan(0);
+    expect(unscreened.every((r) => (index.callersByRoute.get(r.id)?.length ?? 0) === 0)).toBe(true);
+    expect(unscreened.length).toBe(index.code.routes.filter((r) => (index.callersByRoute.get(r.id)?.length ?? 0) === 0).length);
   });
 
   test('покрытие: описания, вход, доступ', () => {

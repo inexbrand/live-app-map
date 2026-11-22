@@ -3,9 +3,9 @@
  * Ответы не содержат значений кук и токенов — только имена.
  */
 import { errorMessage, isLocalOrigin, readBody, requestPath, sendError, sendJson, type DevMiddleware } from '../dev-http';
-import { parseSetCookie } from './cookie-jar';
+import { parseSetCookie, type StoredCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
-import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type KorborRenewal } from './korbor-dogfood';
+import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type BearerSource, type KorborRenewal } from './korbor-dogfood';
 import { fetchSampleIds } from './sample-ids';
 import { summarize, type SessionStore } from './session-store';
 
@@ -40,6 +40,173 @@ function originOf(o: Record<string, unknown>): string | null {
   }
 }
 
+type Req = Parameters<DevMiddleware>[0];
+type Res = Parameters<DevMiddleware>[1];
+
+/** Окружение запроса: хранилище, порт шлюза, кэш Bearer и ответ. */
+type Ctx = { readonly store: SessionStore; readonly gatewayPort: number; readonly bearer: BearerSource; readonly req: Req; readonly res: Res; readonly path: string };
+
+/** Тело запроса профиля: объект и origin приложения. */
+type ProfileBody = { readonly o: Record<string, unknown>; readonly origin: string };
+
+/** Отказ по полю: текст и имя поля для подсказки в форме. */
+function fieldError(res: Res, field: string, error: string): void {
+  sendJson(res, 400, { ok: false, error, field });
+}
+
+/** Только сама страница визуализатора: страницы приложений в iframe шлюза тоже *.localhost. */
+function isVisualizerPage(req: Req): boolean {
+  const origin = req.headers.origin;
+  return isLocalOrigin(req) && (origin === undefined || origin === '' || origin === `http://${req.headers.host ?? ''}`);
+}
+
+async function handleSessions(ctx: Ctx, method: string, profileId: string, act: string): Promise<void> {
+  if (method === 'GET' && profileId === '') {
+    sendJson(ctx.res, 200, { ok: true, gatewayPort: ctx.gatewayPort, profiles: ctx.store.list().map(summarize) });
+    return;
+  }
+  if (!isValidProfileId(profileId)) {
+    fieldError(ctx.res, 'id', 'id профиля: строчные латинские буквы, цифры, дефис (например recruiter)');
+    return;
+  }
+  if (method === 'DELETE' && act === '') {
+    sendJson(ctx.res, ctx.store.remove(profileId) ? 200 : 404, { ok: true });
+    return;
+  }
+  const body = await readProfileBody(ctx);
+  if (body !== null) {
+    await handleWithBody(ctx, `${method} ${act}`, profileId, body);
+  }
+}
+
+/** JSON-объект тела с origin; ошибка уже отправлена — null. */
+async function readProfileBody(ctx: Ctx): Promise<ProfileBody | null> {
+  const body = await readBody(ctx.req, MAX_BODY);
+  if (!body.ok) {
+    sendError(ctx.res, body.status, body.error);
+    return null;
+  }
+  const o = asObject(body.text);
+  if (o === null) {
+    sendError(ctx.res, 400, 'тело — JSON-объект');
+    return null;
+  }
+  const origin = originOf(o);
+  if (origin === null) {
+    fieldError(ctx.res, 'origin', 'origin обязателен: адрес приложения, например http://localhost:16002');
+    return null;
+  }
+  return { o, origin };
+}
+
+async function handleWithBody(ctx: Ctx, route: string, profileId: string, body: ProfileBody): Promise<void> {
+  if (route === 'POST sample-ids') {
+    await sampleIds(ctx, profileId, body.origin, body.o['lists']);
+    return;
+  }
+  const label = str(body.o, 'label');
+  if (label === '') {
+    fieldError(ctx.res, 'label', 'label обязателен: подпись профиля, например «Админ»');
+    return;
+  }
+  if (route === 'PUT ') {
+    putSession(ctx, profileId, label, body);
+    return;
+  }
+  if (route === 'POST korbor-dogfood') {
+    await korborSession(ctx, profileId, label, body);
+    return;
+  }
+  sendError(ctx.res, 405, `${route.split(' ')[0] ?? ''} ${ctx.path} не поддерживается`);
+}
+
+/** Куки «a=1; b=2» из тела; пусто — undefined. */
+function cookiesOf(o: Record<string, unknown>, now: number): StoredCookie[] | undefined {
+  const text = str(o, 'cookies');
+  return text === '' ? undefined : text.split(';').map((s) => parseSetCookie(s.trim(), now)).filter((c) => c !== null);
+}
+
+/** storage {ключ: строка} из тела (не строки отбрасываются); не объект — undefined. */
+function storageOf(o: Record<string, unknown>): Record<string, string> | undefined {
+  const raw = o['storage'];
+  return typeof raw === 'object' && raw !== null && !Array.isArray(raw)
+    ? Object.fromEntries(Object.entries(raw).filter((e): e is [string, string] => typeof e[1] === 'string'))
+    : undefined;
+}
+
+/** Профиль из вставленных кук и/или storage. */
+function putSession(ctx: Ctx, profileId: string, label: string, { o, origin }: ProfileBody): void {
+  const cookies = cookiesOf(o, Date.now());
+  const storage = storageOf(o);
+  if (cookies === undefined && storage === undefined) {
+    fieldError(ctx.res, 'cookies', 'нужны cookies («a=1; b=2») или storage ({ключ: значение})');
+    return;
+  }
+  const saved = ctx.store.upsert({ id: profileId, label, role: str(o, 'role'), origin, ...(cookies === undefined ? {} : { cookies }), ...(storage === undefined ? {} : { storage }) });
+  sendJson(ctx.res, 200, { ok: true, profile: summarize(saved) });
+}
+
+/** Продление dev-входа Korbor из тела: тип, актёр, адрес API; нет поля — отказ отправлен, null. */
+function renewalOf(res: Res, o: Record<string, unknown>): KorborRenewal | null {
+  const kind = str(o, 'kind') === 'admin' ? 'admin' : 'user';
+  const actorId = str(o, 'actorId');
+  const apiBase = str(o, 'apiBase');
+  if (actorId === '' || apiBase === '') {
+    fieldError(res, actorId === '' ? 'actorId' : 'apiBase', 'actorId и apiBase обязательны (apiBase — адрес API korbor, например http://127.0.0.1:16000)');
+    return null;
+  }
+  return { kind, actorId, apiBase };
+}
+
+/** Dev-вход Korbor: API выдаёт вход актёра, профиль запоминает его и как продлить. */
+async function korborSession(ctx: Ctx, profileId: string, label: string, { o, origin }: ProfileBody): Promise<void> {
+  const renewal = renewalOf(ctx.res, o);
+  if (renewal === null) {
+    return;
+  }
+  const minted = await mintKorbor(renewal);
+  if (!minted.ok) {
+    sendError(ctx.res, 502, minted.error);
+    return;
+  }
+  const role = str(o, 'role');
+  const saved = ctx.store.upsert({
+    id: profileId,
+    label,
+    role: role === '' ? minted.role : role,
+    origin,
+    storage: { [KORBOR_DOGFOOD_STORAGE[renewal.kind]]: minted.value },
+    renewal,
+  });
+  sendJson(ctx.res, 200, { ok: true, actor: { label: minted.label, role: minted.role }, profile: summarize(saved) });
+}
+
+/** Значение dev-входа профиля для origin (initData или токен); нет — пусто. */
+function loginValue(store: SessionStore, profileId: string, origin: string, renewal: KorborRenewal): string {
+  return store.get(profileId)?.storage[origin]?.[KORBOR_DOGFOOD_STORAGE[renewal.kind]] ?? '';
+}
+
+/** Первые id списков API под профилем: реальные параметры маршрутов экранов. */
+async function sampleIds(ctx: Ctx, profileId: string, origin: string, rawLists: unknown): Promise<void> {
+  const renewal = ctx.store.get(profileId)?.renewals?.[origin];
+  if (renewal === undefined) {
+    sendError(ctx.res, 404, `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»`);
+    return;
+  }
+  const stale = await ctx.store.ensureFresh(profileId, origin);
+  if (stale !== null) {
+    sendError(ctx.res, 502, stale);
+    return;
+  }
+  const bearer = await ctx.bearer(renewal, loginValue(ctx.store, profileId, origin, renewal));
+  if (!bearer.ok) {
+    sendError(ctx.res, 502, bearer.error);
+    return;
+  }
+  const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
+  sendJson(ctx.res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, bearer.token, lists) });
+}
+
 /**
  * Middleware профилей.
  *
@@ -47,125 +214,20 @@ function originOf(o: Record<string, unknown>): string | null {
  * @param gatewayPort - порт шлюза (отдаётся клиенту)
  */
 export function createSessionsMiddleware(store: SessionStore, gatewayPort: number): DevMiddleware {
-  const korborBearer = createBearerCache();
+  const bearer = createBearerCache();
   return (req, res, next) => {
     const p = requestPath(req);
     if (p !== SESSIONS_PATH && !p.startsWith(`${SESSIONS_PATH}/`)) {
       next();
       return;
     }
-    // Только сама страница визуализатора: страницы приложений в iframe шлюза тоже *.localhost.
-    const origin = req.headers.origin;
-    if (!isLocalOrigin(req) || (origin !== undefined && origin !== '' && origin !== `http://${req.headers.host ?? ''}`)) {
+    if (!isVisualizerPage(req)) {
       sendError(res, 403, 'профили доступны только странице визуализатора');
       return;
     }
-    const rest = p.slice(SESSIONS_PATH.length).split('/').filter((s) => s !== '');
-    void handle(req.method ?? 'GET', rest[0] ?? '', rest[1] ?? '').catch((err: unknown) => {
+    const [profileId = '', act = ''] = p.slice(SESSIONS_PATH.length).split('/').filter((s) => s !== '');
+    void handleSessions({ store, gatewayPort, bearer, req, res, path: p }, req.method ?? 'GET', profileId, act).catch((err: unknown) => {
       sendError(res, 500, errorMessage(err));
     });
-
-    async function handle(method: string, profileId: string, act: string): Promise<void> {
-      if (method === 'GET' && profileId === '') {
-        sendJson(res, 200, { ok: true, gatewayPort, profiles: store.list().map(summarize) });
-        return;
-      }
-      if (!isValidProfileId(profileId)) {
-        sendJson(res, 400, { ok: false, error: 'id профиля: строчные латинские буквы, цифры, дефис (например recruiter)', field: 'id' });
-        return;
-      }
-      if (method === 'DELETE' && act === '') {
-        sendJson(res, store.remove(profileId) ? 200 : 404, { ok: true });
-        return;
-      }
-      const body = await readBody(req, MAX_BODY);
-      if (!body.ok) {
-        sendError(res, body.status, body.error);
-        return;
-      }
-      const o = asObject(body.text);
-      if (o === null) {
-        sendError(res, 400, 'тело — JSON-объект');
-        return;
-      }
-      const origin = originOf(o);
-      if (origin === null) {
-        sendJson(res, 400, { ok: false, error: 'origin обязателен: адрес приложения, например http://localhost:16002', field: 'origin' });
-        return;
-      }
-      if (method === 'POST' && act === 'sample-ids') {
-        await sampleIds(profileId, origin, o['lists']);
-        return;
-      }
-      const label = str(o, 'label');
-      if (label === '') {
-        sendJson(res, 400, { ok: false, error: 'label обязателен: подпись профиля, например «Админ»', field: 'label' });
-        return;
-      }
-      if (method === 'PUT' && act === '') {
-        const now = Date.now();
-        const cookieText = str(o, 'cookies');
-        const cookies = cookieText === '' ? undefined : cookieText.split(';').map((s) => parseSetCookie(s.trim(), now)).filter((c) => c !== null);
-        const rawStorage = o['storage'];
-        const storage =
-          typeof rawStorage === 'object' && rawStorage !== null && !Array.isArray(rawStorage)
-            ? Object.fromEntries(Object.entries(rawStorage).filter((e): e is [string, string] => typeof e[1] === 'string'))
-            : undefined;
-        if (cookies === undefined && storage === undefined) {
-          sendJson(res, 400, { ok: false, error: 'нужны cookies («a=1; b=2») или storage ({ключ: значение})', field: 'cookies' });
-          return;
-        }
-        const saved = store.upsert({ id: profileId, label, role: str(o, 'role'), origin, ...(cookies === undefined ? {} : { cookies }), ...(storage === undefined ? {} : { storage }) });
-        sendJson(res, 200, { ok: true, profile: summarize(saved) });
-        return;
-      }
-      if (method === 'POST' && act === 'korbor-dogfood') {
-        const kind = str(o, 'kind') === 'admin' ? 'admin' : 'user';
-        const actorId = str(o, 'actorId');
-        const apiBase = str(o, 'apiBase');
-        if (actorId === '' || apiBase === '') {
-          sendJson(res, 400, { ok: false, error: 'actorId и apiBase обязательны (apiBase — адрес API korbor, например http://127.0.0.1:16000)', field: actorId === '' ? 'actorId' : 'apiBase' });
-          return;
-        }
-        const renewal: KorborRenewal = { kind, actorId, apiBase };
-        const minted = await mintKorbor(renewal);
-        if (!minted.ok) {
-          sendError(res, 502, minted.error);
-          return;
-        }
-        const saved = store.upsert({
-          id: profileId,
-          label,
-          role: str(o, 'role') === '' ? minted.role : str(o, 'role'),
-          origin,
-          storage: { [KORBOR_DOGFOOD_STORAGE[kind]]: minted.value },
-          renewal,
-        });
-        sendJson(res, 200, { ok: true, actor: { label: minted.label, role: minted.role }, profile: summarize(saved) });
-        return;
-      }
-      sendError(res, 405, `${method} ${p} не поддерживается`);
-    }
-
-    /** Первые id списков API под профилем: реальные параметры маршрутов экранов. */
-    async function sampleIds(profileId: string, origin: string, rawLists: unknown): Promise<void> {
-      const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
-      const renewal = store.get(profileId)?.renewals?.[origin];
-      if (renewal === undefined) {
-        sendError(res, 404, `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»`);
-        return;
-      }
-      const stale = await store.ensureFresh(profileId, origin);
-      if (stale !== null) {
-        sendError(res, 502, stale);
-        return;
-      }
-      const bearer = await korborBearer(renewal, store.get(profileId)?.storage[origin]?.[KORBOR_DOGFOOD_STORAGE[renewal.kind]] ?? '');
-      if (!bearer.ok) {
-        sendError(res, 502, bearer.error);
-        return;
-      }
-      sendJson(res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, bearer.token, lists) });
-    }
   };
 }

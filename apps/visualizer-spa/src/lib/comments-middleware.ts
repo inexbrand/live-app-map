@@ -66,42 +66,63 @@ function filterOf(url: URL): CommentFilter {
 async function handle(req: Req, res: Res, lamDir: string): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://local');
   const rest = url.pathname.slice(COMMENTS_PATH.length).split('/').filter((p) => p !== '');
-  if (rest.length === 0 && req.method === 'GET') {
-    sendJson(res, 200, { ok: true, comments: listComments(lamDir, filterOf(url)) });
-    return;
-  }
-  if (rest.length === 0 && req.method === 'POST') {
-    const body = await readValidJson(req, res, createBodySchema, Math.ceil(MAX_SNAPSHOT_BYTES * 1.4));
-    if (body !== null) {
-      sendJson(res, 201, { ok: true, comment: createComment(lamDir, { ...body, author: 'user', shotDataUrl: body.shotDataUrl }) });
-    }
-    return;
-  }
   const [id = '', tail = ''] = rest;
-  if (rest.length === 2 && tail === 'events' && req.method === 'POST') {
-    const body = await readValidJson(req, res, eventBodySchema, 64 * 1024);
-    if (body !== null) {
-      const event: NewCommentEvent = body.type === 'reply'
-        ? { type: 'reply', author: 'user', text: body.text, files: [], commit: null }
-        : { type: 'status', author: 'user', status: body.status, note: body.note };
-      sendJson(res, 200, { ok: true, comment: addCommentEvent(lamDir, id, event) });
-    }
-    return;
-  }
-  if (rest.length === 2 && tail === 'shot.png' && req.method === 'GET') {
-    const thread = readComment(lamDir, id);
-    const file = thread === null ? null : commentShotPath(lamDir, thread);
-    if (file === null) {
-      sendError(res, 404, 'снимка нет');
+  const method = req.method ?? '';
+  switch (routeKey(method, rest.length, tail)) {
+    case 'GET ':
+      sendJson(res, 200, { ok: true, comments: listComments(lamDir, filterOf(url)) });
       return;
-    }
-    res.statusCode = 200;
-    res.setHeader('content-type', 'image/png');
-    res.setHeader('cache-control', 'private, max-age=31536000, immutable');
-    res.end(readFileSync(file));
+    case 'POST ':
+      await createFromBody(req, res, lamDir);
+      return;
+    case 'POST events':
+      await addEventFromBody(req, res, lamDir, id);
+      return;
+    case 'GET shot.png':
+      sendShot(res, lamDir, id);
+      return;
+    default:
+      sendError(res, 404, `нет такого действия: ${method} ${url.pathname}`);
+  }
+}
+
+/** «МЕТОД действие»: корень — пустое действие, `<id>/<действие>` — его имя; иначе пусто. */
+function routeKey(method: string, depth: number, tail: string): string {
+  if (depth === 0) {
+    return `${method} `;
+  }
+  return depth === 2 ? `${method} ${tail}` : '';
+}
+
+async function createFromBody(req: Req, res: Res, lamDir: string): Promise<void> {
+  const body = await readValidJson(req, res, createBodySchema, Math.ceil(MAX_SNAPSHOT_BYTES * 1.4));
+  if (body !== null) {
+    sendJson(res, 201, { ok: true, comment: createComment(lamDir, { ...body, author: 'user', shotDataUrl: body.shotDataUrl }) });
+  }
+}
+
+async function addEventFromBody(req: Req, res: Res, lamDir: string, id: string): Promise<void> {
+  const body = await readValidJson(req, res, eventBodySchema, 64 * 1024);
+  if (body === null) {
     return;
   }
-  sendError(res, 404, `нет такого действия: ${req.method ?? ''} ${url.pathname}`);
+  const event: NewCommentEvent = body.type === 'reply'
+    ? { type: 'reply', author: 'user', text: body.text, files: [], commit: null }
+    : { type: 'status', author: 'user', status: body.status, note: body.note };
+  sendJson(res, 200, { ok: true, comment: addCommentEvent(lamDir, id, event) });
+}
+
+function sendShot(res: Res, lamDir: string, id: string): void {
+  const thread = readComment(lamDir, id);
+  const file = thread === null ? null : commentShotPath(lamDir, thread);
+  if (file === null) {
+    sendError(res, 404, 'снимка нет');
+    return;
+  }
+  res.statusCode = 200;
+  res.setHeader('content-type', 'image/png');
+  res.setHeader('cache-control', 'private, max-age=31536000, immutable');
+  res.end(readFileSync(file));
 }
 
 /**

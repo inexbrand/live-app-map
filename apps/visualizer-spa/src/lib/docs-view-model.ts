@@ -110,17 +110,18 @@ export function openDocOf(docs: DocsModel, docPath: string | null): OpenDoc | nu
     const f = e?.files[0];
     return f === undefined ? null : { file: f, ...(e === undefined ? {} : { epoch: e }) };
   }
-  for (const e of docs.epochs) {
-    if (e.dir === docPath && e.files[0] !== undefined) {
-      return { file: e.files[0], epoch: e };
-    }
-    const f = e.files.find((x) => x.path === docPath);
-    if (f !== undefined) {
-      return { file: f, epoch: e };
-    }
+  const inEpoch = docs.epochs.map((e) => epochDocOf(e, docPath)).find((x) => x !== null);
+  if (inEpoch !== undefined) {
+    return inEpoch;
   }
   const other = [...docs.notes, ...docs.guides].find((f) => f.path === docPath);
   return other === undefined ? null : { file: other };
+}
+
+/** Путь — папка эпохи (её первый файл) или файл эпохи; иначе null. */
+function epochDocOf(e: DocsModel['epochs'][number], docPath: string): OpenDoc | null {
+  const f = e.dir === docPath && e.files[0] !== undefined ? e.files[0] : e.files.find((x) => x.path === docPath);
+  return f === undefined ? null : { file: f, epoch: e };
 }
 
 /**
@@ -161,14 +162,18 @@ export function resolveDocAsset(docPath: string, src: string): string | null {
   if (/^[a-z]+:/i.test(src) || src.startsWith('//')) {
     return null;
   }
-  const dir = docPath.split('/').slice(0, -1);
-  const parts = src.startsWith('/') ? [] : [...dir];
+  const parts = src.startsWith('/') ? [] : docPath.split('/').slice(0, -1);
   for (const seg of src.replace(/^\//, '').split(/[?#]/)[0]?.split('/') ?? []) {
-    if (seg === '..') {
-      parts.pop();
-    } else if (seg !== '.' && seg !== '') {
-      parts.push(safeDecode(seg));
-    }
+    applySegment(parts, seg);
   }
   return parts.join('/');
+}
+
+/** Шаг пути: «..» — вверх, «.» и пусто — на месте, иначе — вниз. */
+function applySegment(parts: string[], seg: string): void {
+  if (seg === '..') {
+    parts.pop();
+  } else if (seg !== '.' && seg !== '') {
+    parts.push(safeDecode(seg));
+  }
 }

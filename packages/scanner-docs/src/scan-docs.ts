@@ -53,6 +53,19 @@ function epochDate(m: RegExpExecArray): string {
   return `${m[2]}-${m[3]}-${m[4]}T${m[5]}:${m[6]}:${m[7]}`;
 }
 
+/** Готовность эпохи: нет файла багов (или пуст), есть открытые, всё закрыто. */
+function readinessOf(bugs: DocFile | undefined, openCount: number): EpochReadiness {
+  if (bugs === undefined || bugs.text.trim() === '') {
+    return 'no-bugs-file';
+  }
+  return openCount > 0 ? 'not-ready' : 'ready';
+}
+
+/** Значение из текста документа, если документ есть. */
+function mapDoc<T>(doc: DocFile | undefined, read: (text: string) => T | undefined): T | undefined {
+  return doc === undefined ? undefined : read(doc.text);
+}
+
 /**
  * Эпоха из папки (после правки её файлов — заново, без скана всего проекта).
  *
@@ -68,12 +81,9 @@ export function readEpoch(root: string, dir: string): DocEpoch {
   const top = (file: string): DocFile | undefined => files.find((f) => f.path === rel(root, path.join(dir, file)));
   const bugs = top('09-bugs.md');
   const openBugs = bugs === undefined ? [] : openBugItems(bugs.text);
-  const readiness: EpochReadiness =
-    bugs === undefined || bugs.text.trim() === '' ? 'no-bugs-file' : openBugs.length > 0 ? 'not-ready' : 'ready';
-  const brief = top('00-brief.md');
-  const summary = brief === undefined ? undefined : briefSummary(brief.text);
-  const index = top('INDEX.md');
-  const status = index === undefined ? undefined : declaredStatus(index.text);
+  const readiness = readinessOf(bugs, openBugs.length);
+  const summary = mapDoc(top('00-brief.md'), briefSummary);
+  const status = mapDoc(top('INDEX.md'), declaredStatus);
   return {
     id: name,
     slug: m?.[1] ?? name,

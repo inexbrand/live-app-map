@@ -36,21 +36,21 @@ function unwrap(e: ts.Expression): ts.Expression {
  * @returns значения или undefined, если не вычислить
  */
 function stringArray(ctx: SourceContext, e: ts.Expression): string[] | undefined {
-  let cur = unwrap(e);
-  if (ts.isIdentifier(cur)) {
-    const sym = ctx.checker.getSymbolAtLocation(cur);
-    const target = sym !== undefined && (sym.flags & ts.SymbolFlags.Alias) !== 0 ? ctx.checker.getAliasedSymbol(sym) : sym;
-    const decl = target?.valueDeclaration;
-    if (decl === undefined || !ts.isVariableDeclaration(decl) || decl.initializer === undefined) {
-      return undefined;
-    }
-    cur = unwrap(decl.initializer);
-  }
-  if (!ts.isArrayLiteralExpression(cur)) {
+  const top = unwrap(e);
+  const cur = ts.isIdentifier(top) ? constArray(ctx, top) : top;
+  if (cur === undefined || !ts.isArrayLiteralExpression(cur)) {
     return undefined;
   }
   const out = cur.elements.map((el) => (ts.isStringLiteralLike(el) ? el.text : undefined));
   return out.every((x): x is string => x !== undefined) ? out : undefined;
+}
+
+/** Инициализатор константы (через импорт тоже), без обёрток. */
+function constArray(ctx: SourceContext, id: ts.Identifier): ts.Expression | undefined {
+  const sym = ctx.checker.getSymbolAtLocation(id);
+  const target = sym !== undefined && (sym.flags & ts.SymbolFlags.Alias) !== 0 ? ctx.checker.getAliasedSymbol(sym) : sym;
+  const decl = target?.valueDeclaration;
+  return decl !== undefined && ts.isVariableDeclaration(decl) && decl.initializer !== undefined ? unwrap(decl.initializer) : undefined;
 }
 
 /** Ссылка `() => users.id` → таблица и колонка. */
@@ -81,6 +81,33 @@ function propOf(obj: ts.Expression | undefined, name: string): ts.Expression | u
 /** Колонка без имени: то, что набирают методы цепочки. */
 export type ColumnFlags = Omit<DbColumn, 'name' | 'sqlName' | 'type' | 'doc'>;
 
+/** `.default(x)`: текст выражения, `sql\`…\`` — без обёртки. */
+function defaultFlag(args: ts.NodeArray<ts.Expression>, sf: ts.SourceFile): ColumnFlags {
+  const v = args[0];
+  return v === undefined ? {} : { default: v.getText(sf).replace(/^sql`(.*)`$/s, '$1') };
+}
+
+/** `.references(() => t.id, { onDelete })`. */
+function referencesFlag(args: ts.NodeArray<ts.Expression>): ColumnFlags {
+  const target = referenceTarget(args[0]);
+  const onDelete = propOf(args[1], 'onDelete');
+  if (target === undefined) {
+    return {};
+  }
+  return { references: { ...target, ...(onDelete !== undefined && ts.isStringLiteralLike(onDelete) ? { onDelete: onDelete.text } : {}) } };
+}
+
+/** Методы цепочки колонки → поля колонки. */
+const CHAIN_FLAGS: ReadonlyMap<string, (args: ts.NodeArray<ts.Expression>, sf: ts.SourceFile) => ColumnFlags> = new Map<string, (args: ts.NodeArray<ts.Expression>, sf: ts.SourceFile) => ColumnFlags>([
+  ['notNull', () => ({ notNull: true })],
+  ['primaryKey', () => ({ primaryKey: true, notNull: true })],
+  ['unique', () => ({ unique: true })],
+  ['defaultNow', () => ({ default: 'now()' })],
+  ['defaultRandom', () => ({ default: 'gen_random_uuid()' })],
+  ['default', defaultFlag],
+  ['references', (args) => referencesFlag(args)],
+]);
+
 /**
  * Флаг метода цепочки: `.notNull()`, `.primaryKey()`, `.unique()`, `.default(x)`, `.references(...)`.
  *
@@ -90,31 +117,7 @@ export type ColumnFlags = Omit<DbColumn, 'name' | 'sqlName' | 'type' | 'doc'>;
  * @returns поля колонки от этого метода
  */
 function chainFlags(method: string, args: ts.NodeArray<ts.Expression>, sf: ts.SourceFile): ColumnFlags {
-  switch (method) {
-    case 'notNull':
-      return { notNull: true };
-    case 'primaryKey':
-      return { primaryKey: true, notNull: true };
-    case 'unique':
-      return { unique: true };
-    case 'defaultNow':
-      return { default: 'now()' };
-    case 'defaultRandom':
-      return { default: 'gen_random_uuid()' };
-    case 'default': {
-      const v = args[0];
-      return v === undefined ? {} : { default: v.getText(sf).replace(/^sql`(.*)`$/s, '$1') };
-    }
-    case 'references': {
-      const target = referenceTarget(args[0]);
-      const onDelete = propOf(args[1], 'onDelete');
-      return target === undefined
-        ? {}
-        : { references: { ...target, ...(onDelete !== undefined && ts.isStringLiteralLike(onDelete) ? { onDelete: onDelete.text } : {}) } };
-    }
-    default:
-      return {};
-  }
+  return CHAIN_FLAGS.get(method)?.(args, sf) ?? {};
 }
 
 /**
@@ -128,17 +131,7 @@ function chainFlags(method: string, args: ts.NodeArray<ts.Expression>, sf: ts.So
  * @returns колонка или undefined
  */
 export function columnOf(ctx: SourceContext, name: string, init: ts.Expression, sf: ts.SourceFile): DbColumn | undefined {
-  let cur: ts.Expression = init;
-  let flags: ColumnFlags = {};
-  while (ts.isCallExpression(cur) && ts.isPropertyAccessExpression(cur.expression)) {
-    const inner = cur.expression.expression;
-    if (!ts.isCallExpression(inner)) {
-      break;
-    }
-    // Внутренние методы цепочки применяются раньше: внешний не перетирает их флаги.
-    flags = { ...chainFlags(cur.expression.name.text, cur.arguments, sf), ...flags };
-    cur = inner;
-  }
+  const { root: cur, flags } = chainOf(init, sf);
   if (!ts.isCallExpression(cur)) {
     return undefined;
   }
@@ -147,17 +140,38 @@ export function columnOf(ctx: SourceContext, name: string, init: ts.Expression, 
     return undefined;
   }
   const [first, second] = cur.arguments;
-  const sqlName = first !== undefined && ts.isStringLiteral(first) ? first.text : undefined;
-  const options = first !== undefined && ts.isObjectLiteralExpression(first) ? first : second;
-  const enumExpr = propOf(options, 'enum');
-  const enumValues = enumExpr === undefined ? undefined : stringArray(ctx, enumExpr);
+  const sqlName = ownSqlName(first, name);
+  const enumValues = enumOf(ctx, first !== undefined && ts.isObjectLiteralExpression(first) ? first : second);
   return {
     name,
-    ...(sqlName === undefined || sqlName === name ? {} : { sqlName }),
+    ...(sqlName === undefined ? {} : { sqlName }),
     type,
     ...orderFlags(flags),
     ...(enumValues === undefined ? {} : { enumValues }),
   };
+}
+
+/** Корень цепочки `uuid('id').notNull()…` и флаги её методов. */
+function chainOf(init: ts.Expression, sf: ts.SourceFile): { readonly root: ts.Expression; readonly flags: ColumnFlags } {
+  let cur: ts.Expression = init;
+  let flags: ColumnFlags = {};
+  while (ts.isCallExpression(cur) && ts.isPropertyAccessExpression(cur.expression) && ts.isCallExpression(cur.expression.expression)) {
+    // Внутренние методы цепочки применяются раньше: внешний не перетирает их флаги.
+    flags = { ...chainFlags(cur.expression.name.text, cur.arguments, sf), ...flags };
+    cur = cur.expression.expression;
+  }
+  return { root: cur, flags };
+}
+
+/** SQL-имя колонки первым аргументом, если оно отличается от имени свойства. */
+function ownSqlName(first: ts.Expression | undefined, name: string): string | undefined {
+  return first !== undefined && ts.isStringLiteral(first) && first.text !== name ? first.text : undefined;
+}
+
+/** Значения `{ enum: [...] }` в опциях колонки. */
+function enumOf(ctx: SourceContext, options: ts.Expression | undefined): string[] | undefined {
+  const enumExpr = propOf(options, 'enum');
+  return enumExpr === undefined ? undefined : stringArray(ctx, enumExpr);
 }
 
 /** Флаги в постоянном порядке ключей — стабильный JSON карты. */
@@ -182,35 +196,39 @@ export function tableLevelKeys(arg: ts.Expression | undefined): Map<string, Colu
   if (arg === undefined || !ts.isArrowFunction(arg)) {
     return out;
   }
-  const add = (col: string, f: ColumnFlags): void => {
-    out.set(col, { ...(out.get(col) ?? {}), ...f });
-  };
   const visit = (n: ts.Node): void => {
-    if (ts.isCallExpression(n)) {
-      const name = factoryName(n);
-      const opts = n.arguments[0];
-      const cols = propOf(opts, 'columns');
-      const names = cols !== undefined && ts.isArrayLiteralExpression(cols)
-        ? cols.elements.map((e) => (ts.isPropertyAccessExpression(e) ? e.name.text : undefined))
-        : [];
-      if (name === 'primaryKey') {
-        names.forEach((c) => c !== undefined && add(c, { primaryKey: true, notNull: true }));
-      }
-      if (name === 'foreignKey') {
-        const foreign = propOf(opts, 'foreignColumns');
-        const targets = foreign !== undefined && ts.isArrayLiteralExpression(foreign) ? foreign.elements.map((e) => referenceTarget(e)) : [];
-        names.forEach((c, i) => {
-          const target = targets[i];
-          if (c !== undefined && target !== undefined) {
-            add(c, { references: target });
-          }
-        });
-      }
+    for (const [col, f] of ts.isCallExpression(n) ? compositeKeys(n) : []) {
+      out.set(col, { ...(out.get(col) ?? {}), ...f });
     }
     ts.forEachChild(n, visit);
   };
   visit(arg.body);
   return out;
+}
+
+/** Колонки `columns: [t.a, t.b]` опций ключа (не `t.x` — undefined). */
+function keyColumns(opts: ts.Expression | undefined): (string | undefined)[] {
+  const cols = propOf(opts, 'columns');
+  return cols !== undefined && ts.isArrayLiteralExpression(cols) ? cols.elements.map((e) => (ts.isPropertyAccessExpression(e) ? e.name.text : undefined)) : [];
+}
+
+/** Флаги колонок от `primaryKey({ columns })` / `foreignKey({ columns, foreignColumns })`. */
+function compositeKeys(n: ts.CallExpression): [string, ColumnFlags][] {
+  const name = factoryName(n);
+  const opts = n.arguments[0];
+  const names = keyColumns(opts);
+  if (name === 'primaryKey') {
+    return names.flatMap((c): [string, ColumnFlags][] => (c === undefined ? [] : [[c, { primaryKey: true, notNull: true }]]));
+  }
+  if (name !== 'foreignKey') {
+    return [];
+  }
+  const foreign = propOf(opts, 'foreignColumns');
+  const targets = foreign !== undefined && ts.isArrayLiteralExpression(foreign) ? foreign.elements.map((e) => referenceTarget(e)) : [];
+  return names.flatMap((c, i): [string, ColumnFlags][] => {
+    const target = targets[i];
+    return c === undefined || target === undefined ? [] : [[c, { references: target }]];
+  });
 }
 
 /** Описание колонки: JSDoc, иначе обычные комментарии. */

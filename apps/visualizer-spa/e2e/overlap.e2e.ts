@@ -4,41 +4,12 @@
  * Открытая шторка (модальное окно с подложкой) — поверх всего.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { layoutItems, probeOf, type Probe } from './probes';
 
 const OVERLAYS = ['.toolbar', '.drawer', '.diag-fab', '.react-flow__minimap', '.react-flow__controls'];
 
-type Probe = { readonly shown: string[]; readonly overlaps: string[]; readonly covered: string[] };
-
-function probe(page: Page, selectors: readonly string[]): Promise<Probe> {
-  return page.evaluate((sel) => {
-    const els: Array<{ name: string; el: Element; r: DOMRect }> = [];
-    for (const s of sel) {
-      document.querySelectorAll(s).forEach((el, i) => {
-        const r = el.getBoundingClientRect();
-        if (r.width > 0 && r.height > 0) {
-          els.push({ name: `${s}[${i}]`, el, r });
-        }
-      });
-    }
-    const overlaps: string[] = [];
-    for (let i = 0; i < els.length; i++) {
-      for (let j = i + 1; j < els.length; j++) {
-        const a = els[i];
-        const b = els[j];
-        if (a === undefined || b === undefined || a.el.contains(b.el) || b.el.contains(a.el)) continue;
-        if (a.r.left < b.r.right - 1 && b.r.left < a.r.right - 1 && a.r.top < b.r.bottom - 1 && b.r.top < a.r.bottom - 1) {
-          overlaps.push(`${a.name} × ${b.name}`);
-        }
-      }
-    }
-    const covered = els
-      .filter(({ el, r }) => {
-        const top = document.elementFromPoint(r.left + r.width / 2, r.top + Math.min(r.height / 2, 20));
-        return top !== null && !el.contains(top);
-      })
-      .map((e) => e.name);
-    return { shown: els.map((e) => e.name), overlaps, covered };
-  }, selectors);
+async function probe(page: Page, selectors: readonly string[]): Promise<Probe> {
+  return probeOf(await page.evaluate(layoutItems, selectors));
 }
 
 for (const { width, height } of [

@@ -4,9 +4,9 @@
  */
 import { X } from 'lucide-react';
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { composerPosition, quoteText } from '../../lib/comments/format';
+import { composerPosition, quoteText, sourceRef } from '../../lib/comments/format';
 import { appendSpoken } from '../../lib/voice/models';
-import { useVoiceCapture } from '../../lib/voice/use-voice-capture';
+import { useVoiceCapture, type VoiceCapture } from '../../lib/voice/use-voice-capture';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore, type CommentDraft } from '../../store/comments-store';
 import { Button } from '../../ui';
@@ -15,6 +15,24 @@ import { VoiceButton } from './VoiceButton';
 const SIZE = { width: 380, height: 300 };
 /** Сколько держать ⌥, чтобы это считалось «говорю», а не началом сочетания. */
 const ALT_HOLD_MS = 150;
+
+type DraftElement = NonNullable<CommentDraft['anchor']['element']>;
+
+/** Выбранный элемент: компонент (или тег), текст, исходник. */
+function ElementTarget(props: { readonly el: DraftElement }) {
+  const { el } = props;
+  const src = el.component?.source ?? null;
+  return (
+    <div className="comment-composer__what" title={el.domPath}>
+      <strong>{el.component?.name ?? el.tag}</strong>
+      <span>
+        {el.component !== null ? el.tag : ''}
+        {el.text !== '' ? ` «${quoteText(el.text, 48)}»` : ''}
+      </span>
+      {src !== null ? <span className="comment-composer__src">{sourceRef(src)}</span> : null}
+    </div>
+  );
+}
 
 function Target(props: { readonly draft: CommentDraft }) {
   const el = props.draft.anchor.element;
@@ -26,16 +44,96 @@ function Target(props: { readonly draft: CommentDraft }) {
       </div>
     );
   }
-  const src = el.component?.source ?? null;
+  return <ElementTarget el={el} />;
+}
+
+/** Удержание ⌥: таймер до «говорю» и признак, что запись идёт от ⌥. */
+type AltHold = { timer: number | null; held: boolean };
+
+/** ⌥ нажата: через ALT_HOLD_MS — запись (повтор клавиши и идущая запись — не в счёт). */
+function altDown(alt: AltHold, e: ReactKeyboardEvent, voice: VoiceCapture): void {
+  if (!e.repeat && alt.timer === null && !voice.recording) {
+    alt.timer = window.setTimeout(() => {
+      alt.timer = null;
+      alt.held = true;
+      voice.start();
+    }, ALT_HOLD_MS);
+  }
+  e.preventDefault();
+}
+
+/** Отменить ожидание удержания ⌥. */
+function clearAlt(alt: AltHold): void {
+  if (alt.timer !== null) {
+    window.clearTimeout(alt.timer);
+    alt.timer = null;
+  }
+}
+
+/** ⌥ отпущена: запись от ⌥ — остановить и распознать. */
+function altUp(alt: AltHold, voice: VoiceCapture): void {
+  clearAlt(alt);
+  if (alt.held) {
+    alt.held = false;
+    voice.stop();
+  }
+}
+
+/** Клавиши поля: ⌥ — голос, ⌥ + клавиша — сочетание, Enter — сохранить (Shift+Enter и набор IME — нет). */
+function fieldKeyDown(e: ReactKeyboardEvent<HTMLTextAreaElement>, alt: AltHold, voice: VoiceCapture, submit: () => void): void {
+  if (e.key === 'Alt') {
+    altDown(alt, e, voice);
+    return;
+  }
+  // ⌥ + клавиша — это сочетание, а не «говорю»
+  clearAlt(alt);
+  if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+    e.preventDefault();
+    submit();
+  }
+}
+
+/** Esc из любого места поля (текст, кнопки): запись — отменить, иначе закрыть. */
+function rootKeyDown(e: ReactKeyboardEvent<HTMLDivElement>, voice: VoiceCapture, close: () => void): void {
+  if (e.key !== 'Escape') {
+    return;
+  }
+  e.preventDefault();
+  e.stopPropagation();
+  if (voice.recording) {
+    voice.cancel();
+  } else {
+    close();
+  }
+}
+
+/** Живой черновик речи и громкость. */
+function VoiceDraft(props: { readonly voice: VoiceCapture }) {
+  const { voice } = props;
+  if (!voice.recording && !voice.finishing) {
+    return null;
+  }
   return (
-    <div className="comment-composer__what" title={el.domPath}>
-      <strong>{el.component?.name ?? el.tag}</strong>
-      <span>
-        {el.component !== null ? el.tag : ''}
-        {el.text !== '' ? ` «${quoteText(el.text, 48)}»` : ''}
-      </span>
-      {src !== null ? <span className="comment-composer__src">{src.file}{src.line === null ? '' : `:${src.line}`}</span> : null}
-    </div>
+    <p className="comment-composer__draft" aria-live="polite" data-testid="voice-draft">
+      <span className="voice-level" style={{ transform: `scale(${1 + voice.level})` }} aria-hidden={true} />
+      {voice.finishing ? 'Распознаю…' : voice.draft !== '' ? voice.draft : 'Слушаю…'}
+    </p>
+  );
+}
+
+/** Сохранить замечание; пока голос пишется или распознаётся, текст ещё не весь. */
+async function submitComment(text: string, voice: VoiceCapture, save: (text: string) => Promise<boolean>, setToast: (t: string) => void): Promise<void> {
+  if (!voice.recording && !voice.finishing && (await save(text))) {
+    setToast('Замечание сохранено');
+  }
+}
+
+/** Ошибка строкой с ролью alert. */
+function ComposerError(props: { readonly text: string | null }) {
+  return props.text === null ? null : (
+    <p className="comment-composer__error" role="alert">
+      {props.text}
+    </p>
   );
 }
 
@@ -48,8 +146,7 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
   const close = useCommentsStore((s) => s.closeDraft);
   const setToast = useAppStore((s) => s.setToast);
   const area = useRef<HTMLTextAreaElement | null>(null);
-  const altTimer = useRef<number | null>(null);
-  const altHeld = useRef(false);
+  const alt = useRef<AltHold>({ timer: null, held: false });
   const voice = useVoiceCapture((spoken) => {
     setText((t) => appendSpoken(t, spoken));
     area.current?.focus();
@@ -60,69 +157,10 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
     area.current?.focus();
   }, []);
 
-  const submit = async (): Promise<void> => {
-    if (voice.recording || voice.finishing) {
-      return;
-    }
-    if (await save(text)) {
-      setToast('Замечание сохранено');
-    }
-  };
-
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key === 'Alt') {
-      if (!e.repeat && altTimer.current === null && !voice.recording) {
-        altTimer.current = window.setTimeout(() => {
-          altTimer.current = null;
-          altHeld.current = true;
-          voice.start();
-        }, ALT_HOLD_MS);
-      }
-      e.preventDefault();
-      return;
-    }
-    if (altTimer.current !== null) {
-      // ⌥ + клавиша — это сочетание, а не «говорю»
-      window.clearTimeout(altTimer.current);
-      altTimer.current = null;
-    }
-    if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
-      e.preventDefault();
-      void submit();
-      return;
-    }
-  };
-
-  // Esc из любого места поля (текст, кнопки): запись — отменить, иначе закрыть
-  const onRootKeyDown = (e: ReactKeyboardEvent<HTMLDivElement>): void => {
-    if (e.key !== 'Escape') {
-      return;
-    }
-    e.preventDefault();
-    e.stopPropagation();
-    if (voice.recording) {
-      voice.cancel();
-    } else {
-      close();
-    }
-  };
-
-  const onKeyUp = (e: ReactKeyboardEvent<HTMLTextAreaElement>): void => {
-    if (e.key !== 'Alt') {
-      return;
-    }
-    if (altTimer.current !== null) {
-      window.clearTimeout(altTimer.current);
-      altTimer.current = null;
-    }
-    if (altHeld.current) {
-      altHeld.current = false;
-      voice.stop();
-    }
-  };
+  const submit = (): Promise<void> => submitComment(text, voice, save, setToast);
 
   return (
-    <div className="comment-composer ui-panel" role="dialog" aria-label="Новое замечание" data-testid="comment-composer" style={{ left: pos.left, top: pos.top, width: SIZE.width }} onKeyDown={onRootKeyDown}>
+    <div className="comment-composer ui-panel" role="dialog" aria-label="Новое замечание" data-testid="comment-composer" style={{ left: pos.left, top: pos.top, width: SIZE.width }} onKeyDown={(e) => rootKeyDown(e, voice, close)}>
       <div className="comment-composer__head">
         <Target draft={draft} />
         <Button type="button" variant="ghost" size="icon-sm" aria-label="Закрыть" onClick={close}>
@@ -138,17 +176,16 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
         value={text}
         rows={3}
         onChange={(e) => setText(e.target.value)}
-        onKeyDown={onKeyDown}
-        onKeyUp={onKeyUp}
+        onKeyDown={(e) => fieldKeyDown(e, alt.current, voice, () => void submit())}
+        onKeyUp={(e) => {
+          if (e.key === 'Alt') {
+            altUp(alt.current, voice);
+          }
+        }}
       />
-      {voice.recording || voice.finishing ? (
-        <p className="comment-composer__draft" aria-live="polite" data-testid="voice-draft">
-          <span className="voice-level" style={{ transform: `scale(${1 + voice.level})` }} aria-hidden={true} />
-          {voice.finishing ? 'Распознаю…' : voice.draft !== '' ? voice.draft : 'Слушаю…'}
-        </p>
-      ) : null}
-      {voice.error !== null ? <p className="comment-composer__error" role="alert">{voice.error}</p> : null}
-      {saveError !== null ? <p className="comment-composer__error" role="alert">{saveError}</p> : null}
+      <VoiceDraft voice={voice} />
+      <ComposerError text={voice.error} />
+      <ComposerError text={saveError} />
       <div className="comment-composer__bar">
         <VoiceButton capture={voice} />
         <span className="comment-composer__hint">Enter — сохранить, ⌥ — голос</span>

@@ -29,6 +29,101 @@ export type MapLoader = {
   readonly clear: () => void;
 };
 
+/** Значение селекта для источника карты. */
+function activeMapIdOf(source: MapSourceRef | null): string {
+  if (source === null) {
+    return '';
+  }
+  return source.kind === 'catalog' ? source.id : FILE_MAP_ID;
+}
+
+/** Карта каталога из ссылки ?map=…, если она есть в каталоге. */
+function mapFromLink(catalog: readonly MapCatalogEntry[]): MapCatalogEntry | undefined {
+  const mapParam = new URLSearchParams(window.location.search).get('map');
+  return mapParam === null ? undefined : catalog.find((c) => c.path === mapParam);
+}
+
+/** Источник для записи каталога. */
+function catalogSource(entry: MapCatalogEntry): MapSourceRef {
+  return { kind: 'catalog', id: entry.id, label: entry.label, path: entry.path };
+}
+
+/**
+ * Открыть карту из файла.
+ *
+ * @param file - выбранный файл (null — выбор отменён)
+ * @param setSource - запомнить источник
+ * @param done - после загрузки
+ */
+async function openMapFile(file: File | null, setSource: (s: MapSourceRef) => void, done: () => void): Promise<void> {
+  if (!file) {
+    return;
+  }
+  const result = await importMapFile(file);
+  const app = useAppStore.getState();
+  if (!result.ok) {
+    app.setLastLoadError(result.error);
+    app.setToast(result.error);
+    return;
+  }
+  if (app.loadUnknownJson(result.json)) {
+    setSource({ kind: 'file', name: file.name });
+  }
+  if (result.toast !== undefined) {
+    app.setToast(result.toast);
+  }
+  done();
+}
+
+/**
+ * Если нет dogfood-сессии — mint первого admin + первого user с telegramId.
+ * Без этого admin всегда login, miniapp «не открывается» (не Telegram).
+ */
+async function mintMissingDogfood(dogfood: DogfoodActorsState): Promise<void> {
+  const app = useAppStore.getState();
+  await ensureDogfoodSessions({
+    dogfoodAdminAccessToken: app.dogfoodAdminAccessToken,
+    dogfoodMiniappInitData: app.dogfoodMiniappInitData,
+    setDogfoodAdminAccessToken: app.setDogfoodAdminAccessToken,
+    setDogfoodMiniappInitData: app.setDogfoodMiniappInitData,
+    setGlobalRole: app.setGlobalRole,
+    onActors: (actors) => {
+      dogfood.setActors(actors);
+      dogfood.setError(null);
+    },
+    onError: (message) => dogfood.setError(message),
+    onToast: app.setToast,
+  });
+}
+
+/**
+ * Загрузить карту каталога: proxy, карта в store, источник, вход dogfood, toast.
+ *
+ * @returns true — карта загружена
+ */
+async function loadCatalogMap(preset: MapCatalogEntry, dogfood: DogfoodActorsState, setSource: (s: MapSourceRef) => void): Promise<boolean> {
+  const app = useAppStore.getState();
+  // iframe dogfood: proxy всегда нужен (frame-bypass + TLS)
+  if (!app.useTlsProxy) {
+    app.setUseTlsProxy(true);
+  }
+  const res = await loadMapPresetIntoStore(preset, {
+    setBaseUrlOverride: app.setBaseUrlOverride,
+    loadUnknownJson: app.loadUnknownJson,
+    setMode: app.setMode,
+  });
+  if (!res.ok) {
+    app.setLastLoadError(res.error);
+    app.setToast(res.error);
+    return false;
+  }
+  setSource(catalogSource(preset));
+  await mintMissingDogfood(dogfood);
+  const baseHint = preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
+  app.setToast(`Загружено: ${preset.label}${baseHint}`);
+  return true;
+}
+
 /**
  * Загрузка карт шапки.
  *
@@ -40,84 +135,24 @@ export function useMapLoader(catalog: readonly MapCatalogEntry[], dogfood: Dogfo
   const source = useMapSourceStore((s) => s.source);
   const setSource = useMapSourceStore((s) => s.setSource);
   const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
-  const activeMapId = source === null ? '' : source.kind === 'catalog' ? source.id : FILE_MAP_ID;
+  const activeMapId = activeMapIdOf(source);
 
   // Карта открыта ссылкой (?map=…): селект показывает её, а не «Выберите карту…».
   useEffect(() => {
-    if (activeMapId !== '' || catalog.length === 0) {
-      return;
-    }
-    const mapParam = new URLSearchParams(window.location.search).get('map');
-    const hit = mapParam === null ? undefined : catalog.find((c) => c.path === mapParam);
+    const hit = activeMapId === '' ? mapFromLink(catalog) : undefined;
     if (hit !== undefined) {
-      setSource({ kind: 'catalog', id: hit.id, label: hit.label, path: hit.path });
+      setSource(catalogSource(hit));
     }
   }, [catalog, activeMapId, setSource]);
 
-  const openFile = async (file: File | null): Promise<void> => {
-    if (!file) {
-      return;
-    }
-    const result = await importMapFile(file);
-    const app = useAppStore.getState();
-    if (!result.ok) {
-      app.setLastLoadError(result.error);
-      app.setToast(result.error);
-      return;
-    }
-    if (app.loadUnknownJson(result.json)) {
-      setSource({ kind: 'file', name: file.name });
-    }
-    if (result.toast !== undefined) {
-      app.setToast(result.toast);
-    }
-    done();
-  };
-
-  /**
-   * Если нет dogfood-сессии — mint первого admin + первого user с telegramId.
-   * Без этого admin всегда login, miniapp «не открывается» (не Telegram).
-   */
-  const mintMissingDogfood = async (): Promise<void> => {
-    const app = useAppStore.getState();
-    await ensureDogfoodSessions({
-      dogfoodAdminAccessToken: app.dogfoodAdminAccessToken,
-      dogfoodMiniappInitData: app.dogfoodMiniappInitData,
-      setDogfoodAdminAccessToken: app.setDogfoodAdminAccessToken,
-      setDogfoodMiniappInitData: app.setDogfoodMiniappInitData,
-      setGlobalRole: app.setGlobalRole,
-      onActors: (actors) => {
-        dogfood.setActors(actors);
-        dogfood.setError(null);
-      },
-      onError: (message) => dogfood.setError(message),
-      onToast: app.setToast,
-    });
-  };
+  const openFile = (file: File | null): Promise<void> => openMapFile(file, setSource, done);
 
   const loadPreset = async (preset: MapCatalogEntry): Promise<void> => {
     setLoadingPresetId(preset.id);
-    const app = useAppStore.getState();
     try {
-      // iframe dogfood: proxy всегда нужен (frame-bypass + TLS)
-      if (!app.useTlsProxy) {
-        app.setUseTlsProxy(true);
+      if (await loadCatalogMap(preset, dogfood, setSource)) {
+        done();
       }
-      const res = await loadMapPresetIntoStore(preset, {
-        setBaseUrlOverride: app.setBaseUrlOverride,
-        loadUnknownJson: app.loadUnknownJson,
-        setMode: app.setMode,
-      });
-      if (!res.ok) {
-        app.setLastLoadError(res.error);
-        app.setToast(res.error);
-        return;
-      }
-      setSource({ kind: 'catalog', id: preset.id, label: preset.label, path: preset.path });
-      await mintMissingDogfood();
-      const baseHint = preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
-      app.setToast(`Загружено: ${preset.label}${baseHint}`);
-      done();
     } finally {
       setLoadingPresetId(null);
     }

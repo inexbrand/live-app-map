@@ -2,6 +2,7 @@ import { describe, expect, test } from 'bun:test';
 import type { AppMapDocument } from '@live-app-map/schema';
 import {
   applyStateToUrl,
+  edgeLayer,
   diffDocuments,
   indexDocument,
   isSafeUrl,
@@ -264,5 +265,19 @@ describe('sortDocument', () => {
     expect(once.edges.map((e) => e.id)).toEqual(['e-a', 'e-b']);
     expect(twice).toEqual(once);
     expect(sortDocument(shuffled)).toEqual(once);
+  });
+});
+
+describe('edgeLayer', () => {
+  test('wraps и parent — структура, parallel и intercept — композиция, остальное — навигация', () => {
+    expect(['wraps', 'parent', 'parallel', 'intercept', 'link', 'redirect', 'нечто'].map(edgeLayer)).toEqual([
+      'structure',
+      'structure',
+      'composition',
+      'composition',
+      'navigation',
+      'navigation',
+      'navigation',
+    ]);
   });
 });

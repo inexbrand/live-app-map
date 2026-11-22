@@ -52,39 +52,37 @@ function item(kind: SearchKind, id: string, title: string, detail: string, targe
  * @returns строки поиска
  */
 export function buildSearchIndex(doc: AppMapDocument): SearchItem[] {
-  const out: SearchItem[] = [];
-  for (const n of doc.nodes) {
-    if (n.kind === 'service') {
-      continue;
-    }
-    out.push(item('screen', n.id, n.title, n.pathPattern, { kind: 'screen', nodeId: n.id }));
-  }
+  return [...screenItems(doc), ...routeItems(doc), ...tableItems(doc), ...docItems(doc), ...fileItems(doc)];
+}
+
+/** Экраны (сервисы бэкенда — не экраны). */
+function screenItems(doc: AppMapDocument): SearchItem[] {
+  return doc.nodes.filter((n) => n.kind !== 'service').map((n) => item('screen', n.id, n.title, n.pathPattern, { kind: 'screen', nodeId: n.id }));
+}
+
+function routeItems(doc: AppMapDocument): SearchItem[] {
+  return (doc.code?.routes ?? []).map((r) => item('route', r.id, `${r.method} ${r.path}`, shortSummary(r.doc, r.comments) ?? r.location.file, { kind: 'route', routeId: r.id }));
+}
+
+function tableItems(doc: AppMapDocument): SearchItem[] {
+  return (doc.code?.tables ?? []).map((t) => item('table', t.exportName, t.name, t.exportName === t.name ? t.location.file : `${t.exportName} · ${t.location.file}`, { kind: 'table', table: t.exportName }));
+}
+
+/** Эпохи с их файлами, затем заметки и руководства. */
+function docItems(doc: AppMapDocument): SearchItem[] {
+  const epochs = (doc.docs?.epochs ?? []).flatMap((e) => [
+    item('epoch', e.id, e.slug, `${readinessLabel(e)}${e.summary === undefined ? '' : ` · ${e.summary}`}`, { kind: 'doc', path: e.dir }),
+    ...e.files.map((f) => item('doc', f.path, `${e.slug} · ${epochFileLabel(e.dir, f.path)}`, f.title, { kind: 'doc', path: f.path })),
+  ]);
+  const files = [...(doc.docs?.notes ?? []), ...(doc.docs?.guides ?? [])].map((f) => item('doc', f.path, f.title, f.path, { kind: 'doc', path: f.path }));
+  return [...epochs, ...files];
+}
+
+/** Файлы кода: где объявлены роуты, таблицы и символы (по алфавиту). */
+function fileItems(doc: AppMapDocument): SearchItem[] {
   const code = doc.code;
-  const files = new Set<string>();
-  for (const r of code?.routes ?? []) {
-    out.push(item('route', r.id, `${r.method} ${r.path}`, shortSummary(r.doc, r.comments) ?? r.location.file, { kind: 'route', routeId: r.id }));
-    files.add(r.location.file);
-  }
-  for (const t of code?.tables ?? []) {
-    out.push(item('table', t.exportName, t.name, t.exportName === t.name ? t.location.file : `${t.exportName} · ${t.location.file}`, { kind: 'table', table: t.exportName }));
-    files.add(t.location.file);
-  }
-  for (const s of code?.symbols ?? []) {
-    files.add(s.location.file);
-  }
-  for (const e of doc.docs?.epochs ?? []) {
-    out.push(item('epoch', e.id, e.slug, `${readinessLabel(e)}${e.summary === undefined ? '' : ` · ${e.summary}`}`, { kind: 'doc', path: e.dir }));
-    for (const f of e.files) {
-      out.push(item('doc', f.path, `${e.slug} · ${epochFileLabel(e.dir, f.path)}`, f.title, { kind: 'doc', path: f.path }));
-    }
-  }
-  for (const f of [...(doc.docs?.notes ?? []), ...(doc.docs?.guides ?? [])]) {
-    out.push(item('doc', f.path, f.title, f.path, { kind: 'doc', path: f.path }));
-  }
-  for (const f of [...files].sort()) {
-    out.push(item('file', f, f.split('/').pop() ?? f, f, { kind: 'file', file: f }));
-  }
-  return out;
+  const files = new Set([...(code?.routes ?? []), ...(code?.tables ?? []), ...(code?.symbols ?? [])].map((x) => x.location.file));
+  return [...files].sort().map((f) => item('file', f, f.split('/').pop() ?? f, f, { kind: 'file', file: f }));
 }
 
 /** Очки совпадения: начало названия > слово в названии > подстрока названия > подробности. */

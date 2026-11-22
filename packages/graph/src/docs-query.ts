@@ -3,7 +3,7 @@
  * разбор ссылок из текста (`GET /api/x`, путь экрана, файл, таблица) на сущности карты.
  */
 import { codeFileOfNode } from '@live-app-map/schema';
-import type { AppMapDocument, DocEpoch, DocFile, DocsModel, EpochReadiness, HttpMethod } from '@live-app-map/schema';
+import type { ApiRoute, AppMapDocument, DocEpoch, DocFile, DocsModel, EpochReadiness, HttpMethod } from '@live-app-map/schema';
 import type { CodeIndex } from './code-query';
 
 /** Фильтр эпох. */
@@ -158,6 +158,18 @@ function pathShape(p: string): string {
   return normalizeRoutePath(p).replace(/:[^/]+/g, ':');
 }
 
+/** Первое значение ключа не перезаписывается. */
+function setFirst(map: Map<string, string>, key: string, value: string): void {
+  if (!map.has(key)) {
+    map.set(key, value);
+  }
+}
+
+/** Файл экрана относительно корня кода (если код есть). */
+function screenFileOf(doc: AppMapDocument, file: string | undefined, code: CodeIndex | undefined): string | undefined {
+  return file === undefined || code === undefined ? file : (codeFileOfNode(doc.project.root, code.code.root, file) ?? file);
+}
+
 /**
  * Строит индекс разбора ссылок по карте.
  *
@@ -172,21 +184,15 @@ export function buildDocRefIndex(doc: AppMapDocument, code?: CodeIndex): DocRefI
     if (n.kind === 'service' || n.pathPattern === undefined) {
       continue;
     }
-    if (!screensByPath.has(pathShape(n.pathPattern))) {
-      screensByPath.set(pathShape(n.pathPattern), n.id);
-    }
-    const file = n.source?.file;
-    const rel = file === undefined || code === undefined ? file : (codeFileOfNode(doc.project.root, code.code.root, file) ?? file);
-    if (rel !== undefined && !screensByFile.has(rel)) {
-      screensByFile.set(rel, n.id);
+    setFirst(screensByPath, pathShape(n.pathPattern), n.id);
+    const rel = screenFileOf(doc, n.source?.file, code);
+    if (rel !== undefined) {
+      setFirst(screensByFile, rel, n.id);
     }
   }
   const knownFiles = new Set<string>(screensByFile.keys());
-  if (code !== undefined) {
-    code.code.routes.forEach((r) => knownFiles.add(r.location.file));
-    code.code.tables.forEach((t) => knownFiles.add(t.location.file));
-    code.code.symbols.forEach((s) => knownFiles.add(s.location.file));
-  }
+  const located = code === undefined ? [] : [...code.code.routes, ...code.code.tables, ...code.code.symbols];
+  located.forEach((x) => knownFiles.add(x.location.file));
   return { ...(code === undefined ? {} : { code }), screensByPath, screensByFile, knownFiles };
 }
 
@@ -207,18 +213,12 @@ function routeByPath(code: CodeIndex | undefined, method: HttpMethod | undefined
  */
 export function resolveDocRef(ref: string, index: DocRefIndex): DocTarget | undefined {
   const text = ref.trim().replace(/^`|`$/g, '');
-  const m = /^([A-Z]+)\s+(\/\S*)$/.exec(text);
-  if (m?.[2] !== undefined && isHttpMethod(m[1])) {
-    const routeId = routeByPath(index.code, m[1], m[2]);
-    return routeId === undefined ? undefined : { kind: 'route', routeId };
+  const methodPath = methodPathOf(text);
+  if (methodPath !== null) {
+    return routeTarget(routeByPath(index.code, methodPath.method, methodPath.path));
   }
   if (text.startsWith('/') && !/\s/.test(text)) {
-    const routeId = routeByPath(index.code, undefined, text);
-    if (routeId !== undefined) {
-      return { kind: 'route', routeId };
-    }
-    const nodeId = index.screensByPath.get(pathShape(text));
-    return nodeId === undefined ? undefined : { kind: 'screen', nodeId };
+    return pathTarget(text, index);
   }
   const fm = /^([\w@./-]+\.[a-z]{1,5})(?::(\d+))?$/i.exec(text);
   if (fm?.[1] !== undefined) {
@@ -226,6 +226,27 @@ export function resolveDocRef(ref: string, index: DocRefIndex): DocTarget | unde
   }
   const table = index.code === undefined ? undefined : findTableByName(index.code, text);
   return table === undefined ? undefined : { kind: 'table', table };
+}
+
+/** «GET /api/x» → метод и путь; иначе null. */
+function methodPathOf(text: string): { readonly method: HttpMethod; readonly path: string } | null {
+  const m = /^([A-Z]+)\s+(\/\S*)$/.exec(text);
+  const method = m?.[1];
+  return m?.[2] !== undefined && isHttpMethod(method) ? { method, path: m[2] } : null;
+}
+
+function routeTarget(routeId: string | undefined): DocTarget | undefined {
+  return routeId === undefined ? undefined : { kind: 'route', routeId };
+}
+
+/** Путь без метода: роут с таким путём, иначе экран с такой формой пути. */
+function pathTarget(text: string, index: DocRefIndex): DocTarget | undefined {
+  const route = routeTarget(routeByPath(index.code, undefined, text));
+  if (route !== undefined) {
+    return route;
+  }
+  const nodeId = index.screensByPath.get(pathShape(text));
+  return nodeId === undefined ? undefined : { kind: 'screen', nodeId };
 }
 
 /** Таблица по точному имени в коде или в БД. */
@@ -246,14 +267,25 @@ function fileTarget(file: string, line: number | undefined, index: DocRefIndex):
   if (nodeId !== undefined) {
     return { kind: 'screen', nodeId };
   }
-  const routes = index.code?.code.routes.filter((r) => r.location.file === known) ?? [];
+  return codeTargetInFile(known, line, index.code) ?? { kind: 'file', file: known, ...(line === undefined ? {} : { line }) };
+}
+
+/** Роут файла (по строке или единственный), иначе таблица файла (по строке или любая). */
+function codeTargetInFile(file: string, line: number | undefined, code: CodeIndex | undefined): DocTarget | undefined {
+  if (code === undefined) {
+    return undefined;
+  }
+  const route = routeInFile(code, file, line);
+  if (route !== undefined) {
+    return { kind: 'route', routeId: route.id };
+  }
+  const table = code.code.tables.find((t) => t.location.file === file && (line === undefined || t.location.line === line));
+  return table === undefined ? undefined : { kind: 'table', table: table.exportName };
+}
+
+/** Роут файла на этой строке (объявление или обработчик), иначе единственный роут файла. */
+function routeInFile(code: CodeIndex, file: string, line: number | undefined): ApiRoute | undefined {
+  const routes = code.code.routes.filter((r) => r.location.file === file);
   const exact = line === undefined ? undefined : routes.find((r) => r.location.line === line || r.handler.location.line === line);
-  if (exact !== undefined || routes.length === 1) {
-    return { kind: 'route', routeId: (exact ?? routes[0])?.id ?? '' };
-  }
-  const table = index.code?.code.tables.find((t) => t.location.file === known && (line === undefined || t.location.line === line));
-  if (table !== undefined) {
-    return { kind: 'table', table: table.exportName };
-  }
-  return { kind: 'file', file: known, ...(line === undefined ? {} : { line }) };
+  return exact ?? (routes.length === 1 ? routes[0] : undefined);
 }

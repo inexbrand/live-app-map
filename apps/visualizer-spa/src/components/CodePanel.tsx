@@ -13,7 +13,6 @@ import { ScreenApiItem } from './ScreenApiItem';
 
 function RouteItem(props: { readonly route: ApiRoute; readonly callers: readonly RouteCaller[]; readonly focused: boolean }) {
   const r = props.route;
-  const selectPage = useAppStore((s) => s.selectPage);
   const ref = useRef<HTMLLIElement>(null);
   useEffect(() => {
     if (props.focused) {
@@ -32,24 +31,33 @@ function RouteItem(props: { readonly route: ApiRoute; readonly callers: readonly
       </div>
       <Description text={r.doc} />
       <DbLine groups={groupDbCalls(r.dbCalls)} />
-      {props.callers.length === 0 ? null : (
-        <p className="code-item__db">
-          Экраны:{' '}
-          {props.callers.map((c, i) => (
-            <span key={c.nodeId}>
-              {i > 0 ? ', ' : ''}
-              <button type="button" className="code-item__link" onClick={() => selectPage(c.nodeId)}>
-                {c.title}
-              </button>
-            </span>
-          ))}
-        </p>
-      )}
+      <CallerLinks callers={props.callers} />
       <p className="code-item__where font-mono">
         {r.handler.name === undefined ? '' : `${r.handler.name} · `}
         {where(r.location)}
       </p>
     </li>
+  );
+}
+
+/** Экраны, которые вызывают роут, ссылками через запятую. */
+function CallerLinks(props: { readonly callers: readonly RouteCaller[] }) {
+  const selectPage = useAppStore((s) => s.selectPage);
+  if (props.callers.length === 0) {
+    return null;
+  }
+  return (
+    <p className="code-item__db">
+      Экраны:{' '}
+      {props.callers.map((c, i) => (
+        <span key={c.nodeId}>
+          {i > 0 ? ', ' : ''}
+          <button type="button" className="code-item__link" onClick={() => selectPage(c.nodeId)}>
+            {c.title}
+          </button>
+        </span>
+      ))}
+    </p>
   );
 }
 
@@ -105,6 +113,29 @@ function itemMatches(query: string, i: Item): boolean {
   return matchesCodeFilter(query, [i.call.method, i.call.path, i.route?.path, i.route?.doc, i.service?.name, i.via]);
 }
 
+/** Списки панели под фильтр: у сервиса — роуты и таблицы, у экрана — вызовы API. */
+type PanelLists = {
+  readonly routes: readonly ApiRoute[];
+  readonly tables: readonly DbTable[];
+  readonly api: readonly Item[];
+  readonly unmatched: readonly Item[];
+};
+
+/** Списки сервиса под фильтр. */
+function serviceLists(v: ServiceCodeView, query: string, focusId: string | null): PanelLists {
+  return { routes: serviceRoutes(v, query, focusId), tables: v.tables.filter((t) => matchesCodeFilter(query, [t.name, t.exportName, t.doc])), api: [], unmatched: [] };
+}
+
+/** Списки экрана под фильтр. */
+function pageLists(v: PageCodeView, query: string): PanelLists {
+  return { routes: [], tables: [], api: v.api.filter((i) => itemMatches(query, i)), unmatched: v.unmatched.filter((i) => itemMatches(query, i)) };
+}
+
+/** Экраны-вызыватели роута (только у сервиса). */
+function callersOf(v: ServiceCodeView | PageCodeView, routeId: string): readonly RouteCaller[] {
+  return v.kind === 'service' ? (v.callers.get(routeId) ?? []) : [];
+}
+
 /**
  * Панель кода ноды: сервис (роуты, таблицы, функции) или экран (вызовы API, функции файла).
  */
@@ -112,11 +143,8 @@ export function CodePanel(props: { readonly view: ServiceCodeView | PageCodeView
   const [query, setQuery] = useState('');
   const focusId = useAppStore((s) => s.codeFocusRouteId);
   const v = props.view;
-  const routes = v.kind === 'service' ? serviceRoutes(v, query, focusId) : [];
-  const tables = v.kind === 'service' ? v.tables.filter((t) => matchesCodeFilter(query, [t.name, t.exportName, t.doc])) : [];
+  const { routes, tables, api, unmatched } = v.kind === 'service' ? serviceLists(v, query, focusId) : pageLists(v, query);
   const symbols = v.symbols.filter((s) => matchesCodeFilter(query, [s.name, s.doc, ...(s.comments ?? [])]));
-  const api = v.kind === 'page' ? v.api.filter((i) => itemMatches(query, i)) : [];
-  const unmatched = v.kind === 'page' ? v.unmatched.filter((i) => itemMatches(query, i)) : [];
   return (
     <div className="code-panel" data-testid="code-panel">
       {v.kind === 'page' ? <p className="drawer__hint font-mono">{v.file}</p> : null}
@@ -143,7 +171,7 @@ export function CodePanel(props: { readonly view: ServiceCodeView | PageCodeView
             key={r.id}
             route={r}
             focused={r.id === focusId}
-            callers={v.kind === 'service' ? (v.callers.get(r.id) ?? []) : []}
+            callers={callersOf(v, r.id)}
           />
         )}
       />

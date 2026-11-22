@@ -115,29 +115,27 @@ function screenFiles(doc: AppMapDocument, codeRoot: string): Map<string, string>
 export function apiEdges(code: CodeModel, screens: ReadonlyMap<string, string>): AppMapEdge[] {
   const calls = new Map((code.apiCalls ?? []).map((c) => [c.id, c]));
   const routes = new Map(code.routes.map((r) => [r.id, r]));
-  const edges: AppMapEdge[] = [];
-  for (const [nodeId, file] of screens) {
+  const routeOfCall = (callId: string): CodeModel['routes'][number] | undefined => {
+    const routeId = calls.get(callId)?.routeId;
+    return routeId === undefined ? undefined : routes.get(routeId);
+  };
+  return [...screens].flatMap(([nodeId, file]) => {
     const perService = new Map<string, Set<string>>();
-    for (const sc of screenOf(code, nodeId, file)?.calls ?? []) {
-      const routeId = calls.get(sc.callId)?.routeId;
-      const route = routeId === undefined ? undefined : routes.get(routeId);
+    for (const route of (screenOf(code, nodeId, file)?.calls ?? []).map((sc) => routeOfCall(sc.callId))) {
       if (route !== undefined) {
         perService.set(route.serviceId, (perService.get(route.serviceId) ?? new Set()).add(route.id));
       }
     }
-    for (const [serviceId, routeIds] of perService) {
-      edges.push({
-        id: `api:${nodeId}->${serviceId}`,
-        from: nodeId,
-        to: serviceId,
-        kind: 'api',
-        confidence: 'medium',
-        label: `API: ${routeIds.size}`,
-        metadata: { routeIds: [...routeIds].sort() },
-      });
-    }
-  }
-  return edges;
+    return [...perService].map(([serviceId, routeIds]): AppMapEdge => ({
+      id: `api:${nodeId}->${serviceId}`,
+      from: nodeId,
+      to: serviceId,
+      kind: 'api',
+      confidence: 'medium',
+      label: `API: ${routeIds.size}`,
+      metadata: { routeIds: [...routeIds].sort() },
+    }));
+  });
 }
 
 /**

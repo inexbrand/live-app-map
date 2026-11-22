@@ -73,6 +73,39 @@ export function declaredStatus(text: string): string | undefined {
 /** Шаблонный текст каркаса эпохи, а не цель. */
 const PLACEHOLDER = /^\(?заполнить/i;
 
+/** Строка абзаца: заголовок (и метка @epoch), пустая или текст. */
+function lineKind(t: string): 'head' | 'blank' | 'text' {
+  if (HEADING.test(t) || t.startsWith('@epoch')) {
+    return 'head';
+  }
+  return t === '' ? 'blank' : 'text';
+}
+
+/** Абзац кончается заголовком или пустой строкой после текста; в разделе «Цель» — любым заголовком. */
+function endsParagraph(kind: 'head' | 'blank' | 'text', afterGoal: boolean, hasText: boolean): boolean {
+  return (kind === 'head' && afterGoal) || (kind !== 'text' && hasText);
+}
+
+/**
+ * Первый абзац: пустая строка или заголовок после текста его заканчивают.
+ *
+ * @param afterGoal - читаем раздел «Цель»: следующий заголовок заканчивает и пустой абзац
+ */
+function firstParagraph(lines: readonly string[], afterGoal: boolean): string[] {
+  const para: string[] = [];
+  for (const line of lines) {
+    const t = line.trim();
+    const kind = lineKind(t);
+    if (endsParagraph(kind, afterGoal, para.length > 0)) {
+      break;
+    }
+    if (kind === 'text') {
+      para.push(t);
+    }
+  }
+  return para;
+}
+
 /**
  * Цель задачи из 00-brief: первый абзац раздела «Цель», иначе первый абзац текста.
  *
@@ -82,24 +115,7 @@ const PLACEHOLDER = /^\(?заполнить/i;
 export function briefSummary(text: string): string | undefined {
   const lines = proseLines(text);
   const goal = lines.findIndex((l) => /^#{2,6}\s*(цель|goal)/i.test(l.trim()));
-  const from = goal >= 0 ? goal + 1 : 0;
-  const para: string[] = [];
-  for (const line of lines.slice(from)) {
-    const t = line.trim();
-    if (HEADING.test(t) || t.startsWith('@epoch')) {
-      if (para.length > 0 || goal >= 0) {
-        break;
-      }
-      continue;
-    }
-    if (t === '') {
-      if (para.length > 0) {
-        break;
-      }
-      continue;
-    }
-    para.push(t);
-  }
+  const para = firstParagraph(lines.slice(goal >= 0 ? goal + 1 : 0), goal >= 0);
   const s = plain(para.join(' '));
   return s === '' || PLACEHOLDER.test(s) ? undefined : s;
 }

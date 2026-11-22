@@ -302,3 +302,40 @@ describe('liveAppMapToAppMap — viewport без height', () => {
     });
   });
 });
+
+describe('liveAppMapToAppMap: путь страницы по url', () => {
+  const live = (pages: LiveAppMapDocument['pages'], baseUrl?: string): LiveAppMapDocument => ({
+    version: '1.0',
+    ...(baseUrl === undefined ? {} : { baseUrl }),
+    pages,
+    edges: [],
+  });
+
+  test('url на адресе приложения — путь без адреса; чужой url — его pathname; без url и path — /id', () => {
+    const doc = liveAppMapToAppMap(
+      live(
+        [
+          { id: 'a', title: 'A', url: 'http://localhost:5173/feed' },
+          { id: 'b', title: 'B', url: 'http://localhost:5173feed' },
+          { id: 'c', title: 'C', url: 'https://other.example/x/y?z=1' },
+          { id: 'd', title: 'D', url: 'не адрес' },
+          { id: 'e', title: 'E' },
+          { id: 'f', title: 'F', url: '/rel' },
+        ],
+        'http://localhost:5173',
+      ),
+    );
+    expect(doc.nodes.map((n) => n.pathPattern)).toEqual(['/feed', '/feed', '/x/y', 'не адрес', '/e', '/rel']);
+    expect(liveAppMapToAppMap(live([{ id: 'g', title: 'G', url: 'http://h/q' }])).nodes[0]?.pathPattern).toBe('http://h/q');
+  });
+
+  test('исходник страницы — из metadata.sourceFile строкой', () => {
+    const doc = liveAppMapToAppMap(
+      live([
+        { id: 'a', title: 'A', path: '/a', metadata: { sourceFile: 'src/A.tsx' } },
+        { id: 'b', title: 'B', path: '/b', metadata: { sourceFile: 42 } },
+      ]),
+    );
+    expect(doc.nodes.map((n) => n.source)).toEqual([{ file: 'src/A.tsx' }, undefined]);
+  });
+});

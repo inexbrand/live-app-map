@@ -5,7 +5,7 @@
  * смену фильтров и раскрытие эпох: новые узлы появляются рядом с соседями.
  */
 import { forceCollide, forceLink, forceManyBody, forceSimulation, forceX, forceY, type Simulation } from 'd3-force';
-import { useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef, type RefObject } from 'react';
 import { NODE_KIND_LABELS, type DocGraph } from '../../lib/doc-graph';
 import { graphNeighbors } from '../../lib/doc-graph-query';
 import { drawGraph, readPalette, type Camera, type SimLink, type SimNode } from './graph-draw';
@@ -52,219 +52,355 @@ function fitCamera(nodes: readonly SimNode[], w: number, h: number, pad: number)
   return { k, x: w / 2 - ((minX + maxX) / 2) * k, y: h / 2 - ((minY + maxY) / 2) * k };
 }
 
-/**
- * Холст графа.
- */
-export function DocGraphCanvas(props: DocGraphCanvasProps) {
-  const { graph, selectedId, matches, compact = false } = props;
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const simRef = useRef<Simulation<SimNode, SimLink> | null>(null);
-  const nodesRef = useRef<SimNode[]>([]);
-  const linksRef = useRef<SimLink[]>([]);
-  const positions = useRef(new Map<string, { x: number; y: number }>());
-  const cam = useRef<Camera>({ x: 0, y: 0, k: 1 });
-  /** Узел, за которым камера следует, пока раскладка двигается; сдвиг или масштаб рукой отпускает его. */
-  const follow = useRef<string | null>(null);
-  /** Ставит узел в центр холста при текущем масштабе. */
-  const centerOn = (id: string): void => {
-    const n = nodesRef.current.find((x) => x.id === id);
-    if (n?.x !== undefined && n.y !== undefined) {
-      const k = cam.current.k;
-      cam.current = { k, x: size.current.w / 2 - n.x * k, y: size.current.h / 2 - n.y * k };
-    }
-  };
-  const fitted = useRef(false);
-  const hovered = useRef<string | null>(null);
-  const size = useRef({ w: 0, h: 0 });
-  const frame = useRef(0);
-  const focusRef = useRef({ selectedId, matches });
-  focusRef.current = { selectedId, matches };
-  const handlers = useRef({ onSelect: props.onSelect, onOpen: props.onOpen });
-  handlers.current = { onSelect: props.onSelect, onOpen: props.onOpen };
+/** Точка на холсте в css-пикселях. */
+type Point = { readonly x: number; readonly y: number };
 
-  const neighborsOf = useMemo(() => {
+/** Жест мышью: сдвиг фона или перенос узла. */
+type Drag = { readonly mode: 'pan' | 'node'; readonly node: SimNode | null; x: number; y: number; moved: boolean };
+
+/**
+ * Изменяемое состояние холста между кадрами: раскладка, камера, наведение, жест.
+ * Живёт вне React — смена не перерисовывает компонент, только кадр canvas.
+ */
+type CanvasState = {
+  sim: Simulation<SimNode, SimLink> | null;
+  nodes: SimNode[];
+  links: SimLink[];
+  /** Позиции узлов, переживающие смену графа. */
+  readonly positions: Map<string, { x: number; y: number }>;
+  cam: Camera;
+  /** Узел, за которым камера следует, пока раскладка двигается; сдвиг или масштаб рукой отпускает его. */
+  follow: string | null;
+  fitted: boolean;
+  hovered: string | null;
+  size: { w: number; h: number };
+  frame: number;
+  focus: { readonly selectedId: string | null; readonly matches: ReadonlySet<string> };
+  drag: Drag | null;
+  /** Перерисовать в ближайший кадр. */
+  draw: () => void;
+  handlers: { readonly onSelect: (id: string | null) => void; readonly onOpen: (id: string) => void };
+};
+
+function newCanvasState(props: DocGraphCanvasProps): CanvasState {
+  return {
+    sim: null,
+    nodes: [],
+    links: [],
+    positions: new Map(),
+    cam: { x: 0, y: 0, k: 1 },
+    follow: null,
+    fitted: false,
+    hovered: null,
+    size: { w: 0, h: 0 },
+    frame: 0,
+    focus: { selectedId: props.selectedId, matches: props.matches },
+    drag: null,
+    draw: () => {},
+    handlers: { onSelect: props.onSelect, onOpen: props.onOpen },
+  };
+}
+
+/** Ставит узел в центр холста при текущем масштабе. */
+function centerOn(s: CanvasState, id: string): void {
+  const n = s.nodes.find((x) => x.id === id);
+  if (n?.x !== undefined && n.y !== undefined) {
+    const k = s.cam.k;
+    s.cam = { k, x: s.size.w / 2 - n.x * k, y: s.size.h / 2 - n.y * k };
+  }
+}
+
+/** Соседи узла с кэшем на граф. */
+function useNeighbors(graph: DocGraph): (id: string) => Set<string> {
+  return useMemo(() => {
     const cache = new Map<string, Set<string>>();
     return (id: string): Set<string> => {
-      const hit = cache.get(id);
-      if (hit !== undefined) {
-        return hit;
-      }
-      const s = graphNeighbors(graph, id);
-      cache.set(id, s);
-      return s;
+      const hit = cache.get(id) ?? graphNeighbors(graph, id);
+      cache.set(id, hit);
+      return hit;
     };
   }, [graph]);
+}
 
-  /** Перерисовать в ближайший кадр. */
-  const requestDraw = useRef(() => {});
-  requestDraw.current = () => {
-    if (frame.current !== 0) {
-      return;
+/** Кадр: подсветка вокруг наведённого или выбранного узла. */
+function drawFrame(canvas: HTMLCanvasElement | null, s: CanvasState, neighborsOf: (id: string) => Set<string>, compact: boolean): void {
+  const ctx = canvas === null ? null : canvas.getContext('2d');
+  if (canvas === null || ctx === null) {
+    return;
+  }
+  const { selectedId: sel, matches } = s.focus;
+  const center = s.hovered ?? sel;
+  const lit = center === null ? new Set<string>() : new Set([center, ...neighborsOf(center)]);
+  const dpr = window.devicePixelRatio || 1;
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  drawGraph(ctx, s.size, s.nodes, s.links, s.cam, { selected: sel, hovered: s.hovered, lit, matches }, readPalette(canvas), compact);
+}
+
+/** Размер canvas по контейнеру; в компактном виде или до первой подгонки — камера вписывает граф. */
+function resizeCanvas(canvas: HTMLCanvasElement, s: CanvasState, compact: boolean): void {
+  const rect = canvas.getBoundingClientRect();
+  const dpr = window.devicePixelRatio || 1;
+  s.size = { w: rect.width, h: rect.height };
+  canvas.width = Math.max(1, Math.round(rect.width * dpr));
+  canvas.height = Math.max(1, Math.round(rect.height * dpr));
+  if (compact || (!s.fitted && rect.width > 0 && s.nodes.length > 0)) {
+    s.cam = fitCamera(s.nodes, rect.width, rect.height, compact ? 32 : 48);
+    s.fitted = rect.width > 0;
+  }
+  s.draw();
+}
+
+/** Число рёбер у каждого узла. */
+function nodeDegrees(graph: DocGraph): Map<string, number> {
+  const degree = new Map<string, number>();
+  for (const e of graph.edges) {
+    degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
+    degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
+  }
+  return degree;
+}
+
+/** Узлы симуляции; уже размещённые сохраняют позицию. */
+function toSimNodes(graph: DocGraph, prev: ReadonlyMap<string, { x: number; y: number }>): SimNode[] {
+  const degree = nodeDegrees(graph);
+  return graph.nodes.map((n) => {
+    const p = prev.get(n.id);
+    return { id: n.id, kind: n.kind, label: n.label, notReady: n.readiness === 'not-ready', r: nodeRadius(n.kind, degree.get(n.id) ?? 0), ...(p === undefined ? {} : { x: p.x, y: p.y }) };
+  });
+}
+
+/** Новый узел — рядом с уже размещённым соседом, чтобы раскрытие не взрывало раскладку; возвращает число размещённых раньше. */
+function placeNewNodes(nodes: SimNode[], neighborsOf: (id: string) => Set<string>): number {
+  const placed = new Map(nodes.filter((n) => n.x !== undefined).map((n) => [n.id, n]));
+  for (const n of nodes.filter((x) => x.x === undefined)) {
+    const near = [...neighborsOf(n.id)].map((id) => placed.get(id)).find((x) => x !== undefined);
+    if (near?.x !== undefined && near.y !== undefined) {
+      n.x = near.x + (Math.random() - 0.5) * 30;
+      n.y = near.y + (Math.random() - 0.5) * 30;
     }
-    frame.current = requestAnimationFrame(() => {
-      frame.current = 0;
-      const canvas = canvasRef.current;
-      const ctx = canvas?.getContext('2d');
-      if (canvas === null || ctx === null || ctx === undefined) {
-        return;
-      }
-      const { selectedId: sel, matches: m } = focusRef.current;
-      const center = hovered.current ?? sel;
-      const lit = center === null ? new Set<string>() : new Set([center, ...neighborsOf(center)]);
-      const dpr = window.devicePixelRatio || 1;
-      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-      drawGraph(ctx, size.current, nodesRef.current, linksRef.current, cam.current, { selected: sel, hovered: hovered.current, lit, matches: m }, readPalette(canvas), compact);
-    });
-  };
+  }
+  return placed.size;
+}
 
-  // Размер canvas по контейнеру.
+/** Силы раскладки. */
+function buildSimulation(nodes: SimNode[], links: SimLink[], compact: boolean): Simulation<SimNode, SimLink> {
+  return forceSimulation<SimNode, SimLink>(nodes)
+    .force('link', forceLink<SimNode, SimLink>(links).id((d) => d.id).distance((l) => (l.kind === 'contains' ? 30 : 70)).strength(0.4))
+    .force('charge', forceManyBody<SimNode>().strength(compact ? -140 : -110).distanceMax(compact ? 300 : 520))
+    .force('collide', forceCollide<SimNode>((d) => d.r + 4))
+    .force('x', forceX<SimNode>(0).strength(0.04))
+    .force('y', forceY<SimNode>(0).strength(0.04))
+    .stop();
+}
+
+/** Запомнить позиции узлов. */
+function savePositions(nodes: readonly SimNode[], positions: Map<string, { x: number; y: number }>): void {
+  for (const n of nodes) {
+    if (n.x !== undefined && n.y !== undefined) {
+      positions.set(n.id, { x: n.x, y: n.y });
+    }
+  }
+}
+
+/** Шаг живой раскладки: камера вписывает граф или держит выбранный узел. */
+function onLayoutTick(s: CanvasState, nodes: readonly SimNode[], compact: boolean): void {
+  savePositions(nodes, s.positions);
+  if (compact) {
+    s.cam = fitCamera(nodes, s.size.w, s.size.h, 32);
+  } else if (s.follow !== null) {
+    centerOn(s, s.follow);
+  }
+  s.draw();
+}
+
+/** Камера вписывает граф: в компактном виде всегда, в полном — до первой подгонки. */
+function fitOnStart(s: CanvasState, nodes: readonly SimNode[], compact: boolean): void {
+  if (compact || !s.fitted) {
+    s.cam = fitCamera(nodes, s.size.w, s.size.h, compact ? 32 : 48);
+    s.fitted = s.size.w > 0;
+  }
+}
+
+/** Раскладка под новый граф: основная — сразу, без анимации; дальше доводка вживую (или сразу целиком при reduce-motion). */
+function startLayout(graph: DocGraph, compact: boolean, neighborsOf: (id: string) => Set<string>, s: CanvasState): Simulation<SimNode, SimLink> {
+  const nodes = toSimNodes(graph, s.positions);
+  const reuse = placeNewNodes(nodes, neighborsOf) > 0;
+  const links: SimLink[] = graph.edges.map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
+  s.nodes = nodes;
+  s.links = links;
+  s.sim?.stop();
+  const sim = buildSimulation(nodes, links, compact);
+  const reduce = prefersReducedMotion();
+  sim.alpha(reuse ? 0.35 : 1);
+  sim.tick(reduce ? 300 : reuse ? 30 : 160);
+  savePositions(nodes, s.positions);
+  fitOnStart(s, nodes, compact);
+  sim.on('tick', () => onLayoutTick(s, nodes, compact));
+  if (!reduce) {
+    sim.alpha(reuse ? 0.15 : 0.3).restart();
+  }
+  s.sim = sim;
+  s.draw();
+  return sim;
+}
+
+/** Выбор: камера едет к узлу и держит его в центре, пока раскладка не успокоится. */
+function followSelection(s: CanvasState, selectedId: string | null, compact: boolean): void {
+  s.follow = compact ? null : selectedId;
+  if (s.follow !== null) {
+    s.cam = { ...s.cam, k: Math.max(s.cam.k, 0.9) };
+    centerOn(s, s.follow);
+  }
+  s.draw();
+}
+
+/** Узел под точкой экрана. */
+function nodeAt(nodes: readonly SimNode[], c: Camera, p: Point): SimNode | null {
+  const wx = (p.x - c.x) / c.k;
+  const wy = (p.y - c.y) / c.k;
+  let best: SimNode | null = null;
+  let bestD = Infinity;
+  for (const n of nodes) {
+    const d = n.x === undefined || n.y === undefined ? Infinity : Math.hypot(n.x - wx, n.y - wy);
+    if (d < (n.r + 6) / Math.min(1, c.k) && d < bestD) {
+      best = n;
+      bestD = d;
+    }
+  }
+  return best;
+}
+
+/** Точка события относительно холста. */
+function localPoint(canvas: HTMLCanvasElement | null, e: { readonly clientX: number; readonly clientY: number }): Point {
+  const rect = canvas?.getBoundingClientRect();
+  return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
+}
+
+/** Наведение без нажатия: курсор и подсветка узла. */
+function hoverAt(s: CanvasState, el: HTMLCanvasElement, p: Point): void {
+  const id = nodeAt(s.nodes, s.cam, p)?.id ?? null;
+  if (id !== s.hovered) {
+    s.hovered = id;
+    el.style.cursor = id === null ? 'grab' : 'pointer';
+    s.draw();
+  }
+}
+
+/** Движение с нажатием: сдвиг фона или перенос узла (в компактном виде узлы не двигаются). */
+function dragTo(s: CanvasState, d: Drag, p: Point, compact: boolean): void {
+  if (d.mode === 'pan') {
+    s.follow = null;
+    s.cam = { ...s.cam, x: s.cam.x + (p.x - d.x), y: s.cam.y + (p.y - d.y) };
+    d.x = p.x;
+    d.y = p.y;
+    s.draw();
+    return;
+  }
+  if (d.node !== null && !compact) {
+    d.node.fx = (p.x - s.cam.x) / s.cam.k;
+    d.node.fy = (p.y - s.cam.y) / s.cam.k;
+    s.sim?.alphaTarget(0.2).restart();
+  }
+}
+
+function pointerMove(s: CanvasState, el: HTMLCanvasElement, p: Point, compact: boolean): void {
+  const d = s.drag;
+  if (d === null) {
+    hoverAt(s, el, p);
+    return;
+  }
+  d.moved ||= Math.hypot(p.x - d.x, p.y - d.y) > 3;
+  if (d.moved) {
+    dragTo(s, d, p, compact);
+  }
+}
+
+/** Отпускание: узел освобождается; без движения — это клик, выбор узла или фона. */
+function pointerUp(s: CanvasState): void {
+  const d = s.drag;
+  s.drag = null;
+  if (d === null) {
+    return;
+  }
+  if (d.node !== null) {
+    d.node.fx = null;
+    d.node.fy = null;
+    s.sim?.alphaTarget(0);
+  }
+  if (!d.moved) {
+    s.handlers.onSelect(d.node?.id ?? null);
+  }
+}
+
+/** Масштаб колесом под курсором. */
+function zoomAt(c: Camera, p: Point, deltaY: number): Camera {
+  const k = Math.min(MAX_K, Math.max(MIN_K, c.k * Math.exp(-deltaY * 0.0015)));
+  return { k, x: p.x - ((p.x - c.x) * k) / c.k, y: p.y - ((p.y - c.y) * k) / c.k };
+}
+
+/** Подсказка над холстом: тип и описание наведённого узла. */
+function hoverTitle(graph: DocGraph, hovered: string | null): string | undefined {
+  const n = hovered === null ? undefined : graph.nodes.find((x) => x.id === hovered);
+  return n === undefined ? undefined : `${NODE_KIND_LABELS.get(n.kind) ?? ''}: ${n.detail || n.label}`;
+}
+
+/** Перерисовка кадром, размер по контейнеру, раскладка, слежение за выбором. */
+function useCanvasEffects(canvasRef: RefObject<HTMLCanvasElement | null>, s: CanvasState, graph: DocGraph, compact: boolean): void {
+  const neighborsOf = useNeighbors(graph);
+  s.draw = () => {
+    if (s.frame === 0) {
+      s.frame = requestAnimationFrame(() => {
+        s.frame = 0;
+        drawFrame(canvasRef.current, s, neighborsOf, compact);
+      });
+    }
+  };
   useEffect(() => {
     const canvas = canvasRef.current;
     if (canvas === null) {
       return;
     }
-    const resize = (): void => {
-      const rect = canvas.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
-      size.current = { w: rect.width, h: rect.height };
-      canvas.width = Math.max(1, Math.round(rect.width * dpr));
-      canvas.height = Math.max(1, Math.round(rect.height * dpr));
-      if (compact || (!fitted.current && rect.width > 0 && nodesRef.current.length > 0)) {
-        cam.current = fitCamera(nodesRef.current, rect.width, rect.height, compact ? 32 : 48);
-        fitted.current = rect.width > 0;
-      }
-      requestDraw.current();
-    };
-    const ro = new ResizeObserver(resize);
+    const ro = new ResizeObserver(() => resizeCanvas(canvas, s, compact));
     ro.observe(canvas);
-    resize();
+    resizeCanvas(canvas, s, compact);
     // Тема сменилась — палитра другая.
-    const mo = new MutationObserver(() => requestDraw.current());
+    const mo = new MutationObserver(() => s.draw());
     mo.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
     return () => {
       ro.disconnect();
       mo.disconnect();
     };
   }, [compact]);
-
-  // Симуляция под новый граф.
   useEffect(() => {
-    const degree = new Map<string, number>();
-    for (const e of graph.edges) {
-      degree.set(e.source, (degree.get(e.source) ?? 0) + 1);
-      degree.set(e.target, (degree.get(e.target) ?? 0) + 1);
-    }
-    const prev = positions.current;
-    const nodes: SimNode[] = graph.nodes.map((n) => {
-      const p = prev.get(n.id);
-      return { id: n.id, kind: n.kind, label: n.label, notReady: n.readiness === 'not-ready', r: nodeRadius(n.kind, degree.get(n.id) ?? 0), ...(p === undefined ? {} : { x: p.x, y: p.y }) };
-    });
-    // Новый узел — рядом с уже размещённым соседом, чтобы раскрытие не взрывало раскладку.
-    const placed = new Map(nodes.filter((n) => n.x !== undefined).map((n) => [n.id, n]));
-    for (const n of nodes) {
-      if (n.x !== undefined) {
-        continue;
-      }
-      const near = [...neighborsOf(n.id)].map((id) => placed.get(id)).find((x) => x !== undefined);
-      if (near?.x !== undefined && near.y !== undefined) {
-        n.x = near.x + (Math.random() - 0.5) * 30;
-        n.y = near.y + (Math.random() - 0.5) * 30;
-      }
-    }
-    const links: SimLink[] = graph.edges.map((e) => ({ source: e.source, target: e.target, kind: e.kind }));
-    nodesRef.current = nodes;
-    linksRef.current = links;
-    simRef.current?.stop();
-    const reuse = placed.size > 0;
-    const sim = forceSimulation<SimNode, SimLink>(nodes)
-      .force('link', forceLink<SimNode, SimLink>(links).id((d) => d.id).distance((l) => (l.kind === 'contains' ? 30 : 70)).strength(0.4))
-      .force('charge', forceManyBody<SimNode>().strength(compact ? -140 : -110).distanceMax(compact ? 300 : 520))
-      .force('collide', forceCollide<SimNode>((d) => d.r + 4))
-      .force('x', forceX<SimNode>(0).strength(0.04))
-      .force('y', forceY<SimNode>(0).strength(0.04))
-      .stop();
-    // Основная раскладка — сразу, без анимации; дальше доводка вживую (или сразу целиком при reduce-motion).
-    const settle = prefersReducedMotion() ? 300 : reuse ? 30 : 160;
-    sim.alpha(reuse ? 0.35 : 1);
-    sim.tick(settle);
-    const save = (): void => {
-      for (const n of nodes) {
-        if (n.x !== undefined && n.y !== undefined) {
-          positions.current.set(n.id, { x: n.x, y: n.y });
-        }
-      }
-    };
-    save();
-    if (compact || !fitted.current) {
-      cam.current = fitCamera(nodes, size.current.w, size.current.h, compact ? 32 : 48);
-      fitted.current = size.current.w > 0;
-    }
-    sim.on('tick', () => {
-      save();
-      if (compact) {
-        cam.current = fitCamera(nodes, size.current.w, size.current.h, 32);
-      } else if (follow.current !== null) {
-        centerOn(follow.current);
-      }
-      requestDraw.current();
-    });
-    if (!prefersReducedMotion()) {
-      sim.alpha(reuse ? 0.15 : 0.3).restart();
-    }
-    simRef.current = sim;
-    requestDraw.current();
+    const sim = startLayout(graph, compact, neighborsOf, s);
     return () => {
       sim.stop();
     };
   }, [graph, compact, neighborsOf]);
-
-  // Выбор: камера едет к узлу и держит его в центре, пока раскладка не успокоится.
-  useEffect(() => {
-    follow.current = compact ? null : selectedId;
-    if (follow.current !== null) {
-      cam.current = { ...cam.current, k: Math.max(cam.current.k, 0.9) };
-      centerOn(follow.current);
-    }
-    requestDraw.current();
-  }, [selectedId, matches, compact]);
-
+  const { selectedId, matches } = s.focus;
+  useEffect(() => followSelection(s, selectedId, compact), [selectedId, matches, compact]);
   useEffect(
     () => () => {
-      cancelAnimationFrame(frame.current);
-      frame.current = 0;
+      cancelAnimationFrame(s.frame);
+      s.frame = 0;
     },
     [],
   );
+}
 
-  /** Узел под точкой экрана. */
-  const nodeAt = (px: number, py: number): SimNode | null => {
-    const c = cam.current;
-    const wx = (px - c.x) / c.k;
-    const wy = (py - c.y) / c.k;
-    let best: SimNode | null = null;
-    let bestD = Infinity;
-    for (const n of nodesRef.current) {
-      if (n.x === undefined || n.y === undefined) {
-        continue;
-      }
-      const d = Math.hypot(n.x - wx, n.y - wy);
-      const reach = (n.r + 6) / Math.min(1, c.k);
-      if (d < reach && d < bestD) {
-        best = n;
-        bestD = d;
-      }
-    }
-    return best;
-  };
-
-  const drag = useRef<{ mode: 'pan' | 'node'; node: SimNode | null; x: number; y: number; moved: boolean } | null>(null);
-
-  const local = (e: { clientX: number; clientY: number }): { x: number; y: number } => {
-    const rect = canvasRef.current?.getBoundingClientRect();
-    return { x: e.clientX - (rect?.left ?? 0), y: e.clientY - (rect?.top ?? 0) };
-  };
-
-  const hoveredNode = hovered.current === null ? undefined : graph.nodes.find((n) => n.id === hovered.current);
+/**
+ * Холст графа.
+ */
+export function DocGraphCanvas(props: DocGraphCanvasProps) {
+  const { graph, selectedId, compact = false } = props;
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const s = useRef<CanvasState | null>(null);
+  s.current ??= newCanvasState(props);
+  const st = s.current;
+  st.focus = { selectedId, matches: props.matches };
+  st.handlers = { onSelect: props.onSelect, onOpen: props.onOpen };
+  useCanvasEffects(canvasRef, st, graph, compact);
+  const at = (e: { readonly clientX: number; readonly clientY: number }): Point => localPoint(canvasRef.current, e);
   return (
     <canvas
       ref={canvasRef}
@@ -275,84 +411,33 @@ export function DocGraphCanvas(props: DocGraphCanvasProps) {
       data-selected={selectedId ?? ''}
       role="img"
       aria-label={props.ariaLabel}
-      title={hoveredNode === undefined ? undefined : `${NODE_KIND_LABELS.get(hoveredNode.kind) ?? ''}: ${hoveredNode.detail || hoveredNode.label}`}
+      title={hoverTitle(graph, st.hovered)}
       onPointerDown={(e) => {
-        const p = local(e);
-        const n = nodeAt(p.x, p.y);
-        drag.current = { mode: n === null ? 'pan' : 'node', node: n, x: p.x, y: p.y, moved: false };
+        const p = at(e);
+        const n = nodeAt(st.nodes, st.cam, p);
+        st.drag = { mode: n === null ? 'pan' : 'node', node: n, x: p.x, y: p.y, moved: false };
         e.currentTarget.setPointerCapture(e.pointerId);
       }}
-      onPointerMove={(e) => {
-        const p = local(e);
-        const d = drag.current;
-        if (d === null) {
-          const n = nodeAt(p.x, p.y);
-          const id = n?.id ?? null;
-          if (id !== hovered.current) {
-            hovered.current = id;
-            e.currentTarget.style.cursor = id === null ? 'grab' : 'pointer';
-            requestDraw.current();
-          }
-          return;
-        }
-        if (Math.hypot(p.x - d.x, p.y - d.y) > 3) {
-          d.moved = true;
-        }
-        if (!d.moved) {
-          return;
-        }
-        if (d.mode === 'pan') {
-          follow.current = null;
-          cam.current = { ...cam.current, x: cam.current.x + (p.x - d.x), y: cam.current.y + (p.y - d.y) };
-          d.x = p.x;
-          d.y = p.y;
-          requestDraw.current();
-          return;
-        }
-        if (d.node !== null && !compact) {
-          d.node.fx = (p.x - cam.current.x) / cam.current.k;
-          d.node.fy = (p.y - cam.current.y) / cam.current.k;
-          simRef.current?.alphaTarget(0.2).restart();
-        }
-      }}
-      onPointerUp={() => {
-        const d = drag.current;
-        drag.current = null;
-        if (d === null) {
-          return;
-        }
-        if (d.node !== null) {
-          d.node.fx = null;
-          d.node.fy = null;
-          simRef.current?.alphaTarget(0);
-        }
-        if (!d.moved) {
-          handlers.current.onSelect(d.node?.id ?? null);
-        }
-      }}
+      onPointerMove={(e) => pointerMove(st, e.currentTarget, at(e), compact)}
+      onPointerUp={() => pointerUp(st)}
       onPointerLeave={() => {
-        if (hovered.current !== null) {
-          hovered.current = null;
-          requestDraw.current();
+        if (st.hovered !== null) {
+          st.hovered = null;
+          st.draw();
         }
       }}
       onDoubleClick={(e) => {
-        const p = local(e);
-        const n = nodeAt(p.x, p.y);
+        const n = nodeAt(st.nodes, st.cam, at(e));
         if (n !== null) {
-          handlers.current.onOpen(n.id);
+          st.handlers.onOpen(n.id);
         }
       }}
       onWheel={(e) => {
-        if (compact) {
-          return;
+        if (!compact) {
+          st.follow = null;
+          st.cam = zoomAt(st.cam, at(e), e.deltaY);
+          st.draw();
         }
-        const p = local(e);
-        const c = cam.current;
-        const k = Math.min(MAX_K, Math.max(MIN_K, c.k * Math.exp(-e.deltaY * 0.0015)));
-        follow.current = null;
-        cam.current = { k, x: p.x - ((p.x - c.x) * k) / c.k, y: p.y - ((p.y - c.y) * k) / c.k };
-        requestDraw.current();
       }}
     />
   );

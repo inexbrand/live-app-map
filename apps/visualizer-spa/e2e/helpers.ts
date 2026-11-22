@@ -3,6 +3,7 @@
  */
 import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
+import { firstNodeInView, mcpResult } from './probes';
 
 /** Папка скриншотов для отчёта эпохи; без неё скриншоты не снимаются. */
 const SHOTS = process.env['LAM_SHOTS_DIR'];
@@ -46,14 +47,16 @@ export async function openMap(
   map: string,
   options: { readonly query?: string; readonly ready?: (page: Page) => Promise<void> } = {},
 ): Promise<void> {
+  const { query = '', ready = viewSwitchShown } = options;
   await page.setViewportSize(WIDE_VIEWPORT);
-  await page.goto(`/?map=/maps/${map}${options.query ?? ''}`);
-  if (options.ready === undefined) {
-    await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
-  } else {
-    await options.ready(page);
-  }
+  await page.goto(`/?map=/maps/${map}${query}`);
+  await ready(page);
   await page.keyboard.press('Escape');
+}
+
+/** Карта открыта: виден переключатель вида. */
+async function viewSwitchShown(page: Page): Promise<void> {
+  await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
 }
 
 /** Открывает карту korbor-miniapp и выбирает первую целиком видимую ноду. */
@@ -61,19 +64,13 @@ export async function openMiniappAndSelectNode(page: Page): Promise<string> {
   await page.goto('/');
   await page.getByTestId('map-select').selectOption('korbor-miniapp');
   await expect.poll(async () => page.locator('.react-flow__node').count()).toBeGreaterThan(5);
-  const box = await page.locator('.react-flow__node').evaluateAll((els) => {
-    for (const el of els) {
-      const r = el.getBoundingClientRect();
-      if (r.x >= 0 && r.y >= 70 && r.right < window.innerWidth && r.y + 20 < window.innerHeight) {
-        return { x: r.x + Math.min(20, r.width / 2), y: r.y + 12, id: el.getAttribute('data-id') ?? '' };
-      }
-    }
-    return null;
-  });
-  expect(box).not.toBeNull();
-  await page.mouse.click(box?.x ?? 0, box?.y ?? 0);
+  const box = await page.locator('.react-flow__node').evaluateAll(firstNodeInView);
+  if (box === null) {
+    throw new Error('на холсте нет ноды, видимой целиком под шапкой');
+  }
+  await page.mouse.click(box.x, box.y);
   await expect(page.locator('.page-node--selected [data-testid=node-comment]')).toBeVisible();
-  return box?.id ?? '';
+  return box.id;
 }
 
 /** Замечание к области выбранного экрана: кнопка в шапке ноды → «Область» в подсказке. */
@@ -97,6 +94,5 @@ export async function mcpCall(page: Page, name: string, args: Record<string, unk
     data: { jsonrpc: '2.0', id: 1, method: 'tools/call', params: { name, arguments: args } },
   });
   expect(res.ok()).toBe(true);
-  const body = (await res.json()) as { result: { content: Array<{ text: string }> } };
-  return JSON.parse(body.result.content[0]?.text ?? '{}') as Record<string, unknown>;
+  return mcpResult(await res.json());
 }

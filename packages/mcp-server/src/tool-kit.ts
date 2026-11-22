@@ -138,6 +138,15 @@ export function mapPathParam(description: string): MapPathParam {
 }
 
 /**
+ * Объект без полей со значением undefined (порядок полей сохраняется).
+ *
+ * @param value - поля ответа
+ */
+export function defined(value: Readonly<Record<string, unknown>>): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(value).filter(([, v]) => v !== undefined));
+}
+
+/**
  * Каталог для tools/list: описания без обработчиков.
  *
  * @param tools - инструменты

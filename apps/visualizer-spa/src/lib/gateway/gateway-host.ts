@@ -60,15 +60,20 @@ export function targetLabel(url: URL): string | null {
     return null;
   }
   const port = url.port === '' ? (url.protocol === 'https:' ? '443' : '80') : url.port;
-  const host = url.hostname.toLowerCase();
+  const suffix = hostSuffix(url.hostname.toLowerCase());
+  return suffix === null ? null : `${scheme}${port}${suffix}`;
+}
+
+/** Хвост метки: localhost — пусто, 127.0.0.1 — «-ip», sub.localhost — «-sub»; иначе null. */
+function hostSuffix(host: string): string | null {
   if (host === 'localhost') {
-    return `${scheme}${port}`;
+    return '';
   }
   if (host === '127.0.0.1') {
-    return `${scheme}${port}-ip`;
+    return '-ip';
   }
   const sub = /^([a-z0-9-]+)\.localhost$/.exec(host)?.[1];
-  return sub === undefined || sub.includes('--') ? null : `${scheme}${port}-${sub}`;
+  return sub === undefined || sub.includes('--') ? null : `-${sub}`;
 }
 
 /**
@@ -100,20 +105,35 @@ export function toGatewayUrl(appUrl: string, profile: string, gatewayPort: numbe
  * @returns цель или null
  */
 export function parseGatewayHost(host: string): GatewayTarget | null {
+  const parts = hostParts(host);
+  const target = parts === null ? null : originOfLabel(parts.label);
+  return parts === null || target === null ? null : { profile: parts.profile, ...target };
+}
+
+/** Профиль и метка из «профиль--метка[--ячейка].localhost[:порт]»; не тот вид — null. */
+function hostParts(host: string): { readonly profile: string; readonly label: string } | null {
   const name = /^([a-z0-9-]+)\.localhost(?::\d+)?$/.exec(host.toLowerCase())?.[1];
   const [profile, label, cell, ...extra] = name === undefined ? [] : name.split('--');
-  if (profile === undefined || label === undefined || extra.length > 0 || !isValidProfileId(profile) || (cell !== undefined && !CELL_RE.test(cell))) {
+  if (profile === undefined || label === undefined || extra.length > 0 || !isValidProfileId(profile)) {
     return null;
   }
+  return cell !== undefined && !CELL_RE.test(cell) ? null : { profile, label };
+}
+
+/** Origin приложения из метки «h5173», «s443-ip», «h3000-admin». */
+function originOfLabel(label: string): Omit<GatewayTarget, 'profile'> | null {
   const m = LABEL_RE.exec(label);
-  if (m === null || m[1] === undefined || m[2] === undefined) {
-    return null;
-  }
-  const port = Number(m[2]);
-  if (port < 1 || port > 65535) {
+  const port = Number(m?.[2]);
+  if (m === null || m[1] === undefined || m[2] === undefined || port < 1 || port > 65535) {
     return null;
   }
   const protocol = m[1] === 's' ? 'https:' : 'http:';
-  const hostname = m[3] === undefined ? 'localhost' : m[3] === 'ip' ? '127.0.0.1' : `${m[3]}.localhost`;
-  return { profile, origin: `${protocol}//${hostname}:${port}`, protocol, hostname, port };
+  return { origin: `${protocol}//${hostOfLabel(m[3])}:${port}`, protocol, hostname: hostOfLabel(m[3]), port };
+}
+
+function hostOfLabel(sub: string | undefined): string {
+  if (sub === undefined) {
+    return 'localhost';
+  }
+  return sub === 'ip' ? '127.0.0.1' : `${sub}.localhost`;
 }

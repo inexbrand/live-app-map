@@ -5,7 +5,7 @@
 import { Camera, X } from 'lucide-react';
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { isUsableSelection, rectFromPoints, type Point, type Rect } from '../lib/snapshot/region';
-import { useSnapshotStore } from '../store/snapshot-store';
+import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
 import { Button } from '../ui';
 import { startComment } from './comments/start-comment';
 
@@ -84,14 +84,20 @@ function AgentRequestCard(props: { readonly note: string | null }) {
   );
 }
 
-/**
- * Оверлей снимка (внутри холста карты).
- */
-export function SnapshotOverlay() {
-  const session = useSnapshotStore((s) => s.session);
-  const cancel = useSnapshotStore((s) => s.cancel);
-  const active = session.phase !== 'idle' && session.phase !== 'capturing';
+/** Подсказка выбора компонента и переход к выделению области. */
+function PickHint() {
+  return (
+    <div className="snapshot-overlay__hint snapshot-overlay__hint--pick" role="status" data-testid="pick-hint">
+      <span>Наведите на компонент живого экрана и кликните · Esc — отмена</span>
+      <Button type="button" variant="outline" size="sm" onClick={() => startComment('region')} title="Выделить область мышью (⌥⇧S)">
+        Область
+      </Button>
+    </div>
+  );
+}
 
+/** Esc отменяет сессию, пока она ждёт пользователя. */
+function useEscapeCancels(active: boolean, cancel: () => void): void {
   useEffect(() => {
     if (!active) {
       return;
@@ -104,6 +110,17 @@ export function SnapshotOverlay() {
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [active, cancel]);
+}
+
+/**
+ * Оверлей снимка (внутри холста карты).
+ */
+export function SnapshotOverlay() {
+  const session = useSnapshotStore((s) => s.session);
+  const cancel = useSnapshotStore((s) => s.cancel);
+  const active = session.phase !== 'idle' && session.phase !== 'capturing';
+
+  useEscapeCancels(active, cancel);
 
   if (session.phase === 'requested') {
     return (
@@ -118,18 +135,8 @@ export function SnapshotOverlay() {
     );
   }
   if (session.phase === 'selecting') {
-    if (session.purpose.kind === 'comment' && session.purpose.pick === 'element') {
-      // Выбор идёт в самих страницах (пикер шлюза): слой поверх холста не нужен
-      return (
-        <div className="snapshot-overlay__hint snapshot-overlay__hint--pick" role="status" data-testid="pick-hint">
-          <span>Наведите на компонент живого экрана и кликните · Esc — отмена</span>
-          <Button type="button" variant="outline" size="sm" onClick={() => startComment('region')} title="Выделить область мышью (⌥⇧S)">
-            Область
-          </Button>
-        </div>
-      );
-    }
-    return <SelectionLayer />;
+    // Выбор компонента идёт в самих страницах (пикер шлюза): слой поверх холста не нужен
+    return isElementPick(session) ? <PickHint /> : <SelectionLayer />;
   }
   return null;
 }

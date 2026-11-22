@@ -50,25 +50,25 @@ export function rpcError(id: RpcId, code: RpcErrorCode, message: string): RpcRes
   return { jsonrpc: '2.0', id, error: { code, message } };
 }
 
-function dispatch(method: string, params: Readonly<Record<string, unknown>>, ctx: ToolContext): unknown {
-  if (method === 'initialize') {
-    return {
+type Params = Readonly<Record<string, unknown>>;
+
+/** Методы JSON-RPC: метод → ответ. */
+const METHODS = new Map<string, (params: Params, ctx: ToolContext) => unknown>([
+  [
+    'initialize',
+    () => ({
       protocolVersion: MCP_PROTOCOL_VERSION,
       capabilities: { tools: {} },
       serverInfo: { name: 'live-app-map-mcp', version: '0.1.0' },
-    };
-  }
-  if (method === 'tools/list') {
-    return { tools: TOOLS };
-  }
-  if (method === 'tools/call') {
-    const name = typeof params['name'] === 'string' ? params['name'] : '';
-    return callTool(name, asRecord(params['arguments']) ?? {}, ctx);
-  }
-  if (method === 'ping') {
-    return {};
-  }
-  return undefined;
+    }),
+  ],
+  ['tools/list', () => ({ tools: TOOLS })],
+  ['tools/call', (params, ctx) => callTool(typeof params['name'] === 'string' ? params['name'] : '', asRecord(params['arguments']) ?? {}, ctx)],
+  ['ping', () => ({})],
+]);
+
+function dispatch(method: string, params: Params, ctx: ToolContext): unknown {
+  return METHODS.get(method)?.(params, ctx);
 }
 
 /**

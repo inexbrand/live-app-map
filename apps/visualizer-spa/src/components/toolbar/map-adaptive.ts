@@ -19,9 +19,17 @@ export type MapAdaptive = {
  * @param layout - layout карты
  */
 export function mapAdaptive(layout: LayoutHints | undefined): MapAdaptive {
-  const w = layout?.defaultDeviceViewport?.width ?? layout?.defaultWidth ?? 390;
-  const h = layout?.defaultDeviceViewport?.height ?? layout?.defaultHeight ?? 844;
-  const mode = layout?.defaultDeviceViewport?.heightMode ?? layout?.defaultHeightMode ?? 'fixed';
+  const { w, h, mode } = mapSize(layout ?? {});
   const presetId = resolveViewportPresets(layout).find((p) => p.width === w && p.height === h)?.id ?? 'w390';
   return { w, h, mode, presetId };
+}
+
+/** Размер карты: общий viewport, иначе defaultWidth/Height/HeightMode, иначе iPhone 390×844. */
+function mapSize(layout: LayoutHints): Omit<MapAdaptive, 'presetId'> {
+  const d: Partial<NonNullable<LayoutHints['defaultDeviceViewport']>> = layout.defaultDeviceViewport ?? {};
+  return {
+    w: d.width ?? layout.defaultWidth ?? 390,
+    h: d.height ?? layout.defaultHeight ?? 844,
+    mode: d.heightMode ?? layout.defaultHeightMode ?? 'fixed',
+  };
 }

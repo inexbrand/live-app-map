@@ -3,8 +3,9 @@
  * текст, сохранение; ответ агента через MCP; ветка, статус, список и переход.
  * Нужен живой korbor (страницы мини-приложения через шлюз).
  */
-import { expect, test, type Page } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { mcpCall, openMiniappAndSelectNode, startRegion } from './helpers';
+import { blurActive, drawerEdges, firstClickable, freeBand, type Box } from './probes';
 
 /**
  * Точка на компоненте приложения в живой странице выбранного экрана:
@@ -15,23 +16,26 @@ async function componentPoint(page: Page, nodeId: string): Promise<{ id: string;
   await expect(iframe).toBeVisible({ timeout: 60_000 });
   const inFrame = page.frameLocator(`iframe[data-lam-node-iframe="${nodeId}"]`).locator('[data-testid]');
   await expect(inFrame.first()).toBeAttached({ timeout: 60_000 });
-  const vp = page.viewportSize() ?? { width: 1280, height: 720 };
-  let point: { id: string; x: number; y: number } | null = null;
+  const vp = viewportOf(page);
+  let point: { x: number; y: number } | undefined;
   // Камера доезжает до выбранной ноды, страница дорисовывается — ждём устойчивую точку
   await expect(async () => {
-    const drawers = await page.locator('.drawer').evaluateAll((els) => els.map((e) => ({ left: e.getBoundingClientRect().left, right: e.getBoundingClientRect().right })));
-    const rightEdge = Math.min(vp.width, ...drawers.filter((d) => d.left > vp.width / 2).map((d) => d.left));
-    const leftEdge = Math.max(0, ...drawers.filter((d) => d.left < vp.width / 2).map((d) => d.right));
-    const count = await inFrame.count();
-    for (let i = 0; i < count && point === null; i++) {
-      const b = await inFrame.nth(i).boundingBox();
-      if (b !== null && b.width > 20 && b.height > 10 && b.x > leftEdge && b.y > 80 && b.x + b.width < rightEdge && b.y + b.height < vp.height) {
-        point = { id: nodeId, x: b.x + b.width / 2, y: b.y + Math.min(b.height / 2, 12) };
-      }
-    }
-    expect(point, `в экране ${nodeId} нет видимого компонента с data-testid`).not.toBeNull();
+    const band = freeBand(await page.locator('.drawer').evaluateAll(drawerEdges), vp.width);
+    point = firstClickable(await allBoxes(inFrame), band, vp.height);
+    expect(point, `в экране ${nodeId} нет видимого компонента с data-testid`).toBeDefined();
   }).toPass({ timeout: 20_000 });
-  return point ?? { id: nodeId, x: 0, y: 0 };
+  return { id: nodeId, ...(point ?? { x: 0, y: 0 }) };
+}
+
+/** Размер окна страницы (по умолчанию Playwright — 1280×720). */
+function viewportOf(page: Page): { width: number; height: number } {
+  return page.viewportSize() ?? { width: 1280, height: 720 };
+}
+
+/** Прямоугольники всех элементов локатора. */
+async function allBoxes(loc: Locator): Promise<(Box | null)[]> {
+  const count = await loc.count();
+  return Promise.all(Array.from({ length: count }, (_, i) => loc.nth(i).boundingBox()));
 }
 
 /**
@@ -44,7 +48,7 @@ async function startPick(page: Page): Promise<void> {
     if (await agentCard.isVisible()) {
       await agentCard.getByRole('button', { name: 'Отмена' }).click();
     }
-    await page.evaluate(() => (document.activeElement instanceof HTMLElement ? document.activeElement.blur() : undefined));
+    await page.evaluate(blurActive);
     await page.keyboard.press('c');
     await expect(page.getByTestId('pick-hint')).toBeVisible({ timeout: 3000 });
   }).toPass({ timeout: 20_000 });

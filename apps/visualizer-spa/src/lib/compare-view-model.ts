@@ -115,6 +115,68 @@ function nodeSections(left: AppMapDocument, right: AppMapDocument, d: ReturnType
   ];
 }
 
+/** Обе версии карты. */
+type Sides = { readonly left: AppMapDocument; readonly right: AppMapDocument };
+
+type Diff = ReturnType<typeof diffDocuments>;
+
+/** Индекс сущностей версии по id. */
+function indexBy<T extends { readonly id: string }>(docs: Sides, pick: (d: AppMapDocument) => readonly T[]): Readonly<Record<'left' | 'right', ReadonlyMap<string, T>>> {
+  return { left: new Map(pick(docs.left).map((x) => [x.id, x])), right: new Map(pick(docs.right).map((x) => [x.id, x])) };
+}
+
+/** Название ноды версии (нет ноды — id, нет конца — прочерк). */
+function nodeTitle(doc: AppMapDocument, id: string | null): string {
+  return id === null ? '—' : (doc.nodes.find((n) => n.id === id)?.title ?? id);
+}
+
+function routeSection(docs: Sides, d: Diff): CompareSection {
+  const byId = indexBy(docs, (x) => x.code?.routes ?? []);
+  return {
+    key: 'routes',
+    title: 'Роуты',
+    items: rows(
+      { ...d.routes, changed: d.routes.changed.map((c) => ({ id: c.id, detail: fieldWords(c) })) },
+      (side, id) => byId[side].get(id),
+      (r) => ({ label: `${r.method} ${r.path}`, target: { kind: 'route', routeId: r.id } }),
+    ),
+  };
+}
+
+/** Изменённые колонки таблицы: `+новая · −старая · ~другая`. */
+function columnWords(c: Diff['tables']['changed'][number]): string {
+  return [...c.columns.added.map((x) => `+${x}`), ...c.columns.removed.map((x) => `−${x}`), ...c.columns.changed.map((x) => `~${x}`)].join(' · ');
+}
+
+function tableSection(docs: Sides, d: Diff): CompareSection {
+  const byId = indexBy(docs, (x) => x.code?.tables ?? []);
+  return {
+    key: 'tables',
+    title: 'Таблицы',
+    items: rows(
+      { ...d.tables, changed: d.tables.changed.map((c) => ({ id: c.id, detail: columnWords(c) })) },
+      (side, id) => byId[side].get(id),
+      (t) => ({ label: t.name, target: { kind: 'table', table: t.exportName } }),
+    ),
+  };
+}
+
+function edgeSection(docs: Sides, d: Diff): CompareSection {
+  const byId = indexBy(docs, (x) => x.edges);
+  return {
+    key: 'edges',
+    title: 'Связи',
+    items: rows(
+      { ...d.edges, changed: [] },
+      (side, id) => {
+        const e = byId[side].get(id);
+        return e === undefined ? undefined : { e, side };
+      },
+      ({ e, side }) => ({ label: `${nodeTitle(docs[side], e.from)} → ${nodeTitle(docs[side], e.to)}`, detail: e.kind }),
+    ),
+  };
+}
+
 /**
  * Сравнение двух версий карты.
  *
@@ -125,53 +187,12 @@ function nodeSections(left: AppMapDocument, right: AppMapDocument, d: ReturnType
 export function compareMaps(left: AppMapDocument, right: AppMapDocument): MapComparison {
   const d = diffDocuments(left, right);
   const docs = { left, right };
-  const routes = (side: 'left' | 'right') => new Map((docs[side].code?.routes ?? []).map((r) => [r.id, r]));
-  const tables = (side: 'left' | 'right') => new Map((docs[side].code?.tables ?? []).map((t) => [t.id, t]));
-  const edges = (side: 'left' | 'right') => new Map(docs[side].edges.map((e) => [e.id, e]));
-  const title = (side: 'left' | 'right', id: string | null): string =>
-    id === null ? '—' : (docs[side].nodes.find((n) => n.id === id)?.title ?? id);
-  const routeMap = { left: routes('left'), right: routes('right') };
-  const tableMap = { left: tables('left'), right: tables('right') };
-  const edgeMap = { left: edges('left'), right: edges('right') };
   const [screens, nodes] = nodeSections(left, right, d);
   const sections: CompareSection[] = [
     ...(screens === undefined ? [] : [screens]),
-    {
-      key: 'routes',
-      title: 'Роуты',
-      items: rows(
-        { ...d.routes, changed: d.routes.changed.map((c) => ({ id: c.id, detail: fieldWords(c) })) },
-        (side, id) => routeMap[side].get(id),
-        (r) => ({ label: `${r.method} ${r.path}`, target: { kind: 'route', routeId: r.id } }),
-      ),
-    },
-    {
-      key: 'tables',
-      title: 'Таблицы',
-      items: rows(
-        {
-          ...d.tables,
-          changed: d.tables.changed.map((c) => ({
-            id: c.id,
-            detail: [...c.columns.added.map((x) => `+${x}`), ...c.columns.removed.map((x) => `−${x}`), ...c.columns.changed.map((x) => `~${x}`)].join(' · '),
-          })),
-        },
-        (side, id) => tableMap[side].get(id),
-        (t) => ({ label: t.name, target: { kind: 'table', table: t.exportName } }),
-      ),
-    },
-    {
-      key: 'edges',
-      title: 'Связи',
-      items: rows(
-        { ...d.edges, changed: [] },
-        (side, id) => {
-          const e = edgeMap[side].get(id);
-          return e === undefined ? undefined : { e, side };
-        },
-        ({ e, side }) => ({ label: `${title(side, e.from)} → ${title(side, e.to)}`, detail: e.kind }),
-      ),
-    },
+    routeSection(docs, d),
+    tableSection(docs, d),
+    edgeSection(docs, d),
     ...(nodes === undefined ? [] : [nodes]),
   ];
   return { total: diffChangeCount(d), sections };

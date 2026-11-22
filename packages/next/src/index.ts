@@ -80,6 +80,9 @@ function isNextRewriteRuleArray(
   return true;
 }
 
+/** Фазы rewrites Next: каждая необязательна, но если есть — массив правил. */
+const REWRITE_PHASES = ['beforeFiles', 'afterFiles', 'fallback'];
+
 /**
  * Сужает unknown rewrites к фазовой форме Next.
  */
@@ -87,22 +90,10 @@ function isNextRewritePhases(value: unknown): value is NextRewritePhases {
   if (value === null || typeof value !== 'object' || Array.isArray(value)) {
     return false;
   }
-  if ('beforeFiles' in value && value.beforeFiles !== undefined) {
-    if (!isNextRewriteRuleArray(value.beforeFiles)) {
-      return false;
-    }
-  }
-  if ('afterFiles' in value && value.afterFiles !== undefined) {
-    if (!isNextRewriteRuleArray(value.afterFiles)) {
-      return false;
-    }
-  }
-  if ('fallback' in value && value.fallback !== undefined) {
-    if (!isNextRewriteRuleArray(value.fallback)) {
-      return false;
-    }
-  }
-  return true;
+  return REWRITE_PHASES.every((phase) => {
+    const rules: unknown = Reflect.get(value, phase);
+    return rules === undefined || isNextRewriteRuleArray(rules);
+  });
 }
 
 /**
@@ -196,17 +187,33 @@ async function resolveUserRewrites(
   return null;
 }
 
+/** Опции с умолчаниями: включено вне production. */
+function resolveOptions(options: LiveAppMapNextOptions) {
+  return {
+    enabled: options.enabled ?? (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production'),
+    allowProduction: options.allowProduction ?? false,
+    routePrefix: options.routePrefix ?? DEFAULT_ROUTE_PREFIX,
+    sidecarBaseUrl: options.sidecarBaseUrl ?? DEFAULT_SIDECAR_BASE_URL,
+    allowIdentityRewrite: options.allowIdentityRewrite ?? false,
+  };
+}
+
+/** Правило карты — первым: перед массивом правил пользователя или в начало beforeFiles. */
+function withExtraRewrites(extra: readonly NextRewriteRule[], userRewrites: unknown): NextRewritesResult {
+  if (userRewrites !== null && isNextRewriteRuleArray(userRewrites)) {
+    return [...extra, ...userRewrites];
+  }
+  if (userRewrites !== null && isNextRewritePhases(userRewrites)) {
+    return { ...userRewrites, beforeFiles: [...extra, ...(userRewrites.beforeFiles ?? [])] };
+  }
+  return extra;
+}
+
 /**
  * Оборачивает next.config — dev rewrite `/__live-app-map/*` → sidecar visualizer.
  */
 export function withLiveAppMap(options: LiveAppMapNextOptions = {}) {
-  const enabled =
-    options.enabled ??
-    (typeof process !== 'undefined' && process.env.NODE_ENV !== 'production');
-  const allowProduction = options.allowProduction ?? false;
-  const routePrefix = options.routePrefix ?? DEFAULT_ROUTE_PREFIX;
-  const sidecarBaseUrl = options.sidecarBaseUrl ?? DEFAULT_SIDECAR_BASE_URL;
-  const allowIdentityRewrite = options.allowIdentityRewrite ?? false;
+  const { enabled, allowProduction, routePrefix, sidecarBaseUrl, allowIdentityRewrite } = resolveOptions(options);
 
   return function wrap<T extends Record<string, unknown>>(
     nextConfig: T,
@@ -222,21 +229,7 @@ export function withLiveAppMap(options: LiveAppMapNextOptions = {}) {
     );
     const extra: readonly NextRewriteRule[] = [extraRule];
 
-    const rewrites = async (): Promise<NextRewritesResult> => {
-      const rawRewrites = nextConfig['rewrites'];
-      const userRewrites = await resolveUserRewrites(rawRewrites);
-
-      if (userRewrites !== null && isNextRewriteRuleArray(userRewrites)) {
-        return [...extra, ...userRewrites];
-      }
-      if (userRewrites !== null && isNextRewritePhases(userRewrites)) {
-        return {
-          ...userRewrites,
-          beforeFiles: [...extra, ...(userRewrites.beforeFiles ?? [])],
-        };
-      }
-      return extra;
-    };
+    const rewrites = async (): Promise<NextRewritesResult> => withExtraRewrites(extra, await resolveUserRewrites(nextConfig['rewrites']));
 
     const prevEnv = readEnvRecord(nextConfig['env']);
     const mapEnabled = enabled || allowProduction;

@@ -65,6 +65,34 @@ function returnedObjects(body: ts.Node): ts.ObjectLiteralExpression[] {
  * @param files - исходники проекта
  * @returns интерфейс → метод → тела
  */
+/** Реализации в узле: фабрика с типом-интерфейсом результата или класс с `implements`. */
+function nodeMethods(node: ts.Node): [string, string, ts.Node][] {
+  if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
+    return factoryMethods(node.type, node.body);
+  }
+  return ts.isClassDeclaration(node) ? classMethods(node) : [];
+}
+
+/** Методы объектов, которые возвращает фабрика `(): Repo => ({ … })`. */
+function factoryMethods(type: ts.TypeNode | undefined, body: ts.Node | undefined): [string, string, ts.Node][] {
+  const iface = typeName(type);
+  if (iface === undefined || body === undefined) {
+    return [];
+  }
+  return returnedObjects(body).flatMap((obj) => [...objectMethods(obj)].map(([m, b]): [string, string, ts.Node] => [iface, m, b]));
+}
+
+/** Методы класса с телом для каждого интерфейса из `implements`. */
+function classMethods(node: ts.ClassDeclaration): [string, string, ts.Node][] {
+  const ifaces = (node.heritageClauses ?? [])
+    .filter((h) => h.token === ts.SyntaxKind.ImplementsKeyword)
+    .flatMap((h) => h.types.map((t) => t.expression.getText()));
+  return node.members.filter(ts.isMethodDeclaration).flatMap((member): [string, string, ts.Node][] => {
+    const body = member.body;
+    return body === undefined ? [] : ifaces.map((iface): [string, string, ts.Node] => [iface, member.name.getText(), body]);
+  });
+}
+
 export function indexImplementations(files: readonly ts.SourceFile[]): ImplementationIndex {
   const index = new Map<string, Map<string, ts.Node[]>>();
   const add = (iface: string, method: string, body: ts.Node): void => {
@@ -72,32 +100,8 @@ export function indexImplementations(files: readonly ts.SourceFile[]): Implement
     methods.set(method, [...(methods.get(method) ?? []), body]);
     index.set(iface, methods);
   };
-  const addFactory = (type: ts.TypeNode | undefined, body: ts.Node | undefined): void => {
-    const iface = typeName(type);
-    if (iface === undefined || body === undefined) {
-      return;
-    }
-    for (const obj of returnedObjects(body)) {
-      for (const [m, b] of objectMethods(obj)) {
-        add(iface, m, b);
-      }
-    }
-  };
   const visit = (node: ts.Node): void => {
-    if (ts.isFunctionDeclaration(node) || ts.isArrowFunction(node) || ts.isFunctionExpression(node)) {
-      addFactory(node.type, node.body);
-    } else if (ts.isClassDeclaration(node)) {
-      const ifaces = (node.heritageClauses ?? [])
-        .filter((h) => h.token === ts.SyntaxKind.ImplementsKeyword)
-        .flatMap((h) => h.types.map((t) => t.expression.getText()));
-      for (const member of node.members) {
-        if (ts.isMethodDeclaration(member) && member.body !== undefined) {
-          for (const iface of ifaces) {
-            add(iface, member.name.getText(), member.body);
-          }
-        }
-      }
-    }
+    nodeMethods(node).forEach(([iface, m, b]) => add(iface, m, b));
     ts.forEachChild(node, visit);
   };
   for (const sf of files) {

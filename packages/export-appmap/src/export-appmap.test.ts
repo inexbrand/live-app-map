@@ -135,3 +135,45 @@ describe('exportAppMapZip ↔ parseAppMapZip', () => {
     expect(parsed.document.edges[0]?.to).toBe('settings');
   });
 });
+
+describe('parseAppMapZip: manifest, снимки и liveappmap', () => {
+  test('без manifest — предупреждение; снимок экрана берётся из screens/<slug>.png, иначе из capture', async () => {
+    const zip = new JSZip();
+    zip.file(
+      'map.json',
+      JSON.stringify({
+        nodes: [
+          { id: 'home', slug: 'home', title: 'Home', urlPath: '/' },
+          { id: 'feed', title: 'Feed', urlPath: '/feed', capture: { screenshot: 'shots/feed.png' } },
+          { slug: 'about', urlPath: '/about', capture: { screenshot: '' } },
+        ],
+      }),
+    );
+    zip.file('screens/home.png', new Uint8Array([1, 2, 3]));
+    zip.folder('screens/sub');
+    const result = await parseAppMapZip(await zip.generateAsync({ type: 'uint8array' }));
+    expect(result.ok).toBe(true);
+    if (!result.ok) {
+      throw new Error('expected ok');
+    }
+    expect(result.warnings).toEqual(['MANIFEST_MISSING: manifest.json отсутствует']);
+    expect([...result.screens.keys()]).toEqual(['home.png']);
+    expect(result.document.pages.map((p) => [p.id, p.title, p.screenshot])).toEqual([
+      ['home', 'Home', 'screens/home.png'],
+      ['feed', 'Feed', 'shots/feed.png'],
+      ['about', 'about', null],
+    ]);
+  });
+
+  test('map.json в формате liveappmap принимается как есть; ни то ни другое — INVALID_MAP', async () => {
+    const live = new JSZip();
+    live.file('map.json', JSON.stringify({ version: '1.0', pages: [{ id: 'a', title: 'A', path: '/a' }], edges: [] }));
+    live.file('manifest.json', JSON.stringify({ formatVersion: 2 }));
+    const ok = await parseAppMapZip(await live.generateAsync({ type: 'uint8array' }));
+    expect(ok.ok && ok.document.pages.map((p) => p.id)).toEqual(['a']);
+    const bad = new JSZip();
+    bad.file('map.json', JSON.stringify({ что: 'то' }));
+    const no = await parseAppMapZip(await bad.generateAsync({ type: 'uint8array' }));
+    expect(no.ok ? [] : no.errors).toEqual(['INVALID_MAP: map.json без nodes[] и не liveappmap']);
+  });
+});

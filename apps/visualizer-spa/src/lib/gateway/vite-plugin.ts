@@ -34,6 +34,35 @@ function previousGateway(): Stoppable | undefined {
   return typeof stop === 'function' ? { stop: (f) => Reflect.apply(stop, v, [f]) } : undefined;
 }
 
+type ViteServer = Parameters<NonNullable<Extract<Plugin['configureServer'], (...args: never[]) => unknown>>>[0];
+
+/** Шлюз на первом свободном порту из PORT_TRIES подряд; все заняты — undefined. */
+function startOnFreePort(wanted: number, store: SessionStore, log: (line: string) => void): ReturnType<typeof startGateway> | undefined {
+  for (let i = 0; i < PORT_TRIES; i++) {
+    try {
+      return startGateway({ port: wanted + i, store, log });
+    } catch {
+      // порт занят — следующий
+    }
+  }
+  return undefined;
+}
+
+/** REST профилей и снимков рядом с шлюзом; закрытие dev-сервера закрывает и их. */
+function mountGateway(server: ViteServer, gateway: ReturnType<typeof startGateway>, store: SessionStore, sessionsDir: string, wanted: number): void {
+  Reflect.set(globalThis, GLOBAL_KEY, gateway);
+  server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
+  const port = gateway.port ?? wanted;
+  // Снимки рядом с профилями, тоже вне git: на них могут быть данные под входом.
+  const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: () => chromium.launch() });
+  server.middlewares.use(createSessionsMiddleware(store, port));
+  server.middlewares.use(createSnapshotMiddleware(snapshots, port));
+  server.httpServer?.on('close', () => {
+    void gateway.stop(true);
+    void snapshots.close();
+  });
+}
+
 /**
  * Плагин шлюза.
  */
@@ -45,30 +74,12 @@ export function lamGatewayPlugin(): Plugin {
       const sessionsDir = resolveSessionsDir(resolveLamDir(process.cwd()));
       const store = new SessionStore(sessionsDir);
       const wanted = Number(process.env['LAM_GATEWAY_PORT'] ?? DEFAULT_GATEWAY_PORT);
-      let started: ReturnType<typeof startGateway> | undefined;
-      for (let i = 0; i < PORT_TRIES && started === undefined; i++) {
-        try {
-          started = startGateway({ port: wanted + i, store, log: (l) => server.config.logger.warn(l) });
-        } catch {
-          // порт занят — следующий
-        }
-      }
-      if (started === undefined) {
+      const gateway = startOnFreePort(wanted, store, (l) => server.config.logger.warn(l));
+      if (gateway === undefined) {
         server.config.logger.error(`[lam-gateway] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: живые экраны пойдут напрямую`);
         return;
       }
-      const gateway = started;
-      Reflect.set(globalThis, GLOBAL_KEY, gateway);
-      server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
-      const port = gateway.port ?? wanted;
-      // Снимки рядом с профилями, тоже вне git: на них могут быть данные под входом.
-      const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: () => chromium.launch() });
-      server.middlewares.use(createSessionsMiddleware(store, port));
-      server.middlewares.use(createSnapshotMiddleware(snapshots, port));
-      server.httpServer?.on('close', () => {
-        void gateway.stop(true);
-        void snapshots.close();
-      });
+      mountGateway(server, gateway, store, sessionsDir, wanted);
     },
   };
 }

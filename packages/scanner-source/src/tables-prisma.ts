@@ -3,6 +3,7 @@
  */
 import type { DbColumn, DbReference, SourceLocation } from '@live-app-map/schema';
 import type { FoundTable } from './tables-drizzle';
+import { optionalField } from './optional-field';
 
 /** Блок `model` или `enum` схемы. */
 type Block = {
@@ -24,31 +25,37 @@ type Block = {
 function splitBlocks(text: string, file: string): Block[] {
   const out: Block[] = [];
   let docLines: string[] = [];
-  let current: { kind: 'model' | 'enum'; name: string; location: SourceLocation; doc: string; lines: { text: string; doc: string }[] } | undefined;
+  let current: OpenBlock | undefined;
   text.split(/\r?\n/).forEach((raw, index) => {
     const line = raw.trim();
     if (line.startsWith('///')) {
       docLines.push(line.replace(/^\/\/\/\s?/, ''));
       return;
     }
+    const doc = docLines.join('\n');
+    docLines = [];
     if (current === undefined) {
-      const head = /^(model|enum)\s+(\w+)\s*\{/.exec(line);
-      if (head?.[1] !== undefined && head[2] !== undefined) {
-        const kind = head[1] === 'model' ? 'model' : 'enum';
-        current = { kind, name: head[2], location: { file, line: index + 1 }, doc: docLines.join('\n'), lines: [] };
-      }
-      docLines = [];
-      return;
-    }
-    if (line.startsWith('}')) {
+      current = blockHead(line, { file, line: index + 1 }, doc);
+    } else if (line.startsWith('}')) {
       out.push(current);
       current = undefined;
     } else if (line !== '' && !line.startsWith('//')) {
-      current.lines.push({ text: line, doc: docLines.join('\n') });
+      current.lines.push({ text: line, doc });
     }
-    docLines = [];
   });
   return out;
+}
+
+/** Блок, тело которого ещё читается. */
+type OpenBlock = Block & { readonly lines: { text: string; doc: string }[] };
+
+/** Начало блока `model X {` / `enum X {`; иначе undefined. */
+function blockHead(line: string, location: SourceLocation, doc: string): OpenBlock | undefined {
+  const head = /^(model|enum)\s+(\w+)\s*\{/.exec(line);
+  if (head?.[1] === undefined || head[2] === undefined) {
+    return undefined;
+  }
+  return { kind: head[1] === 'model' ? 'model' : 'enum', name: head[2], location, doc, lines: [] };
 }
 
 /** Аргумент атрибута `@name(...)` с учётом вложенных скобок. */
@@ -78,6 +85,72 @@ function listArg(args: string, key: string): string[] {
 /** Поле-связь: на какие колонки этой модели и цели оно указывает. */
 type Relation = { readonly fields: string[]; readonly target: string; readonly references: string[]; readonly onDelete?: string };
 
+/** Поле модели: `name Type[]? @attrs`. */
+type Field = { readonly name: string; readonly base: string; readonly list: boolean; readonly optional: boolean; readonly rest: string; readonly doc: string };
+
+/** Строка тела модели: `@@map`, `@@id`, поле; прочее (`@@index` …) — undefined. */
+type ModelLine = { readonly kind: 'map'; readonly table: string } | { readonly kind: 'id'; readonly fields: readonly string[] } | ({ readonly kind: 'field' } & Field);
+
+function modelLine(text: string, doc: string): ModelLine | undefined {
+  const mapTable = /^@@map\(\s*"([^"]+)"\s*\)/.exec(text)?.[1];
+  if (mapTable !== undefined) {
+    return { kind: 'map', table: mapTable };
+  }
+  const id = /^@@id\(\s*\[([^\]]*)\]/.exec(text)?.[1];
+  if (id !== undefined) {
+    return { kind: 'id', fields: id.split(',').map((s) => s.trim()) };
+  }
+  const field = /^(\w+)\s+(\w+)(\[\])?(\?)?(.*)$/.exec(text);
+  if (field?.[1] === undefined || field[2] === undefined) {
+    return undefined;
+  }
+  return { kind: 'field', name: field[1], base: field[2], list: field[3] !== undefined, optional: field[4] !== undefined, rest: field[5] ?? '', doc };
+}
+
+/** Поле-связь с `@relation(fields: [...])`; без fields — undefined. */
+function relationOf(f: Field): Relation | undefined {
+  const rel = attrArg(f.rest, 'relation');
+  const fields = rel === undefined ? [] : listArg(rel, 'fields');
+  if (rel === undefined || fields.length === 0) {
+    return undefined;
+  }
+  const onDelete = /onDelete\s*:\s*(\w+)/.exec(rel)?.[1];
+  return { fields, target: f.base, references: listArg(rel, 'references'), ...(onDelete === undefined ? {} : { onDelete }) };
+}
+
+/** Ссылка колонки по первой связи, где она в fields. */
+function referenceOf(name: string, relations: readonly Relation[]): DbReference | undefined {
+  const rel = relations.find((r) => r.fields.includes(name));
+  const column = rel?.references[rel.fields.indexOf(name)];
+  return rel === undefined || column === undefined ? undefined : { table: rel.target, column, ...(rel.onDelete === undefined ? {} : { onDelete: rel.onDelete }) };
+}
+
+/** `{ key: true }` при условии, иначе `{}`. */
+function flagField<K extends string>(key: K, on: boolean): Partial<Record<K, true>> {
+  return optionalField(key, on ? true : undefined);
+}
+
+/** Что нужно колонке от модели: связи, составной ключ, enum. */
+type ModelKeys = { readonly relations: readonly Relation[]; readonly blockPk: ReadonlySet<string>; readonly enums: ReadonlyMap<string, string[]> };
+
+/** Колонка скалярного поля (порядок ключей: составной ключ — после default). */
+function columnOf(f: Field, keys: ModelKeys): DbColumn {
+  const ownPk = /@id\b/.test(f.rest);
+  return {
+    name: f.name,
+    ...optionalField('sqlName', /@map\(\s*"([^"]+)"\s*\)/.exec(f.rest)?.[1]),
+    type: f.list ? `${f.base}[]` : f.base,
+    ...flagField('primaryKey', ownPk),
+    ...flagField('notNull', !f.optional),
+    ...flagField('unique', /@unique\b/.test(f.rest)),
+    ...optionalField('default', attrArg(f.rest, 'default')),
+    ...flagField('primaryKey', !ownPk && keys.blockPk.has(f.name)),
+    ...optionalField('references', referenceOf(f.name, keys.relations)),
+    ...optionalField('enumValues', keys.enums.get(f.base)),
+    ...optionalField('doc', f.doc === '' ? undefined : f.doc),
+  };
+}
+
 /**
  * Модель → таблица: скалярные поля становятся колонками, поля-связи — ссылками колонок.
  *
@@ -87,71 +160,18 @@ type Relation = { readonly fields: string[]; readonly target: string; readonly r
  * @returns таблица
  */
 function modelTable(block: Block, models: ReadonlySet<string>, enums: ReadonlyMap<string, string[]>): FoundTable {
-  let table = block.name;
-  const columns: DbColumn[] = [];
-  const relations: Relation[] = [];
-  const blockPk = new Set<string>();
-  for (const { text, doc } of block.lines) {
-    const mapTable = /^@@map\(\s*"([^"]+)"\s*\)/.exec(text);
-    if (mapTable?.[1] !== undefined) {
-      table = mapTable[1];
-      continue;
-    }
-    const id = /^@@id\(\s*\[([^\]]*)\]/.exec(text);
-    if (id?.[1] !== undefined) {
-      id[1].split(',').forEach((s) => blockPk.add(s.trim()));
-      continue;
-    }
-    const field = /^(\w+)\s+(\w+)(\[\])?(\?)?(.*)$/.exec(text);
-    if (field?.[1] === undefined || field[2] === undefined) {
-      continue;
-    }
-    const [, name, base, list, optional, rest = ''] = field;
-    if (models.has(base)) {
-      const rel = attrArg(rest, 'relation');
-      const fields = rel === undefined ? [] : listArg(rel, 'fields');
-      if (rel !== undefined && fields.length > 0) {
-        const onDelete = /onDelete\s*:\s*(\w+)/.exec(rel)?.[1];
-        relations.push({ fields, target: base, references: listArg(rel, 'references'), ...(onDelete === undefined ? {} : { onDelete }) });
-      }
-      continue;
-    }
-    const sqlName = /@map\(\s*"([^"]+)"\s*\)/.exec(rest)?.[1];
-    const def = attrArg(rest, 'default');
-    const values = enums.get(base);
-    columns.push({
-      name,
-      ...(sqlName === undefined ? {} : { sqlName }),
-      type: list === undefined ? base : `${base}[]`,
-      ...(/@id\b/.test(rest) ? { primaryKey: true } : {}),
-      ...(optional === undefined ? { notNull: true } : {}),
-      ...(/@unique\b/.test(rest) ? { unique: true } : {}),
-      ...(def === undefined ? {} : { default: def }),
-      ...(values === undefined ? {} : { enumValues: values }),
-      ...(doc === '' ? {} : { doc }),
-    });
-  }
-  const withKeys = columns.map((c) => {
-    const rel = relations.find((r) => r.fields.includes(c.name));
-    const column = rel?.references[rel.fields.indexOf(c.name)];
-    const references: DbReference | undefined = rel === undefined || column === undefined
-      ? undefined
-      : { table: rel.target, column, ...(rel.onDelete === undefined ? {} : { onDelete: rel.onDelete }) };
-    const { doc, enumValues, ...head } = c;
-    return {
-      ...head,
-      ...(blockPk.has(c.name) ? { primaryKey: true } : {}),
-      ...(references === undefined ? {} : { references }),
-      ...(enumValues === undefined ? {} : { enumValues }),
-      ...(doc === undefined ? {} : { doc }),
-    };
-  });
+  const lines = block.lines.map((l) => modelLine(l.text, l.doc));
+  const table = lines.reduce((t, l) => (l?.kind === 'map' ? l.table : t), block.name);
+  const blockPk = new Set(lines.flatMap((l) => (l?.kind === 'id' ? l.fields : [])));
+  const fields = lines.filter((l): l is ModelLine & { readonly kind: 'field' } => l?.kind === 'field');
+  const relations = fields.filter((f) => models.has(f.base)).flatMap((f) => relationOf(f) ?? []);
+  const keys: ModelKeys = { relations, blockPk, enums };
   return {
     orm: 'prisma',
     name: table,
     exportName: block.name,
     location: block.location,
-    columns: withKeys,
+    columns: fields.filter((f) => !models.has(f.base)).map((f) => columnOf(f, keys)),
     ...(block.doc === '' ? {} : { doc: block.doc }),
   };
 }

@@ -67,43 +67,58 @@ function routeShape(ctx: SourceContext, n: ts.Node): RouteShape | undefined {
   if (!ts.isCallExpression(n) || !ts.isIdentifier(n.expression)) {
     return undefined;
   }
-  const decl = resolvedSymbol(ctx.checker, n.expression)?.valueDeclaration;
-  const fn = decl === undefined ? undefined : functionOfDeclaration(decl);
+  const fn = localFunction(ctx, n.expression);
   const obj = fn?.body === undefined ? undefined : returnedObject(fn.body);
-  if (fn === undefined || obj === undefined) {
-    return undefined;
-  }
-  const binds = new Map<string, string>();
+  return fn === undefined || obj === undefined ? undefined : { anchor: n, obj, binds: bindArgs(fn, n, new Map()) };
+}
+
+/** Функция проекта, на которую ссылается имя. */
+function localFunction(ctx: SourceContext, id: ts.Identifier): ReturnType<typeof functionOfDeclaration> {
+  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
+  return decl === undefined ? undefined : functionOfDeclaration(decl);
+}
+
+/** Параметры функции → строковые аргументы вызова (поверх внешних привязок). */
+function bindArgs(fn: NonNullable<ReturnType<typeof functionOfDeclaration>>, call: ts.CallExpression, binds: ReadonlyMap<string, string>): Map<string, string> {
+  const inner = new Map(binds);
   fn.parameters.forEach((p, i) => {
-    const a = n.arguments[i];
-    if (ts.isIdentifier(p.name) && a !== undefined && ts.isStringLiteralLike(a)) {
-      binds.set(p.name.text, a.text);
+    const v = strOf(call.arguments[i], binds);
+    if (ts.isIdentifier(p.name) && v !== undefined) {
+      inner.set(p.name.text, v);
     }
   });
-  return { anchor: n, obj, binds };
+  return inner;
 }
 
 /** Путь объекта роута с учётом родителей (`children`); index-роут — путь родителя. */
 function fullPath(shape: RouteShape): string | undefined {
-  const own = propOf(shape.obj, 'path');
-  const isIndex = propOf(shape.obj, 'index')?.kind === ts.SyntaxKind.TrueKeyword;
-  if (own === undefined && !isIndex) {
-    return undefined;
-  }
-  const seg = own !== undefined ? strOf(own, shape.binds) : '';
+  const seg = ownSegment(shape);
   if (seg === undefined) {
     return undefined;
   }
+  const prefix = parentPrefix(shape.anchor);
+  return seg.startsWith('/') ? seg : joinPath(prefix === '' ? '/' : prefix, seg);
+}
+
+/** Свой сегмент: path (литерал или параметр фабрики), у index-роута — пусто; иначе undefined. */
+function ownSegment(shape: RouteShape): string | undefined {
+  const own = propOf(shape.obj, 'path');
+  if (own !== undefined) {
+    return strOf(own, shape.binds);
+  }
+  return propOf(shape.obj, 'index')?.kind === ts.SyntaxKind.TrueKeyword ? '' : undefined;
+}
+
+/** Префикс из path родительских объектов роута (`children`). */
+function parentPrefix(anchor: ts.Node): string {
   let prefix = '';
-  for (let n: ts.Node = shape.anchor.parent; !ts.isSourceFile(n); n = n.parent) {
-    if (ts.isObjectLiteralExpression(n)) {
-      const parent = propOf(n, 'path');
-      if (parent !== undefined && ts.isStringLiteralLike(parent)) {
-        prefix = joinPath(parent.text.startsWith('/') ? parent.text : `/${parent.text}`, prefix);
-      }
+  for (let n: ts.Node = anchor.parent; !ts.isSourceFile(n); n = n.parent) {
+    const parent = ts.isObjectLiteralExpression(n) ? propOf(n, 'path') : undefined;
+    if (parent !== undefined && ts.isStringLiteralLike(parent)) {
+      prefix = joinPath(parent.text.startsWith('/') ? parent.text : `/${parent.text}`, prefix);
     }
   }
-  return seg.startsWith('/') ? seg : joinPath(prefix === '' ? '/' : prefix, seg);
+  return prefix;
 }
 
 /**
@@ -127,45 +142,63 @@ function lazyModules(ctx: SourceContext, expr: ts.Expression, binds: ReadonlyMap
     return [];
   }
   const next = depth + 1;
-  if (ts.isParenthesizedExpression(expr) || ts.isAwaitExpression(expr) || ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr)) {
+  if (isWrapper(expr)) {
     return lazyModules(ctx, expr.expression, binds, next);
   }
   if (ts.isArrowFunction(expr) || ts.isFunctionExpression(expr)) {
     return bodyModules(ctx, expr.body, binds, next);
   }
   if (ts.isCallExpression(expr)) {
-    if (expr.expression.kind === ts.SyntaxKind.ImportKeyword) {
-      const decl = expr.arguments[0] === undefined ? undefined : ctx.checker.getSymbolAtLocation(expr.arguments[0])?.valueDeclaration;
-      return decl !== undefined && ts.isSourceFile(decl) ? [decl] : [];
-    }
-    if (ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'then') {
-      return lazyModules(ctx, expr.expression.expression, binds, next);
-    }
-    if (ts.isIdentifier(expr.expression)) {
-      const sym = resolvedSymbol(ctx.checker, expr.expression);
-      const fn = sym?.valueDeclaration === undefined ? undefined : functionOfDeclaration(sym.valueDeclaration);
-      if (fn?.body !== undefined) {
-        const inner = new Map(binds);
-        fn.parameters.forEach((p, i) => {
-          const a = expr.arguments[i];
-          const v = a === undefined ? undefined : ts.isStringLiteralLike(a) ? a.text : ts.isIdentifier(a) ? binds.get(a.text) : undefined;
-          if (ts.isIdentifier(p.name) && v !== undefined) {
-            inner.set(p.name.text, v);
-          }
-        });
-        return bodyModules(ctx, fn.body, inner, next);
-      }
-    }
-    return lazyModules(ctx, expr.expression, binds, next);
+    return callModules(ctx, expr, binds, next);
   }
-  if (ts.isElementAccessExpression(expr) || ts.isPropertyAccessExpression(expr)) {
-    const keyNode = ts.isPropertyAccessExpression(expr) ? expr.name : expr.argumentExpression;
-    const key = ts.isStringLiteralLike(keyNode) ? keyNode.text : ts.isIdentifier(keyNode) ? (ts.isPropertyAccessExpression(expr) ? keyNode.text : binds.get(keyNode.text)) : undefined;
-    const obj = objectLiteralOf(ctx, expr.expression);
-    const value = obj === undefined || key === undefined ? undefined : propOf(obj, key);
-    return value === undefined ? [] : lazyModules(ctx, value, binds, next);
+  return ts.isElementAccessExpression(expr) || ts.isPropertyAccessExpression(expr) ? accessModules(ctx, expr, binds, next) : [];
+}
+
+/** Обёртка выражения: скобки, await, as, satisfies. */
+function isWrapper(expr: ts.Expression): expr is ts.ParenthesizedExpression | ts.AwaitExpression | ts.AsExpression | ts.SatisfiesExpression {
+  return ts.isParenthesizedExpression(expr) || ts.isAwaitExpression(expr) || ts.isAsExpression(expr) || ts.isSatisfiesExpression(expr);
+}
+
+/** Модуль `import('./x')` (файл проекта). */
+function importedModule(ctx: SourceContext, expr: ts.CallExpression): ts.SourceFile[] {
+  const arg = expr.arguments[0];
+  const decl = arg === undefined ? undefined : ctx.checker.getSymbolAtLocation(arg)?.valueDeclaration;
+  return decl !== undefined && ts.isSourceFile(decl) ? [decl] : [];
+}
+
+/** `import('./x')`, `p.then(…)`, вызов локальной фабрики загрузчика, иначе вызываемое выражение. */
+function callModules(ctx: SourceContext, expr: ts.CallExpression, binds: ReadonlyMap<string, string>, next: number): ts.SourceFile[] {
+  if (expr.expression.kind === ts.SyntaxKind.ImportKeyword) {
+    return importedModule(ctx, expr);
   }
-  return [];
+  if (ts.isPropertyAccessExpression(expr.expression) && expr.expression.name.text === 'then') {
+    return lazyModules(ctx, expr.expression.expression, binds, next);
+  }
+  const fn = ts.isIdentifier(expr.expression) ? localFunction(ctx, expr.expression) : undefined;
+  if (fn?.body !== undefined) {
+    return bodyModules(ctx, fn.body, bindArgs(fn, expr, binds), next);
+  }
+  return lazyModules(ctx, expr.expression, binds, next);
+}
+
+/** Ключ доступа: `.key`, `['key']`, `[param]` фабрики. */
+function accessKey(expr: ts.ElementAccessExpression | ts.PropertyAccessExpression, binds: ReadonlyMap<string, string>): string | undefined {
+  const keyNode = ts.isPropertyAccessExpression(expr) ? expr.name : expr.argumentExpression;
+  if (ts.isStringLiteralLike(keyNode)) {
+    return keyNode.text;
+  }
+  if (!ts.isIdentifier(keyNode)) {
+    return undefined;
+  }
+  return ts.isPropertyAccessExpression(expr) ? keyNode.text : binds.get(keyNode.text);
+}
+
+/** `LOADERS[id]`, `LOADERS.feed`: значение карты загрузчиков. */
+function accessModules(ctx: SourceContext, expr: ts.ElementAccessExpression | ts.PropertyAccessExpression, binds: ReadonlyMap<string, string>, next: number): ts.SourceFile[] {
+  const key = accessKey(expr, binds);
+  const obj = objectLiteralOf(ctx, expr.expression);
+  const value = obj === undefined || key === undefined ? undefined : propOf(obj, key);
+  return value === undefined ? [] : lazyModules(ctx, value, binds, next);
 }
 
 /** Модули из тела функции: выражение стрелки или выражения `return`. */
@@ -189,18 +222,18 @@ function bodyModules(ctx: SourceContext, body: ts.Node, binds: ReadonlyMap<strin
 
 /** Объектный литерал, на который указывает выражение (константа-карта загрузчиков). */
 function objectLiteralOf(ctx: SourceContext, expr: ts.Expression): ts.ObjectLiteralExpression | undefined {
-  let e: ts.Expression = expr;
-  if (ts.isIdentifier(e)) {
-    const decl = resolvedSymbol(ctx.checker, e)?.valueDeclaration;
-    if (decl === undefined || !ts.isVariableDeclaration(decl) || decl.initializer === undefined) {
-      return undefined;
-    }
-    e = decl.initializer;
-  }
-  while (ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isParenthesizedExpression(e)) {
+  const init = ts.isIdentifier(expr) ? constInit(ctx, expr) : expr;
+  let e = init;
+  while (e !== undefined && (ts.isAsExpression(e) || ts.isSatisfiesExpression(e) || ts.isParenthesizedExpression(e))) {
     e = e.expression;
   }
-  return ts.isObjectLiteralExpression(e) ? e : undefined;
+  return e !== undefined && ts.isObjectLiteralExpression(e) ? e : undefined;
+}
+
+/** Инициализатор константы, на которую ссылается имя. */
+function constInit(ctx: SourceContext, id: ts.Identifier): ts.Expression | undefined {
+  const decl = resolvedSymbol(ctx.checker, id)?.valueDeclaration;
+  return decl !== undefined && ts.isVariableDeclaration(decl) ? decl.initializer : undefined;
 }
 
 /**

@@ -3,6 +3,21 @@
  */
 import { getExampleParam, type ExampleParamsConfig } from './example-params';
 
+/** Необязательный catch-all: нет значения или пустой массив — сегмента нет. */
+function optionalSegment(v: string | readonly string[] | undefined): string {
+  if (v === undefined) {
+    return '';
+  }
+  return Array.isArray(v) ? v.join('/') : String(v);
+}
+
+/** Двойные слэши — в один, хвостовой слэш убрать, пустой путь — «/». */
+function tidyPath(p: string): string {
+  const collapsed = p.replace(/\/{2,}/g, '/');
+  const trimmed = collapsed.length > 1 && collapsed.endsWith('/') ? collapsed.slice(0, -1) : collapsed;
+  return trimmed === '' ? '/' : trimmed;
+}
+
 /**
  * Подставляет example-params в path pattern (dynamic / catch-all / optional catch-all).
  */
@@ -14,53 +29,23 @@ export function materializePath(
   const missing: string[] = [];
   let result = pattern;
 
+  const param = (name: string) => getExampleParam(exampleParams, name, byRoute);
+  /** Нет значения: обязательный параметр — «example» и в missing. */
+  const required = (name: string, join: (v: readonly string[]) => string): string => {
+    const v = param(name);
+    if (v === undefined) {
+      missing.push(name);
+      return 'example';
+    }
+    return Array.isArray(v) ? join(v) : String(v);
+  };
   // optional catch-all [[...param]] — empty/undefined → no segment
-  result = result.replace(/\[\[\.\.\.([^\]]+)\]\]/g, (_m, name: string) => {
-    const v = getExampleParam(exampleParams, name, byRoute);
-    if (v === undefined) {
-      return '';
-    }
-    if (Array.isArray(v)) {
-      return v.length ? v.join('/') : '';
-    }
-    return String(v);
-  });
-
+  result = result.replace(/\[\[\.\.\.([^\]]+)\]\]/g, (_m, name: string) => optionalSegment(param(name)));
   // catch-all [...param]
-  result = result.replace(/\[\.\.\.([^\]]+)\]/g, (_m, name: string) => {
-    const v = getExampleParam(exampleParams, name, byRoute);
-    if (v === undefined) {
-      missing.push(name);
-      return 'example';
-    }
-    if (Array.isArray(v)) {
-      return v.join('/');
-    }
-    return String(v);
-  });
-
+  result = result.replace(/\[\.\.\.([^\]]+)\]/g, (_m, name: string) => required(name, (v) => v.join('/')));
   // dynamic [param]
-  result = result.replace(/\[([^\].]+)\]/g, (_m, name: string) => {
-    const v = getExampleParam(exampleParams, name, byRoute);
-    if (v === undefined) {
-      missing.push(name);
-      return 'example';
-    }
-    if (Array.isArray(v)) {
-      return v[0] ?? 'example';
-    }
-    return String(v);
-  });
-
-  // collapse double slashes and trailing
-  result = result.replace(/\/{2,}/g, '/');
-  if (result.length > 1 && result.endsWith('/')) {
-    result = result.slice(0, -1);
-  }
-  if (result === '') {
-    result = '/';
-  }
-  return { path: result, missing };
+  result = result.replace(/\[([^\].]+)\]/g, (_m, name: string) => required(name, (v) => v[0] ?? 'example'));
+  return { path: tidyPath(result), missing };
 }
 
 /**

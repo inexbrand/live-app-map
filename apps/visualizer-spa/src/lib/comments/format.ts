@@ -71,3 +71,11 @@ export function quoteText(text: string, max: number): string {
   const space = cut.lastIndexOf(' ');
   return `${(space > max / 2 ? cut.slice(0, space) : cut).trimEnd()}…`;
 }
+/**
+ * Место в исходнике: `файл:строка` (без строки — только файл).
+ *
+ * @param src - исходник компонента
+ */
+export function sourceRef(src: { readonly file: string; readonly line: number | null }): string {
+  return src.line === null ? src.file : `${src.file}:${src.line}`;
+}

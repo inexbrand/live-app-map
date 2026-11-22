@@ -33,34 +33,41 @@ function mark(parts: readonly Part[]): Marked | undefined {
   let text = '';
   const names: string[] = [];
   for (const [i, p] of parts.entries()) {
-    if (p.kind === 'lit') {
-      text += p.text;
-    } else if (p.kind === 'env' && i === 0) {
-      text += p.base ?? '';
-    } else if (p.kind === 'param') {
-      if (PATH_LIKE.test(p.name)) {
-        return undefined;
-      }
-      if (text === '') {
-        // `${origin}/api/…`: параметр-адрес перед литералом пути — это origin, путь задан здесь.
-        if (!startsWithSlash(parts[i + 1])) {
-          return undefined;
-        }
-        continue;
-      }
-      text += PARAM;
-      names.push(p.name);
-    } else if (text === '') {
-      // Неизвестное начало перед литералом '/…' — это origin (window.location.origin и т. п.).
-      if (!startsWithSlash(parts[i + 1])) {
-        return undefined;
-      }
-    } else {
-      text += DYN;
-      names.push(p.name);
+    const step = markStep(p, i === 0, text === '', parts[i + 1]);
+    if (step === undefined) {
+      return undefined;
     }
+    text += step.add;
+    names.push(...step.names);
   }
   return { text, names };
+}
+
+type MarkStep = { readonly add: string; readonly names: readonly string[] };
+
+/**
+ * Неизвестное начало перед литералом '/…' — это origin (`${origin}/api/…`,
+ * window.location.origin): пропускается; иначе путь не задан.
+ */
+function originStep(next: Part | undefined): MarkStep | undefined {
+  return startsWithSlash(next) ? { add: '', names: [] } : undefined;
+}
+
+/** Вклад части в размеченный текст: литерал, база env, параметр (PARAM), прочее (DYN). */
+function markStep(p: Part, first: boolean, empty: boolean, next: Part | undefined): MarkStep | undefined {
+  if (p.kind === 'lit') {
+    return { add: p.text, names: [] };
+  }
+  if (p.kind === 'env' && first) {
+    return { add: p.base ?? '', names: [] };
+  }
+  if (p.kind === 'param' && PATH_LIKE.test(p.name)) {
+    return undefined;
+  }
+  if (empty) {
+    return originStep(next);
+  }
+  return { add: p.kind === 'param' ? PARAM : DYN, names: [p.name] };
 }
 
 /** Имя сегмента-параметра без лишних символов. */
@@ -79,39 +86,48 @@ export function normalizeApiPath(parts: readonly Part[]): string | undefined {
   if (marked === undefined || EXTERNAL.test(marked.text)) {
     return undefined;
   }
-  // База и путь склеиваются через '/', поэтому '//' внутри — не protocol-relative URL.
-  let s = marked.text.replace(/^[a-z][\w+.-]*:\/\/[^/]*/i, '').replace(/\/{2,}/g, '/');
-  const cut = s.search(/[?#]/);
-  if (cut >= 0) {
-    s = s.slice(0, cut);
-  }
-  if (!s.startsWith('/')) {
+  const s = pathOnly(marked.text);
+  const out = s.startsWith('/') ? pathSegments(s, marked.names) : undefined;
+  if (out === undefined || ASSET.test(out[out.length - 1] ?? '')) {
     return undefined;
   }
+  return `/${out.join('/')}`;
+}
+
+/** Путь без схемы и хоста, без query и hash; '//' — в '/' (база и путь склеены через '/'). */
+function pathOnly(text: string): string {
+  const s = text.replace(/^[a-z][\w+.-]*:\/\/[^/]*/i, '').replace(/\/{2,}/g, '/');
+  const cut = s.search(/[?#]/);
+  return cut >= 0 ? s.slice(0, cut) : s;
+}
+
+/** Сегменты пути с именами параметров; параметр-адрес внутри сегмента — undefined. */
+function pathSegments(s: string, names: readonly string[]): string[] | undefined {
   let nameIndex = 0;
   const segs = s.split('/').filter((x) => x !== '');
   const out: string[] = [];
   for (const [i, seg] of segs.entries()) {
     const marks = [...seg].filter((ch) => ch === DYN || ch === PARAM).length;
-    const name = marked.names[nameIndex] ?? 'param';
+    const next = segmentOut(seg, marks, i === segs.length - 1, names[nameIndex] ?? 'param');
     nameIndex += marks;
-    if (marks === 0) {
-      out.push(seg);
-    } else if (seg === DYN || seg === PARAM) {
-      out.push(paramName(name));
-    } else if (seg.includes(PARAM)) {
+    if (next === undefined) {
       return undefined;
-    } else if (i === segs.length - 1 && !seg.startsWith(DYN)) {
-      // `entity${buildQuery()}` — хвост без '/', это query.
-      out.push(seg.slice(0, seg.indexOf(DYN)));
-    } else {
-      out.push(paramName(name));
     }
+    out.push(next);
   }
-  if (ASSET.test(out[out.length - 1] ?? '')) {
+  return out;
+}
+
+/** Сегмент результата: литерал, параметр, хвост-литерал перед query-подстановкой; PARAM внутри — undefined. */
+function segmentOut(seg: string, marks: number, isLast: boolean, name: string): string | undefined {
+  if (marks === 0) {
+    return seg;
+  }
+  if (seg.includes(PARAM) && seg !== PARAM) {
     return undefined;
   }
-  return `/${out.join('/')}`;
+  // `entity${buildQuery()}` — хвост без '/', это query.
+  return isLast && seg !== PARAM && !seg.startsWith(DYN) ? seg.slice(0, seg.indexOf(DYN)) : paramName(name);
 }
 
 /** Сегмент — параметр: `:id`, `:id?`, `{id}`. */

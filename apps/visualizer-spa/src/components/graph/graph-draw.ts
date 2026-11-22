@@ -106,6 +106,172 @@ function hollow(kind: GraphNodeKind): boolean {
   return kind === 'file' || kind === 'screen' || kind === 'table' || kind === 'service';
 }
 
+/** Узлы, которые рисуются основным цветом (остальные — приглушённым). */
+function isStrong(kind: GraphNodeKind): boolean {
+  return kind === 'epoch' || kind === 'note' || kind === 'guide' || kind === 'route';
+}
+
+/** Узел с координатами. */
+type Placed = SimNode & { x: number; y: number };
+
+function isPlaced(n: SimNode | undefined): n is Placed {
+  return n?.x !== undefined && n.y !== undefined;
+}
+
+/** Точка дальше поля от края кадра. */
+function outside(x: number, y: number, size: { readonly w: number; readonly h: number }, mx: number, my: number): boolean {
+  return x < -mx || y < -my || x > size.w + mx || y > size.h + my;
+}
+
+/** Перевод мировых координат в экранные. */
+type ToScreen = { readonly sx: (x: number) => number; readonly sy: (y: number) => number };
+
+function toScreen(cam: Camera): ToScreen {
+  return { sx: (x) => x * cam.k + cam.x, sy: (y) => y * cam.k + cam.y };
+}
+
+/** Радиус узла на экране с учётом масштаба. */
+function screenRadius(n: SimNode, cam: Camera): number {
+  return Math.max(2.5, n.r * Math.min(1.6, Math.max(0.55, cam.k)));
+}
+
+/** Конец ребра — узел. */
+function endNode(e: SimNode | string, byId: ReadonlyMap<string, SimNode>): SimNode | undefined {
+  return typeof e === 'string' ? byId.get(e) : e;
+}
+
+/** Ребро выделено: оба конца подсвечены и один из них выбран или под курсором. */
+function edgeLit(l: SimLink, focus: DrawFocus): boolean {
+  const a = endId(l.source);
+  const b = endId(l.target);
+  const lit = focus.lit;
+  return lit.size > 0 && lit.has(a) && lit.has(b) && [focus.selected, focus.hovered].some((id) => id === a || id === b);
+}
+
+function drawEdges(ctx: CanvasRenderingContext2D, nodes: readonly SimNode[], links: readonly SimLink[], t: ToScreen, focus: DrawFocus, pal: GraphPalette): void {
+  const dimming = focus.lit.size > 0;
+  const byId = new Map(nodes.map((n) => [n.id, n]));
+  ctx.lineWidth = 1;
+  for (const l of links) {
+    const a = endNode(l.source, byId);
+    const b = endNode(l.target, byId);
+    if (!isPlaced(a) || !isPlaced(b)) {
+      continue;
+    }
+    const on = edgeLit(l, focus);
+    ctx.globalAlpha = dimming && !on ? 0.12 : 1;
+    ctx.strokeStyle = on ? pal.edgeStrong : pal.edge;
+    ctx.setLineDash(l.kind === 'belongs' ? [3, 3] : []);
+    ctx.beginPath();
+    ctx.moveTo(t.sx(a.x), t.sy(a.y));
+    ctx.lineTo(t.sx(b.x), t.sy(b.y));
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+}
+
+/** Заливка или контур узла по типу. */
+function paintShape(ctx: CanvasRenderingContext2D, n: SimNode, pal: GraphPalette): void {
+  const color = isStrong(n.kind) ? pal.node : pal.nodeMuted;
+  if (hollow(n.kind)) {
+    ctx.fillStyle = pal.bg;
+    ctx.fill();
+    ctx.lineWidth = 1.5;
+    ctx.strokeStyle = color;
+    ctx.stroke();
+  } else {
+    ctx.fillStyle = color;
+    ctx.fill();
+  }
+}
+
+/** Кольца вокруг узла: эпоха не готова; узел выбран или найден. */
+function drawRings(ctx: CanvasRenderingContext2D, n: SimNode, x: number, y: number, r: number, focus: DrawFocus, pal: GraphPalette): void {
+  if (n.notReady && n.kind === 'epoch') {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = pal.attention;
+    shapePath(ctx, n, x, y, r + 3);
+    ctx.stroke();
+  }
+  if (n.id === focus.selected || focus.matches.has(n.id)) {
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = pal.match;
+    shapePath(ctx, n, x, y, r + (n.id === focus.selected ? 6 : 4));
+    ctx.stroke();
+  }
+}
+
+function drawNodes(ctx: CanvasRenderingContext2D, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette): void {
+  const t = toScreen(cam);
+  const dimming = focus.lit.size > 0;
+  for (const n of nodes.filter(isPlaced)) {
+    const x = t.sx(n.x);
+    const y = t.sy(n.y);
+    if (outside(x, y, size, 40, 40)) {
+      continue;
+    }
+    const r = screenRadius(n, cam);
+    ctx.globalAlpha = !dimming || focus.lit.has(n.id) ? 1 : 0.18;
+    shapePath(ctx, n, x, y, r);
+    paintShape(ctx, n, pal);
+    drawRings(ctx, n, x, y, r, focus, pal);
+  }
+}
+
+/** Узлу нужна подпись: все подписываются, он подсвечен или найден, крупный при среднем масштабе, или масштаб крупный. */
+function wantsLabel(n: SimNode, focus: DrawFocus, k: number, labelsAll: boolean): boolean {
+  const big = n.kind === 'epoch' || n.kind === 'note' || n.kind === 'guide';
+  return labelsAll || focus.lit.has(n.id) || focus.matches.has(n.id) || (big && k > 0.5) || k > 1.3;
+}
+
+/** Важность подписи: выбранная и наведённая, подсвеченные, найденные, крупные узлы. */
+function labelPriority(n: SimNode, focus: DrawFocus): number {
+  const pointed = n.id === focus.selected || n.id === focus.hovered;
+  return (pointed ? 1000 : 0) + (focus.lit.has(n.id) ? 500 : 0) + (focus.matches.has(n.id) ? 300 : 0) + n.r;
+}
+
+/** Текст подписи, обрезанный многоточием. */
+function labelText(label: string, labelsAll: boolean): string {
+  const max = labelsAll ? 26 : 34;
+  return label.length > max ? `${label.slice(0, max - 1)}…` : label;
+}
+
+/** Цвет подписи: выбранная и наведённая — ярче. */
+function labelColor(n: SimNode, focus: DrawFocus, pal: GraphPalette): string {
+  return n.id === focus.selected || n.id === focus.hovered ? pal.labelStrong : pal.label;
+}
+
+function drawLabels(ctx: CanvasRenderingContext2D, size: { readonly w: number; readonly h: number }, nodes: readonly SimNode[], cam: Camera, focus: DrawFocus, pal: GraphPalette, labelsAll: boolean): void {
+  const t = toScreen(cam);
+  const dimming = focus.lit.size > 0;
+  ctx.font = '12px "Medeo Sans", sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'top';
+  // Подпись, которая легла бы на уже поставленную, пропускается — текст не слипается.
+  const candidates = nodes.filter((n) => wantsLabel(n, focus, cam.k, labelsAll)).sort((a, b) => labelPriority(b, focus) - labelPriority(a, focus));
+  const placed = new LabelGrid();
+  for (const n of candidates.filter(isPlaced)) {
+    const x = t.sx(n.x);
+    const y = t.sy(n.y) + screenRadius(n, cam) + 6;
+    if (outside(x, y, size, 100, 40)) {
+      continue;
+    }
+    const text = labelText(n.label, labelsAll);
+    const w = ctx.measureText(text).width;
+    if (!placed.tryPlace({ x: x - w / 2 - 2, y: y - 1, w: w + 4, h: 16 })) {
+      continue;
+    }
+    ctx.globalAlpha = !dimming || focus.lit.has(n.id) ? 1 : 0.25;
+    // Обводка цветом фона: подпись читается поверх рёбер.
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 4;
+    ctx.strokeStyle = pal.bg;
+    ctx.strokeText(text, x, y);
+    ctx.fillStyle = labelColor(n, focus, pal);
+    ctx.fillText(text, x, y);
+  }
+}
+
 /**
  * Кадр графа.
  *
@@ -129,113 +295,17 @@ export function drawGraph(
   labelsAll: boolean,
 ): void {
   ctx.clearRect(0, 0, size.w, size.h);
-  const lit = focus.lit;
-  const dimming = lit.size > 0;
-  const sx = (x: number): number => x * cam.k + cam.x;
-  const sy = (y: number): number => y * cam.k + cam.y;
-  const byId = new Map(nodes.map((n) => [n.id, n]));
-
-  ctx.lineWidth = 1;
-  for (const l of links) {
-    const a = typeof l.source === 'string' ? byId.get(l.source) : l.source;
-    const b = typeof l.target === 'string' ? byId.get(l.target) : l.target;
-    if (a?.x === undefined || a.y === undefined || b?.x === undefined || b.y === undefined) {
-      continue;
-    }
-    const on = dimming && lit.has(endId(l.source)) && lit.has(endId(l.target)) && (focus.selected === endId(l.source) || focus.selected === endId(l.target) || focus.hovered === endId(l.source) || focus.hovered === endId(l.target));
-    ctx.globalAlpha = dimming && !on ? 0.12 : 1;
-    ctx.strokeStyle = on ? pal.edgeStrong : pal.edge;
-    ctx.setLineDash(l.kind === 'belongs' ? [3, 3] : []);
-    ctx.beginPath();
-    ctx.moveTo(sx(a.x), sy(a.y));
-    ctx.lineTo(sx(b.x), sy(b.y));
-    ctx.stroke();
-  }
-  ctx.setLineDash([]);
-
-  const radius = (n: SimNode): number => Math.max(2.5, n.r * Math.min(1.6, Math.max(0.55, cam.k)));
-  for (const n of nodes) {
-    if (n.x === undefined || n.y === undefined) {
-      continue;
-    }
-    const x = sx(n.x);
-    const y = sy(n.y);
-    if (x < -40 || y < -40 || x > size.w + 40 || y > size.h + 40) {
-      continue;
-    }
-    const r = radius(n);
-    const on = !dimming || lit.has(n.id);
-    ctx.globalAlpha = on ? 1 : 0.18;
-    shapePath(ctx, n, x, y, r);
-    const strong = n.kind === 'epoch' || n.kind === 'note' || n.kind === 'guide' || n.kind === 'route';
-    if (hollow(n.kind)) {
-      ctx.fillStyle = pal.bg;
-      ctx.fill();
-      ctx.lineWidth = 1.5;
-      ctx.strokeStyle = strong ? pal.node : pal.nodeMuted;
-      ctx.stroke();
-    } else {
-      ctx.fillStyle = strong ? pal.node : pal.nodeMuted;
-      ctx.fill();
-    }
-    if (n.notReady && n.kind === 'epoch') {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = pal.attention;
-      shapePath(ctx, n, x, y, r + 3);
-      ctx.stroke();
-    }
-    if (n.id === focus.selected || focus.matches.has(n.id)) {
-      ctx.lineWidth = 2;
-      ctx.strokeStyle = pal.match;
-      shapePath(ctx, n, x, y, r + (n.id === focus.selected ? 6 : 4));
-      ctx.stroke();
-    }
-  }
-
-  ctx.font = '12px "Medeo Sans", sans-serif';
-  ctx.textAlign = 'center';
-  ctx.textBaseline = 'top';
-  // Подписи по важности: выбранная и наведённая, подсвеченные, найденные, крупные узлы.
-  // Подпись, которая легла бы на уже поставленную, пропускается — текст не слипается.
-  const priority = (n: SimNode): number =>
-    (n.id === focus.selected || n.id === focus.hovered ? 1000 : 0) + (lit.has(n.id) ? 500 : 0) + (focus.matches.has(n.id) ? 300 : 0) + n.r;
-  const candidates = nodes
-    .filter((n) => {
-      const big = n.kind === 'epoch' || n.kind === 'note' || n.kind === 'guide';
-      return labelsAll || lit.has(n.id) || focus.matches.has(n.id) || (big && cam.k > 0.5) || cam.k > 1.3;
-    })
-    .sort((a, b) => priority(b) - priority(a));
-  const placed = new LabelGrid();
-  for (const n of candidates) {
-    if (n.x === undefined || n.y === undefined) {
-      continue;
-    }
-    const x = sx(n.x);
-    const y = sy(n.y) + radius(n) + 6;
-    if (x < -100 || y < -40 || x > size.w + 100 || y > size.h + 40) {
-      continue;
-    }
-    const max = labelsAll ? 26 : 34;
-    const text = n.label.length > max ? `${n.label.slice(0, max - 1)}…` : n.label;
-    const w = ctx.measureText(text).width;
-    const box = { x: x - w / 2 - 2, y: y - 1, w: w + 4, h: 16 };
-    if (!placed.tryPlace(box)) {
-      continue;
-    }
-    const on = !dimming || lit.has(n.id);
-    ctx.globalAlpha = on ? 1 : 0.25;
-    // Обводка цветом фона: подпись читается поверх рёбер.
-    ctx.lineJoin = 'round';
-    ctx.lineWidth = 4;
-    ctx.strokeStyle = pal.bg;
-    ctx.strokeText(text, x, y);
-    ctx.fillStyle = n.id === focus.selected || n.id === focus.hovered ? pal.labelStrong : pal.label;
-    ctx.fillText(text, x, y);
-  }
+  drawEdges(ctx, nodes, links, toScreen(cam), focus, pal);
+  drawNodes(ctx, size, nodes, cam, focus, pal);
+  drawLabels(ctx, size, nodes, cam, focus, pal, labelsAll);
   ctx.globalAlpha = 1;
 }
 
 type Box = { readonly x: number; readonly y: number; readonly w: number; readonly h: number };
+
+function overlaps(a: Box, b: Box): boolean {
+  return a.x < b.x + b.w && b.x < a.x + a.w && a.y < b.y + b.h && b.y < a.y + a.h;
+}
 
 /** Сетка занятых мест под подписи: проверка пересечения за O(соседних ячеек). */
 class LabelGrid {
@@ -256,12 +326,8 @@ class LabelGrid {
   /** Ставит подпись, если место свободно. */
   tryPlace(b: Box): boolean {
     const keys = this.keys(b);
-    for (const k of keys) {
-      for (const o of this.cells.get(k) ?? []) {
-        if (b.x < o.x + o.w && o.x < b.x + b.w && b.y < o.y + o.h && o.y < b.y + b.h) {
-          return false;
-        }
-      }
+    if (keys.some((k) => (this.cells.get(k) ?? []).some((o) => overlaps(b, o)))) {
+      return false;
     }
     for (const k of keys) {
       this.cells.set(k, [...(this.cells.get(k) ?? []), b]);

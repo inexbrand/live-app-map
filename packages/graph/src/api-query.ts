@@ -66,19 +66,28 @@ const VERSION = /^v\d+$/;
  */
 export function routeGroupKey(routePath: string): RouteGroupKey {
   const segs = routePath.split('/').filter((s) => s !== '');
-  let i = 0;
+  const base = baseSegments(segs);
+  const section = staticOr(segs[base.length]);
+  const module = section !== '' ? staticOr(segs[base.length + 1]) : '';
+  return { base: base.length === 0 ? '' : `/${base.join('/')}`, section, module };
+}
+
+/** Начало пути: `api`, затем версия `v1` — каждое по отдельности необязательно. */
+function baseSegments(segs: readonly string[]): string[] {
   const base: string[] = [];
-  if (segs[i] === 'api') {
-    base.push(segs[i++] ?? '');
+  if (segs[0] === 'api') {
+    base.push('api');
   }
-  if (segs[i] !== undefined && VERSION.test(segs[i] ?? '')) {
-    base.push(segs[i++] ?? '');
+  const version = segs[base.length];
+  if (version !== undefined && VERSION.test(version)) {
+    base.push(version);
   }
-  const isStatic = (s: string | undefined): s is string => s !== undefined && !s.startsWith(':') && !s.startsWith('*');
-  const section = isStatic(segs[i]) ? segs[i] : '';
-  const next = segs[i + 1];
-  const module = section !== '' && isStatic(next) ? next : '';
-  return { base: base.length === 0 ? '' : `/${base.join('/')}`, section: section ?? '', module };
+  return base;
+}
+
+/** Статичный сегмент как есть; параметр (`:id`, `*`) и отсутствие — пустая строка. */
+function staticOr(s: string | undefined): string {
+  return s !== undefined && !s.startsWith(':') && !s.startsWith('*') ? s : '';
 }
 
 /** Есть описание: JSDoc или комментарий. */
@@ -100,25 +109,45 @@ function touchesTable(index: CodeIndex, r: ApiRoute, table: string): boolean {
  * @returns роуты
  */
 export function filterRoutes(index: CodeIndex, filter: ApiFilter): ApiRoute[] {
-  const q = filter.query?.trim().toLowerCase() ?? '';
-  const service =
-    filter.service === undefined || filter.service === ''
-      ? undefined
-      : (index.servicesById.get(filter.service) ?? index.code.services.find((s) => s.name === filter.service));
-  if (filter.service !== undefined && filter.service !== '' && service === undefined) {
+  const service = filter.service === undefined || filter.service === '' ? null : serviceByIdOrName(index, filter.service);
+  if (service === undefined) {
     return [];
   }
-  const methods = new Set(filter.methods ?? []);
-  return index.code.routes.filter(
-    (r) =>
-      (service === undefined || r.serviceId === service.id) &&
-      (methods.size === 0 || methods.has(r.method)) &&
-      (filter.table === undefined || filter.table === '' || touchesTable(index, r, filter.table)) &&
-      (filter.undocumented !== true || !hasDescription(r)) &&
-      (filter.noScreens !== true || (index.callersByRoute.get(r.id)?.length ?? 0) === 0) &&
-      (q === '' ||
-        [r.method, r.path, r.doc ?? '', ...(r.comments ?? []), r.handler.name ?? '', r.location.file].join('\n').toLowerCase().includes(q)),
-  );
+  const checks = routeChecks(index, filter, service);
+  return index.code.routes.filter((r) => checks.every((ok) => ok(r)));
+}
+
+/** Сервис по id или имени; не нашёлся — undefined. */
+function serviceByIdOrName(index: CodeIndex, key: string): CodeService | undefined {
+  return index.servicesById.get(key) ?? index.code.services.find((s) => s.name === key);
+}
+
+/** Текст роута для поиска (нижний регистр). */
+function routeText(r: ApiRoute): string {
+  return [r.method, r.path, r.doc ?? '', ...(r.comments ?? []), r.handler.name ?? '', r.location.file].join('\n').toLowerCase();
+}
+
+/** Проверки фильтра: только заданные поля. */
+function routeChecks(index: CodeIndex, filter: ApiFilter, service: CodeService | null): ((r: ApiRoute) => boolean)[] {
+  const { methods, table, query } = filterValues(filter);
+  const all: [boolean, (r: ApiRoute) => boolean][] = [
+    [service !== null, (r) => r.serviceId === service?.id],
+    [methods.size > 0, (r) => methods.has(r.method)],
+    [table !== '', (r) => touchesTable(index, r, table)],
+    [filter.undocumented === true, (r) => !hasDescription(r)],
+    [filter.noScreens === true, (r) => !hasScreens(index, r)],
+    [query !== '', (r) => routeText(r).includes(query)],
+  ];
+  return all.filter(([on]) => on).map(([, check]) => check);
+}
+
+/** Поля фильтра без пустых значений: методы, таблица, запрос в нижнем регистре. */
+function filterValues(filter: ApiFilter): { readonly methods: ReadonlySet<string>; readonly table: string; readonly query: string } {
+  return { methods: new Set(filter.methods ?? []), table: filter.table ?? '', query: filter.query?.trim().toLowerCase() ?? '' };
+}
+
+function hasScreens(index: CodeIndex, r: ApiRoute): boolean {
+  return (index.callersByRoute.get(r.id)?.length ?? 0) > 0;
 }
 
 /** Группирует по ключу, сохраняя порядок первого появления. */

@@ -68,14 +68,23 @@ export async function mintKorbor(r: KorborRenewal): Promise<MintResult> {
     signal: AbortSignal.timeout(15_000),
   });
   const body: unknown = await res.json().catch(() => null);
-  const data = typeof body === 'object' && body !== null && 'data' in body && typeof body.data === 'object' && body.data !== null ? body.data : null;
-  const value = data === null ? undefined : r.kind === 'user' ? ('initData' in data ? data.initData : undefined) : 'accessToken' in data ? data.accessToken : undefined;
+  const data = dataOf(body);
+  // Мини-апп входит по initData, админка — по access-токену
+  const value = data[r.kind === 'user' ? 'initData' : 'accessToken'];
   if (!res.ok || typeof value !== 'string' || value === '') {
     return { ok: false, error: `вход не выдан (HTTP ${res.status}): ${JSON.stringify(body).slice(0, 200)}` };
   }
-  const label = data !== null && 'label' in data && typeof data.label === 'string' ? data.label : r.actorId;
-  const role = data !== null && 'role' in data && typeof data.role === 'string' ? data.role : r.kind;
-  return { ok: true, value, label, role };
+  return { ok: true, value, label: textOr(data['label'], r.actorId), role: textOr(data['role'], r.kind) };
+}
+
+/** Поле data ответа API объектом; нет — пустой объект. */
+function dataOf(body: unknown): Record<string, unknown> {
+  const data: unknown = typeof body === 'object' && body !== null && 'data' in body ? body.data : null;
+  return typeof data === 'object' && data !== null ? Object.fromEntries(Object.entries(data)) : {};
+}
+
+function textOr(v: unknown, fallback: string): string {
+  return typeof v === 'string' ? v : fallback;
 }
 /** Bearer для API Korbor или ошибка. */
 export type BearerResult = { ok: true; token: string } | { ok: false; error: string };

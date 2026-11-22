@@ -132,15 +132,84 @@ function readWithin(reader: ReadableStreamDefaultReader<Uint8Array>, idleMs: num
   });
 }
 
-async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, rev: string, file: string, target: string): Promise<void> {
+/** Клиент ушёл (закрыл вкладку, сменил модель) — качать дальше незачем. */
+function abortOnClientGone(res: Res): AbortController {
   const ctrl = new AbortController();
-  // Клиент ушёл (закрыл вкладку, сменил модель) — качать дальше незачем.
   // Слушаем ответ: «close» запроса у GET приходит сразу после заголовков.
   res.on('close', () => {
     if (!res.writableEnded) {
       ctrl.abort();
     }
   });
+  return ctrl;
+}
+
+/** Временный файл загрузки и первая ошибка записи на диск. */
+type PartFile = { readonly stream: ReturnType<typeof createWriteStream>; readonly error: () => Error | null };
+
+function openPart(part: string): PartFile {
+  const stream = createWriteStream(part);
+  let error: Error | null = null;
+  stream.on('error', (e) => {
+    error = e;
+  });
+  return { stream, error: () => error };
+}
+
+/** Заголовки ответа: тип, длина (если тело не распаковано), без кэша. */
+function startStream(res: Res, file: string, headers: Headers): void {
+  res.statusCode = 200;
+  res.setHeader('content-type', contentType(file));
+  // fetch уже распаковал gzip: длина сжатого тела клиенту не подходит
+  const len = headers.get('content-encoding') === null ? headers.get('content-length') : null;
+  if (len !== null) {
+    res.setHeader('content-length', len);
+  }
+  res.setHeader('cache-control', 'no-cache');
+}
+
+/**
+ * Куски источника — на диск и клиенту; последний кусок придерживается: клиенту он
+ * уходит только после переноса файла на место (получив ответ целиком, клиент уже
+ * найдёт модель на диске).
+ *
+ * @returns придержанный последний кусок
+ */
+async function pump(reader: ReadableStreamDefaultReader<Uint8Array>, disk: PartFile, res: Res, signal: AbortSignal, idleMs: number, file: string): Promise<Uint8Array | null> {
+  let held: Uint8Array | null = null;
+  for (;;) {
+    if (signal.aborted || res.destroyed) {
+      throw new Error(`модель: ${file} — клиент отменил загрузку`);
+    }
+    const diskError = disk.error();
+    if (diskError !== null) {
+      throw diskError;
+    }
+    const next = await readWithin(reader, idleMs, file);
+    if (next.done) {
+      return held;
+    }
+    disk.stream.write(next.value);
+    if (held !== null) {
+      res.write(held);
+    }
+    held = next.value;
+  }
+}
+
+/** Загрузка сорвалась: оборвать источник, закрыть и удалить временный файл. */
+async function discard(ctrl: AbortController, reader: ReadableStreamDefaultReader<Uint8Array>, disk: PartFile, part: string): Promise<void> {
+  ctrl.abort();
+  void reader.cancel().catch(() => undefined);
+  disk.stream.destroy();
+  if (!disk.stream.closed) {
+    await new Promise<void>((resolve) => disk.stream.once('close', () => resolve()));
+  }
+  rmSync(part, { force: true });
+}
+
+async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, rev: string, file: string, target: string): Promise<void> {
+  const ctrl = abortOnClientGone(res);
   const up = await openSource(opts, repo, rev, file, ctrl.signal);
   if (!up.ok || up.body === null) {
     sendError(res, up.status === 404 ? 404 : 502, `модель: ${file} — HTTP ${up.status}`);
@@ -149,58 +218,33 @@ async function download(opts: ModelsMiddlewareOptions, res: Res, repo: string, r
   mkdirSync(path.dirname(target), { recursive: true });
   // Свой временный файл на запрос: одновременные загрузки одного файла не мешают друг другу
   const part = `${target}.${process.pid}.${randomUUID()}.part`;
-  const disk = createWriteStream(part);
-  let diskError: Error | null = null;
-  disk.on('error', (e) => {
-    diskError = e;
-  });
-  res.statusCode = 200;
-  res.setHeader('content-type', contentType(file));
-  // fetch уже распаковал gzip: длина сжатого тела клиенту не подходит
-  const len = up.headers.get('content-encoding') === null ? up.headers.get('content-length') : null;
-  if (len !== null) {
-    res.setHeader('content-length', len);
-  }
-  res.setHeader('cache-control', 'no-cache');
+  const disk = openPart(part);
+  startStream(res, file, up.headers);
   const reader = up.body.getReader();
   try {
-    // Последний кусок уходит клиенту только после переноса файла на место:
-    // получив ответ целиком, клиент уже найдёт модель на диске.
-    let held: Uint8Array | null = null;
-    for (;;) {
-      if (ctrl.signal.aborted || res.destroyed) {
-        throw new Error(`модель: ${file} — клиент отменил загрузку`);
-      }
-      if (diskError !== null) {
-        throw diskError;
-      }
-      const next = await readWithin(reader, opts.idleMs, file);
-      if (next.done) {
-        break;
-      }
-      const chunk = next.value;
-      disk.write(chunk);
-      if (held !== null) {
-        res.write(held);
-      }
-      held = chunk;
-    }
-    await new Promise<void>((resolve, reject) => disk.end((err?: Error | null) => (err ? reject(err) : resolve())));
+    const held = await pump(reader, disk, res, ctrl.signal, opts.idleMs, file);
+    await new Promise<void>((resolve, reject) => disk.stream.end((err?: Error | null) => (err ? reject(err) : resolve())));
     renameSync(part, target);
     res.end(held ?? undefined);
   } catch (err) {
-    ctrl.abort();
-    void reader.cancel().catch(() => undefined);
-    disk.destroy();
-    if (!disk.closed) {
-      await new Promise<void>((resolve) => disk.once('close', () => resolve()));
-    }
-    rmSync(part, { force: true });
+    await discard(ctrl, reader, disk, part);
     res.destroy(err instanceof Error ? err : new Error(String(err)));
   }
 }
 
 const treeCache = new Map<string, ReadonlyMap<string, number>>();
+
+/** Файлы и размеры из ответа каталога Hugging Face (лишнее пропускается). */
+function treeEntries(list: unknown): [string, number][] {
+  if (!Array.isArray(list)) {
+    return [];
+  }
+  return list.flatMap((e: unknown): [string, number][] => {
+    const file: unknown = typeof e === 'object' && e !== null ? Reflect.get(e, 'path') : undefined;
+    const size: unknown = typeof e === 'object' && e !== null ? Reflect.get(e, 'size') : undefined;
+    return typeof file === 'string' && typeof size === 'number' ? [[file, size]] : [];
+  });
+}
 
 async function upstreamSizes(opts: ModelsMiddlewareOptions, repo: string): Promise<ReadonlyMap<string, number>> {
   const cached = treeCache.get(`${opts.upstream}|${repo}`);
@@ -213,13 +257,8 @@ async function upstreamSizes(opts: ModelsMiddlewareOptions, repo: string): Promi
     if (!r.ok) {
       throw new Error(`каталог модели ${repo}: HTTP ${r.status}`);
     }
-    const list: unknown = await r.json();
-    if (Array.isArray(list)) {
-      for (const e of list) {
-        if (typeof e === 'object' && e !== null && 'path' in e && 'size' in e && typeof e.path === 'string' && typeof e.size === 'number') {
-          sizes.set(e.path, e.size);
-        }
-      }
+    for (const [file, size] of treeEntries(await r.json())) {
+      sizes.set(file, size);
     }
   }
   treeCache.set(`${opts.upstream}|${repo}`, sizes);
@@ -254,31 +293,37 @@ async function handleSize(opts: ModelsMiddlewareOptions, res: Res, url: URL): Pr
   sendJson(res, 200, { ok: true, repo, bytes: total, bytesOnDisk: onDisk });
 }
 
-async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promise<void> {
-  const url = new URL(req.url ?? '/', 'http://local');
-  const parts = url.pathname.slice(MODELS_PATH.length).split('/').filter((p) => p !== '');
-  const [head, ...rest] = parts;
-  if (head === 'status' && req.method === 'GET') {
-    sendJson(res, 200, { ok: true, models: opts.repos.map((repo) => ({ repo, ...dirBytes(path.join(opts.dir, repo)) })) });
+/** wasm onnxruntime из node_modules. */
+async function handleOrt(opts: ModelsMiddlewareOptions, res: Res, _url: URL, rest: readonly string[]): Promise<void> {
+  const name = rest.join('/');
+  if (!/^ort-wasm[A-Za-z0-9._-]*\.(mjs|wasm)$/.test(name) || !existsSync(path.join(opts.ortDir, name))) {
+    sendError(res, 404, `нет файла onnxruntime: ${name}`);
     return;
   }
-  if (head === 'size' && req.method === 'GET') {
-    await handleSize(opts, res, url);
-    return;
-  }
-  if (head === 'ort' && req.method === 'GET') {
-    const name = rest.join('/');
-    if (!/^ort-wasm[A-Za-z0-9._-]*\.(mjs|wasm)$/.test(name) || !existsSync(path.join(opts.ortDir, name))) {
-      sendError(res, 404, `нет файла onnxruntime: ${name}`);
-      return;
-    }
-    serveFile(res, path.join(opts.ortDir, name));
-    return;
-  }
-  if (head !== 'hf') {
-    sendError(res, 404, `нет такого пути: ${url.pathname}`);
-    return;
-  }
+  serveFile(res, path.join(opts.ortDir, name));
+}
+
+/** Что уже лежит на диске. */
+async function handleStatus(opts: ModelsMiddlewareOptions, res: Res): Promise<void> {
+  sendJson(res, 200, { ok: true, models: opts.repos.map((repo) => ({ repo, ...dirBytes(path.join(opts.dir, repo)) })) });
+}
+
+/** GET-эндпоинты кроме файлов моделей. */
+const GET_ROUTES: ReadonlyMap<string, (opts: ModelsMiddlewareOptions, res: Res, url: URL, rest: readonly string[]) => Promise<void>> = new Map([
+  ['status', handleStatus],
+  ['size', handleSize],
+  ['ort', handleOrt],
+]);
+
+/** Ревизия и файл из `<repo>/resolve/<rev>/<file>`; не тот вид — null. */
+function hfFileOf(rest: readonly string[]): { readonly rev: string; readonly file: string } | null {
+  const [, , resolve, rev = '', ...fileParts] = rest;
+  const file = safeFile(fileParts);
+  return resolve !== 'resolve' || !SAFE_PART.test(rev) || file === null ? null : { rev, file };
+}
+
+/** Модели: удалить с диска или отдать файл (с диска, иначе — скачать и сохранить). */
+async function handleHf(opts: ModelsMiddlewareOptions, req: Req, res: Res, rest: readonly string[]): Promise<void> {
   const repo = rest.slice(0, 2).join('/');
   if (!opts.repos.includes(repo)) {
     sendError(res, 403, `модель не из списка: ${repo}`);
@@ -289,18 +334,32 @@ async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promis
     sendJson(res, 200, { ok: true, repo });
     return;
   }
-  const [, , resolve, rev = '', ...fileParts] = rest;
-  const file = safeFile(fileParts);
-  if (req.method !== 'GET' || resolve !== 'resolve' || !SAFE_PART.test(rev) || file === null) {
+  const hf = req.method === 'GET' ? hfFileOf(rest) : null;
+  if (hf === null) {
     sendError(res, 400, 'ожидается GET hf/<repo>/resolve/<rev>/<file>');
     return;
   }
-  const target = path.join(opts.dir, repo, file);
+  const target = path.join(opts.dir, repo, hf.file);
   if (existsSync(target)) {
     serveFile(res, target);
     return;
   }
-  await download(opts, res, repo, rev, file, target);
+  await download(opts, res, repo, hf.rev, hf.file, target);
+}
+
+async function handle(opts: ModelsMiddlewareOptions, req: Req, res: Res): Promise<void> {
+  const url = new URL(req.url ?? '/', 'http://local');
+  const [head = '', ...rest] = url.pathname.slice(MODELS_PATH.length).split('/').filter((p) => p !== '');
+  if (head === 'hf') {
+    await handleHf(opts, req, res, rest);
+    return;
+  }
+  const route = req.method === 'GET' ? GET_ROUTES.get(head) : undefined;
+  if (route === undefined) {
+    sendError(res, 404, `нет такого пути: ${url.pathname}`);
+    return;
+  }
+  await route(opts, res, url, rest);
 }
 
 /**

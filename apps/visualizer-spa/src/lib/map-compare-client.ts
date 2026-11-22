@@ -49,6 +49,16 @@ async function fetchDocument(url: string, method?: 'POST'): Promise<LoadedVersio
   return r.ok ? documentFromJson(r.value) : { ok: false, error: r.error };
 }
 
+/** Версия не загрузилась. */
+function failed(error: string): LoadedVersion {
+  return { ok: false, error };
+}
+
+/** Открытая карта как версия. */
+function openVersion(open: AppMapDocument | null): LoadedVersion {
+  return open === null ? failed('карта не открыта') : { ok: true, document: open };
+}
+
 /**
  * Документ выбранной версии.
  *
@@ -60,21 +70,18 @@ export async function loadVersion(
   choice: VersionChoice,
   ctx: { readonly open: AppMapDocument | null; readonly mapId: string | null; readonly mapPath: string | null },
 ): Promise<LoadedVersion> {
-  const need = (v: string | null): v is string => v !== null;
   switch (choice.kind) {
     case 'open':
-      return ctx.open === null ? { ok: false, error: 'карта не открыта' } : { ok: true, document: ctx.open };
+      return openVersion(ctx.open);
     case 'file':
       return documentFromJson(choice.json);
     case 'disk':
-      return need(ctx.mapPath) ? fetchDocument(ctx.mapPath) : { ok: false, error: 'карта открыта из файла — файла каталога нет' };
+      return ctx.mapPath === null ? failed('карта открыта из файла — файла каталога нет') : fetchDocument(ctx.mapPath);
     case 'git':
-      return need(ctx.mapId)
-        ? fetchDocument(`/__lam_maps/version?id=${encodeURIComponent(ctx.mapId)}&ref=${encodeURIComponent(choice.ref)}`)
-        : { ok: false, error: 'карта открыта из файла — истории нет' };
+      return ctx.mapId === null
+        ? failed('карта открыта из файла — истории нет')
+        : fetchDocument(`/__lam_maps/version?id=${encodeURIComponent(ctx.mapId)}&ref=${encodeURIComponent(choice.ref)}`);
     case 'scan':
-      return need(ctx.mapId)
-        ? fetchDocument(`/__lam_maps/scan?id=${encodeURIComponent(ctx.mapId)}`, 'POST')
-        : { ok: false, error: 'карта открыта из файла — сканировать нечего' };
+      return ctx.mapId === null ? failed('карта открыта из файла — сканировать нечего') : fetchDocument(`/__lam_maps/scan?id=${encodeURIComponent(ctx.mapId)}`, 'POST');
   }
 }

@@ -162,34 +162,41 @@ function linkDocument(b: GraphBuilder, doc: AppMapDocument, refs: DocRefIndex, d
   const from = `doc:${file.path}`;
   const { codes, hrefs } = docReferences(file.text);
   for (const c of codes) {
-    const t = resolveDocRef(c, refs);
-    if (t !== undefined) {
-      b.edge(from, addTarget(b, doc, t), 'links');
-      continue;
-    }
-    const m = CODE_PATH.exec(c);
-    if (m?.[1] !== undefined && !m[1].startsWith('docs/')) {
-      b.edge(from, addTarget(b, doc, { kind: 'file', file: m[1] }), 'links');
-    }
-    const asDoc = docIds.get(c) ?? docIds.get(resolveDocAsset(file.path, c) ?? '');
-    if (asDoc !== undefined) {
-      b.edge(from, asDoc, 'links');
-    }
+    linkCode(b, doc, refs, docIds, file, from, c);
   }
-  for (const h of hrefs) {
-    if (/^[a-z]+:/i.test(h) || h.startsWith('#')) {
-      continue;
-    }
-    const local = resolveDocAsset(file.path, h);
-    const asDoc = local === null ? undefined : docIds.get(local);
-    if (asDoc !== undefined) {
-      b.edge(from, asDoc, 'links');
-      continue;
-    }
-    const t = local === null ? undefined : resolveDocRef(local, refs);
-    if (t !== undefined) {
-      b.edge(from, addTarget(b, doc, t), 'links');
-    }
+  for (const h of hrefs.filter((x) => !/^[a-z]+:/i.test(x) && !x.startsWith('#'))) {
+    linkHref(b, doc, refs, docIds, from, resolveDocAsset(file.path, h));
+  }
+}
+
+/** `код` в тексте: объект карты, иначе файл кода (не docs/) и/или другой документ. */
+function linkCode(b: GraphBuilder, doc: AppMapDocument, refs: DocRefIndex, docIds: ReadonlyMap<string, string>, file: DocFile, from: string, c: string): void {
+  const t = resolveDocRef(c, refs);
+  if (t !== undefined) {
+    b.edge(from, addTarget(b, doc, t), 'links');
+    return;
+  }
+  const m = CODE_PATH.exec(c);
+  if (m?.[1] !== undefined && !m[1].startsWith('docs/')) {
+    b.edge(from, addTarget(b, doc, { kind: 'file', file: m[1] }), 'links');
+  }
+  const asDoc = docIds.get(c) ?? docIds.get(resolveDocAsset(file.path, c) ?? '');
+  if (asDoc !== undefined) {
+    b.edge(from, asDoc, 'links');
+  }
+}
+
+/** Ссылка markdown на локальный путь: документ, иначе объект карты. */
+function linkHref(b: GraphBuilder, doc: AppMapDocument, refs: DocRefIndex, docIds: ReadonlyMap<string, string>, from: string, local: string | null): void {
+  if (local === null) {
+    return;
+  }
+  const asDoc = docIds.get(local);
+  const t = asDoc === undefined ? resolveDocRef(local, refs) : undefined;
+  if (asDoc !== undefined) {
+    b.edge(from, asDoc, 'links');
+  } else if (t !== undefined) {
+    b.edge(from, addTarget(b, doc, t), 'links');
   }
 }
 

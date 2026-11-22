@@ -3,6 +3,7 @@
  */
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
+import type { AppMapDocument } from '@live-app-map/schema';
 import { DiagnosticsDock } from './components/DiagnosticsDock';
 import { CommentComposer } from './components/comments/CommentComposer';
 import { CommentsListPanel } from './components/comments/CommentsListPanel';
@@ -36,313 +37,371 @@ import {
 import { useAppStore } from './store/app-store';
 import { Button } from './ui';
 
-/**
- * Корневой shell.
- */
-export function App() {
-  const mapDocument = useAppStore((s) => s.document);
-  /** Номер загрузки карты: вид «Сравнение» начинается заново для новой карты. */
-  const loadSeq = useAppStore((s) => s.loadSeq);
-  const toast = useAppStore((s) => s.toast);
-  const setToast = useAppStore((s) => s.setToast);
-  const lastLoadError = useAppStore((s) => s.lastLoadError);
-  const clearLoadError = useAppStore((s) => s.clearLoadError);
-  const setLastLoadError = useAppStore((s) => s.setLastLoadError);
-  const loadUnknownJson = useAppStore((s) => s.loadUnknownJson);
-  const setBaseUrlOverride = useAppStore((s) => s.setBaseUrlOverride);
-  const setMode = useAppStore((s) => s.setMode);
-  const parseIssues = useAppStore((s) => s.parseIssues);
-  useGatewayFrames();
-  useRouteSamples();
-  useNavHistory();
-  useHotkeys(mapDocument !== null);
-  const canvasFilter = useAppStore((s) => s.searchQuery);
-  const setCanvasFilter = useAppStore((s) => s.setSearchQuery);
-  const appView = useViewStore((s) => s.view);
-  const [dragging, setDragging] = useState(false);
-  const [loadingPresetId, setLoadingPresetId] = useState<string | null>(null);
-  const [catalog, setCatalog] = useState<readonly MapCatalogEntry[]>([]);
-  const [catalogError, setCatalogError] = useState<string | null>(null);
-  const [catalogLoading, setCatalogLoading] = useState(true);
+type LoadError = (msg: string) => void;
 
+/** Ошибка загрузки карты: баннер и toast. */
+function reportLoadError(msg: string): void {
+  const app = useAppStore.getState();
+  app.setLastLoadError(msg);
+  app.setToast(msg);
+}
+
+/** Каталог карт: записи, ошибка, идёт ли загрузка. */
+function useMapCatalog(): { readonly catalog: readonly MapCatalogEntry[]; readonly error: string | null; readonly loading: boolean } {
+  const [catalog, setCatalog] = useState<readonly MapCatalogEntry[]>([]);
+  const [error, setError] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
   useEffect(() => {
     let cancelled = false;
-    setCatalogLoading(true);
+    setLoading(true);
     void fetchMapCatalog().then((res) => {
       if (cancelled) {
         return;
       }
-      setCatalogLoading(false);
-      if (!res.ok) {
-        setCatalogError(res.error);
-        setCatalog([]);
-        return;
-      }
-      setCatalogError(null);
-      setCatalog(res.catalog.maps);
+      setLoading(false);
+      setError(res.ok ? null : res.error);
+      setCatalog(res.ok ? res.catalog.maps : []);
     });
     return () => {
       cancelled = true;
     };
   }, []);
+  return { catalog, error, loading };
+}
 
-  const runDogfoodAfterMapLoad = useCallback(async () => {
-    const s = useAppStore.getState();
-    await ensureDogfoodSessions({
-      dogfoodAdminAccessToken: s.dogfoodAdminAccessToken,
-      dogfoodMiniappInitData: s.dogfoodMiniappInitData,
-      setDogfoodAdminAccessToken: s.setDogfoodAdminAccessToken,
-      setDogfoodMiniappInitData: s.setDogfoodMiniappInitData,
-      setGlobalRole: s.setGlobalRole,
-      onToast: setToast,
-    });
-  }, [setToast]);
+/** Dogfood-сессии после загрузки карты (роль, токены). */
+async function runDogfoodAfterMapLoad(): Promise<void> {
+  const s = useAppStore.getState();
+  await ensureDogfoodSessions({
+    dogfoodAdminAccessToken: s.dogfoodAdminAccessToken,
+    dogfoodMiniappInitData: s.dogfoodMiniappInitData,
+    setDogfoodAdminAccessToken: s.setDogfoodAdminAccessToken,
+    setDogfoodMiniappInitData: s.setDogfoodMiniappInitData,
+    setGlobalRole: s.setGlobalRole,
+    onToast: s.setToast,
+  });
+}
 
-  const loadPreset = useCallback(
-    async (preset: MapCatalogEntry) => {
-      setLoadingPresetId(preset.id);
-      try {
-        const res = await loadMapPresetIntoStore(preset, {
-          setBaseUrlOverride,
-          loadUnknownJson,
-          setMode,
-        });
-        if (!res.ok) {
-          setLastLoadError(res.error);
-          setToast(res.error);
-          return;
-        }
-        useMapSourceStore.getState().setSource({ kind: 'catalog', id: preset.id, label: preset.label, path: preset.path });
-        await runDogfoodAfterMapLoad();
-        const baseHint =
-          preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
-        setToast(`${preset.label}${baseHint}`);
-      } finally {
-        setLoadingPresetId(null);
-      }
-    },
-    [
-      loadUnknownJson,
-      runDogfoodAfterMapLoad,
-      setBaseUrlOverride,
-      setLastLoadError,
-      setMode,
-      setToast,
-    ],
-  );
+/** Карта из каталога: загрузка, источник, dogfood, toast с адресом приложения. */
+async function loadCatalogPreset(preset: MapCatalogEntry): Promise<void> {
+  const app = useAppStore.getState();
+  const res = await loadMapPresetIntoStore(preset, {
+    setBaseUrlOverride: app.setBaseUrlOverride,
+    loadUnknownJson: app.loadUnknownJson,
+    setMode: app.setMode,
+  });
+  if (!res.ok) {
+    reportLoadError(res.error);
+    return;
+  }
+  useMapSourceStore.getState().setSource({ kind: 'catalog', id: preset.id, label: preset.label, path: preset.path });
+  await runDogfoodAfterMapLoad();
+  const baseHint = preset.baseUrl.trim() !== '' ? ` · ${preset.baseUrl}` : '';
+  useAppStore.getState().setToast(`${preset.label}${baseHint}`);
+}
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const baseUrl = params.get('baseUrl');
-    const map = params.get('map');
-    const role = params.get('role');
-    if (baseUrl) {
-      setBaseUrlOverride(baseUrl);
-    }
-    if (role) {
-      useAppStore.getState().setGlobalRole(role);
-    }
-    if (map) {
-      void requestJson(map)
-        .then(async (r) => {
-          if (!r.ok) {
-            const msg = r.status === null ? r.error : `Не удалось загрузить карту ${map}: HTTP ${r.status}`;
-            setLastLoadError(msg);
-            setToast(msg);
-            return;
-          }
-          loadUnknownJson(r.value);
-          setMode('live');
-          // Deep-link / refresh: auto dogfood (раньше только через select карты)
-          await runDogfoodAfterMapLoad();
-        })
-        .catch((err: unknown) => {
-          const msg = err instanceof Error ? err.message : String(err);
-          setLastLoadError(msg);
-          setToast(msg);
-        });
-    }
-  }, [
-    loadUnknownJson,
-    runDogfoodAfterMapLoad,
-    setBaseUrlOverride,
-    setLastLoadError,
-    setMode,
-    setToast,
-  ]);
+/** Выбор карты из каталога; id загружаемой — для «Загрузка…» на кнопке. */
+function useLoadPreset(): { readonly loadingId: string | null; readonly load: (preset: MapCatalogEntry) => void } {
+  const [loadingId, setLoadingId] = useState<string | null>(null);
+  const load = useCallback((preset: MapCatalogEntry) => {
+    setLoadingId(preset.id);
+    void loadCatalogPreset(preset).finally(() => setLoadingId(null));
+  }, []);
+  return { loadingId, load };
+}
 
+/** Карта по ссылке: JSON по адресу, режим live, dogfood. */
+async function loadLinkedMap(map: string, onError: LoadError): Promise<void> {
+  const r = await requestJson(map);
+  if (!r.ok) {
+    onError(r.status === null ? r.error : `Не удалось загрузить карту ${map}: HTTP ${r.status}`);
+    return;
+  }
+  const app = useAppStore.getState();
+  app.loadUnknownJson(r.value);
+  app.setMode('live');
+  // Deep-link / refresh: auto dogfood (раньше только через select карты)
+  await runDogfoodAfterMapLoad();
+}
+
+/** Параметры адреса ?baseUrl=&role=&map= применяются один раз при открытии. */
+function applyLocationParams(search: string): void {
+  const params = new URLSearchParams(search);
+  const baseUrl = params.get('baseUrl');
+  const map = params.get('map');
+  const role = params.get('role');
+  if (baseUrl) {
+    useAppStore.getState().setBaseUrlOverride(baseUrl);
+  }
+  if (role) {
+    useAppStore.getState().setGlobalRole(role);
+  }
+  if (map) {
+    loadLinkedMap(map, reportLoadError).catch((err: unknown) => reportLoadError(err instanceof Error ? err.message : String(err)));
+  }
+}
+
+/** Toast гаснет через 4 с; Esc закрывает toast и ошибку загрузки. */
+function useToastAndEscape(): void {
+  const toast = useAppStore((s) => s.toast);
   useEffect(() => {
     if (!toast) {
       return;
     }
-    const t = window.setTimeout(() => setToast(null), 4000);
+    const t = window.setTimeout(() => useAppStore.getState().setToast(null), 4000);
     return () => window.clearTimeout(t);
-  }, [toast, setToast]);
-
+  }, [toast]);
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => {
+    const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
-        clearLoadError();
-        setToast(null);
+        useAppStore.getState().clearLoadError();
+        useAppStore.getState().setToast(null);
       }
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [clearLoadError, setToast]);
+  }, []);
+}
 
-  const onDrop = useCallback(
-    async (e: DragEvent) => {
-      e.preventDefault();
-      setDragging(false);
-      const file = e.dataTransfer.files[0];
-      if (!file) {
-        return;
-      }
-      const result = await importMapFile(file);
-      if (!result.ok) {
-        setLastLoadError(result.error);
-        setToast(result.error);
-        return;
-      }
-      if (loadUnknownJson(result.json)) {
-        useMapSourceStore.getState().setSource({ kind: 'file', name: file.name });
-      }
-      if (result.toast !== undefined) {
-        setToast(result.toast);
-      }
-    },
-    [loadUnknownJson, setLastLoadError, setToast],
-  );
+/** Перетащенный файл карты: разбор, источник «файл», toast импорта. */
+async function dropMapFile(file: File | undefined): Promise<void> {
+  if (!file) {
+    return;
+  }
+  const result = await importMapFile(file);
+  if (!result.ok) {
+    reportLoadError(result.error);
+    return;
+  }
+  if (useAppStore.getState().loadUnknownJson(result.json)) {
+    useMapSourceStore.getState().setSource({ kind: 'file', name: file.name });
+  }
+  if (result.toast !== undefined) {
+    useAppStore.getState().setToast(result.toast);
+  }
+}
 
-  return (
-    <div
-      className={`app-shell${dragging ? ' app-shell--drag' : ''}`}
-      onDragOver={(e) => {
+/** Перетаскивание файла карты в окно: подсветка и загрузка. */
+function useMapDrop(): { readonly dragging: boolean; readonly handlers: { onDragOver: (e: DragEvent) => void; onDragLeave: () => void; onDrop: (e: DragEvent) => void } } {
+  const [dragging, setDragging] = useState(false);
+  return {
+    dragging,
+    handlers: {
+      onDragOver: (e) => {
         e.preventDefault();
         setDragging(true);
-      }}
-      onDragLeave={() => setDragging(false)}
-      onDrop={(e) => void onDrop(e)}
+      },
+      onDragLeave: () => setDragging(false),
+      onDrop: (e) => {
+        e.preventDefault();
+        setDragging(false);
+        void dropMapFile(e.dataTransfer.files[0]);
+      },
+    },
+  };
+}
+
+/** Баннер ошибки загрузки с крестиком. */
+function LoadErrorBanner() {
+  const lastLoadError = useAppStore((s) => s.lastLoadError);
+  const clearLoadError = useAppStore((s) => s.clearLoadError);
+  if (!lastLoadError) {
+    return null;
+  }
+  return (
+    <div className="error-banner" role="alert">
+      <div className="error-banner__body">
+        <strong>
+          <AlertTriangle
+            size={16}
+            style={{ verticalAlign: 'text-bottom', marginRight: 6 }}
+          />
+          Ошибка загрузки
+        </strong>
+        <span>{lastLoadError}</span>
+      </div>
+      <Button type="button" variant="ghost" size="icon-sm" onClick={() => clearLoadError()}>
+        <X size={16} />
+      </Button>
+    </div>
+  );
+}
+
+/** Предупреждения разбора карты (первые шесть). */
+function ParseIssuesBanner() {
+  const hasMap = useAppStore((s) => s.document !== null);
+  const parseIssues = useAppStore((s) => s.parseIssues);
+  if (!hasMap || parseIssues.length === 0) {
+    return null;
+  }
+  return (
+    <div className="warnings-banner" role="status">
+      <strong>Предупреждения parse ({parseIssues.length})</strong>
+      <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
+        {parseIssues.slice(0, 6).map((d, i) => (
+          <li key={`${d.code}-${i}`}>
+            {d.message}
+            {d.path ? ` · ${d.path}` : ''}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+/** Кнопка карты каталога; подсказка — путь и число экранов. */
+function PresetButton({ preset, loadingId, onLoad }: { readonly preset: MapCatalogEntry; readonly loadingId: string | null; readonly onLoad: (p: MapCatalogEntry) => void }) {
+  const busy = loadingId === preset.id;
+  return (
+    <Button
+      type="button"
+      variant="primary"
+      disabled={loadingId !== null}
+      aria-busy={busy}
+      title={preset.pageCount > 0 ? `${preset.path} · ${preset.pageCount} экранов` : preset.path}
+      onClick={() => onLoad(preset)}
     >
+      {busy ? 'Загрузка…' : preset.label}
+    </Button>
+  );
+}
+
+/** Экран без карты: каталог и подсказки. */
+function EmptyState({ catalog, catalogError, catalogLoading }: { readonly catalog: readonly MapCatalogEntry[]; readonly catalogError: string | null; readonly catalogLoading: boolean }) {
+  const { loadingId, load } = useLoadPreset();
+  return (
+    <div className="empty-state">
+      <div className="empty-state__card">
+        <h1>Выберите карту проекта</h1>
+        <p>
+          Карта показывает экраны приложения вживую, его API, базу данных и документацию задач.
+          Выберите проект ниже или перетащите файл карты в это окно.
+        </p>
+        {catalogError ? (
+          <p className="drawer__hint" role="status">
+            {catalogError}
+          </p>
+        ) : null}
+        <div className="empty-state__actions">
+          {catalogLoading ? (
+            <Button type="button" variant="outline" disabled={true}>
+              Загрузка каталога…
+            </Button>
+          ) : null}
+          {!catalogLoading && catalog.length === 0 ? (
+            <p className="drawer__hint">
+              Каталог пуст. Положите{' '}
+              <code>*.liveappmap.json</code> в{' '}
+              <code>apps/visualizer-spa/public/maps/</code> и обновите
+              страницу.
+            </p>
+          ) : null}
+          {catalog.map((p) => (
+            <PresetButton key={p.id} preset={p} loadingId={loadingId} onLoad={load} />
+          ))}
+        </div>
+        <p className="drawer__hint">
+          Поиск по всему проекту — ⌘K, все клавиши — ?
+        </p>
+      </div>
+    </div>
+  );
+}
+
+/** Полоска «на холсте только экраны …» с «Показать все». */
+function CanvasFilterBar() {
+  const canvasFilter = useAppStore((s) => s.searchQuery);
+  const setCanvasFilter = useAppStore((s) => s.setSearchQuery);
+  const appView = useViewStore((s) => s.view);
+  if (appView !== 'screens' || canvasFilter.trim() === '') {
+    return null;
+  }
+  return (
+    <div className="canvas-filter" role="status" data-testid="canvas-filter">
+      <span>
+        На холсте только экраны «{canvasFilter.trim()}»
+      </span>
+      <Button type="button" size="sm" variant="ghost" onClick={() => setCanvasFilter('')}>
+        Показать все
+      </Button>
+    </div>
+  );
+}
+
+/** Вид карты: API, база (если есть таблицы), документация, сравнение или холст экранов. */
+function MainView({ doc }: { readonly doc: AppMapDocument }) {
+  const appView = useViewStore((s) => s.view);
+  /** Номер загрузки карты: вид «Сравнение» начинается заново для новой карты. */
+  const loadSeq = useAppStore((s) => s.loadSeq);
+  switch (appView) {
+    case 'api':
+      return <ApiView />;
+    case 'database':
+      return doc.code !== undefined && doc.code.tables.length > 0 ? <DatabaseView /> : <AppMapCanvas />;
+    case 'docs':
+      return <DocsView />;
+    case 'compare':
+      return <CompareView key={loadSeq} />;
+    default:
+      return <AppMapCanvas />;
+  }
+}
+
+/** Открытая карта: полоска фильтра, вид и панели поверх. */
+function MapArea({ doc }: { readonly doc: AppMapDocument }) {
+  const appView = useViewStore((s) => s.view);
+  return (
+    <div className="canvas-wrap">
+      {/* Виды «API», «База данных», «Документация» снимают холст целиком: живые iframe не держат память. */}
+      <CanvasFilterBar />
+      <MainView doc={doc} />
+      {appView === 'screens' ? <ScreenCommentsPanel /> : null}
+      <CommentsListPanel />
+      <StateInjectPanel />
+      <SnapshotOverlay />
+    </div>
+  );
+}
+
+/** Toast внизу окна. */
+function Toast() {
+  const toast = useAppStore((s) => s.toast);
+  return toast ? (
+    <div className="toast" role="status">
+      {toast}
+    </div>
+  ) : null;
+}
+
+/**
+ * Корневой shell.
+ */
+export function App() {
+  const mapDocument = useAppStore((s) => s.document);
+  useGatewayFrames();
+  useRouteSamples();
+  useNavHistory();
+  useHotkeys(mapDocument !== null);
+  useToastAndEscape();
+  useEffect(() => applyLocationParams(window.location.search), []);
+  const { catalog, error: catalogError, loading: catalogLoading } = useMapCatalog();
+  const { dragging, handlers } = useMapDrop();
+
+  return (
+    <div className={`app-shell${dragging ? ' app-shell--drag' : ''}`} {...handlers}>
       <MapToolbar catalog={catalog} catalogLoading={catalogLoading} />
       <LamGrabHost />
       <div className="app-main">
-        {lastLoadError ? (
-          <div className="error-banner" role="alert">
-            <div className="error-banner__body">
-              <strong>
-                <AlertTriangle
-                  size={16}
-                  style={{ verticalAlign: 'text-bottom', marginRight: 6 }}
-                />
-                Ошибка загрузки
-              </strong>
-              <span>{lastLoadError}</span>
-            </div>
-            <Button type="button" variant="ghost" size="icon-sm" onClick={() => clearLoadError()}>
-              <X size={16} />
-            </Button>
-          </div>
-        ) : null}
-
-        {mapDocument && parseIssues.length > 0 ? (
-          <div className="warnings-banner" role="status">
-            <strong>Предупреждения parse ({parseIssues.length})</strong>
-            <ul style={{ margin: '6px 0 0', paddingLeft: 18 }}>
-              {parseIssues.slice(0, 6).map((d, i) => (
-                <li key={`${d.code}-${i}`}>
-                  {d.message}
-                  {d.path ? ` · ${d.path}` : ''}
-                </li>
-              ))}
-            </ul>
-          </div>
-        ) : null}
-
-        {!mapDocument ? (
-          <div className="empty-state">
-            <div className="empty-state__card">
-              <h1>Выберите карту проекта</h1>
-              <p>
-                Карта показывает экраны приложения вживую, его API, базу данных и документацию задач.
-                Выберите проект ниже или перетащите файл карты в это окно.
-              </p>
-              {catalogError ? (
-                <p className="drawer__hint" role="status">
-                  {catalogError}
-                </p>
-              ) : null}
-              <div className="empty-state__actions">
-                {catalogLoading ? (
-                  <Button type="button" variant="outline" disabled={true}>
-                    Загрузка каталога…
-                  </Button>
-                ) : null}
-                {!catalogLoading && catalog.length === 0 ? (
-                  <p className="drawer__hint">
-                    Каталог пуст. Положите{' '}
-                    <code>*.liveappmap.json</code> в{' '}
-                    <code>apps/visualizer-spa/public/maps/</code> и обновите
-                    страницу.
-                  </p>
-                ) : null}
-                {catalog.map((p) => {
-                  const busy = loadingPresetId === p.id;
-                  return (
-                    <Button
-                      key={p.id}
-                      type="button"
-                      variant="primary"
-                      disabled={loadingPresetId !== null}
-                      aria-busy={busy}
-                      title={
-                        p.pageCount > 0
-                          ? `${p.path} · ${p.pageCount} экранов`
-                          : p.path
-                      }
-                      onClick={() => void loadPreset(p)}
-                    >
-                      {busy ? 'Загрузка…' : p.label}
-                    </Button>
-                  );
-                })}
-              </div>
-              <p className="drawer__hint">
-                Поиск по всему проекту — ⌘K, все клавиши — ?
-              </p>
-            </div>
-          </div>
-        ) : (
-          <div className="canvas-wrap">
-            {/* Виды «API», «База данных», «Документация» снимают холст целиком: живые iframe не держат память. */}
-            {appView === 'screens' && canvasFilter.trim() !== '' ? (
-              <div className="canvas-filter" role="status" data-testid="canvas-filter">
-                <span>
-                  На холсте только экраны «{canvasFilter.trim()}»
-                </span>
-                <Button type="button" size="sm" variant="ghost" onClick={() => setCanvasFilter('')}>
-                  Показать все
-                </Button>
-              </div>
-            ) : null}
-            {appView === 'api' ? <ApiView /> : appView === 'database' && mapDocument.code !== undefined && mapDocument.code.tables.length > 0 ? <DatabaseView /> : appView === 'docs' ? <DocsView /> : appView === 'compare' ? <CompareView key={loadSeq} /> : <AppMapCanvas />}
-            {appView === 'screens' ? <ScreenCommentsPanel /> : null}
-            <CommentsListPanel />
-            <StateInjectPanel />
-            <SnapshotOverlay />
-          </div>
-        )}
+        <LoadErrorBanner />
+        <ParseIssuesBanner />
+        {mapDocument ? <MapArea doc={mapDocument} /> : <EmptyState catalog={catalog} catalogError={catalogError} catalogLoading={catalogLoading} />}
         <DiagnosticsDock />
       </div>
       <CommentComposer />
       <VoiceModelDialog />
       <CommandPalette />
       <ShortcutsHelp />
-      {toast ? (
-        <div className="toast" role="status">
-          {toast}
-        </div>
-      ) : null}
+      <Toast />
     </div>
   );
 }

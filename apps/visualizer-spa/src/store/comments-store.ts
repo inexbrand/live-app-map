@@ -145,6 +145,17 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
   focus: (focusId) => set({ focusId }),
 }));
 
+/** Текст, по которому ищет общий список: замечание, экран, компонент, текст элемента. */
+function searchText(t: CommentThread): string {
+  const el = t.anchor.element;
+  return [t.text, t.anchor.pageTitle, el?.component?.name ?? '', el?.text ?? ''].join(' ').toLowerCase();
+}
+
+/** Ветка подходит под статус и автора фильтра. */
+function matchesKind(t: CommentThread, filter: CommentListFilter): boolean {
+  return (filter.status === 'all' || t.status === filter.status) && (filter.author === 'all' || t.author === filter.author);
+}
+
 /**
  * Ветки по фильтру общего списка (свежие сверху — порядок сервера).
  *
@@ -153,17 +164,5 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
  */
 export function filterThreads(threads: readonly CommentThread[], filter: CommentListFilter): readonly CommentThread[] {
   const q = filter.query.trim().toLowerCase();
-  return threads.filter((t) => {
-    if (filter.status !== 'all' && t.status !== filter.status) {
-      return false;
-    }
-    if (filter.author !== 'all' && t.author !== filter.author) {
-      return false;
-    }
-    if (q === '') {
-      return true;
-    }
-    const hay = [t.text, t.anchor.pageTitle, t.anchor.element?.component?.name ?? '', t.anchor.element?.text ?? ''].join(' ').toLowerCase();
-    return hay.includes(q);
-  });
+  return threads.filter((t) => matchesKind(t, filter) && (q === '' || searchText(t).includes(q)));
 }

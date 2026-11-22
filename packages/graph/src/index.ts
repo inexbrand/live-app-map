@@ -41,6 +41,16 @@ const NAV_KINDS = new Set<string>([
 
 const STRUCT_KINDS = new Set<string>(['wraps', 'parent']);
 
+/** Ребро между известными нодами — в соседи обеих. */
+function link(adj: Map<string, { out: string[]; in: string[] }>, e: AppMapEdge): void {
+  const fromA = adj.get(e.from);
+  const toA = e.to === null ? undefined : adj.get(e.to);
+  if (fromA && toA && e.to !== null) {
+    fromA.out.push(e.to);
+    toA.in.push(e.from);
+  }
+}
+
 /**
  * Строит индекс по документу (immutable).
  */
@@ -59,14 +69,7 @@ export function indexDocument(document: AppMapDocument): GraphIndex {
 
   for (const e of document.edges) {
     edgesById.set(e.id, e);
-    if (e.to !== null && adj.has(e.from) && adj.has(e.to)) {
-      const fromA = adj.get(e.from);
-      const toA = adj.get(e.to);
-      if (fromA && toA) {
-        fromA.out.push(e.to);
-        toA.in.push(e.from);
-      }
-    }
+    link(adj, e);
     if (NAV_KINDS.has(e.kind)) {
       navigationEdges.push(e);
     }
@@ -119,15 +122,7 @@ export function searchNodes(
   if (!q) {
     return [...index.nodesById.values()];
   }
-  return [...index.nodesById.values()].filter((n) => {
-    return (
-      n.id.toLowerCase().includes(q) ||
-      n.title.toLowerCase().includes(q) ||
-      n.pathPattern.toLowerCase().includes(q) ||
-      (n.pathExample?.toLowerCase().includes(q) ?? false) ||
-      (n.url?.toLowerCase().includes(q) ?? false)
-    );
-  });
+  return [...index.nodesById.values()].filter((n) => [n.id, n.title, n.pathPattern, n.pathExample ?? '', n.url ?? ''].some((s) => s.toLowerCase().includes(q)));
 }
 
 /**
@@ -172,33 +167,38 @@ export function resolveNodeUrl(
   baseUrl: string | null,
 ): string | null {
   if (node.url) {
-    if (!isSafeUrl(node.url)) {
-      return null;
-    }
-    return node.url;
+    return isSafeUrl(node.url) ? node.url : null;
   }
   const path = node.pathExample ?? node.pathPattern;
+  const own = ownUrl(path);
+  if (own !== undefined) {
+    return own;
+  }
+  return baseUrl !== null && baseUrl !== '' && path ? joinBase(path, baseUrl) : null;
+}
+
+/**
+ * Путь, который сам себе адрес: http(s) — если безопасен; javascript:/data: — null.
+ * Обычный путь — undefined (его кладут на адрес приложения).
+ */
+function ownUrl(path: string): string | null | undefined {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return isSafeUrl(path) ? path : null;
   }
-  if (path.startsWith('javascript:') || path.startsWith('data:')) {
+  return path.startsWith('javascript:') || path.startsWith('data:') ? null : undefined;
+}
+
+/** Путь экрана на адресе приложения; небезопасный адрес — null. */
+function joinBase(path: string, baseUrl: string): string | null {
+  if (!isSafeUrl(baseUrl)) {
     return null;
   }
-  if (baseUrl !== null && baseUrl !== '' && path) {
-    if (!isSafeUrl(baseUrl)) {
-      return null;
-    }
-    try {
-      const href = new URL(
-        path.startsWith('/') ? path : `/${path}`,
-        baseUrl,
-      ).href;
-      return isSafeUrl(href) ? href : null;
-    } catch {
-      return null;
-    }
+  try {
+    const href = new URL(path.startsWith('/') ? path : `/${path}`, baseUrl).href;
+    return isSafeUrl(href) ? href : null;
+  } catch {
+    return null;
   }
-  return null;
 }
 
 /**

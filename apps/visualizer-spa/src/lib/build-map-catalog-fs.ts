@@ -36,15 +36,7 @@ function screenCount(doc: AppMapDocument): number {
 export function summarizeMapFile(fileName: string, text: string): SummaryResult {
   const live = parseLiveAppMapJson(text);
   if (live.ok) {
-    return {
-      ok: true,
-      summary: {
-        fileName,
-        appName: live.document.app?.name ?? null,
-        baseUrl: live.document.baseUrl ?? null,
-        pageCount: screenCount(liveAppMapToAppMap(live.document)),
-      },
-    };
+    return { ok: true, summary: summaryOf(fileName, live.document.app?.name, live.document.baseUrl, liveAppMapToAppMap(live.document)) };
   }
   let raw: unknown;
   try {
@@ -54,17 +46,13 @@ export function summarizeMapFile(fileName: string, text: string): SummaryResult 
   }
   const app = parseAppMapDocument(raw);
   if (app.ok) {
-    return {
-      ok: true,
-      summary: {
-        fileName,
-        appName: app.document.project.name ?? null,
-        baseUrl: app.document.baseUrl,
-        pageCount: screenCount(app.document),
-      },
-    };
+    return { ok: true, summary: summaryOf(fileName, app.document.project.name, app.document.baseUrl, app.document) };
   }
   return { ok: false, reason: live.errors[0]?.message ?? 'не карта Live App Map' };
+}
+
+function summaryOf(fileName: string, appName: string | undefined, baseUrl: string | null | undefined, doc: AppMapDocument): MapFileSummary {
+  return { fileName, appName: appName ?? null, baseUrl: baseUrl ?? null, pageCount: screenCount(doc) };
 }
 
 /**

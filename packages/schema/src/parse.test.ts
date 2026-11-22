@@ -247,3 +247,33 @@ describe('roundtrip convert', () => {
     expect(reparse.ok).toBe(true);
   });
 });
+
+describe('parseLiveAppMapDocument: версии и предупреждения', () => {
+  test('major-версия выше 1 — ошибка; 1.x и число 1 — разбираются', () => {
+    const v2 = parseLiveAppMapDocument({ ...sampleLive, version: '2.0' });
+    expect(v2.ok).toBe(false);
+    if (!v2.ok) {
+      expect(v2.errors.map((e) => e.code)).toEqual(['UNSUPPORTED_VERSION']);
+    }
+    expect(parseLiveAppMapDocument({ ...sampleLive, version: 1 }).ok).toBe(true);
+    expect(parseLiveAppMapDocument({ ...sampleLive, version: '1.4.2' }).ok).toBe(true);
+  });
+
+  test('повтор id и страница без адреса — предупреждения', () => {
+    const r = parseLiveAppMapDocument({
+      ...sampleLive,
+      pages: [
+        { id: 'a', title: 'A', path: '/a' },
+        { id: 'a', title: 'A2', path: '/a2' },
+        { id: 'b', title: 'B' },
+      ],
+    });
+    expect(r.ok).toBe(true);
+    if (r.ok) {
+      expect(r.warnings.map((w) => [w.code, w.path ?? null])).toEqual([
+        ['DUPLICATE_PAGE_ID', null],
+        ['NO_URL', 'b'],
+      ]);
+    }
+  });
+});

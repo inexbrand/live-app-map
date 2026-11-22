@@ -27,16 +27,15 @@ export function resolveComponentSource(component: PickedComponent, code: CodeMod
   const stack = component.stack;
   if (stack !== null) {
     const file = symbols.map((s) => s.location.file).find((f) => f === stack.file || f.endsWith(`/${stack.file}`));
-    const fromRoot = code === undefined || projectRoot === undefined ? null : codeFileOfNode(projectRoot, code.root, stack.file);
-    return { file: file ?? fromRoot ?? stack.file, line: stack.line, origin: 'react-stack' };
+    return { file: file ?? stackFileFromRoot(code, projectRoot, stack.file) ?? stack.file, line: stack.line, origin: 'react-stack' };
   }
-  for (const name of component.chain) {
-    const s = symbols.find((x) => x.kind === 'component' && x.name === name);
-    if (s !== undefined) {
-      return { file: s.location.file, line: s.location.line, origin: 'code-map' };
-    }
-  }
-  return null;
+  const s = component.chain.map((name) => symbols.find((x) => x.kind === 'component' && x.name === name)).find((x) => x !== undefined);
+  return s === undefined ? null : { file: s.location.file, line: s.location.line, origin: 'code-map' };
+}
+
+/** Файл стека относительно корня кода карты; нет карты или корня проекта — null. */
+function stackFileFromRoot(code: CodeModel | undefined, projectRoot: string | undefined, file: string): string | null {
+  return code === undefined || projectRoot === undefined ? null : codeFileOfNode(projectRoot, code.root, file);
 }
 
 /**

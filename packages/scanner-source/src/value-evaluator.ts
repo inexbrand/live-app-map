@@ -27,6 +27,55 @@ import { isProjectNode, resolvedSymbol, type SourceContext } from './source-cont
 /** Предел глубины вычисления (константы через константы, билдеры). */
 const MAX_EVAL_DEPTH = 8;
 
+/** Выражение внутри обёртки (скобки, as, !, satisfies, <T>, await) или undefined. */
+function wrappedExpression(expr: ts.Expression): ts.Expression | undefined {
+  return ts.isParenthesizedExpression(expr) ||
+    ts.isAsExpression(expr) ||
+    ts.isNonNullExpression(expr) ||
+    ts.isSatisfiesExpression(expr) ||
+    ts.isTypeAssertionExpression(expr) ||
+    ts.isAwaitExpression(expr)
+    ? expr.expression
+    : undefined;
+}
+
+/** Объявление символа: значение или первое из объявлений. */
+function declarationOf(sym: ts.Symbol | undefined): ts.Declaration | undefined {
+  return sym?.valueDeclaration ?? sym?.declarations?.[0];
+}
+
+/** Параметр функции или элемент его деструктуризации. */
+function isParameterLike(decl: ts.Declaration): boolean {
+  return ts.isParameter(decl) || (ts.isBindingElement(decl) && ts.isParameter(rootOfBinding(decl)));
+}
+
+/** Инициализатор константы, поля, члена enum или свойства объекта. */
+function initializerOf(decl: ts.Declaration): ts.Expression | undefined {
+  if (ts.isEnumMember(decl) || ts.isVariableDeclaration(decl) || ts.isPropertyDeclaration(decl)) {
+    return decl.initializer;
+  }
+  return ts.isPropertyAssignment(decl) ? decl.initializer : undefined;
+}
+
+/** Объявление свойства: поле объекта (в т. ч. `{ a }`), член enum, поле класса. */
+function isPropertyDeclarationLike(decl: ts.Declaration): boolean {
+  return ts.isPropertyAssignment(decl) || ts.isShorthandPropertyAssignment(decl) || ts.isEnumMember(decl) || ts.isPropertyDeclaration(decl);
+}
+
+/** Свойство при деструктуризации: из параметра-строки (memberOf) или из объекта. */
+function destructured(obj: Value, key: string, origin: ts.Node): Value | undefined {
+  if (obj.kind === 'str') {
+    return memberOf(obj, key, origin);
+  }
+  return obj.kind === 'obj' ? obj.props.get(key) : undefined;
+}
+
+/** Имя шага Eden `.x({ id })`: первое свойство объекта, иначе текст аргумента. */
+function edenParamName(first: ts.Expression | undefined): string {
+  const name = first !== undefined && ts.isObjectLiteralExpression(first) ? first.properties[0]?.name?.getText() : undefined;
+  return name ?? lastName(first?.getText() ?? 'param');
+}
+
 /**
  * Вычислитель значений с доступом к checker и env-файлам.
  */
@@ -55,47 +104,50 @@ export class ValueEvaluator {
       return lit(expr.text, origin);
     }
     if (ts.isTemplateExpression(expr)) {
-      const parts: Part[] = [{ kind: 'lit', text: expr.head.text, origin }];
-      for (const span of expr.templateSpans) {
-        const v = this.evaluate(span.expression, frame, origin, next);
-        parts.push(...partsOf(v, origin, lastName(span.expression.getText())));
-        parts.push({ kind: 'lit', text: span.literal.text, origin });
-      }
-      return { kind: 'str', parts };
+      return this.template(expr, frame, origin, next);
     }
-    if (
-      ts.isParenthesizedExpression(expr) ||
-      ts.isAsExpression(expr) ||
-      ts.isNonNullExpression(expr) ||
-      ts.isSatisfiesExpression(expr) ||
-      ts.isTypeAssertionExpression(expr) ||
-      ts.isAwaitExpression(expr)
-    ) {
-      return this.evaluate(expr.expression, frame, origin, next);
+    const inner = wrappedExpression(expr);
+    return inner === undefined ? this.composite(expr, frame, origin, next) : this.evaluate(inner, frame, origin, next);
+  }
+
+  /** Шаблонная строка: литералы и значения подстановок. */
+  private template(expr: ts.TemplateExpression, frame: Frame, origin: ts.Node, depth: number): Value {
+    const parts: Part[] = [{ kind: 'lit', text: expr.head.text, origin }];
+    for (const span of expr.templateSpans) {
+      const v = this.evaluate(span.expression, frame, origin, depth);
+      parts.push(...partsOf(v, origin, lastName(span.expression.getText())));
+      parts.push({ kind: 'lit', text: span.literal.text, origin });
     }
+    return { kind: 'str', parts };
+  }
+
+  /** Составные выражения: операторы, объект, имя, член, вызов. */
+  private composite(expr: ts.Expression, frame: Frame, origin: ts.Node, depth: number): Value {
     if (ts.isBinaryExpression(expr)) {
-      return this.binary(expr, frame, origin, next);
+      return this.binary(expr, frame, origin, depth);
     }
     if (ts.isConditionalExpression(expr)) {
-      const a = this.evaluate(expr.whenTrue, frame, origin, next);
-      return isKnown(a) ? a : this.evaluate(expr.whenFalse, frame, origin, next);
+      return this.firstKnown(expr.whenTrue, expr.whenFalse, frame, origin, depth);
     }
     if (ts.isObjectLiteralExpression(expr)) {
-      return this.object(expr, frame, origin, next);
+      return this.object(expr, frame, origin, depth);
     }
     if (ts.isIdentifier(expr)) {
-      return this.identifier(expr, frame, origin, next);
+      return this.identifier(expr, frame, origin, depth);
     }
     if (ts.isPropertyAccessExpression(expr) || ts.isElementAccessExpression(expr)) {
-      return this.member(expr, frame, origin, next);
+      return this.member(expr, frame, origin, depth);
     }
     if (ts.isCallExpression(expr)) {
-      return this.call(expr, frame, origin, next);
+      return this.call(expr, frame, origin, depth);
     }
-    if (ts.isNewExpression(expr)) {
-      return { kind: 'unknown', name: lastName(expr.expression.getText()) };
-    }
-    return { kind: 'unknown', name: lastName(expr.getText()) };
+    return { kind: 'unknown', name: lastName((ts.isNewExpression(expr) ? expr.expression : expr).getText()) };
+  }
+
+  /** Значение a, если известно, иначе b (`?:`, `??`, `||`). */
+  private firstKnown(a: ts.Expression, b: ts.Expression, frame: Frame, origin: ts.Node, depth: number): Value {
+    const first = this.evaluate(a, frame, origin, depth);
+    return isKnown(first) ? first : this.evaluate(b, frame, origin, depth);
   }
 
   /** `a + b`, `a ?? b`, `a || b`. */
@@ -110,8 +162,7 @@ export class ValueEvaluator {
       };
     }
     if (op === ts.SyntaxKind.QuestionQuestionToken || op === ts.SyntaxKind.BarBarToken) {
-      const a = this.evaluate(expr.left, frame, origin, depth);
-      return isKnown(a) ? a : this.evaluate(expr.right, frame, origin, depth);
+      return this.firstKnown(expr.left, expr.right, frame, origin, depth);
     }
     return { kind: 'unknown', name: lastName(expr.getText()) };
   }
@@ -139,13 +190,9 @@ export class ValueEvaluator {
     if (id.text === 'undefined') {
       return { kind: 'none' };
     }
-    const imported = importedFrom(this.ctx.checker, id);
-    if (imported !== undefined && !imported.module.startsWith('.')) {
-      const sym = resolvedSymbol(this.ctx.checker, id);
-      const decl = sym?.valueDeclaration ?? sym?.declarations?.[0];
-      if (decl === undefined || !isProjectNode(this.ctx, decl)) {
-        return { kind: 'module', ...imported };
-      }
+    const external = this.externalModule(id);
+    if (external !== undefined) {
+      return external;
     }
     const sym = this.symbolOf(id);
     if (sym === undefined) {
@@ -158,6 +205,16 @@ export class ValueEvaluator {
     return this.declared(sym, id, frame, origin, depth);
   }
 
+  /** Импорт из пакета (не из проекта) — значение-модуль; иначе undefined. */
+  private externalModule(id: ts.Identifier): Value | undefined {
+    const imported = importedFrom(this.ctx.checker, id);
+    if (imported === undefined || imported.module.startsWith('.')) {
+      return undefined;
+    }
+    const decl = declarationOf(resolvedSymbol(this.ctx.checker, id));
+    return decl === undefined || !isProjectNode(this.ctx, decl) ? { kind: 'module', ...imported } : undefined;
+  }
+
   /** Символ идентификатора; у `{ a }` в литерале — символ значения. */
   private symbolOf(id: ts.Identifier): ts.Symbol | undefined {
     if (ts.isShorthandPropertyAssignment(id.parent)) {
@@ -168,22 +225,17 @@ export class ValueEvaluator {
 
   /** Значение по объявлению символа: константа, член enum, параметр, поле класса. */
   private declared(sym: ts.Symbol, at: ts.Node, frame: Frame, origin: ts.Node, depth: number): Value {
-    const decl = sym.valueDeclaration ?? sym.declarations?.[0];
+    const decl = declarationOf(sym);
     const name = lastName(at.getText());
     if (decl === undefined) {
       return at.getText() === 'fetch' ? { kind: 'fetch' } : { kind: 'unknown', name };
     }
-    if (ts.isParameter(decl) || (ts.isBindingElement(decl) && ts.isParameter(rootOfBinding(decl)))) {
+    if (isParameterLike(decl)) {
       return { kind: 'str', parts: [{ kind: 'param', name, origin }] };
     }
-    if (ts.isEnumMember(decl) && decl.initializer !== undefined) {
-      return this.evaluate(decl.initializer, frame, origin, depth);
-    }
-    if ((ts.isVariableDeclaration(decl) || ts.isPropertyDeclaration(decl)) && decl.initializer !== undefined) {
-      return this.evaluate(decl.initializer, frame, origin, depth);
-    }
-    if (ts.isPropertyAssignment(decl)) {
-      return this.evaluate(decl.initializer, frame, origin, depth);
+    const init = initializerOf(decl);
+    if (init !== undefined) {
+      return this.evaluate(init, frame, origin, depth);
     }
     if (ts.isShorthandPropertyAssignment(decl)) {
       const value = this.ctx.checker.getShorthandAssignmentValueSymbol(decl);
@@ -204,11 +256,7 @@ export class ValueEvaluator {
     }
     const obj = this.evaluate(holder.initializer, frame, origin, depth);
     const key = (decl.propertyName ?? decl.name).getText();
-    const fromParam = memberOf(obj, key, origin);
-    if (obj.kind === 'str' && fromParam !== undefined) {
-      return fromParam;
-    }
-    const v = obj.kind === 'obj' ? obj.props.get(key) : undefined;
+    const v = destructured(obj, key, origin);
     if (v !== undefined) {
       return v;
     }
@@ -223,42 +271,51 @@ export class ValueEvaluator {
     depth: number,
   ): Value {
     const text = expr.getText();
-    const env = /^(?:import\.meta\.env|process\.env)\.(\w+)$/.exec(text);
-    if (env?.[1] !== undefined) {
-      return {
-        kind: 'str',
-        parts: [{ kind: 'env', name: env[1], base: this.envBase(expr.getSourceFile(), env[1]), origin }],
-      };
+    const env = this.envValue(expr, text, origin);
+    if (env !== undefined) {
+      return env;
     }
     const key = memberKey(expr);
     const unknown: Value = { kind: 'unknown', name: key ?? lastName(text) };
     // Объект из кадра (аргумент обёртки) — берём свойство из него.
-    if (key !== undefined && ts.isIdentifier(expr.expression)) {
-      const sym = this.symbolOf(expr.expression);
-      const bound = sym === undefined ? undefined : frame.get(sym);
-      if (bound !== undefined) {
-        return memberOf(bound, key, origin) ?? unknown;
-      }
+    const bound = key === undefined ? undefined : this.boundObject(expr.expression, frame);
+    if (bound !== undefined) {
+      return memberOf(bound, key ?? '', origin) ?? unknown;
     }
     // Свойство с объявлением в проекте (константа-объект, enum, поле класса): читаем только его.
+    const declared = this.projectProperty(expr, frame, origin, depth);
+    if (declared !== undefined) {
+      return declared;
+    }
+    return this.objectMember(expr.expression, key, frame, origin, depth) ?? unknown;
+  }
+
+  /** Свойство вычисленного объекта; без ключа — undefined. */
+  private objectMember(target: ts.Expression, key: string | undefined, frame: Frame, origin: ts.Node, depth: number): Value | undefined {
+    return key === undefined ? undefined : memberOf(this.evaluate(target, frame, origin, depth), key, origin);
+  }
+
+  /** `import.meta.env.X`, `process.env.X` — часть-переменная окружения с базой из env-файла. */
+  private envValue(expr: ts.Expression, text: string, origin: ts.Node): Value | undefined {
+    const env = /^(?:import\.meta\.env|process\.env)\.(\w+)$/.exec(text)?.[1];
+    return env === undefined ? undefined : { kind: 'str', parts: [{ kind: 'env', name: env, base: this.envBase(expr.getSourceFile(), env), origin }] };
+  }
+
+  /** Значение имени из кадра (аргумент обёртки); не имя или не в кадре — undefined. */
+  private boundObject(expr: ts.Expression, frame: Frame): Value | undefined {
+    const sym = ts.isIdentifier(expr) ? this.symbolOf(expr) : undefined;
+    return sym === undefined ? undefined : frame.get(sym);
+  }
+
+  /** Свойство, объявленное в проекте (поле объекта, enum, класса), — по объявлению; иначе undefined. */
+  private projectProperty(expr: ts.PropertyAccessExpression | ts.ElementAccessExpression, frame: Frame, origin: ts.Node, depth: number): Value | undefined {
     const nameNode = ts.isPropertyAccessExpression(expr) ? expr.name : expr.argumentExpression;
     const sym = resolvedSymbol(this.ctx.checker, nameNode);
-    const decl = sym?.valueDeclaration ?? sym?.declarations?.[0];
-    if (
-      sym !== undefined &&
-      decl !== undefined &&
-      isProjectNode(this.ctx, decl) &&
-      (ts.isPropertyAssignment(decl) ||
-        ts.isShorthandPropertyAssignment(decl) ||
-        ts.isEnumMember(decl) ||
-        ts.isPropertyDeclaration(decl))
-    ) {
-      return this.declared(sym, nameNode, frame, origin, depth);
+    const decl = declarationOf(sym);
+    if (sym === undefined || decl === undefined || !isProjectNode(this.ctx, decl) || !isPropertyDeclarationLike(decl)) {
+      return undefined;
     }
-    if (key === undefined) {
-      return unknown;
-    }
-    return memberOf(this.evaluate(expr.expression, frame, origin, depth), key, origin) ?? unknown;
+    return this.declared(sym, nameNode, frame, origin, depth);
   }
 
   /** Вызов внутри выражения: создание клиента, шаг Eden, билдер проекта. */
@@ -270,17 +327,13 @@ export class ValueEvaluator {
       return created;
     }
     if (callee.kind === 'client' && callee.lib === 'eden') {
-      const first = expr.arguments[0];
-      const name = first !== undefined && ts.isObjectLiteralExpression(first) ? first.properties[0]?.name?.getText() : undefined;
-      return { ...callee, segs: [...callee.segs, { kind: 'dyn', name: name ?? lastName(first?.getText() ?? 'param'), origin }] };
+      return { ...callee, segs: [...callee.segs, { kind: 'dyn', name: edenParamName(expr.arguments[0]), origin }] };
     }
-    const target = this.functionsOf(expr.expression);
-    const fn = target?.fns[0];
-    if (fn !== undefined && fn.body !== undefined) {
+    const fn = this.functionsOf(expr.expression)?.fns[0];
+    if (fn?.body !== undefined) {
       return this.returnValue(fn, this.bind(fn, args), origin, depth);
     }
-    const first = expr.arguments[0];
-    return { kind: 'unknown', name: first === undefined ? lastName(expr.expression.getText()) : lastName(first.getText()) };
+    return { kind: 'unknown', name: lastName((expr.arguments[0] ?? expr.expression).getText()) };
   }
 
   /**
@@ -293,26 +346,36 @@ export class ValueEvaluator {
   bind(fn: FunctionNode, args: readonly Value[]): Frame {
     const frame = new Map<ts.Symbol, Value>();
     fn.parameters.forEach((p, i) => {
-      const arg = args[i] ?? (p.initializer === undefined ? { kind: 'none' } : this.evaluate(p.initializer, EMPTY_FRAME, p));
+      const arg = args[i] ?? this.defaultArg(p);
       if (ts.isIdentifier(p.name)) {
-        const sym = this.ctx.checker.getSymbolAtLocation(p.name);
-        if (sym !== undefined) {
-          frame.set(sym, arg);
-        }
-        return;
-      }
-      if (ts.isObjectBindingPattern(p.name)) {
-        for (const el of p.name.elements) {
-          const sym = ts.isIdentifier(el.name) ? this.ctx.checker.getSymbolAtLocation(el.name) : undefined;
-          const key = (el.propertyName ?? el.name).getText();
-          const v = arg.kind === 'obj' ? arg.props.get(key) : undefined;
-          if (sym !== undefined && v !== undefined) {
-            frame.set(sym, v);
-          }
-        }
+        this.setSymbol(frame, p.name, arg);
+      } else if (ts.isObjectBindingPattern(p.name)) {
+        this.bindPattern(frame, p.name, arg);
       }
     });
     return frame;
+  }
+
+  /** Значение параметра без аргумента: значение по умолчанию или none. */
+  private defaultArg(p: ts.ParameterDeclaration): Value {
+    return p.initializer === undefined ? { kind: 'none' } : this.evaluate(p.initializer, EMPTY_FRAME, p);
+  }
+
+  private setSymbol(frame: Map<ts.Symbol, Value>, name: ts.Identifier, value: Value): void {
+    const sym = this.ctx.checker.getSymbolAtLocation(name);
+    if (sym !== undefined) {
+      frame.set(sym, value);
+    }
+  }
+
+  /** `{ a, b: c }` параметра — свойства объекта-аргумента. */
+  private bindPattern(frame: Map<ts.Symbol, Value>, pattern: ts.ObjectBindingPattern, arg: Value): void {
+    for (const el of pattern.elements) {
+      const v = arg.kind === 'obj' ? arg.props.get((el.propertyName ?? el.name).getText()) : undefined;
+      if (v !== undefined && ts.isIdentifier(el.name)) {
+        this.setSymbol(frame, el.name, v);
+      }
+    }
   }
 
   /** Значение первого `return` функции (или тела-выражения стрелки). */
@@ -351,24 +414,28 @@ export class ValueEvaluator {
     if (!ts.isIdentifier(nameNode) && !ts.isPrivateIdentifier(nameNode)) {
       return undefined;
     }
-    const sym = ts.isIdentifier(nameNode) ? this.symbolOf(nameNode) : this.ctx.checker.getSymbolAtLocation(nameNode);
-    let decl = sym?.valueDeclaration ?? sym?.declarations?.[0];
-    if (decl !== undefined && ts.isShorthandPropertyAssignment(decl)) {
-      const value = this.ctx.checker.getShorthandAssignmentValueSymbol(decl);
-      decl = value?.valueDeclaration ?? value?.declarations?.[0];
-    }
+    const decl = this.calleeDeclaration(nameNode);
     if (decl === undefined || !isProjectNode(this.ctx, decl)) {
       return undefined;
     }
     const name = ts.isPropertyAccessExpression(callee) ? `${lastName(callee.expression.getText())}.${nameNode.text}` : nameNode.text;
     const fn = functionOfDeclaration(decl);
-    if (fn !== undefined) {
-      return { name, fns: [fn] };
-    }
-    const iface = ownerInterface(decl);
-    const impls = iface === undefined ? undefined : this.ctx.implementations.get(iface)?.get(nameNode.text);
-    const fns = (impls ?? []).map((b) => b.parent).filter((p): p is FunctionNode => p !== undefined && ts.isFunctionLike(p));
+    const fns = fn === undefined ? this.implementationsOf(decl, nameNode.text) : [fn];
     return fns.length === 0 ? undefined : { name, fns };
+  }
+
+  /** Объявление вызываемого имени; у `{ a }` — объявление значения. */
+  private calleeDeclaration(nameNode: ts.Identifier | ts.PrivateIdentifier): ts.Declaration | undefined {
+    const sym = ts.isIdentifier(nameNode) ? this.symbolOf(nameNode) : this.ctx.checker.getSymbolAtLocation(nameNode);
+    const decl = declarationOf(sym);
+    return decl !== undefined && ts.isShorthandPropertyAssignment(decl) ? declarationOf(this.ctx.checker.getShorthandAssignmentValueSymbol(decl)) : decl;
+  }
+
+  /** Реализации метода интерфейса, которому принадлежит объявление. */
+  private implementationsOf(decl: ts.Declaration, method: string): FunctionNode[] {
+    const iface = ownerInterface(decl);
+    const impls = iface === undefined ? undefined : this.ctx.implementations.get(iface)?.get(method);
+    return (impls ?? []).map((b) => b.parent).filter((p): p is FunctionNode => p !== undefined && ts.isFunctionLike(p));
   }
 }
 
