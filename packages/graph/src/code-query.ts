@@ -102,6 +102,22 @@ export type RouteFilter = {
 
 const READ_OPS: ReadonlySet<DbOperation> = new Set<DbOperation>(['select', 'count']);
 
+type CodeScreen = NonNullable<CodeModel['screens']>[number];
+
+/** Экран — в вызывающие роут один раз (по ноде, иначе по файлу). */
+function withCaller(list: RouteCaller[], screen: CodeScreen, via: string | undefined, titles: ReadonlyMap<string, string>): RouteCaller[] {
+  const key = screen.nodeId ?? screen.file;
+  if (!list.some((c) => (c.nodeId ?? c.file) === key)) {
+    list.push({
+      ...(screen.nodeId === undefined ? {} : { nodeId: screen.nodeId }),
+      title: (screen.nodeId === undefined ? undefined : titles.get(screen.nodeId)) ?? screen.file,
+      file: screen.file,
+      ...(via === undefined ? {} : { via }),
+    });
+  }
+  return list;
+}
+
 /**
  * Строит индекс раздела code. Карта без code даёт пустой индекс.
  *
@@ -116,20 +132,9 @@ export function buildCodeIndex(doc: AppMapDocument): CodeIndex {
   for (const screen of code.screens ?? []) {
     for (const sc of screen.calls) {
       const routeId = calls.get(sc.callId)?.routeId;
-      if (routeId === undefined) {
-        continue;
+      if (routeId !== undefined) {
+        callersByRoute.set(routeId, withCaller(callersByRoute.get(routeId) ?? [], screen, sc.via, titles));
       }
-      const list = callersByRoute.get(routeId) ?? [];
-      const key = screen.nodeId ?? screen.file;
-      if (!list.some((c) => (c.nodeId ?? c.file) === key)) {
-        list.push({
-          ...(screen.nodeId === undefined ? {} : { nodeId: screen.nodeId }),
-          title: (screen.nodeId === undefined ? undefined : titles.get(screen.nodeId)) ?? screen.file,
-          file: screen.file,
-          ...(sc.via === undefined ? {} : { via: sc.via }),
-        });
-      }
-      callersByRoute.set(routeId, list);
     }
   }
   return {
@@ -171,6 +176,11 @@ export function findService(index: CodeIndex, nameOrId: string): CodeService | u
   return index.servicesById.get(nameOrId) ?? index.code.services.find((s) => s.name === nameOrId);
 }
 
+/** Пустой запрос — любой роут; иначе метод, путь, описание или комментарии. */
+function matchesRouteQuery(r: ApiRoute, q: string): boolean {
+  return q === '' || `${r.method} ${r.path}\n${r.doc ?? ''}\n${(r.comments ?? []).join('\n')}`.toLowerCase().includes(q);
+}
+
 /**
  * Роуты по сервису и подстроке.
  *
@@ -184,11 +194,7 @@ export function findRoutes(index: CodeIndex, filter: RouteFilter): ApiRoute[] {
     return [];
   }
   const q = filter.query?.trim().toLowerCase() ?? '';
-  return index.code.routes.filter(
-    (r) =>
-      (service === undefined || r.serviceId === service.id) &&
-      (q === '' || `${r.method} ${r.path}\n${r.doc ?? ''}\n${(r.comments ?? []).join('\n')}`.toLowerCase().includes(q)),
-  );
+  return index.code.routes.filter((r) => (service === undefined || r.serviceId === service.id) && matchesRouteQuery(r, q));
 }
 
 /**
