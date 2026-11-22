@@ -32,12 +32,17 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@happy-dom/global-registrator": "^21.0.4",
     "@live-app-map/cli": "workspace:*",
     "@playwright/test": "^1.51.0",
+    "@testing-library/dom": "^10.4.2",
+    "@testing-library/react": "^16.3.3",
+    "@testing-library/user-event": "^14.6.13",
     "@types/d3-force": "^3",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
     "@vitejs/plugin-react": "^4.3.4",
+    "reassure": "^1.6.1",
     "typescript": "^5.8.2",
     "vite": "^6.2.0"
   }
