@@ -10,7 +10,7 @@ import type { Rect } from './region';
 import { uploadSnapshot } from '../agent-bridge';
 import { useCommentsStore } from '../../store/comments-store';
 import { anchorPage, screenAnchor } from '../comments/page-anchor';
-import { createTabGrabber, type GrabResult, type TabGrabber } from './tab-grabber';
+import { createTabGrabber, type GrabResult, type OpenResult, type TabGrabber } from './tab-grabber';
 
 /** Сколько держать поток вкладки после замечания: следующее — без диалога браузера. */
 const KEEP_STREAM_MS = 5 * 60_000;
@@ -57,6 +57,85 @@ async function deliver(purpose: SnapshotPurpose, shot: GrabResult, rect: Rect): 
   return up.ok ? `Снимок отправлен агенту: ${up.file}` : `Снимок не отправлен агенту: ${up.error}`;
 }
 
+type Session = ReturnType<typeof useSnapshotStore.getState>['session'];
+type KeepRef = { current: number };
+
+/** Сессии нет: поток живёт до конца срока после замечания, потом закрывается. */
+function idlePhase(grabber: TabGrabber, keepUntil: KeepRef): (() => void) | undefined {
+  const left = keepUntil.current - Date.now();
+  if (left <= 0) {
+    grabber.close();
+    return undefined;
+  }
+  const t = window.setTimeout(() => grabber.close(), left);
+  return () => window.clearTimeout(t);
+}
+
+/** Доступ к вкладке получен или нет: выделение, замечание без снимка или отмена. */
+function onOpened(res: OpenResult, purpose: SnapshotPurpose): void {
+  const store = useSnapshotStore.getState();
+  const toast = useAppStore.getState().setToast;
+  if (res.ok) {
+    store.opened();
+  } else if (purpose.kind === 'comment' && purpose.pick === 'element') {
+    // Замечание важнее снимка: выбираем компонент и без него
+    store.opened();
+    toast(`Снимок недоступен (${res.error}) — замечание сохранится без него`);
+  } else {
+    store.cancel();
+    toast(`Снимок: ${res.error}`);
+  }
+}
+
+/** Просим доступ к вкладке. */
+function openingPhase(grabber: TabGrabber, session: Extract<Session, { phase: 'opening' }>): void {
+  void grabber.open().then((res) => {
+    if (useSnapshotStore.getState().session !== session) {
+      // Отменили, пока браузер спрашивал разрешение: поток не нужен
+      grabber.close();
+      return;
+    }
+    onOpened(res, session.purpose);
+  });
+}
+
+/** Снимаем область и отдаём результат; поток замечания держим для следующего. */
+function capturingPhase(grabber: TabGrabber, session: Extract<Session, { phase: 'capturing' }>, keepUntil: KeepRef): void {
+  void afterPaint()
+    .then(() => grabber.grab(session.rect))
+    .then((shot) => {
+      if (session.purpose.kind === 'comment') {
+        keepUntil.current = Date.now() + KEEP_STREAM_MS;
+      } else {
+        grabber.close();
+      }
+      return deliver(session.purpose, shot, session.rect);
+    })
+    .then((message) => {
+      if (message !== null) {
+        useAppStore.getState().setToast(message);
+      }
+      useSnapshotStore.getState().finish();
+    });
+}
+
+/** Шаг сессии по её фазе; выделение ведёт оверлей. */
+function stepSession(grabber: TabGrabber, session: Session, keepUntil: KeepRef): (() => void) | undefined {
+  switch (session.phase) {
+    case 'idle':
+    case 'requested':
+      return idlePhase(grabber, keepUntil);
+    case 'opening':
+      openingPhase(grabber, session);
+      return undefined;
+    case 'capturing':
+      capturingPhase(grabber, session, keepUntil);
+      return undefined;
+    case 'selecting':
+      return undefined;
+  }
+}
+
 /**
  * Подключает сессию снимка к браузерному захвату вкладки.
  */
@@ -75,57 +154,7 @@ export function useSnapshotSession(): void {
 
   useEffect(() => {
     grabberRef.current ??= createTabGrabber();
-    const grabber = grabberRef.current;
-    const store = useSnapshotStore.getState();
-    const toast = useAppStore.getState().setToast;
-
-    if (session.phase === 'idle' || session.phase === 'requested') {
-      const left = keepUntil.current - Date.now();
-      if (left <= 0) {
-        grabber.close();
-        return;
-      }
-      const t = window.setTimeout(() => grabber.close(), left);
-      return () => window.clearTimeout(t);
-    }
-    if (session.phase === 'opening') {
-      void grabber.open().then((res) => {
-        if (useSnapshotStore.getState().session !== session) {
-          // Отменили, пока браузер спрашивал разрешение: поток не нужен
-          grabber.close();
-          return;
-        }
-        if (res.ok) {
-          store.opened();
-        } else if (session.purpose.kind === 'comment' && session.purpose.pick === 'element') {
-          // Замечание важнее снимка: выбираем компонент и без него
-          store.opened();
-          toast(`Снимок недоступен (${res.error}) — замечание сохранится без него`);
-        } else {
-          store.cancel();
-          toast(`Снимок: ${res.error}`);
-        }
-      });
-      return;
-    }
-    if (session.phase === 'capturing') {
-      void afterPaint()
-        .then(() => grabber.grab(session.rect))
-        .then((shot) => {
-          if (session.purpose.kind === 'comment') {
-            keepUntil.current = Date.now() + KEEP_STREAM_MS;
-          } else {
-            grabber.close();
-          }
-          return deliver(session.purpose, shot, session.rect);
-        })
-        .then((message) => {
-          if (message !== null) {
-            toast(message);
-          }
-          useSnapshotStore.getState().finish();
-        });
-    }
+    return stepSession(grabberRef.current, session, keepUntil);
   }, [session]);
 
   useEffect(() => () => grabberRef.current?.close(), []);

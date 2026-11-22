@@ -4,6 +4,7 @@
 import { useEffect } from 'react';
 import { useUiStore } from '../store/ui-store';
 import { useViewStore, type AppView } from '../store/view-store';
+import { isTypingTarget } from './typing-target';
 import { toggleTheme } from './theme';
 
 const VIEW_KEYS: ReadonlyMap<string, AppView> = new Map([
@@ -12,11 +13,6 @@ const VIEW_KEYS: ReadonlyMap<string, AppView> = new Map([
   ['3', 'database'],
   ['4', 'docs'],
 ]);
-
-/** Фокус в поле ввода: буквы и цифры принадлежат полю. */
-function typing(t: EventTarget | null): boolean {
-  return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || (t instanceof HTMLElement && t.isContentEditable);
-}
 
 type Ui = ReturnType<typeof useUiStore.getState>;
 
@@ -75,7 +71,7 @@ function mapKey(e: KeyboardEvent, ui: Ui): void {
 
 /** Буквы и цифры не перехватываются: фокус в поле, модификатор или открыт поиск. */
 function ownedByOthers(e: KeyboardEvent, ui: Ui): boolean {
-  return typing(e.target) || e.metaKey || e.ctrlKey || e.altKey || ui.palette;
+  return isTypingTarget(e.target) || e.metaKey || e.ctrlKey || e.altKey || ui.palette;
 }
 
 /**

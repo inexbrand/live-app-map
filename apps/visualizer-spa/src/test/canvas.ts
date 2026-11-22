@@ -58,6 +58,7 @@ export class RecordingContext {
   stroke(): void { this.call('stroke', []); }
   strokeText(...a: [string, number, number]): void { this.call('strokeText', a); }
   fillText(...a: [string, number, number]): void { this.call('fillText', a); }
+  drawImage(_image: CanvasImageSource, ...a: number[]): void { this.call('drawImage', a); }
   measureText(text: string): { readonly width: number } { return { width: text.length * 6 }; }
 }
 /**

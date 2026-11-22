@@ -12,11 +12,34 @@ import { useSnapshotSession } from '../lib/snapshot/use-snapshot-session';
 import { useAgentBridge } from '../lib/use-agent-bridge';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
+import { isTypingTarget } from '../lib/typing-target';
 import { startComment } from './comments/start-comment';
 
-/** Фокус в поле ввода: буквы принадлежат полю. */
-function typing(t: EventTarget | null): boolean {
-  return t instanceof HTMLInputElement || t instanceof HTMLTextAreaElement || t instanceof HTMLSelectElement || (t instanceof HTMLElement && t.isContentEditable);
+/** ⇧C — список замечаний, C — замечание к компоненту. */
+function commentKey(e: KeyboardEvent): void {
+  if (e.altKey || e.code !== 'KeyC' || isTypingTarget(e.target)) {
+    return;
+  }
+  e.preventDefault();
+  if (e.shiftKey) {
+    const c = useCommentsStore.getState();
+    c.setListOpen(!c.listOpen);
+    return;
+  }
+  startComment('element');
+}
+
+/** Клавиши замечаний; без карты и с ⌘/Ctrl не работают. */
+function onGrabKey(e: KeyboardEvent): void {
+  if (useAppStore.getState().document === null || e.metaKey || e.ctrlKey) {
+    return;
+  }
+  if (e.altKey && e.shiftKey && e.code === 'KeyS') {
+    e.preventDefault();
+    startComment('region');
+    return;
+  }
+  commentKey(e);
 }
 
 /**
@@ -29,28 +52,8 @@ export function LamGrabHost() {
   useCommentPicker();
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent): void => {
-      if (useAppStore.getState().document === null || e.metaKey || e.ctrlKey) {
-        return;
-      }
-      if (e.altKey && e.shiftKey && e.code === 'KeyS') {
-        e.preventDefault();
-        startComment('region');
-        return;
-      }
-      if (e.altKey || e.code !== 'KeyC' || typing(e.target)) {
-        return;
-      }
-      e.preventDefault();
-      if (e.shiftKey) {
-        const c = useCommentsStore.getState();
-        c.setListOpen(!c.listOpen);
-        return;
-      }
-      startComment('element');
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
+    window.addEventListener('keydown', onGrabKey);
+    return () => window.removeEventListener('keydown', onGrabKey);
   }, []);
 
   return null;
