@@ -8,26 +8,23 @@ import type { LiveSlice, MapSlice, SelectionSlice } from './types';
 /** 9999 = «без лимита» в UI и policy. */
 const MAX_LIVE_IFRAMES_CAP = 9999;
 
-/** Лимит iframe: не число — по умолчанию; 0 или 9999 и больше — без лимита (9999); иначе от min до потолка. */
-function clampIframeBudget(n: number, fallback: number, min: number): number {
+/** Лимит iframe: не число — по умолчанию; 0 или меньше, 9999 и больше — без лимита (9999); иначе округлённое. */
+function clampIframeBudget(n: number, fallback: number): number {
   if (!Number.isFinite(n)) {
     return fallback;
   }
   const rounded = Math.round(n);
-  if (rounded <= 0 || rounded >= 9999) {
-    return 9999;
-  }
-  return Math.min(MAX_LIVE_IFRAMES_CAP, Math.max(min, rounded));
+  return rounded <= 0 || rounded >= MAX_LIVE_IFRAMES_CAP ? MAX_LIVE_IFRAMES_CAP : rounded;
 }
 
-/** Лимит живых iframe: от 1, 0 — без лимита. */
+/** Лимит живых iframe; 0 — без лимита. */
 export function clampMaxLive(n: number): number {
-  return clampIframeBudget(n, DEFAULT_MAX_LIVE, 1);
+  return clampIframeBudget(n, DEFAULT_MAX_LIVE);
 }
 
-/** Лимит warm iframe: от 0. */
+/** Лимит warm iframe; 0 — без лимита. */
 export function clampMaxWarm(n: number): number {
-  return clampIframeBudget(n, DEFAULT_MAX_WARM, 0);
+  return clampIframeBudget(n, DEFAULT_MAX_WARM);
 }
 
 /** Раскладка iframe. */

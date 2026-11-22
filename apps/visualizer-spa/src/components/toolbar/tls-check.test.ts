@@ -23,5 +23,7 @@ describe('проверка TLS', () => {
     }
     expect(tlsCheckMessage({})).toBe('TLS fail · unknown');
     expect(tlsCheckMessage({ ok: true })).toBe('TLS OK · HTTP — · ');
+    expect(tlsCheckMessage({ ok: true, status: 0, message: 'x' })).toBe('TLS OK · HTTP 0 · x');
+    expect(tlsCheckMessage({ ok: false, error: '' })).toBe('TLS fail · ');
   });
 });

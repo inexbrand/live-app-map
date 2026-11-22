@@ -81,3 +81,36 @@ describe('requestOk и разбор тела', () => {
     expect(apiField(null, 'n', isNum)).toBeNull();
   });
 });
+
+describe('параметры запроса', () => {
+  /** fetch, который запоминает init и отвечает пустым JSON. */
+  function recorder(status = 200, body: unknown = {}): { readonly fetchFn: typeof fetch; readonly inits: RequestInit[] } {
+    const inits: RequestInit[] = [];
+    const fetchFn: typeof fetch = async (_url, init) => {
+      inits.push(init ?? {});
+      return new Response(JSON.stringify(body), { status });
+    };
+    return { fetchFn, inits };
+  }
+
+  test('cache уходит в fetch, только если задан', async () => {
+    const r = recorder();
+    await requestJson('/x', { fetchFn: r.fetchFn, cache: 'no-store' });
+    await requestJson('/x', { fetchFn: r.fetchFn });
+    expect(r.inits[0]?.cache).toBe('no-store');
+    expect(r.inits[1] !== undefined && 'cache' in r.inits[1]).toBe(false);
+  });
+
+  test('пустой error ответа — так и остаётся пустым, без подмены кодом', async () => {
+    const r = recorder(500, { error: '' });
+    const res = await requestJson('/x', { fetchFn: r.fetchFn });
+    expect(res).toEqual({ ok: false, status: 500, error: '', body: { error: '' } });
+  });
+
+  test('apiField: поля нет или тело не объект — null', () => {
+    const isNumber = (v: unknown): v is number => typeof v === 'number';
+    expect(apiField({ a: 1 }, 'b', isNumber)).toBeNull();
+    expect(apiField(null, 'a', isNumber)).toBeNull();
+    expect(apiField({ a: 1 }, 'a', isNumber)).toBe(1);
+  });
+});

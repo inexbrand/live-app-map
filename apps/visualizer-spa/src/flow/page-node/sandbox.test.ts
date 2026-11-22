@@ -19,10 +19,10 @@ describe('доверенный адрес iframe', () => {
       'http://127.0.0.1:3000',
       'http://[::1]:80/',
       'https://vite.localhost:5175/#/feed',
-      '/__lam_proxy/miniapp/#/',
-      'http://x/__lam_proxy/admin/',
-      '/__lam_proxy/site/',
-      '/__lam_proxy/https/example.com/',
+      'https://example.com/__lam_proxy/miniapp/#/',
+      'https://example.com/__lam_proxy/admin/',
+      'https://example.com/__lam_proxy/site/',
+      'https://example.com/__lam_proxy/https/example.org/',
     ]) {
       expect(isTrustedIframeBaseUrl(url)).toBe(true);
     }
