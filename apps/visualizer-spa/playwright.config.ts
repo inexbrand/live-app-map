@@ -65,6 +65,9 @@ export default defineConfig({
             '--use-fake-ui-for-media-stream',
             '--use-fake-device-for-media-stream',
             `--use-file-for-fake-audio-capture=${VOICE_WAV}`,
+            // Звук тест не выводит. С системным выходом AudioContext идёт по часам устройства:
+            // у виртуального (NDI Audio) часы стоят — запись тишина, текст пустой.
+            '--disable-audio-output',
           ],
         },
       },
