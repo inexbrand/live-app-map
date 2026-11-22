@@ -99,6 +99,13 @@ export function reconcile(s: PolicyState): ReconcileResult {
   return { liveIds: live, deferredPins, reasons };
 }
 
+/** Переходы слота по событию: из какого состояния — в какое; не указано — остаётся. */
+const SLOT_MOVES: Readonly<Record<'shouldLoad' | 'onLoad' | 'onError', ReadonlyMap<IframeSlotState, IframeSlotState>>> = {
+  shouldLoad: new Map([['IDLE', 'LOADING'], ['ERROR', 'LOADING']]),
+  onLoad: new Map([['LOADING', 'LIVE']]),
+  onError: new Map([['LOADING', 'ERROR'], ['LIVE', 'ERROR']]),
+};
+
 /**
  * Переход FSM слота.
  */
@@ -106,21 +113,10 @@ export function transitionSlot(
   current: IframeSlotState,
   event: 'shouldLoad' | 'onLoad' | 'onError' | 'freeze',
 ): IframeSlotState {
-  switch (event) {
-    case 'shouldLoad':
-      if (current === 'IDLE' || current === 'ERROR') {
-        return 'LOADING';
-      }
-      return current;
-    case 'onLoad':
-      return current === 'LOADING' ? 'LIVE' : current;
-    case 'onError':
-      return current === 'LOADING' || current === 'LIVE' ? 'ERROR' : current;
-    case 'freeze':
-      return 'IDLE';
-    default:
-      return current;
+  if (event === 'freeze') {
+    return 'IDLE';
   }
+  return SLOT_MOVES[event].get(current) ?? current;
 }
 
 /**
@@ -193,6 +189,16 @@ function isAllowed(
   return iframeAllowed[id] ?? true;
 }
 
+/** Пока пул больше предела — убрать самый старый незакреплённый; все закреплены — самый старый. */
+function evictOldest(order: readonly string[], maxWarm: number, pinned: ReadonlySet<string>): string[] {
+  const out = [...order];
+  while (out.length > maxWarm) {
+    const victim = out.findIndex((id) => !pinned.has(id));
+    out.splice(victim === -1 ? 0 : victim, 1);
+  }
+  return out;
+}
+
 /**
  * Keep-alive pool: кто ушёл из live → warm; eviction LRU (не pin первым).
  * Iframe в mountedIds не unmount — state приложения сохраняется.
@@ -209,65 +215,15 @@ export function reconcileWarmPool(input: WarmPoolInput): WarmPoolResult {
 
   const unlimitedWarm = maxWarm <= 0 || maxWarm >= 9999;
 
-  // Warm candidates: previous order minus live / disallowed
-  let order: string[] = [];
-  const seen = new Set<string>();
-  for (const id of previousWarmOrder) {
-    if (liveIds.has(id)) {
-      continue;
-    }
-    if (!isAllowed(id, iframeAllowed)) {
-      continue;
-    }
-    if (seen.has(id)) {
-      continue;
-    }
-    seen.add(id);
-    order.push(id);
+  const candidate = (id: string): boolean => !liveIds.has(id) && isAllowed(id, iframeAllowed);
+  // Warm candidates: previous order minus live / disallowed (без повторов)
+  let order = [...new Set(previousWarmOrder)].filter(candidate);
+  // Только что ушли из live, затем pin (всегда в warm, если не live) → newest (конец массива)
+  for (const id of [...previousLiveIds, ...pinned].filter(candidate)) {
+    order = [...order.filter((x) => x !== id), id];
   }
-
-  // Только что ушли из live → newest (конец массива)
-  for (const id of previousLiveIds) {
-    if (liveIds.has(id)) {
-      continue;
-    }
-    if (!isAllowed(id, iframeAllowed)) {
-      continue;
-    }
-    order = order.filter((x) => x !== id);
-    order.push(id);
-  }
-
-  // Pin всегда в warm, если не live (newest, защищены при eviction)
-  for (const id of pinned) {
-    if (liveIds.has(id)) {
-      continue;
-    }
-    if (!isAllowed(id, iframeAllowed)) {
-      continue;
-    }
-    order = order.filter((x) => x !== id);
-    order.push(id);
-  }
-
   if (!unlimitedWarm) {
-    while (order.length > maxWarm) {
-      // Evict oldest non-pinned first
-      let victim = -1;
-      for (let i = 0; i < order.length; i++) {
-        const id = order[i];
-        if (id !== undefined && !pinned.has(id)) {
-          victim = i;
-          break;
-        }
-      }
-      if (victim === -1) {
-        // Все pin — всё равно режем oldest
-        order.shift();
-      } else {
-        order.splice(victim, 1);
-      }
-    }
+    order = evictOldest(order, maxWarm, pinned);
   }
 
   const warmIds = new Set(order);
