@@ -109,7 +109,6 @@ function cacheKeyOf(store: LiveUrlInput): readonly unknown[] {
     gateway.port,
     gateway.profiles,
     gateway.samples,
-    proxyOrigin(),
   ];
 }
 
