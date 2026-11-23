@@ -82,11 +82,13 @@ export function searchDocs(docs: DocsModel, query: string, limit = 50): DocHit[]
   const inText: DocHit[] = [];
   for (const { file, epochId } of allDocs(docs)) {
     const base = { path: file.path, title: file.title, ...(epochId === undefined ? {} : { epochId }) };
-    if (`${file.title}\n${file.path}`.toLowerCase().includes(q)) {
+    const byTitle = `${file.title}\n${file.path}`.toLowerCase().includes(q);
+    if (byTitle) {
       titled.push({ ...base, line: 1, snippet: file.title });
     }
     file.text.split('\n').forEach((text, i) => {
-      if (text.toLowerCase().includes(q)) {
+      // Строка 1 уже найдена по заголовку — второй строкой списка она не нужна
+      if (!(byTitle && i === 0) && text.toLowerCase().includes(q)) {
         const t = text.trim();
         inText.push({ ...base, line: i + 1, snippet: t.length > SNIPPET_MAX ? `${t.slice(0, SNIPPET_MAX - 1)}…` : t });
       }
