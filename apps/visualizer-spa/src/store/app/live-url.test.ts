@@ -31,6 +31,24 @@ describe('live URL через шлюз', () => {
     expect(new URL(url ?? '').hash).toBe(new URL(direct ?? '').hash);
   });
 
+  test('адрес пересобирается при смене роли, стейта, входа и образцов шлюза', () => {
+    openMap('korbor-miniapp');
+    const id = screen(/^\/$/);
+    useGatewayStore.setState({ port: 4320, profiles: [] });
+    const first = useAppStore.getState().resolveLiveUrl(id);
+    useAppStore.getState().setGlobalRole('recruiter');
+    const withRole = useAppStore.getState().resolveLiveUrl(id);
+    expect(withRole).not.toBe(first);
+    useGatewayStore.setState({ port: 4321 });
+    expect(useAppStore.getState().resolveLiveUrl(id)).toContain('.localhost:4321/');
+    useGatewayStore.setState({ port: null });
+    useAppStore.getState().setDogfoodAdminAccessToken('tok');
+    useAppStore.getState().setDogfoodMiniappInitData('init-1');
+    expect(useAppStore.getState().resolveLiveUrl(id)).toContain('lam_init_data=init-1');
+    useAppStore.getState().setDogfoodMiniappInitData('init-2');
+    expect(useAppStore.getState().resolveLiveUrl(id)).toContain('lam_init_data=init-2');
+  });
+
   test('сервис и неизвестный id — без URL', () => {
     openMap('korbor-miniapp');
     const service = useAppStore.getState().document?.nodes.find((n) => n.kind === 'service');

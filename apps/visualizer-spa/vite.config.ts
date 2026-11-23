@@ -1,6 +1,7 @@
 /**
  * Vite SPA :4310 + TLS dogfood proxy (self-signed miniapp) + dynamic /maps catalog.
  */
+import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -103,8 +104,12 @@ function surfaceProxy(name: string, target: string, secure?: boolean): ProxyOpti
 }
 
 export default defineConfig({
+  resolve: {
+    alias: { '@': path.resolve(spaRoot, 'src') },
+  },
   plugins: [
     react(),
+    tailwindcss(),
     mapsCatalogPlugin(),
     tlsCheckPlugin(),
     errorReportsPlugin(),

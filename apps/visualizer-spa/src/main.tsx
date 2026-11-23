@@ -5,6 +5,7 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { createErrorReporter, installGlobalErrorReporting } from './lib/report-client-error';
 import { initPluginHost } from './plugin-host';
 import { applyTheme, savedTheme } from './lib/theme';
+import './styles/index.css';
 import './styles/global.css';
 import './styles/views.css';
 import './styles/comments.css';

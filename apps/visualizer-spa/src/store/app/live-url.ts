@@ -94,13 +94,51 @@ function screenOf(store: LiveUrlInput, id: string): MapNode | null {
   return !node || node.kind === 'service' ? null : node;
 }
 
+/** Всё, от чего зависит адрес: смена любого значения сбрасывает кэш. */
+function cacheKeyOf(store: LiveUrlInput): readonly unknown[] {
+  const gateway = useGatewayStore.getState();
+  return [
+    store.document,
+    store.index,
+    store.activeStates,
+    store.globalRole,
+    store.baseUrlOverride,
+    store.dogfoodMiniappInitData,
+    store.dogfoodAdminAccessToken,
+    store.useTlsProxy,
+    gateway.port,
+    gateway.profiles,
+    gateway.samples,
+    proxyOrigin(),
+  ];
+}
+
+/** Кэш адресов: один набор входов — одна карта id → адрес. */
+let cache: { key: readonly unknown[]; urls: Map<string, string | null> } = { key: [], urls: new Map() };
+
 /**
- * Live URL экрана; null — нет карты, ноды, URL или это сервис.
+ * Live URL экрана; null — нет карты, ноды, URL или это сервис. Адрес считается один раз
+ * на набор входов: селекторы всех нод зовут его на каждое изменение store.
  *
  * @param store - состояние store
  * @param id - id ноды
  */
 export function resolveLiveUrl(store: LiveUrlInput, id: string): string | null {
+  const key = cacheKeyOf(store);
+  if (key.length !== cache.key.length || key.some((v, i) => !Object.is(v, cache.key[i]))) {
+    cache = { key, urls: new Map() };
+  }
+  const hit = cache.urls.get(id);
+  if (hit !== undefined) {
+    return hit;
+  }
+  const url = computeLiveUrl(store, id);
+  cache.urls.set(id, url);
+  return url;
+}
+
+/** Адрес экрана без кэша. */
+function computeLiveUrl(store: LiveUrlInput, id: string): string | null {
   const node = screenOf(store, id);
   const doc = store.document;
   const base = node === null || doc === null ? null : baseUrlOf(node, store.baseUrlOverride || doc.baseUrl);
