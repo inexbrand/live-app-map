@@ -122,7 +122,7 @@ function PageDrawer(props: { readonly node: MapNode; readonly codeView: CodeView
   const setGlobalRole = useAppStore((s) => s.setGlobalRole);
   const liveUrl = useAppStore((s) => s.resolveLiveUrl(node.id));
   return (
-    <aside className="drawer ui-panel drawer--edge">
+    <aside className="drawer ui-panel drawer--edge" data-testid="page-drawer">
       <PanelHeader title={node.title} description={node.pathExample ?? node.pathPattern} action={<CloseButton />} />
       <PanelBody>
         <Field label="Живой URL" htmlFor="live-url-view">

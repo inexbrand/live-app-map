@@ -1469,12 +1469,17 @@ kbd,
 .session-profiles__item { display: flex; justify-content: space-between; gap: 8px; align-items: flex-start; }
 .session-form { display: grid; gap: 8px; margin-top: 8px; }
 .session-form__error { color: #f08a8a; }
+.session-form__actions { display: flex; gap: 8px; }
+.settings-dev > summary { cursor: pointer; font-weight: 600; padding: 4px 0; }
+.settings-dev[open] > summary { margin-bottom: 8px; }
 .page-node__snapshot { position: absolute; top: 0; left: 0; display: block; max-width: none; pointer-events: none; user-select: none; }
 
 /* GPU: вьюпорт холста — отдельный композитный слой, пан/зум двигают его без перерисовки;
    нода изолирует раскладку и отрисовку — изменения внутри не трогают соседей. */
 .react-flow__viewport { will-change: transform; }
 .react-flow__node { contain: layout style paint; }
+/* Рамка группы: в обзоре подпись стоит над рамкой — без paint-изоляции, иначе обрезается */
+.react-flow__node-groupFrame { contain: layout style; }
 .react-flow__minimap { contain: layout paint; }
 
 /* Вид «База данных» */
@@ -1539,10 +1544,23 @@ kbd,
 
 /* Обзор карты (ui-audit пункт 6): ниже OVERVIEW_ZOOM подписи растут обратно масштабу,
    мелочь карточки (путь, кнопки, размеры, стейты) прячется — читаются разделы и экраны. */
-.group-frame__title { font-size: clamp(28px, calc(28px / var(--lam-zoom, 1)), 360px); }
+.flow-host--overview .group-frame__title {
+  position: absolute; left: 0; bottom: 100%;
+  padding: 0 0 calc(6px / var(--lam-zoom, 1));
+  font-size: calc(24px / var(--lam-zoom, 1)); white-space: nowrap;
+}
 .flow-host--overview .page-node__title { font-size: min(calc(13px / var(--lam-zoom, 1)), 34px); line-height: 1.1; }
 .flow-host--overview .page-node__path,
 .flow-host--overview .page-node__actions,
 .flow-host--overview .page-node__states,
 .flow-host--overview .page-node__viewport-bar { visibility: hidden; }
 .flow-host--overview .react-flow__edge-textwrapper { display: none; }
+
+/* Узкое окно (ui-audit пункт 5): шапка в одну строку без прокрутки — селект карты уже,
+   подсказка ⌘K прячется (поиск остаётся кнопкой с именем). */
+@media (max-width: 960px) {
+  .toolbar-map-select { min-width: 0; max-width: 200px; }
+  .toolbar-map-select select { min-width: 0; width: 100%; text-overflow: ellipsis; }
+  .toolbar .palette__kbd { display: none; }
+}
+.flow-host--overview .group-frame__count { font-size: 0.6em; }

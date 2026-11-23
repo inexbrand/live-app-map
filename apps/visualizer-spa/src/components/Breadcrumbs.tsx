@@ -136,6 +136,10 @@ function useCrumbs(): Crumb[] {
 /** Крошки и кнопка «назад». */
 export function Breadcrumbs() {
   const crumbs = useCrumbs();
+  // Одна корневая крошка повторяет нажатую вкладку — шум и лишняя ширина шапки
+  if (crumbs.length < 2) {
+    return null;
+  }
   return (
     <nav className="crumbs" aria-label="Где вы" data-testid="breadcrumbs">
       <button type="button" className="crumbs__back" onClick={() => window.history.back()} title="Назад (Alt+←)" aria-label="Назад">

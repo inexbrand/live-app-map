@@ -10,7 +10,7 @@ import { useAppStore } from '../../store/app-store';
 import { useMapSourceStore, type MapSourceRef } from '../../store/map-source-store';
 import type { DogfoodActorsState } from './use-dogfood-actors';
 
-/** id поля выбора файла карты (одно на страницу, вне листа «Источники»). */
+/** id поля выбора файла карты (одно на страницу, для пункта «Открыть JSON» селекта). */
 export const MAP_FILE_INPUT_ID = 'lam-file-input';
 
 /** Значение селекта для карты из файла. */

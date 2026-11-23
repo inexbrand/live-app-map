@@ -216,6 +216,8 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
   const refresh = useGatewayStore((s) => s.refresh);
   const origins = useMapOrigins();
   const [method, setMethod] = useState<SessionMethod>('korbor-dogfood');
+  // Форма — по кнопке: в листе сначала видно, кто уже вошёл
+  const [adding, setAdding] = useState(false);
   const [state, submit, pending] = useActionState((_prev: FormState, form: FormData) => submitSession(method, form, refresh), EMPTY);
 
   if (port === null) {
@@ -224,10 +226,6 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
 
   return (
     <div className="sheet-block session-profiles" data-testid="session-profiles">
-      <div className="ui-field__label">Профили входа</div>
-      <p className="drawer__hint">
-        Войдите один раз — шлюз подставит сессию во все экраны этого приложения. Данные лежат в .lam-sessions вне git.
-      </p>
       {profiles.length === 0 ? <p className="drawer__hint">Профилей нет: экраны открываются без входа.</p> : null}
       <ul className="session-profiles__list">
         {profiles.map((p) => (
@@ -235,6 +233,12 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
         ))}
       </ul>
 
+      {adding ? null : (
+        <Button type="button" variant="primary" size="sm" onClick={() => setAdding(true)}>
+          Добавить вход
+        </Button>
+      )}
+      {adding ? (
       <form action={submit} className="session-form">
         <Field label="Профиль (id)" htmlFor="sess-id" hint="recruiter, employer, admin — совпадает со стейтом ноды">
           <Input id="sess-id" name="id" list="sess-id-list" />
@@ -271,10 +275,16 @@ export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodA
         </Field>
         {method === 'korbor-dogfood' ? <DogfoodFields state={state} actors={props.actors} actorsError={props.actorsError} apiBase={props.apiBase} /> : <PasteFields state={state} />}
         <FormOutcome state={state} />
-        <Button type="submit" variant="primary" size="sm" disabled={pending}>
-          {pending ? 'Вход…' : 'Войти'}
-        </Button>
+        <div className="session-form__actions">
+          <Button type="submit" variant="primary" size="sm" disabled={pending}>
+            {pending ? 'Вход…' : 'Войти'}
+          </Button>
+          <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>
+            Отмена
+          </Button>
+        </div>
       </form>
+      ) : null}
     </div>
   );
 }
