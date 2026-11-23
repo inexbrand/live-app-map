@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { App } from './App';
 import { useAppStore } from './store/app-store';
-import { useViewStore } from './store/view-store';
+import { useViewStore, type AppView } from './store/view-store';
 import { jsonResponse, mapJson, resetStores, stubFetch } from './test/fixtures';
 
 useDom();
@@ -54,7 +54,8 @@ describe('панель экрана', () => {
 
   test('на других видах панели нет; вернулись к экранам — она снова там', async () => {
     const { box, id } = await openWithSelection();
-    for (const view of ['api', 'database', 'docs', 'compare'] as const) {
+    const views: readonly AppView[] = ['api', 'database', 'docs', 'compare'];
+    for (const view of views) {
       act(() => useViewStore.getState().setView(view));
       expect(box.queryByRole('button', { name: 'Закрыть панель' })).toBeNull();
     }
