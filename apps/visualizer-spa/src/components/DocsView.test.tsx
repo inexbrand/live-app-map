@@ -12,7 +12,7 @@ import type { DocEpoch, DocsModel } from '@live-app-map/schema';
 import { useAppStore } from '../store/app-store';
 import { useDocGraphStore } from '../store/doc-graph-store';
 import { useViewStore } from '../store/view-store';
-import { jsonResponse, openMap, resetStores, stubFetch } from '../test/fixtures';
+import { jsonResponse, OPEN_EPOCH_DIR, openMap, openMapWithOpenEpoch, resetStores, stubFetch } from '../test/fixtures';
 import { DocsView } from './DocsView';
 
 useDom();
@@ -68,7 +68,8 @@ describe('вид «Документация»', () => {
   });
 
   test('список и первая эпоха; документация с диска недоступна — отметки выключены', async () => {
-    openMap('korbor-miniapp');
+    // Тестовая незакрытая эпоха: чип «Не готово N» есть, только когда такие эпохи есть
+    openMapWithOpenEpoch('korbor-miniapp');
     const docs = docsOf();
     const { ui, container } = view();
     expect(ui.getAllByTestId('docs-epoch-row')).toHaveLength(docs.epochs.length);
@@ -99,9 +100,9 @@ describe('вид «Документация»', () => {
   });
 
   test('эпоха: вкладки файлов, открытые пункты с «ещё», 09-bugs с отметкой', async () => {
-    openMap('korbor-miniapp');
+    openMapWithOpenEpoch('korbor-miniapp');
     liveDocs = docsOf();
-    const e = epochWhere((x) => x.openBugs.length > 5 && x.files.some((f) => f.path === `${x.dir}/09-bugs.md`));
+    const e = epochWhere((x) => x.dir === OPEN_EPOCH_DIR);
     act(() => useViewStore.getState().openDoc(e.dir));
     const { ui, container } = view();
     const bugs = within(ui.getByTestId('docs-open-bugs'));

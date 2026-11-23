@@ -127,6 +127,12 @@ describe('документы', () => {
     expect(searchDocs(docs, 'POST /api/hono')[0]?.epochId).toBe('api#20261121-100000');
   });
 
+  test('слово и в заголовке, и в первой строке файла — одно совпадение на строку', () => {
+    const file = { path: 'docs/agent-notes/roles.md', title: 'Роли', text: '# Роли\n\nРоли и права.' };
+    const hits = searchDocs({ root: '/p', epochs: [], notes: [file], guides: [] }, 'роли');
+    expect(hits.map((h) => `${h.path}:${h.line}`)).toEqual(['docs/agent-notes/roles.md:1', 'docs/agent-notes/roles.md:3']);
+  });
+
   test('ссылки из текста: роут по методу и пути, путь с другими именами параметров, экран, файл:строка', () => {
     expect(resolveDocRef('POST /api/hono/items', refs)).toEqual({ kind: 'route', routeId: 'api:@g/api POST /api/hono/items' });
     expect(resolveDocRef('/api/me/vacancies/{id}', refs)).toEqual({ kind: 'route', routeId: 'api:@g/api GET /api/me/vacancies/:vacancyId' });

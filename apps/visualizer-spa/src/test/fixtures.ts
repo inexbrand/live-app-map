@@ -3,7 +3,7 @@
  * store в начальном состоянии, ответы сети по адресу.
  */
 import { readFileSync } from 'node:fs';
-import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument } from '@live-app-map/schema';
+import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument, type DocEpoch } from '@live-app-map/schema';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
 import { useDocGraphStore } from '../store/doc-graph-store';
@@ -62,6 +62,65 @@ export function resetStores(): void {
   reset(useGatewayStore);
   reset(useSnapshotStore);
   reset(useVoiceStore);
+}
+
+/** Тестовая незакрытая эпоха: в korbor эпохи закрываются, а сценарию нужна открытая. */
+export const OPEN_EPOCH_DIR = 'docs/epoch/test-open-task#20991231-235959';
+
+/** Открытые пункты тестовой эпохи — больше пяти, чтобы была кнопка «ещё». */
+export const OPEN_EPOCH_BUGS = ['Первый пункт', 'Второй пункт', 'Третий пункт', 'Четвёртый пункт', 'Пятый пункт', 'Шестой пункт', 'Седьмой пункт'];
+
+/**
+ * Карта с тестовой незакрытой эпохой первой (эпохи — от новых к старым).
+ *
+ * @param doc - карта
+ */
+export function withOpenEpoch(doc: AppMapDocument): AppMapDocument {
+  const docs = doc.docs;
+  if (docs === undefined) {
+    throw new Error('в карте нет docs');
+  }
+  const dir = OPEN_EPOCH_DIR;
+  const bugs = `# Найденные баги\n\n## Open\n\n${OPEN_EPOCH_BUGS.map((b) => `- [ ] ${b}`).join('\n')}\n\n## Closed\n`;
+  const epoch: DocEpoch = {
+    id: dir.slice('docs/epoch/'.length),
+    slug: 'test-open-task',
+    date: '2099-12-31T23:59:59',
+    dir,
+    summary: 'Тестовая незакрытая задача.',
+    readiness: 'not-ready',
+    openBugs: OPEN_EPOCH_BUGS,
+    files: [
+      { path: `${dir}/00-brief.md`, title: 'Brief', text: '# Brief\n\n## Цель\n\nТестовая незакрытая задача.\n' },
+      { path: `${dir}/09-bugs.md`, title: 'Найденные баги', text: bugs },
+    ],
+    images: [],
+  };
+  return { ...doc, docs: { ...docs, epochs: [epoch, ...docs.epochs] } };
+}
+
+/** Загрузить карту с тестовой незакрытой эпохой. */
+export function openMapWithOpenEpoch(name: MapName): AppMapDocument {
+  const doc = withOpenEpoch(appMap(name));
+  useAppStore.getState().loadDocument(doc);
+  return doc;
+}
+
+/**
+ * Загрузить карту, где у первого роута убраны JSDoc и комментарии — роут без авторского описания.
+ *
+ * @returns id этого роута
+ */
+export function openMapWithUndocumentedRoute(name: MapName): string {
+  const doc = appMap(name);
+  const routes = doc.code?.routes ?? [];
+  const first = routes[0];
+  if (doc.code === undefined || first === undefined) {
+    throw new Error(`в карте ${name} нет роутов`);
+  }
+  const { doc: _doc, comments: _comments, ...bare } = first;
+  useAppStore.getState().loadDocument({ ...doc, code: { ...doc.code, routes: [bare, ...routes.slice(1)] } });
+  return first.id;
 }
 
 /** Загрузить карту в store, как после выбора в шапке. */
