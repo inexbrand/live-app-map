@@ -5,6 +5,7 @@
  * Скриншоты пишутся в папку эпохи (LAM_SHOTS_DIR), если она задана.
  */
 import { expect, test } from '@playwright/test';
+import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
 import { collectPageErrors, openMap, shot } from './helpers';
 
 
@@ -62,9 +63,12 @@ test.describe('вид «API» на korbor', () => {
   test('«без описания» оставляет роуты без авторского описания, у каждого — описание из кода', async ({ page }) => {
     await openMap(page, 'korbor-all.liveappmap.json');
     await page.getByTestId('view-api').click();
-    await page.getByTestId('api-undocumented').click();
     const rows = page.getByTestId('api-route-row');
-    await expect.poll(async () => rows.count()).toBeGreaterThan(200);
+    await expect(rows).not.toHaveCount(0);
+    // Сколько роутов без авторского описания — зависит от кода korbor; фильтр оставляет ровно их.
+    const undocumented = await page.locator('.api-row__doc--auto').count();
+    await page.getByTestId('api-undocumented').click();
+    await expect(rows).toHaveCount(undocumented);
     await expect(page.locator('.api-row__doc:not(.api-row__doc--auto)')).toHaveCount(0);
     await expect(page.locator('.api-row__doc--auto')).toHaveCount(await rows.count());
     await shot(page, 'api-korbor-undocumented.png');
@@ -96,28 +100,28 @@ test.describe('вид «API» на korbor', () => {
 
 test.describe('вид «Документация»', () => {
   test('korbor: эпохи с готовностью, открытые пункты, ссылка из текста на роут', async ({ page }) => {
-    // Сценарий на снимке docs из карты (26 эпох, 4 не готовы). На этой машине диск korbor новее
-    // (29 и 0) и чтение с диска заменяет снимок — без этого тест зависел от гонки с чтением.
-    await page.route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
+    // Снимок карты с тестовой незакрытой эпохой; чтение диска отключено — виден снимок и причина.
+    const docs = await pinKorborDocs(page, 'off');
     await openMap(page, 'korbor-all.liveappmap.json');
     await page.getByTestId('view-docs').click();
-    await expect(page.getByTestId('docs-epoch-row')).toHaveCount(26);
-    await expect(page.getByTestId('docs-source')).toContainText('Показан снимок из карты (эпох: 26). С диска не прочитать: диск отключён в тесте');
+    const total = docs().epochs.length;
+    await expect(page.getByTestId('docs-epoch-row')).toHaveCount(total);
+    await expect(page.getByTestId('docs-source')).toContainText(`Показан снимок из карты (эпох: ${total}). С диска не прочитать: диск отключён в тесте`);
     await page.getByRole('button', { name: /^Не готово/ }).click();
     const notReady = page.getByTestId('docs-epoch-row');
-    await expect.poll(async () => notReady.count()).toBeGreaterThan(0);
-    await notReady.filter({ hasText: 'perf-load-test' }).click();
-    await expect(page.getByTestId('docs-open-bugs')).toContainText('rate limiter');
+    await expect(notReady).toHaveCount(docs().epochs.filter((e) => e.readiness === 'not-ready').length);
+    await notReady.filter({ hasText: OPEN_EPOCH.slug }).click();
+    await expect(page.getByTestId('docs-open-bugs')).toContainText(OPEN_EPOCH.bug);
     await page.getByRole('button', { name: 'Баги', exact: true }).click();
     // Вкладка «Баги» — один список «Пункты», текст файла свёрнут
-    await expect(page.getByTestId('docs-bug-marks')).toContainText('rate limiter');
+    await expect(page.getByTestId('docs-bug-marks')).toContainText(OPEN_EPOCH.bug);
     await expect(page.getByTestId('docs-open-bugs')).toHaveCount(0);
     await shot(page, 'docs-korbor-not-ready.png');
 
     await page.getByRole('button', { name: /^Все$/ }).click();
-    await page.locator('#docs-search').fill('telegram-login');
+    await page.locator('#docs-search').fill('незакрытая задача — проверить');
     await page.getByTestId('docs-hit').first().click();
-    const ref = page.getByTestId('doc-ref').filter({ hasText: 'POST /api/v1/auth/web/telegram-login' }).first();
+    const ref = page.getByTestId('doc-ref').filter({ hasText: OPEN_EPOCH.route }).first();
     await expect(ref).toBeVisible();
     await ref.click();
     await expect(page.getByTestId('api-route-card')).toContainText('/api/v1/auth/web/telegram-login');

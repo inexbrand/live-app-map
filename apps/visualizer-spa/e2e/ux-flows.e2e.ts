@@ -4,6 +4,7 @@
  * горячие клавиши и тема. Скриншоты — в LAM_SHOTS_DIR, если задана.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
 import { collectPageErrors, openMap, shot, WIDE_VIEWPORT } from './helpers';
 
 function openKorbor(page: Page, query = ''): Promise<void> {
@@ -76,16 +77,16 @@ test.describe('понять проект', () => {
 
 test.describe('закрыть задачу', () => {
   test('незакрытая эпоха → баги → связи документа → ссылка на документ открывается заново', async ({ page }) => {
-    // Сценарий на снимке docs карты (4 эпохи не готовы); диск korbor новее (0) — чтение отключено.
-    await page.context().route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
+    // Тестовая незакрытая эпоха — сценарий не зависит от того, что закрыто в korbor.
+    await pinKorborDocs(page);
     await openKorbor(page, '&view=docs');
     await page.getByRole('button', { name: /^Не готово/ }).click();
-    await page.getByTestId('docs-epoch-row').filter({ hasText: 'perf-load-test' }).click();
-    await expect(page.getByTestId('docs-open-bugs')).toContainText('rate limiter');
+    await page.getByTestId('docs-epoch-row').filter({ hasText: OPEN_EPOCH.slug }).click();
+    await expect(page.getByTestId('docs-open-bugs')).toContainText(OPEN_EPOCH.bug);
     await page.getByRole('button', { name: 'Баги', exact: true }).click();
     const local = page.getByTestId('local-graph');
-    await expect(local.getByTestId('local-graph-out')).toContainText('sql-query-metrics-run.ts');
-    await expect(local.getByTestId('local-graph-in')).toContainText('perf-load-test');
+    await expect(local.getByTestId('local-graph-out')).toContainText(OPEN_EPOCH.route);
+    await expect(local.getByTestId('local-graph-in')).toContainText(OPEN_EPOCH.slug);
     await expect(page.getByTestId('local-graph-canvas')).toHaveAttribute('data-nodes', /^[3-9]|\d{2,}$/);
     await shot(page, 'flow-close-task.png');
 
@@ -95,15 +96,15 @@ test.describe('закрыть задачу', () => {
     const again = await page.context().newPage();
     await again.setViewportSize(WIDE_VIEWPORT);
     await again.goto(url);
-    await expect(again.getByTestId('docs-doc')).toContainText('in-memory rate limiter', { timeout: 30_000 });
+    await expect(again.getByTestId('docs-doc')).toContainText(OPEN_EPOCH.bug, { timeout: 30_000 });
     await again.close();
   });
 });
 
 test.describe('граф документации', () => {
   test('сначала только документы, «показать все» — сотни узлов на canvas, фильтры, поиск, карточка узла, переход на карту', async ({ page }) => {
-    // Фильтр «Не готово» нужен эпохам снимка карты (4 не готовы); на диске их 0 — чтение отключено.
-    await page.context().route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
+    // Фильтру «Не готово» нужна незакрытая эпоха — тестовая, не из korbor.
+    await pinKorborDocs(page);
     await openKorbor(page, '&view=docs');
     await page.keyboard.press('g');
     const canvas = page.getByTestId('doc-graph-canvas');
