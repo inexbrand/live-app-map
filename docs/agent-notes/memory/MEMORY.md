@@ -21,3 +21,5 @@
 - [Git: origin — inexbrand](git-remotes-inexbrand.md) — форк Resterr1337 = remote user, бэкап chii-коммита
 - [Общий checkout: без stash](shared-checkout-no-stash.md) — параллельные агенты, коммитить только свои пути
 - [Автовход через dev-auth](lam-dev-auth-autologin.md) — /__lam_sessions/auto, копия обработчика в korbor, сид админа и ролей
+- [SPA на shadcn: грабли](shadcn-base-ui-spa.md) — @layer base, тесты Select/Toggle, две копии стора в vite
+- [API: домены вместо сервисов](api-domains-audiences.md) — аудитории по данным, доска роута по клику
