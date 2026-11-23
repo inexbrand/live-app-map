@@ -4,6 +4,7 @@
  * Скриншоты — в LAM_SHOTS_DIR, если задана.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { pinKorborDocs } from './docs-fixture';
 import { collectPageErrors, openMiniappAndSelectNode, shot } from './helpers';
 
 /** Шапка не шире окна: ничего не вылезает и не обрезается прокруткой. */
@@ -149,16 +150,22 @@ test.describe('числа документации', () => {
   test('снимок карты заменяется диском: пока читаю — строка-пояснение, после — числа с диска', async ({ page }) => {
     let release: () => void = () => undefined;
     const gate = new Promise<void>((done) => { release = done; });
-    await page.route('**/__lam_docs/live**', async (route) => {
+    // «Диск» отвечает по сигналу теста и на одну эпоху меньше снимка — видно, что числа сменились.
+    const docs = await pinKorborDocs(page, async (route, d) => {
       await gate;
-      await route.continue();
+      await route.fulfill({ json: { docs: { ...d, epochs: d.epochs.slice(1) } } });
     });
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
-    await expect(page.getByTestId('docs-source')).toContainText('Показан снимок из карты (эпох: 26). Читаю документацию с диска…', { timeout: 30_000 });
+    const source = page.getByTestId('docs-source');
+    await expect(source).toContainText('Читаю документацию с диска…', { timeout: 30_000 });
+    const snapshot = docs().epochs.length;
+    await expect(source).toHaveText(`Показан снимок из карты (эпох: ${snapshot}). Читаю документацию с диска…`);
+    await expect(page.getByTestId('docs-epoch-row')).toHaveCount(snapshot);
     await shot(page, 'after-docs-snapshot-note.png');
     release();
-    await expect(page.getByTestId('docs-source')).toHaveCount(0);
+    await expect(source).toHaveCount(0);
+    await expect(page.getByTestId('docs-epoch-row')).toHaveCount(snapshot - 1);
   });
 });
 
