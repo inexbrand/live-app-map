@@ -1,0 +1,19 @@
+# Memory
+
+- [Korbor/vpn-saas: БД через порты](korbor-vpn-db-via-ports.md) — сканеру нужны реализации интерфейсов, проверять цифры на korbor
+- [master live-app-map сломан (2026-11)](live-app-map-master-broken-2026-11.md) — 9 файлов SPA не в git, чинит другой агент
+- [Visualizer dev runtime](visualizer-dev-runtime.md) — vite под Bun, эндпоинты dev, .lam-feedback в корне
+- [Large file edit tooling](large-file-edit-tooling.md) — context-mode блокирует Read >25KB: cat + write
+- [Фронтенды korbor/vpn: клиенты API](korbor-frontend-api-clients.md) — DI-fetch, сторы, switch админки, правила сканера, цифры 200/314
+- [Запуск korbor локально](korbor-local-run.md) — без бота, chainguard MinIO, site/.env + seed
+- [vpn-saas: переходы TanStack во вложенных импортах](vpn-saas-tanstack-links.md) — обход импортов до 3, общие файлы отсекать
+- [Визуализатор: реальные параметры маршрутов](visualizer-route-samples.md) — id из API под профилем, metadata.pathPattern, свой порт для e2e
+- [Worktree: git, scan:korbor, e2e](worktree-git-and-korbor-scan.md) — /usr/bin/git, KORBOR_DIR, LAM_SESSIONS_DIR для e2e, занятый 4311, commit -F
+- [Визуализатор: грабли UX-переделки](visualizer-ux-overhaul-lessons.md) — перезапуск dev после rebase схемы, rAF/StrictMode, merge вместо force-push, LAM_SHOTS_DIR
+- [scan:korbor и живая CMS](scan-korbor-needs-live-cms.md) — без :16001 теряются 9 страниц сайта, сверять 33
+- [Грабли REPL и vite (sauger)](agent-tooling-pitfalls-sauger.md) — не cat > f < /dev/stdin, перезапуск vite после middleware, карта без нод
+- [Визуализатор: замечания и голос — грабли](visualizer-comments-voice-lessons.md) — rVFC у неподвижной вкладки, _debugStack+sourcemap, res close, зеркало моделей, 1024×700
+- [DOM-тесты SPA: грабли](spa-dom-tests-happy-dom.md) — userEvent.setup({document}), WheelEvent, React 19 form reset, crapper 0% при падении
+- [Reassure под bun](reassure-under-bun.md) — test:perf, --conditions=require, perfTest без expect.getState
+- [e2e: грабли машины](e2e-host-env-pitfalls.md) — зависший OrbStack, NDI Audio глушит голос, korbor без бота
+- [mutator под bun](mutator-under-bun.md) — ./ в путях, вывод в файл, группы SPA по тестам, canvas через регистратор, эталон сканера
