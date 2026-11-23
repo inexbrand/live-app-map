@@ -8,7 +8,7 @@ import { bugItems, type BugItem, type BugItemState } from '@live-app-map/scanner
 import type { DocEpoch, DocFile, DocsModel } from '@live-app-map/schema';
 import { markBug, withEpoch } from '../lib/docs-live-client';
 import { useAppStore } from '../store/app-store';
-import { Button } from '../ui';
+import { Button } from '@/components/ui/button';
 
 const STATE_WORDS: Readonly<Record<BugItemState, string>> = { open: 'открыт', closed: 'закрыт', other: 'вне разделов' };
 
@@ -34,7 +34,7 @@ function BugConfirm(props: { readonly file: string; readonly item: BugItem; read
         {item.checkbox ? ' (отметка чекбокса).' : ` (перенос в раздел ${next === 'closed' ? 'Closed' : 'Open'}).`}
       </p>
       <div className="docs-bugs__actions">
-        <Button type="button" size="sm" variant="primary" disabled={busy} onClick={props.onApply}>
+        <Button type="button" size="sm" variant="default" disabled={busy} onClick={props.onApply}>
           {busy ? 'Записываю…' : 'Записать'}
         </Button>
         <Button type="button" size="sm" variant="ghost" disabled={busy} onClick={props.onCancel}>

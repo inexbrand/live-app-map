@@ -10,10 +10,10 @@ import type { DocEpoch, DocFile, DocsModel } from '@live-app-map/schema';
 import { docsAssetUrl } from '../lib/docs-asset-url';
 import { epochDateLabel, epochFileLabel, galleryImages, readinessLabel, type OpenDoc } from '../lib/docs-view-model';
 import { useAppStore } from '../store/app-store';
-import { Button } from '../ui';
 import { BugMarks } from './BugMarks';
 import { LocalGraph } from './graph/LocalGraph';
 import { DocMarkdown } from './Markdown';
+import { Button } from '@/components/ui/button';
 
 /** Кнопка «Скопировать ссылку» на открытое место (адрес страницы хранит документ). */
 function CopyLink() {

@@ -3,7 +3,7 @@
  */
 import { X } from 'lucide-react';
 import { useUiStore } from '../store/ui-store';
-import { Button } from '../ui';
+import { Button } from '@/components/ui/button';
 
 /** Клавиши и что они делают. */
 export const SHORTCUTS: readonly { readonly keys: readonly string[]; readonly what: string }[] = [

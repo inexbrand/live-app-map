@@ -47,7 +47,7 @@ export function OptionSelect(props: OptionSelectProps) {
         }
       }}
     >
-      <SelectTrigger id={props.id} size={size} aria-label={props['aria-label']} data-testid={props['data-testid']} className={cn('w-full min-w-0', className)}>
+      <SelectTrigger id={props.id} size={size} aria-label={props['aria-label']} data-testid={props['data-testid']} data-value={value} className={cn('w-full min-w-0', className)}>
         <SelectValue placeholder={placeholder} />
       </SelectTrigger>
       <SelectContent alignItemWithTrigger={false}>

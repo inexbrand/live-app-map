@@ -5,6 +5,7 @@
 import { Component, type ErrorInfo, type ReactNode } from 'react';
 import { ErrorReportSource, type ErrorReport } from '../lib/error-report';
 import { buildErrorReport } from '../lib/report-client-error';
+import { Button } from '@/components/ui/button';
 
 /** Props границы. */
 export type ErrorBoundaryProps = {
@@ -51,9 +52,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, State> {
             Отчёт сохранён в .lam-feedback/error-reports.jsonl (при запущенном bun run dev).
           </p>
           <div className="empty-state__actions">
-            <button type="button" className="ui-btn ui-btn--primary" onClick={() => window.location.reload()}>
-              Перезагрузить
-            </button>
+            <Button onClick={() => window.location.reload()}>Перезагрузить</Button>
           </div>
         </div>
       </div>

@@ -2,7 +2,7 @@
  * Стейты экрана чипами: выбранный подставляется в live URL.
  */
 import type { AppMapPageState } from '@live-app-map/schema';
-import { Chip } from '../../ui';
+import { Toggle } from '@/components/ui/toggle';
 
 /** Props стейтов. */
 export type StateChipsProps = {
@@ -21,9 +21,9 @@ export function StateChips(props: StateChipsProps) {
   return (
     <div className="page-node__states">
       {states.map((st) => (
-        <Chip
+        <Toggle variant="outline" size="sm"
           key={st.name}
-          active={activeStateName === st.name}
+          pressed={activeStateName === st.name}
           title={st.note ?? st.name}
           onClick={(e) => {
             e.stopPropagation();
@@ -35,7 +35,7 @@ export function StateChips(props: StateChipsProps) {
             : st.name === 'employer'
               ? 'клиент'
               : st.name}
-        </Chip>
+        </Toggle>
       ))}
     </div>
   );

@@ -9,8 +9,8 @@ import { timeAgo, quoteText, sourceRef } from '../../lib/comments/format';
 import { flashElement } from '../../lib/comments/use-comments';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
-import { Button } from '../../ui';
 import { CommentStatusBadge } from './CommentStatusBadge';
+import { Button } from '@/components/ui/button';
 
 function who(author: CommentThread['author']): string {
   return author === 'agent' ? 'ИИ' : 'Вы';

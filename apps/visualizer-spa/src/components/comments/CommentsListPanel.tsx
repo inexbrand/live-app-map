@@ -10,13 +10,24 @@ import { flashElement } from '../../lib/comments/use-comments';
 import { useAppStore } from '../../store/app-store';
 import { filterThreads, useCommentsStore, type CommentListFilter } from '../../store/comments-store';
 import { useViewStore } from '../../store/view-store';
-import { Button, Input, Select } from '../../ui';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { OptionSelect } from '../option-select';
 import { CommentStatusBadge } from './CommentStatusBadge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 const STATUSES: ReadonlyArray<{ readonly id: CommentListFilter['status']; readonly label: string }> = [
   { id: 'open', label: 'Открытые' },
   { id: 'fixed', label: 'Исправленные' },
   { id: 'all', label: 'Все' },
+];
+
+
+/** Пункты фильтра «Автор». */
+const AUTHOR_ITEMS = [
+  { value: 'all', label: 'Все авторы' },
+  { value: 'user', label: 'Мои' },
+  { value: 'agent', label: 'От ИИ' },
 ];
 
 /**
@@ -56,19 +67,27 @@ function ListFilters() {
   const setFilter = useCommentsStore((s) => s.setFilter);
   return (
     <div className="comments-list__filters">
-      <div className="mode-seg" role="radiogroup" aria-label="Статус">
+      <ToggleGroup
+        variant="outline"
+        size="sm"
+        spacing={0}
+        aria-label="Статус"
+        value={[filter.status]}
+        onValueChange={(v: unknown[]) => {
+          const next = STATUSES.find((s) => s.id === v[0]);
+          if (next !== undefined) {
+            setFilter({ status: next.id });
+          }
+        }}
+      >
         {STATUSES.map((s) => (
-          <button key={s.id} type="button" role="radio" aria-checked={filter.status === s.id} className={`mode-seg__btn${filter.status === s.id ? ' mode-seg__btn--on' : ''}`} onClick={() => setFilter({ status: s.id })}>
+          <ToggleGroupItem key={s.id} value={s.id}>
             {s.label}
-          </button>
+          </ToggleGroupItem>
         ))}
-      </div>
+      </ToggleGroup>
       <div className="comments-list__row">
-        <Select aria-label="Автор" value={filter.author} onChange={(e) => setFilter({ author: authorOf(e.target.value) })}>
-          <option value="all">Все авторы</option>
-          <option value="user">Мои</option>
-          <option value="agent">От ИИ</option>
-        </Select>
+        <OptionSelect aria-label="Автор" size="sm" className="w-36 shrink-0" items={AUTHOR_ITEMS} value={filter.author} onValueChange={(v) => setFilter({ author: authorOf(v) })} />
         <Input aria-label="Поиск по замечаниям" placeholder="Текст, экран, компонент" value={filter.query} onChange={(e) => setFilter({ query: e.target.value })} />
       </div>
     </div>

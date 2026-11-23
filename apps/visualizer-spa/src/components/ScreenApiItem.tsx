@@ -4,8 +4,9 @@
 import { ArrowRight } from 'lucide-react';
 import type { ScreenApiItem as Item } from '../lib/node-code';
 import { useAppStore } from '../store/app-store';
-import { Badge, Button } from '../ui';
 import { DbLine, where } from './code-parts';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 
 /** Пункт списка вызовов экрана. */
 export function ScreenApiItem(props: { readonly item: Item }) {
@@ -14,7 +15,7 @@ export function ScreenApiItem(props: { readonly item: Item }) {
   return (
     <li className="code-item" data-testid={route === undefined ? 'screen-api-unmatched' : 'screen-api-call'}>
       <div className="code-item__head">
-        <Badge className="code-item__method">{call.method}</Badge>
+        <Badge variant="secondary" className="code-item__method">{call.method}</Badge>
         <span className="code-item__name font-mono">{call.path}</span>
       </div>
       {route === undefined ? (

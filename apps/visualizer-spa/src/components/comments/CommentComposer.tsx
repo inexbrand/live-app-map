@@ -9,8 +9,8 @@ import { appendSpoken } from '../../lib/voice/models';
 import { useVoiceCapture, type VoiceCapture } from '../../lib/voice/use-voice-capture';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore, type CommentDraft } from '../../store/comments-store';
-import { Button } from '../../ui';
 import { VoiceButton } from './VoiceButton';
+import { Button } from '@/components/ui/button';
 
 const SIZE = { width: 380, height: 300 };
 /** Сколько держать ⌥, чтобы это считалось «говорю», а не началом сочетания. */
@@ -189,7 +189,7 @@ function ComposerCard(props: { readonly draft: CommentDraft }) {
       <div className="comment-composer__bar">
         <VoiceButton capture={voice} />
         <span className="comment-composer__hint">Enter — сохранить, ⌥ — голос</span>
-        <Button type="button" variant="primary" size="sm" disabled={saving || voice.finishing} onClick={() => void submit()}>
+        <Button type="button" variant="default" size="sm" disabled={saving || voice.finishing} onClick={() => void submit()}>
           Сохранить
         </Button>
       </div>

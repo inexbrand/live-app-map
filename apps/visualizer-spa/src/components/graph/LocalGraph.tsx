@@ -8,9 +8,9 @@ import { localGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';
-import { Chip } from '../../ui';
 import { DocGraphCanvas } from './DocGraphCanvas';
 import { KindMark } from './KindMark';
+import { Toggle } from '@/components/ui/toggle';
 
 const NO_MATCHES: ReadonlySet<string> = new Set();
 
@@ -95,12 +95,12 @@ export function LocalGraph(props: { readonly docPath: string }) {
       <div className="local-graph__head">
         <h3>Связи</h3>
         <div className="local-graph__depth" role="group" aria-label="Глубина">
-          <Chip active={depth === 1} onClick={() => setDepth(1)}>
+          <Toggle variant="outline" size="sm" pressed={depth === 1} onClick={() => setDepth(1)}>
             1 шаг
-          </Chip>
-          <Chip active={depth === 2} onClick={() => setDepth(2)}>
+          </Toggle>
+          <Toggle variant="outline" size="sm" pressed={depth === 2} onClick={() => setDepth(2)}>
             2 шага
-          </Chip>
+          </Toggle>
         </div>
       </div>
       {local.nodes.length <= 1 ? (

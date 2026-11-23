@@ -34,7 +34,7 @@ import {
   type MapCatalogEntry,
 } from './lib/map-catalog';
 import { useAppStore } from './store/app-store';
-import { Button } from './ui';
+import { Button } from '@/components/ui/button';
 
 type LoadError = (msg: string) => void;
 
@@ -252,7 +252,7 @@ function PresetButton({ preset, loadingId, onLoad }: { readonly preset: MapCatal
   return (
     <Button
       type="button"
-      variant="primary"
+      variant="default"
       disabled={loadingId !== null}
       aria-busy={busy}
       title={preset.pageCount > 0 ? `${preset.path} · ${preset.pageCount} экранов` : preset.path}

@@ -6,8 +6,8 @@ import { Camera, X } from 'lucide-react';
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { isUsableSelection, rectFromPoints, type Point, type Rect } from '../lib/snapshot/region';
 import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
-import { Button } from '../ui';
 import { startComment } from './comments/start-comment';
+import { Button } from '@/components/ui/button';
 
 function SelectionLayer() {
   const beginCapture = useSnapshotStore((s) => s.beginCapture);
@@ -71,7 +71,7 @@ function AgentRequestCard(props: { readonly note: string | null }) {
       <strong>Агент просит снимок экрана</strong>
       {props.note !== null ? <p className="drawer__hint">{props.note}</p> : null}
       <div className="drawer__actions">
-        <Button type="button" variant="primary" size="sm" onClick={accept}>
+        <Button type="button" variant="default" size="sm" onClick={accept}>
           <Camera size={16} strokeWidth={1.75} />
           Снять
         </Button>

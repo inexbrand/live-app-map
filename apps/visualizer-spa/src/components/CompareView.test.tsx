@@ -10,6 +10,7 @@ import userEvent from '@testing-library/user-event';
 import { useMapSourceStore } from '../store/map-source-store';
 import { useViewStore } from '../store/view-store';
 import { jsonResponse, mapJson, openMap, resetStores, stubFetch, type FetchRoute } from '../test/fixtures';
+import { listOptions, pickOption } from '../test/select';
 import { CompareView } from './CompareView';
 
 useDom();
@@ -69,12 +70,14 @@ function first<T>(xs: readonly T[]): T {
   return x;
 }
 
-function picker(ui: ReturnType<typeof within>, side: 'left' | 'right'): HTMLSelectElement {
-  const el = ui.getByTestId(`compare-${side}`);
-  if (!(el instanceof HTMLSelectElement)) {
-    throw new Error('не select');
-  }
-  return el;
+/** Кнопка списка версии (shadcn Select). */
+function picker(ui: ReturnType<typeof within>, side: 'left' | 'right'): HTMLElement {
+  return ui.getByTestId(`compare-${side}`);
+}
+
+/** Выбранное значение списка версии. */
+function picked(ui: ReturnType<typeof within>, side: 'left' | 'right'): string | null {
+  return picker(ui, side).getAttribute('data-value');
 }
 
 describe('вид «Сравнение»', () => {
@@ -94,8 +97,8 @@ describe('вид «Сравнение»', () => {
     const { ui, container } = view();
     expect(ui.getByText('файл my.liveappmap.json')).toBeTruthy();
     expect(ui.getByText(/^Карта открыта из файла: история/)).toBeTruthy();
-    const left = picker(ui, 'left');
-    expect(within(left).getByRole('option', { name: 'Файл на диске' }).hasAttribute('disabled')).toBe(true);
+    const options = await listOptions(picker(ui, 'left'));
+    expect(options.find((o) => o.label === 'Файл на диске')?.disabled).toBe(true);
     await waitFor(() => expect(ui.getByTestId('compare-total').textContent).toBe('Версии совпадают: изменений нет.'));
     expect(ui.getAllByTestId('compare-summary').map((s) => s.textContent)).toEqual(ui.getAllByTestId('compare-summary').map(() => 'без изменений'));
     expect(net?.calls).toHaveLength(0);
@@ -106,8 +109,8 @@ describe('вид «Сравнение»', () => {
     history();
     catalog();
     const { ui, container } = view();
-    await waitFor(() => expect(picker(ui, 'left').value).toBe(`git:${VERSIONS[0]?.ref}`));
-    expect(within(picker(ui, 'left')).getByRole('option', { name: '21.11 17:13 · a1b2c3d · скан после правки' })).toBeTruthy();
+    await waitFor(() => expect(picked(ui, 'left')).toBe(`git:${VERSIONS[0]?.ref}`));
+    expect((await listOptions(picker(ui, 'left'))).map((o) => o.label)).toContain('21.11 17:13 · a1b2c3d · скан после правки');
     await waitFor(() => expect(ui.getByTestId('compare-total').textContent).toMatch(/^Изменений: \d+$/));
     expect(net?.calls.map((c) => c.url)).toContain(`/__lam_maps/version?id=korbor-miniapp&ref=${VERSIONS[0]?.ref}`);
     dumpDom('cmp-git', container);
@@ -147,7 +150,7 @@ describe('вид «Сравнение»', () => {
     catalog();
     const { ui, container } = view();
     await waitFor(() => expect(ui.getByText('История карты недоступна: не git-репозиторий')).toBeTruthy());
-    expect(picker(ui, 'left').value).toBe('disk');
+    expect(picked(ui, 'left')).toBe('disk');
     await waitFor(() => expect(ui.queryByTestId('compare-total')).not.toBeNull());
     dumpDom('cmp-disk', container);
   });
@@ -161,7 +164,7 @@ describe('вид «Сравнение»', () => {
     catalog();
     const { ui, container } = view();
     await waitFor(() => expect(ui.queryByTestId('compare-total')).not.toBeNull());
-    fireEvent.change(picker(ui, 'right'), { target: { value: 'scan' } });
+    await pickOption(picker(ui, 'right'), 'Свежий скан');
     expect(ui.getByTestId('compare-loading').textContent).toBe('Стало: сканирую проект…');
     dumpDom('cmp-scanning', container);
     await act(async () => {
@@ -171,8 +174,8 @@ describe('вид «Сравнение»', () => {
     await waitFor(() => expect(ui.queryByTestId('compare-loading')).toBeNull());
     expect(net?.calls.find((c) => c.url.startsWith('/__lam_maps/scan'))?.method).toBe('POST');
     expect(container.querySelector('.db-view__link')).toBeNull();
-    fireEvent.change(picker(ui, 'right'), { target: { value: 'open' } });
-    await waitFor(() => expect(picker(ui, 'right').value).toBe('open'));
+    await pickOption(picker(ui, 'right'), 'Открытая карта');
+    await waitFor(() => expect(picked(ui, 'right')).toBe('open'));
   });
 
   test('выбор «было» до ответа истории не перезаписывается', async () => {
@@ -183,13 +186,13 @@ describe('вид «Сравнение»', () => {
     history((url) => (url.startsWith('/__lam_maps/versions') ? gate.then(() => jsonResponse({ versions: VERSIONS })) : undefined));
     catalog();
     const { ui } = view();
-    fireEvent.change(picker(ui, 'left'), { target: { value: 'open' } });
+    await pickOption(picker(ui, 'left'), 'Открытая карта');
     await act(async () => {
       release();
       await gate;
     });
-    await waitFor(() => expect(within(picker(ui, 'left')).queryAllByRole('option').length).toBe(6));
-    expect(picker(ui, 'left').value).toBe('open');
+    await waitFor(async () => expect((await listOptions(picker(ui, 'left'))).length).toBe(6));
+    expect(picked(ui, 'left')).toBe('open');
     await waitFor(() => expect(ui.getByTestId('compare-total').textContent).toBe('Версии совпадают: изменений нет.'));
   });
 
@@ -202,16 +205,16 @@ describe('вид «Сравнение»', () => {
     if (!(input instanceof HTMLInputElement)) {
       throw new Error('нет поля файла');
     }
-    fireEvent.change(picker(ui, 'left'), { target: { value: 'file' } });
+    await pickOption(picker(ui, 'left'), 'Файл с компьютера…');
     const user = userEvent.setup({ document });
     await user.upload(input, new File([JSON.stringify(mapJson('korbor-admin'))], 'admin.liveappmap.json', { type: 'application/json' }));
-    await waitFor(() => expect(picker(ui, 'left').value).toBe('file-chosen'));
-    expect(picker(ui, 'left').querySelector('option[value="file-chosen"]')?.textContent).toBe('Файл: admin.liveappmap.json');
+    await waitFor(() => expect(picked(ui, 'left')).toBe('file-chosen'));
+    expect(picker(ui, 'left').querySelector('[data-slot="select-value"]')?.textContent).toBe('Файл: admin.liveappmap.json');
     await waitFor(() => expect(ui.getByTestId('compare-total').textContent).toMatch(/^Изменений/));
     dumpDom('cmp-upload', container);
     await user.upload(input, new File(['не json'], 'bad.json', { type: 'application/json' }));
     await waitFor(() => expect(ui.getByRole('alert').textContent).toMatch(/^Было: /));
-    fireEvent.change(picker(ui, 'left'), { target: { value: 'disk' } });
+    await pickOption(picker(ui, 'left'), 'Файл на диске');
     await waitFor(() => expect(net?.calls.some((c) => c.url === '/maps/korbor-miniapp.liveappmap.json')).toBe(true));
   });
 });

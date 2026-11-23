@@ -100,7 +100,7 @@ describe('вид «База данных»', () => {
     fireEvent.click(reads().getByRole('button', { name: 'Свернуть' }));
     expect(reads().getAllByTestId('db-route-link')).toHaveLength(8);
     act(() => useViewStore.getState().openTable(v.table.exportName));
-    const screen = reads().queryAllByRole('button').find((b) => b.className === 'ui-chip' && !b.hasAttribute('disabled'));
+    const screen = reads().queryAllByRole('button').find((b) => b.getAttribute('data-size') === 'xs' && !b.hasAttribute('disabled'));
     if (screen !== undefined) {
       fireEvent.click(screen);
       expect(useViewStore.getState().view).toBe('screens');

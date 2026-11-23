@@ -10,9 +10,11 @@ import { shownReadiness } from '../../lib/docs-view-model';
 import { collapseEpochs, filterGraph, graphNeighbors, searchGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
-import { Button, Chip, Input } from '../../ui';
 import { DocGraphCanvas } from './DocGraphCanvas';
 import { KindMark } from './KindMark';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Toggle } from '@/components/ui/toggle';
 
 const READINESS: readonly { value: EpochReadiness | null; label: string }[] = [
   { value: null, label: 'Все' },
@@ -71,12 +73,12 @@ function CardActions(props: { readonly node: GraphNode }) {
   return (
     <div className="doc-graph__actions">
       {node.docPath === undefined ? null : (
-        <Button type="button" size="sm" variant="primary" onClick={() => open(node)} data-testid="graph-open-text">
+        <Button type="button" size="sm" variant="default" onClick={() => open(node)} data-testid="graph-open-text">
           <FileText size={16} strokeWidth={1.75} /> Открыть текст
         </Button>
       )}
       {canMap ? (
-        <Button type="button" size="sm" variant="primary" onClick={() => open(node)} data-testid="graph-open-map">
+        <Button type="button" size="sm" variant="default" onClick={() => open(node)} data-testid="graph-open-map">
           <MapPin size={16} strokeWidth={1.75} /> Показать на карте
         </Button>
       ) : null}
@@ -187,10 +189,10 @@ function ReadinessSection(props: { readonly full: DocGraph; readonly st: GraphSt
       <h3 className="docs-group__title">Готовность эпох</h3>
       <div className="docs-list__filters" role="group" aria-label="Готовность эпох на графе">
         {shownReadiness(READINESS, notReady).map((r) => (
-          <Chip key={r.label} active={st.readiness === r.value} onClick={() => st.setReadiness(r.value)}>
+          <Toggle variant="outline" size="sm" key={r.label} pressed={st.readiness === r.value} onClick={() => st.setReadiness(r.value)}>
             {r.label}
             {r.value === 'not-ready' ? <span className="docs-count"> {notReady}</span> : null}
-          </Chip>
+          </Toggle>
         ))}
       </div>
     </section>

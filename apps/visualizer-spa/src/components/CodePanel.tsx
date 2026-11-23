@@ -4,12 +4,14 @@
  */
 import { useEffect, useRef, useState } from 'react';
 import type { ApiRoute, CodeSymbol, DbTable } from '@live-app-map/schema';
-import { Badge, Field, Input } from '../ui';
+import { Field, FieldLabel } from '@/components/ui/field';
 import { groupDbCalls, type PageCodeView, type RouteCaller, type ScreenApiItem as Item, type ServiceCodeView } from '../lib/node-code';
 import { matchesCodeFilter } from '../lib/code-filter';
 import { useAppStore } from '../store/app-store';
 import { DbLine, Description, Section, where } from './code-parts';
 import { ScreenApiItem } from './ScreenApiItem';
+import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
 
 function RouteItem(props: { readonly route: ApiRoute; readonly callers: readonly RouteCaller[]; readonly focused: boolean }) {
   const r = props.route;
@@ -26,7 +28,7 @@ function RouteItem(props: { readonly route: ApiRoute; readonly callers: readonly
       data-testid={props.focused ? 'code-route-focused' : 'code-route'}
     >
       <div className="code-item__head">
-        <Badge className="code-item__method">{r.method}</Badge>
+        <Badge variant="secondary" className="code-item__method">{r.method}</Badge>
         <span className="code-item__name font-mono">{r.path}</span>
       </div>
       <Description text={r.doc} />
@@ -66,7 +68,7 @@ function TableItem(props: { readonly table: DbTable }) {
   return (
     <li className="code-item" data-testid="code-table">
       <div className="code-item__head">
-        <Badge>{t.orm}</Badge>
+        <Badge variant="secondary">{t.orm}</Badge>
         <span className="code-item__name font-mono">{t.name}</span>
       </div>
       <Description text={t.doc ?? t.comments?.[0]} />
@@ -91,7 +93,7 @@ function SymbolItem(props: { readonly symbol: CodeSymbol }) {
   return (
     <li className="code-item" data-testid="code-symbol">
       <div className="code-item__head">
-        <Badge>{s.kind}</Badge>
+        <Badge variant="secondary">{s.kind}</Badge>
         <span className="code-item__name font-mono">{s.name}</span>
       </div>
       {s.signature === undefined ? null : <p className="code-item__where font-mono">{s.signature}</p>}
@@ -148,7 +150,8 @@ export function CodePanel(props: { readonly view: ServiceCodeView | PageCodeView
   return (
     <div className="code-panel" data-testid="code-panel">
       {v.kind === 'page' ? <p className="drawer__hint font-mono">{v.file}</p> : null}
-      <Field label="Фильтр кода" htmlFor="code-filter">
+      <Field>
+        <FieldLabel htmlFor="code-filter">Фильтр кода</FieldLabel>
         <Input
           id="code-filter"
           value={query}

@@ -8,7 +8,9 @@ import type { DbColumn } from '@live-app-map/schema';
 import { dbIndexOf, tableRows, tableView, type RouteUse } from '../lib/db-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { Badge, Button, Input } from '../ui';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
 
 /** Признаки колонки одной строкой: PK, NOT NULL, UNIQUE, default, enum. */
 function columnFlags(c: DbColumn): string {
@@ -49,10 +51,10 @@ function ScreenChip(props: { readonly screen: RouteUse['screens'][number] }) {
   const setView = useViewStore((st) => st.setView);
   const nodeId = s.nodeId;
   return (
-    <button
+    <Button
+      variant="outline"
+      size="xs"
       disabled={nodeId === undefined}
-      type="button"
-      className="ui-chip"
       title={s.file}
       onClick={() => {
         if (nodeId !== undefined) {
@@ -62,7 +64,7 @@ function ScreenChip(props: { readonly screen: RouteUse['screens'][number] }) {
       }}
     >
       {s.title}
-    </button>
+    </Button>
   );
 }
 
@@ -178,9 +180,9 @@ function ReferencedBy(props: { readonly refs: TableViewModel['referencedBy'] }) 
       {props.refs.length === 0 ? <p className="drawer__hint">Другие таблицы на неё не ссылаются.</p> : null}
       <div className="db-view__screens">
         {props.refs.map((r) => (
-          <button key={`${r.table}.${r.column}`} type="button" className="ui-chip" onClick={() => openTable(r.table)}>
+          <Button key={`${r.table}.${r.column}`} variant="outline" size="xs" onClick={() => openTable(r.table)}>
             {r.table}.{r.column}
-          </button>
+          </Button>
         ))}
       </div>
     </section>
@@ -194,8 +196,8 @@ function TableDetail(props: { readonly view: TableViewModel }) {
     <main className="db-view__detail" data-testid="db-table">
       <header className="db-view__head">
         <h2>{view.table.name}</h2>
-        <Badge>{view.table.orm}</Badge>
-        {view.service === undefined ? null : <Badge>{view.service.name}</Badge>}
+        <Badge variant="secondary">{view.table.orm}</Badge>
+        {view.service === undefined ? null : <Badge variant="secondary">{view.service.name}</Badge>}
         <span className="drawer__hint font-mono">
           {view.table.location.file}:{view.table.location.line}
         </span>

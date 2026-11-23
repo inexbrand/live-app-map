@@ -7,12 +7,13 @@ import type { DocEpoch, DocFile, DocsModel, EpochReadiness } from '@live-app-map
 import { docsSections, epochDateLabel, openDocOf, readinessLabel, shownReadiness } from '../lib/docs-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { Chip, Input } from '../ui';
 import { fetchLiveDocs } from '../lib/docs-live-client';
-import { EmptyView } from '../ui/empty-view';
+import { Empty, EmptyDescription } from '@/components/ui/empty';
 import { DocPane } from './DocPane';
 import { DocsSourceLine, READING_DOCS } from './DocsSourceLine';
 import { DocGraphView } from './graph/DocGraphView';
+import { Input } from '@/components/ui/input';
+import { Toggle } from '@/components/ui/toggle';
 
 /** Переключатель «Текст / Граф» вида «Документация». Клавиша G. */
 function DocsModeSwitch() {
@@ -174,10 +175,10 @@ function ReadinessFilter(props: { readonly value: EpochReadiness | null; readonl
   return (
     <div className="docs-list__filters" role="group" aria-label="Готовность эпох">
       {shownReadiness(READINESS, props.notReady).map((r) => (
-        <Chip key={r.label} active={props.value === r.value} onClick={() => props.onChange(r.value)}>
+        <Toggle variant="outline" size="sm" key={r.label} pressed={props.value === r.value} onClick={() => props.onChange(r.value)}>
           {r.label}
           {r.value === 'not-ready' ? ` ${props.notReady}` : ''}
-        </Chip>
+        </Toggle>
       ))}
     </div>
   );
@@ -239,10 +240,12 @@ export function DocsView() {
   const [readiness, setReadiness] = useState<EpochReadiness | null>(null);
   if (docs === undefined) {
     return (
-      <EmptyView view="docs-view">
+      <Empty data-testid="docs-view" className="h-full">
+        <EmptyDescription>
         В карте нет документации. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code> — в карту попадут
         docs/epoch, docs/agent-notes, CLAUDE.md и README.
-      </EmptyView>
+        </EmptyDescription>
+      </Empty>
     );
   }
   if (docsMode === 'graph') {

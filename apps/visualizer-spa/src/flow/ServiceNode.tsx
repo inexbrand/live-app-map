@@ -5,8 +5,8 @@
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { AppMapNode } from '@live-app-map/schema';
 import { Server } from 'lucide-react';
-import { Badge } from '../ui';
 import { useAppStore } from '../store/app-store';
+import { Badge } from '@/components/ui/badge';
 
 /** Ширина и высота ноды сервиса в мировых координатах холста. */
 export { SERVICE_NODE_SIZE } from './service-node-size';
@@ -40,9 +40,9 @@ export function ServiceNode(props: NodeProps) {
       </div>
       <div className="service-node__path font-mono">{node.pathPattern}</div>
       <div className="service-node__stats">
-        <Badge>роуты {count(node, 'routes')}</Badge>
-        <Badge>таблицы {count(node, 'tables')}</Badge>
-        <Badge>функции {count(node, 'symbols')}</Badge>
+        <Badge variant="secondary">роуты {count(node, 'routes')}</Badge>
+        <Badge variant="secondary">таблицы {count(node, 'tables')}</Badge>
+        <Badge variant="secondary">функции {count(node, 'symbols')}</Badge>
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

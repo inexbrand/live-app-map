@@ -6,7 +6,6 @@ import { useMemo } from 'react';
 import { commentsLabel } from '../../lib/comments/format';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
-import { PanelBody, PanelHeader } from '../../ui';
 import { CommentThreadItem } from './CommentThreadItem';
 
 /**
@@ -29,18 +28,18 @@ export function ScreenCommentsPanel() {
   const open = mine.filter((t) => t.status === 'open').length;
 
   return (
-    <aside className="drawer drawer--left ui-panel drawer--edge comments-panel" data-testid="screen-comments">
-      <PanelHeader
-        title="Замечания"
-        description={`${node.title} · ${commentsLabel(mine.length)}, открыто ${open}`}
-      />
-      <PanelBody>
+    <aside className="drawer drawer--left drawer--edge comments-panel flex flex-col bg-background" data-testid="screen-comments">
+      <header className="flex flex-col gap-0.5 border-b border-border p-3">
+        <h2 className="text-sm font-medium">Замечания</h2>
+        <p className="text-xs text-muted-foreground">{`${node.title} · ${commentsLabel(mine.length)}, открыто ${open}`}</p>
+      </header>
+      <div className="min-h-0 flex-1 overflow-y-auto p-3">
         <div className="comments-panel__list">
           {mine.map((t) => (
             <CommentThreadItem key={t.id} thread={t} focused={t.id === focusId} />
           ))}
         </div>
-      </PanelBody>
+      </div>
     </aside>
   );
 }

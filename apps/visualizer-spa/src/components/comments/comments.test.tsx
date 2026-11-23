@@ -21,6 +21,7 @@ import { CommentsListPanel } from './CommentsListPanel';
 import { CommentsToolbarButton } from './CommentsToolbarButton';
 import { ScreenCommentsPanel } from './ScreenCommentsPanel';
 import { startComment } from './start-comment';
+import { pickOption } from '../../test/select';
 
 useDom();
 
@@ -150,18 +151,18 @@ describe('кнопка и общий список', () => {
     expect(list.getAllByTestId('comments-list-item').map((b) => b.getAttribute('data-comment-id'))).toEqual(['c1', 'c3']);
     expect(list.getAllByTestId('comments-list-item')[0]?.textContent).toContain('Ответ ИИ: Поправил ширину');
     dumpDom('comments-list', container);
-    fireEvent.click(list.getByRole('radio', { name: 'Исправленные' }));
+    fireEvent.click(list.getByRole('button', { name: 'Исправленные' }));
     expect(list.getAllByTestId('comments-list-item').map((b) => b.getAttribute('data-comment-id'))).toEqual(['c2']);
-    fireEvent.click(list.getByRole('radio', { name: 'Все' }));
-    fireEvent.change(list.getByLabelText('Автор'), { target: { value: 'agent' } });
+    fireEvent.click(list.getByRole('button', { name: 'Все' }));
+    await pickOption(list.getByRole('combobox', { name: 'Автор' }), 'От ИИ');
     expect(list.getAllByTestId('comments-list-item').map((b) => b.getAttribute('data-comment-id'))).toEqual(['c2']);
-    fireEvent.change(list.getByLabelText('Автор'), { target: { value: 'user' } });
+    await pickOption(list.getByRole('combobox', { name: 'Автор' }), 'Мои');
     expect(list.getAllByTestId('comments-list-item')).toHaveLength(2);
     await userEvent.setup({ document }).type(list.getByLabelText('Поиск по замечаниям'), 'buybutton');
     expect(list.getAllByTestId('comments-list-item').map((b) => b.getAttribute('data-comment-id'))).toEqual(['c1']);
     await userEvent.setup({ document }).type(list.getByLabelText('Поиск по замечаниям'), 'zzz');
     expect(list.getByText('Под фильтр ничего не подошло.')).toBeTruthy();
-    fireEvent.change(list.getByLabelText('Автор'), { target: { value: 'all' } });
+    await pickOption(list.getByRole('combobox', { name: 'Автор' }), 'Все авторы');
     fireEvent.click(list.getByRole('button', { name: 'Закрыть' }));
     expect(ui.queryByTestId('comments-list')).toBeNull();
   });

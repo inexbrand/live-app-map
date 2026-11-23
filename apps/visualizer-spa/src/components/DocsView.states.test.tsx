@@ -83,7 +83,7 @@ describe('список документов', () => {
   test('фильтр готовности: выбранный чип отмечен', () => {
     const { ui } = show(null);
     const group = within(ui.getByRole('group', { name: 'Готовность эпох' }));
-    const active = () => group.getAllByRole('button').filter((b) => b.className.includes('ui-chip--active')).map((b) => b.textContent);
+    const active = () => group.getAllByRole('button').filter((b) => b.getAttribute('aria-pressed') === 'true').map((b) => b.textContent);
     expect(active()).toEqual(['Все']);
     fireEvent.click(group.getByRole('button', { name: 'Без 09-bugs' }));
     expect(active()).toEqual(['Без 09-bugs']);
@@ -191,7 +191,7 @@ describe('локальный граф документа', () => {
     const out = within(local.getByTestId('local-graph-out')).getAllByRole('button');
     expect(out.map((b) => `${b.textContent}:${b.hasAttribute('disabled')}`)).toEqual(['Бриф:false', `${plainCodeFile().split(':')[0]?.split('/').pop()}:true`]);
     expect(local.queryByTestId('local-graph-in')).toBeNull();
-    const depth = () => within(within(ui.getByTestId('local-graph')).getByRole('group', { name: 'Глубина' })).getAllByRole('button').map((b) => `${b.textContent}:${b.className.includes('ui-chip--active')}`);
+    const depth = () => within(within(ui.getByTestId('local-graph')).getByRole('group', { name: 'Глубина' })).getAllByRole('button').map((b) => `${b.textContent}:${b.getAttribute('aria-pressed') === 'true'}`);
     expect(depth()).toEqual(['1 шаг:true', '2 шага:false']);
     expect(local.getByTestId('local-graph-canvas').getAttribute('aria-label')).toBe('Связи документа: 2 узлов');
     fireEvent.click(within(ui.getByTestId('local-graph')).getByRole('button', { name: '2 шага' }));

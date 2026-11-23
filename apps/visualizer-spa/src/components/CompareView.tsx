@@ -11,7 +11,9 @@ import { importMapFile } from '../lib/import-map';
 import { targetTitle, useMapNav } from '../lib/use-map-nav';
 import { useAppStore } from '../store/app-store';
 import { useMapSourceStore, type MapSourceRef } from '../store/map-source-store';
-import { Button, Field, Select } from '../ui';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { OptionSelect, type OptionItem } from './option-select';
+import { Button } from '@/components/ui/button';
 
 const CHANGE_WORDS: Readonly<Record<CompareChange, string>> = { added: 'добавлено', removed: 'пропало', changed: 'изменено' };
 const CHANGE_MARKS: Readonly<Record<CompareChange, string>> = { added: '+', removed: '−', changed: '~' };
@@ -78,24 +80,26 @@ function VersionPicker(props: {
     }
     props.onChoose(choiceOf(value, versions));
   };
+  const items: OptionItem[] = [
+    { value: 'open', label: 'Открытая карта' },
+    { value: 'disk', label: 'Файл на диске', disabled: !catalog },
+    { value: 'scan', label: 'Свежий скан', disabled: !catalog },
+    ...versions.map((v) => ({ value: `git:${v.ref}`, label: `${shortDate(v.date)} · ${v.ref.slice(0, 7)} · ${v.subject}` })),
+    ...(fileName === null ? [] : [{ value: 'file-chosen', label: `Файл: ${fileName}`, disabled: true }]),
+  ];
+  const id = `${props.testId}-select`;
   return (
-    <Field label={props.label} className="cmp-view__picker">
-      <Select aria-label={props.label} data-testid={props.testId} value={choiceKey(side.choice)} onChange={(e) => onSelect(e.target.value)}>
-        <option value="open">Открытая карта</option>
-        <option value="disk" disabled={!catalog}>
-          Файл на диске
-        </option>
-        <option value="scan" disabled={!catalog}>
-          Свежий скан
-        </option>
-        {versions.map((v) => (
-          <option key={v.ref} value={`git:${v.ref}`}>
-            {shortDate(v.date)} · {v.ref.slice(0, 7)} · {v.subject}
-          </option>
-        ))}
-        {fileName === null ? null : <option value="file-chosen" hidden>Файл: {fileName}</option>}
-        <option value="file">Файл с компьютера…</option>
-      </Select>
+    <Field className="cmp-view__picker">
+      <FieldLabel htmlFor={id}>{props.label}</FieldLabel>
+      <OptionSelect
+        id={id}
+        aria-label={props.label}
+        data-testid={props.testId}
+        items={items}
+        actions={[{ value: 'file', label: 'Файл с компьютера…' }]}
+        value={choiceKey(side.choice)}
+        onValueChange={onSelect}
+      />
       <MapFileInput inputRef={fileRef} testId={props.testId} onChoose={props.onChoose} />
     </Field>
   );

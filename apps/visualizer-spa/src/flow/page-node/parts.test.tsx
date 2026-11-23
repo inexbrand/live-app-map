@@ -87,6 +87,6 @@ describe('стейты', () => {
     expect(html).toContain('>клиент<');
     expect(html).toContain('>empty<');
     expect(html).toContain('title="как рекрутер"');
-    expect(html.match(/ui-chip--active/g)?.length).toBe(1);
+    expect(html.match(/aria-pressed="true"/g)?.length).toBe(1);
   });
 });

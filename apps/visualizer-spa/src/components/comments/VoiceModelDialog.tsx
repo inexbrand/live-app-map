@@ -6,7 +6,7 @@ import { X } from 'lucide-react';
 import { useCallback, useEffect } from 'react';
 import { formatBytes, VOICE_LANGUAGES, VOICE_MODELS } from '../../lib/voice/models';
 import { useVoiceStore } from '../../store/voice-store';
-import { Button } from '../../ui';
+import { Button } from '@/components/ui/button';
 
 function Progress() {
   const progress = useVoiceStore((s) => s.progress);
@@ -109,11 +109,11 @@ function DialogActions(props: { readonly v: Voice }) {
       ) : null}
       <span className="toolbar__spacer" />
       {v.phase === 'ready' ? (
-        <Button type="button" variant="primary" size="sm" onClick={() => v.setDialog(false)}>
+        <Button type="button" variant="default" size="sm" onClick={() => v.setDialog(false)}>
           Готово — держите ⌥ и говорите
         </Button>
       ) : (
-        <Button type="button" variant="primary" size="sm" disabled={busy} onClick={() => void v.load()} data-testid="voice-download">
+        <Button type="button" variant="default" size="sm" disabled={busy} onClick={() => void v.load()} data-testid="voice-download">
           {downloadLabel(v)}
         </Button>
       )}

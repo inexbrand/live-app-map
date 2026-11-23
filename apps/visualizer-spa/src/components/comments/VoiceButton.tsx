@@ -6,7 +6,7 @@ import { Mic, Settings2, Square } from 'lucide-react';
 import { useRef } from 'react';
 import type { VoiceCapture } from '../../lib/voice/use-voice-capture';
 import { useVoiceStore } from '../../store/voice-store';
-import { Button } from '../../ui';
+import { Button } from '@/components/ui/button';
 
 /** Дольше — это удержание. */
 const HOLD_MS = 300;
@@ -26,7 +26,7 @@ export function VoiceButton(props: { readonly capture: VoiceCapture }) {
       <Button
         type="button"
         size="icon-sm"
-        variant={capture.recording ? 'primary' : 'outline'}
+        variant={capture.recording ? 'default' : 'outline'}
         aria-pressed={capture.recording}
         aria-label={capture.recording ? 'Остановить запись' : 'Говорить (удерживайте)'}
         title="Удерживайте и говорите; короткий клик — запись до второго клика. ⌥ — то же с клавиатуры"

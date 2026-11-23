@@ -105,7 +105,7 @@ describe('таблица с колонками и роутами', () => {
   test('шапка: бейджи ORM и сервиса; длинное описание свёрнуто и раскрывается', () => {
     const ui = show('orders');
     const head = ui.getByTestId('db-table').querySelector('header');
-    expect([...(head?.querySelectorAll('.ui-badge') ?? [])].map((b) => b.textContent)).toEqual(['drizzle', '@x/db']);
+    expect([...(head?.querySelectorAll('[data-slot="badge"]') ?? [])].map((b) => b.textContent)).toEqual(['drizzle', '@x/db']);
     const doc = ui.getByTestId('db-table').querySelector('.db-view__doc');
     expect(doc?.className).toBe('db-view__doc db-view__doc--clamp');
     fireEvent.click(ui.getByRole('button', { name: 'Показать полностью' }));
@@ -123,7 +123,7 @@ describe('таблица с колонками и роутами', () => {
     const ui = show('users');
     expect(ui.getByTestId('db-table').querySelector('.db-view__doc')?.className).toBe('db-view__doc');
     expect(ui.queryByRole('button', { name: 'Показать полностью' })).toBeNull();
-    expect([...(ui.getByTestId('db-table').querySelectorAll('header .ui-badge'))].map((b) => b.textContent)).toEqual(['drizzle']);
+    expect([...(ui.getByTestId('db-table').querySelectorAll('header [data-slot="badge"]'))].map((b) => b.textContent)).toEqual(['drizzle']);
     expect(routeSection(ui, 'Читают')).toEqual({ hint: null, routes: 8, docs: [], more: 'Показать ещё 1' });
     fireEvent.click(ui.getByRole('button', { name: 'Показать ещё 1' }));
     expect(routeSection(ui, 'Читают')).toEqual({ hint: null, routes: 9, docs: [], more: 'Свернуть' });
