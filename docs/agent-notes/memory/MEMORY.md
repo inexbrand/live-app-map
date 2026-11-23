@@ -17,3 +17,4 @@
 - [Reassure под bun](reassure-under-bun.md) — test:perf, --conditions=require, perfTest без expect.getState
 - [e2e: грабли машины](e2e-host-env-pitfalls.md) — зависший OrbStack, NDI Audio глушит голос, korbor без бота
 - [mutator под bun](mutator-under-bun.md) — ./ в путях, вывод в файл, группы SPA по тестам, canvas через регистратор, эталон сканера
+- [Handy вместо STT Орки](handy-stt-setup.md) — whisper-large-v3, правый Option toggle, авто-Enter
