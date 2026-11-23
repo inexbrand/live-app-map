@@ -11,6 +11,7 @@ import type { AppMapDocument, CodeSymbol } from '@live-app-map/schema';
 import { selectNodeCode } from '../lib/node-code';
 import { useAppStore } from '../store/app-store';
 import { openMap, resetStores } from '../test/fixtures';
+import { pickOption } from '../test/select';
 import { StateInjectPanel } from './StateInjectPanel';
 
 useDom();
@@ -38,7 +39,7 @@ describe('панель ноды', () => {
     expect(container.innerHTML).toBe('');
   });
 
-  test('экран со стейтами: роль, стейт включается и снимается, клики в iframe', () => {
+  test('экран со стейтами: роль, стейт включается и снимается, клики в iframe', async () => {
     const doc = openMap('korbor-miniapp');
     const id = nodeWhere(doc, (nid) => (doc.nodes.find((n) => n.id === nid)?.states?.length ?? 0) > 0);
     act(() => useAppStore.getState().selectPage(id));
@@ -46,7 +47,7 @@ describe('панель ноды', () => {
     const url = ui.getByLabelText('Живой URL');
     expect((url as HTMLTextAreaElement).value).toBe(useAppStore.getState().resolveLiveUrl(id) ?? '—');
     dumpDom('drawer-states', container);
-    fireEvent.change(ui.getByLabelText('Глобальная роль'), { target: { value: 'recruiter' } });
+    await pickOption(ui.getByRole('combobox', { name: 'Глобальная роль' }), 'Рекрутер');
     expect(useAppStore.getState().globalRole).toBe('recruiter');
     const states = doc.nodes.find((n) => n.id === id)?.states ?? [];
     const first = states[0];

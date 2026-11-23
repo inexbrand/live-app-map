@@ -1,11 +1,19 @@
 /**
- * Лист «Настройки просмотра»: простые вещи сверху (масштаб, размер экранов, роль),
+ * Лист «Настройки просмотра»: тема и простые вещи сверху (масштаб, размер экранов, роль),
  * техника — под «Для разработчика» (сколько экранов живут, адрес приложения, прокси).
  */
 import { resolveViewportPresets } from '../../lib/viewport-presets';
 import { mapAdaptive } from './map-adaptive';
 import { useAppStore } from '../../store/app-store';
-import { Field, Input, Select } from '../../ui';
+import { ChevronDown, Moon, Sun } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Input } from '@/components/ui/input';
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
+import { applyTheme, currentTheme, type Theme } from '../../lib/theme';
+import { OptionSelect } from '../option-select';
 import { EdgeSheet } from '../EdgeSheet';
 import { BudgetField } from './BudgetField';
 import { TlsProxyBlock } from './TlsProxyBlock';
@@ -28,6 +36,48 @@ const PRESET_NOTE: Readonly<Record<string, string>> = {
   w1920: ' · монитор',
 };
 
+/** Роли «Смотреть как»; пустое значение — без роли. */
+const ROLE_ITEMS = [
+  { value: 'recruiter', label: 'Рекрутер' },
+  { value: 'employer', label: 'Клиент (работодатель)' },
+];
+
+/** Тема интерфейса: светлая или тёмная (то же делает клавиша T). */
+function ThemeField() {
+  const [theme, setTheme] = useState<Theme>(currentTheme);
+  useEffect(() => {
+    const mo = new MutationObserver(() => setTheme(currentTheme()));
+    mo.observe(window.document.documentElement, { attributes: true, attributeFilter: ['class'] });
+    return () => mo.disconnect();
+  }, []);
+  return (
+    <Field>
+      <FieldLabel>Тема</FieldLabel>
+      <ToggleGroup
+        variant="outline"
+        aria-label="Тема"
+        value={[theme]}
+        onValueChange={(v) => {
+          const next = v[0];
+          if (next === 'dark' || next === 'light') {
+            applyTheme(next);
+          }
+        }}
+      >
+        <ToggleGroupItem value="dark" aria-label="Тёмная" data-testid="theme-dark">
+          <Moon />
+          Тёмная
+        </ToggleGroupItem>
+        <ToggleGroupItem value="light" aria-label="Светлая" data-testid="theme-light">
+          <Sun />
+          Светлая
+        </ToggleGroupItem>
+      </ToggleGroup>
+      <FieldDescription>Клавиша T переключает тему с любого экрана.</FieldDescription>
+    </Field>
+  );
+}
+
 /** Props листа настроек. */
 export type SettingsSheetProps = {
   readonly open: boolean;
@@ -42,15 +92,18 @@ function MapAdaptiveField() {
   const { w, h, mode, presetId } = mapAdaptive(layout);
   const presets = resolveViewportPresets(layout);
   return (
-    <Field label="Размер всех экранов" htmlFor="set-map-adaptive" hint={`Сейчас ${w}×${h}, ${mode === 'auto' ? 'страница целиком' : 'окно с прокруткой'}.`}>
-      <Select id="set-map-adaptive" data-testid="map-adaptive-select" disabled={!hasDocument} value={presetId} onChange={(e) => setPreset(e.target.value)}>
-        {presets.map((p) => (
-          <option key={p.id} value={p.id}>
-            {p.width}×{p.height}
-            {PRESET_NOTE[p.id] ?? ''}
-          </option>
-        ))}
-      </Select>
+    <Field>
+      <FieldLabel htmlFor="set-map-adaptive">Размер всех экранов</FieldLabel>
+      <OptionSelect
+        id="set-map-adaptive"
+        aria-label="Размер всех экранов"
+        data-testid="map-adaptive-select"
+        disabled={!hasDocument}
+        value={presetId}
+        onValueChange={setPreset}
+        items={presets.map((p) => ({ value: p.id, label: `${p.width}×${p.height}${PRESET_NOTE[p.id] ?? ''}` }))}
+      />
+      <FieldDescription>{`Сейчас ${w}×${h}, ${mode === 'auto' ? 'страница целиком' : 'окно с прокруткой'}.`}</FieldDescription>
     </Field>
   );
 }
@@ -63,7 +116,7 @@ function IframeBudgetLine() {
   const maxLive = useAppStore((s) => s.maxLiveIframes);
   const maxWarm = useAppStore((s) => s.maxWarmIframes);
   return (
-    <p className="drawer__hint" data-testid="iframe-budget">
+    <p className="text-sm text-muted-foreground" data-testid="iframe-budget">
       Живых экранов {liveCount}
       {maxLive >= 9999 ? '' : ` из ${maxLive}`} · на паузе {warmCount}
       {maxWarm >= 9999 ? '' : ` из ${maxWarm}`} · закреплено {pinCount}
@@ -76,23 +129,20 @@ function ScaleField() {
   const iframeScale = useAppStore((s) => s.iframeScale);
   const setIframeScale = useAppStore((s) => s.setIframeScale);
   return (
-    <Field label="Масштаб превью" htmlFor="set-scale">
-      <Select
+    <Field>
+      <FieldLabel htmlFor="set-scale">Масштаб превью</FieldLabel>
+      <OptionSelect
         id="set-scale"
-        value={iframeScale}
-        onChange={(e) => {
-          const scale = SCALES.find((s) => s.value === Number(e.target.value));
+        aria-label="Масштаб превью"
+        value={String(iframeScale)}
+        items={SCALES.map((s) => ({ value: String(s.value), label: s.label }))}
+        onValueChange={(v) => {
+          const scale = SCALES.find((s) => s.value === Number(v));
           if (scale !== undefined) {
             setIframeScale(scale.value);
           }
         }}
-      >
-        {SCALES.map((s) => (
-          <option key={s.value} value={s.value}>
-            {s.label}
-          </option>
-        ))}
-      </Select>
+      />
     </Field>
   );
 }
@@ -102,12 +152,10 @@ function RoleField() {
   const globalRole = useAppStore((s) => s.globalRole);
   const setGlobalRole = useAppStore((s) => s.setGlobalRole);
   return (
-    <Field label="Смотреть как" htmlFor="set-role" hint="Экраны мини-приложения откроются от лица этой роли.">
-      <Select id="set-role" value={globalRole} onChange={(e) => setGlobalRole(e.target.value)}>
-        <option value="">Без роли</option>
-        <option value="recruiter">Рекрутер</option>
-        <option value="employer">Клиент (работодатель)</option>
-      </Select>
+    <Field>
+      <FieldLabel htmlFor="set-role">Смотреть как</FieldLabel>
+      <OptionSelect id="set-role" aria-label="Смотреть как" value={globalRole} onValueChange={setGlobalRole} items={ROLE_ITEMS} placeholder="Без роли" />
+      <FieldDescription>Экраны мини-приложения откроются от лица этой роли.</FieldDescription>
     </Field>
   );
 }
@@ -121,32 +169,39 @@ function DeveloperBlock() {
   const baseUrl = useAppStore((s) => s.baseUrlOverride);
   const setBaseUrl = useAppStore((s) => s.setBaseUrlOverride);
   return (
-    <details className="sheet-block settings-dev">
-      <summary>Для разработчика</summary>
-      <BudgetField
-        id="set-max"
-        label="Сколько экранов живут одновременно"
-        hint="Закреплённые, выбранный и видимые на холсте. Остальные показывают снимок. Без предела — только для маленьких карт."
-        value={maxLive}
-        onChange={setMaxLive}
-        counts={[4, 6, 8, 12, 16]}
-        unlimitedLabel="Без предела (тяжело)"
-      />
-      <BudgetField
-        id="set-warm"
-        label="Сколько экранов держать на паузе"
-        hint="Ушедший с экрана сохраняет своё состояние и не перезагружается. Закреплённые выгружаются последними."
-        value={maxWarm}
-        onChange={setMaxWarm}
-        counts={[0, 4, 6, 8, 12, 16]}
-        zeroLabel="0 — выгружать сразу"
-        unlimitedLabel="Без предела"
-      />
-      <Field label="Адрес приложения" htmlFor="set-base" hint="Где запущено приложение, чьи экраны показывает карта.">
-        <Input id="set-base" value={baseUrl} placeholder="https://vite.localhost:5175" onChange={(e) => setBaseUrl(e.target.value)} onBlur={(e) => setBaseUrl(e.target.value)} />
-      </Field>
-      <TlsProxyBlock />
-    </details>
+    <Collapsible className="flex flex-col gap-4 border-t pt-4">
+      <CollapsibleTrigger render={<Button variant="ghost" size="sm" className="w-fit" />}>
+        Для разработчика
+        <ChevronDown />
+      </CollapsibleTrigger>
+      <CollapsibleContent className="flex flex-col gap-5">
+        <BudgetField
+          id="set-max"
+          label="Сколько экранов живут одновременно"
+          hint="Закреплённые, выбранный и видимые на холсте. Остальные показывают снимок. Без предела — только для маленьких карт."
+          value={maxLive}
+          onChange={setMaxLive}
+          counts={[4, 6, 8, 12, 16]}
+          unlimitedLabel="Без предела (тяжело)"
+        />
+        <BudgetField
+          id="set-warm"
+          label="Сколько экранов держать на паузе"
+          hint="Ушедший с экрана сохраняет своё состояние и не перезагружается. Закреплённые выгружаются последними."
+          value={maxWarm}
+          onChange={setMaxWarm}
+          counts={[0, 4, 6, 8, 12, 16]}
+          zeroLabel="0 — выгружать сразу"
+          unlimitedLabel="Без предела"
+        />
+        <Field>
+          <FieldLabel htmlFor="set-base">Адрес приложения</FieldLabel>
+          <Input id="set-base" value={baseUrl} placeholder="https://vite.localhost:5175" onChange={(e) => setBaseUrl(e.target.value)} onBlur={(e) => setBaseUrl(e.target.value)} />
+          <FieldDescription>Где запущено приложение, чьи экраны показывает карта.</FieldDescription>
+        </Field>
+        <TlsProxyBlock />
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
@@ -159,6 +214,7 @@ export function SettingsSheet(props: SettingsSheetProps) {
   const { open, onClose } = props;
   return (
     <EdgeSheet open={open} side="right" title="Настройки просмотра" description="Как выглядят экраны на карте." onClose={onClose}>
+      <ThemeField />
       <IframeBudgetLine />
       <ScaleField />
       <MapAdaptiveField />

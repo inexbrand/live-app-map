@@ -7,28 +7,28 @@ useDom();
 
 describe('EdgeSheet', () => {
   test('закрытый лист ничего не показывает', () => {
-    const { container } = render(<EdgeSheet open={false} title="Т" onClose={() => {}}>тело</EdgeSheet>);
-    expect(container.innerHTML).toBe('');
+    render(<EdgeSheet open={false} title="Т" onClose={() => {}}>тело</EdgeSheet>);
+    expect(within(document.body).queryByRole('dialog')).toBeNull();
   });
 
-  test('открытый: заголовок, описание, сторона; закрыть — фоном и кнопкой', () => {
+  test('открытый лист справа: заголовок, описание, тело; крестик закрывает', () => {
     let closed = 0;
-    const { container } = render(
+    render(
       <EdgeSheet open title="Настройки" description="Лимиты" side="right" onClose={() => { closed += 1; }}>тело</EdgeSheet>,
     );
-    const ui = within(container);
+    const ui = within(document.body);
     const dialog = ui.getByRole('dialog', { name: 'Настройки' });
-    expect(dialog.className).toContain('edge-sheet--right');
-    expect(ui.getByText('Лимиты')).toBeTruthy();
-    expect(ui.getByText('тело')).toBeTruthy();
-    fireEvent.click(ui.getByLabelText('Закрыть'));
-    fireEvent.click(ui.getByLabelText('Закрыть панель'));
-    expect(closed).toBe(2);
+    expect(dialog.getAttribute('data-side')).toBe('right');
+    expect(within(dialog).getByText('Лимиты')).toBeTruthy();
+    expect(within(dialog).getByText('тело')).toBeTruthy();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Закрыть' }));
+    expect(closed).toBe(1);
   });
 
-  test('без описания и стороны — по центру, без абзаца описания', () => {
-    const { container } = render(<EdgeSheet open title="Т" onClose={() => {}}>x</EdgeSheet>);
-    expect(container.querySelector('.edge-sheet--center')).not.toBeNull();
-    expect(container.querySelector('.edge-sheet__desc')).toBeNull();
+  test('без стороны — окно по центру, без абзаца описания', () => {
+    render(<EdgeSheet open title="Т" onClose={() => {}}>x</EdgeSheet>);
+    const dialog = within(document.body).getByRole('dialog', { name: 'Т' });
+    expect(dialog.getAttribute('data-slot')).toBe('dialog-content');
+    expect(dialog.querySelector('[data-slot="dialog-description"]')).toBeNull();
   });
 });

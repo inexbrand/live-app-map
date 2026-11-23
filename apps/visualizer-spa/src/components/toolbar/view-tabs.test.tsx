@@ -23,18 +23,19 @@ describe('visibleViewTabs', () => {
 });
 
 describe('ToolbarButton', () => {
-  test('выбранная — основной цвет; подпись сворачиваемая или всегда видна; дети после подписи', () => {
+  test('выбранная — заливка основным цветом, иначе контур; подпись сворачиваемая или всегда видна; дети после подписи', () => {
     const on = renderToStaticMarkup(<ToolbarButton icon={Layers} label="Вид" selected />);
-    expect(on).toContain('class="ui-btn ui-btn--primary ui-btn--sm"');
-    expect(on).toContain('<span class="toolbar__label">Вид</span>');
+    expect(on).toContain('bg-primary');
+    expect(on).toContain('<span class="max-[900px]:hidden">Вид</span>');
     const plain = renderToStaticMarkup(
       <ToolbarButton icon={Layers} label="Источники" labelCollapses={false}>
         <kbd>K</kbd>
       </ToolbarButton>,
     );
-    expect(plain).toContain('ui-btn--outline');
-    expect(plain).not.toContain('toolbar__label');
+    expect(plain).toContain('border-border');
+    expect(plain).not.toContain('bg-primary');
+    expect(plain).not.toContain('max-[900px]:hidden');
     expect(plain.indexOf('Источники')).toBeLessThan(plain.indexOf('<kbd>K</kbd>'));
-    expect(renderToStaticMarkup(<ToolbarButton icon={Layers} size="icon-sm" aria-label="x" />)).toContain('ui-btn--icon ui-btn--sm');
+    expect(renderToStaticMarkup(<ToolbarButton icon={Layers} size="icon-sm" aria-label="x" />)).toContain('size-7');
   });
 });

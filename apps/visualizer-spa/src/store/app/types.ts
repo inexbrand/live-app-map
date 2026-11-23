@@ -123,19 +123,13 @@ export type ViewportSlice = {
   setMapViewportPreset: (presetId: string) => void;
 };
 
-/** Журнал, панель логов и toast. */
+/** Журнал и toast. */
 export type LogSlice = {
   /** Журнал системы и per-page load/error */
   logs: readonly AppLogEntry[];
-  /** Панель логов </> открыта */
-  diagnosticsOpen: boolean;
-  /** Фильтр логов по page id (null = все) */
-  logFilterPageId: string | null;
   toast: string | null;
   pushLog: (entry: Omit<AppLogEntry, 'id' | 'ts'> & { readonly ts?: string }) => void;
   clearLogs: () => void;
-  setDiagnosticsOpen: (open: boolean) => void;
-  setLogFilterPageId: (pageId: string | null) => void;
   setToast: (msg: string | null) => void;
 };
 

@@ -4,7 +4,6 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import type { AppMapDocument } from '@live-app-map/schema';
-import { DiagnosticsDock } from './components/DiagnosticsDock';
 import { CommentComposer } from './components/comments/CommentComposer';
 import { CommentsListPanel } from './components/comments/CommentsListPanel';
 import { ScreenCommentsPanel } from './components/comments/ScreenCommentsPanel';
@@ -393,7 +392,6 @@ export function App() {
         <LoadErrorBanner />
         <ParseIssuesBanner />
         {mapDocument ? <MapArea doc={mapDocument} /> : <EmptyState catalog={catalog} catalogError={catalogError} catalogLoading={catalogLoading} />}
-        <DiagnosticsDock />
       </div>
       <CommentComposer />
       <VoiceModelDialog />

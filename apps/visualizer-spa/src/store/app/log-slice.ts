@@ -1,5 +1,5 @@
 /**
- * Срез журнала: записи, панель логов, фильтр, toast.
+ * Срез журнала: записи и toast. Лог экрана показывает его панель (ScreenStatusLog).
  */
 import type { AppLogEntry, AppSlice, LogSlice } from './types';
 
@@ -8,8 +8,6 @@ const MAX_LOGS = 400;
 /** Срез журнала. */
 export const createLogSlice: AppSlice<LogSlice> = (set, get) => ({
   logs: [],
-  diagnosticsOpen: false,
-  logFilterPageId: null,
   toast: null,
 
   pushLog: (entry) => {
@@ -25,10 +23,6 @@ export const createLogSlice: AppSlice<LogSlice> = (set, get) => ({
   },
 
   clearLogs: () => set({ logs: [] }),
-
-  setDiagnosticsOpen: (diagnosticsOpen) => set({ diagnosticsOpen }),
-
-  setLogFilterPageId: (logFilterPageId) => set({ logFilterPageId }),
 
   setToast: (toast) => set({ toast }),
 });

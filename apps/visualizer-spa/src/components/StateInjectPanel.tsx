@@ -1,11 +1,18 @@
 /**
- * Панель стейтов / ролей / interact (UI kit).
+ * Панель выбранного экрана (или сервиса) справа: живой URL, роль, состояния, действия,
+ * статус и лог экрана, код.
  */
 import { Copy, MousePointer2, ExternalLink, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { selectNodeCode } from '../lib/node-code';
 import { CodePanel } from './CodePanel';
-import { Button, Chip, Field, PanelBody, PanelHeader, Select } from '../ui';
+import type { ReactNode } from 'react';
+import { Button } from '@/components/ui/button';
+import { Field, FieldLabel } from '@/components/ui/field';
+import { Textarea } from '@/components/ui/textarea';
+import { Toggle } from '@/components/ui/toggle';
+import { OptionSelect } from './option-select';
+import { ScreenStatusLog } from './ScreenStatusLog';
 import { useAppStore } from '../store/app-store';
 
 type CodeView = ReturnType<typeof selectNodeCode>;
@@ -47,22 +54,41 @@ function hasPageCode(codeView: CodeView): codeView is NonNullable<CodeView> {
 function CloseButton() {
   const selectPage = useAppStore((s) => s.selectPage);
   return (
-    <Button type="button" variant="ghost" size="icon-sm" aria-label="Закрыть панель" title="Закрыть (Esc)" onClick={() => selectPage(null)}>
-      <X size={16} />
+    <Button variant="ghost" size="icon-sm" aria-label="Закрыть панель" title="Закрыть (Esc)" onClick={() => selectPage(null)}>
+      <X />
     </Button>
   );
 }
+
+/** Оболочка панели справа: заголовок с крестиком и прокручиваемое тело. */
+function SidePanel(props: { readonly title: string; readonly description?: string; readonly testId: string; readonly children: ReactNode }) {
+  return (
+    <aside className="absolute top-3 right-3 bottom-3 z-20 flex w-[min(400px,calc(100%-24px))] flex-col overflow-hidden rounded-xl border bg-card text-card-foreground shadow-lg" data-testid={props.testId}>
+      <header className="flex items-start justify-between gap-2 border-b p-4">
+        <div className="min-w-0">
+          <h2 className="truncate text-base font-medium">{props.title}</h2>
+          {props.description === undefined ? null : <p className="truncate text-sm text-muted-foreground">{props.description}</p>}
+        </div>
+        <CloseButton />
+      </header>
+      <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">{props.children}</div>
+    </aside>
+  );
+}
+
+/** Роли «Глобальная роль»; пустое значение — без роли. */
+const ROLE_ITEMS = [
+  { value: 'recruiter', label: 'Рекрутер' },
+  { value: 'employer', label: 'Клиент (работодатель)' },
+];
 
 /** Drawer сервиса: панель кода. */
 function ServiceDrawer(props: { readonly node: MapNode; readonly codeView: CodeView }) {
   const { node, codeView } = props;
   return (
-    <aside className="drawer ui-panel drawer--edge drawer--code" data-testid="service-drawer">
-      <PanelHeader title={node.title} description={node.pathPattern} action={<CloseButton />} />
-      <PanelBody>
-        {codeView === null ? <p className="drawer__hint">В карте нет раздела code для сервиса.</p> : <CodePanel view={codeView} />}
-      </PanelBody>
-    </aside>
+    <SidePanel title={node.title} description={node.pathPattern} testId="service-drawer">
+      {codeView === null ? <p className="text-sm text-muted-foreground">В карте нет раздела code для сервиса.</p> : <CodePanel view={codeView} />}
+    </SidePanel>
   );
 }
 
@@ -73,19 +99,19 @@ function StateChips(props: { readonly node: MapNode }) {
   const activeStateName = useAppStore((s) => s.activeStates.get(node.id));
   const states = node.states ?? [];
   if (states.length === 0) {
-    return <p className="drawer__hint">Отдельных состояний нет — задайте глобальную роль.</p>;
+    return <p className="text-sm text-muted-foreground">Отдельных состояний нет — задайте глобальную роль.</p>;
   }
   return (
-    <div className="drawer__row">
-      <span className="ui-field__label">Состояния экрана</span>
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+    <Field>
+      <FieldLabel>Состояния экрана</FieldLabel>
+      <div className="flex flex-wrap gap-1.5">
         {states.map((st) => (
-          <Chip key={st.name} active={activeStateName === st.name} title={st.note} onClick={() => applyPageState(node.id, activeStateName === st.name ? null : st)}>
+          <Toggle key={st.name} variant="outline" size="sm" pressed={activeStateName === st.name} title={st.note} onPressedChange={() => applyPageState(node.id, activeStateName === st.name ? null : st)}>
             {stateLabel(st.name)}
-          </Chip>
+          </Toggle>
         ))}
       </div>
-    </div>
+    </Field>
   );
 }
 
@@ -98,17 +124,17 @@ function PageActions(props: { readonly node: MapNode; readonly liveUrl: string |
   const setToast = useAppStore((s) => s.setToast);
   const interacting = interactPageId === node.id;
   return (
-    <div className="drawer__actions">
-      <Button type="button" variant="primary" size="sm" onClick={() => openPageInNewTab(node.id)}>
-        <ExternalLink size={16} strokeWidth={1.75} />
+    <div className="flex flex-wrap gap-2">
+      <Button size="sm" onClick={() => openPageInNewTab(node.id)}>
+        <ExternalLink strokeWidth={1.75} />
         В новой вкладке
       </Button>
-      <Button type="button" variant="outline" size="sm" onClick={() => void copyLiveUrl(props.liveUrl, setToast)}>
-        <Copy size={16} strokeWidth={1.75} />
+      <Button variant="outline" size="sm" onClick={() => void copyLiveUrl(props.liveUrl, setToast)}>
+        <Copy strokeWidth={1.75} />
         Копировать URL
       </Button>
-      <Button type="button" variant="outline" size="sm" active={interacting} onClick={() => setInteract(interacting ? null : node.id)}>
-        <MousePointer2 size={16} strokeWidth={1.75} />
+      <Button variant={interacting ? 'default' : 'outline'} size="sm" aria-pressed={interacting} onClick={() => setInteract(interacting ? null : node.id)}>
+        <MousePointer2 strokeWidth={1.75} />
         Клики в iframe
       </Button>
     </div>
@@ -122,27 +148,23 @@ function PageDrawer(props: { readonly node: MapNode; readonly codeView: CodeView
   const setGlobalRole = useAppStore((s) => s.setGlobalRole);
   const liveUrl = useAppStore((s) => s.resolveLiveUrl(node.id));
   return (
-    <aside className="drawer ui-panel drawer--edge" data-testid="page-drawer">
-      <PanelHeader title={node.title} description={node.pathExample ?? node.pathPattern} action={<CloseButton />} />
-      <PanelBody>
-        <Field label="Живой URL" htmlFor="live-url-view">
-          <textarea id="live-url-view" className="ui-textarea font-mono" readOnly rows={3} value={liveUrl ?? '—'} />
-        </Field>
+    <SidePanel title={node.title} description={node.pathExample ?? node.pathPattern} testId="page-drawer">
+      <Field>
+        <FieldLabel htmlFor="live-url-view">Живой URL</FieldLabel>
+        <Textarea id="live-url-view" className="font-mono text-xs" readOnly rows={3} value={liveUrl ?? '—'} />
+      </Field>
 
-        <Field label="Глобальная роль" htmlFor="node-global-role">
-          <Select id="node-global-role" value={globalRole} onChange={(e) => setGlobalRole(e.target.value)}>
-            <option value="">Без роли</option>
-            <option value="recruiter">Рекрутер</option>
-            <option value="employer">Клиент (работодатель)</option>
-          </Select>
-        </Field>
+      <Field>
+        <FieldLabel htmlFor="node-global-role">Глобальная роль</FieldLabel>
+        <OptionSelect id="node-global-role" aria-label="Глобальная роль" value={globalRole} onValueChange={setGlobalRole} items={ROLE_ITEMS} placeholder="Без роли" />
+      </Field>
 
-        <StateChips node={node} />
-        <PageActions node={node} liveUrl={liveUrl} />
+      <StateChips node={node} />
+      <PageActions node={node} liveUrl={liveUrl} />
+      <ScreenStatusLog pageId={node.id} />
 
-        {hasPageCode(codeView) ? <CodePanel view={codeView} /> : null}
-      </PanelBody>
-    </aside>
+      {hasPageCode(codeView) ? <CodePanel view={codeView} /> : null}
+    </SidePanel>
   );
 }
 

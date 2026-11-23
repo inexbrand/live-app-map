@@ -188,14 +188,13 @@ describe('холст карты', () => {
     expect(nodeEl(r.container, other).querySelector('img[data-lam-snapshot]')).toBeNull();
   });
 
-  test('кнопки ноды: лог экрана, закрепить и открепить, открыть во вкладке, замечание', async () => {
+  test('кнопки ноды: статус и лог экрана (выбор экрана), закрепить и открепить, открыть во вкладке, замечание', async () => {
     const { doc, r } = await canvas();
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
     fireEvent.mouseEnter(nodeEl(r.container, id));
     const node = within(nodeEl(r.container, id));
     fireEvent.click(node.getByLabelText('Лог экрана'));
-    expect(useAppStore.getState().diagnosticsOpen).toBe(true);
-    expect(useAppStore.getState().logFilterPageId).toBe(id);
+    expect(useAppStore.getState().selectedPageId).toBe(id);
     fireEvent.click(node.getByLabelText('Закрепить'));
     expect(useAppStore.getState().pinnedPageIds.has(id)).toBe(true);
     fireEvent.click(within(nodeEl(r.container, id)).getByLabelText('Открепить'));

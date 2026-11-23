@@ -1,5 +1,5 @@
 /**
- * Кнопки шапки ноды: замечание, лог, закрепить, открыть во вкладке.
+ * Кнопки шапки ноды: замечание, статус и лог (панель экрана), закрепить, открыть во вкладке.
  */
 import { ExternalLink, MessageSquarePlus, Pin, PinOff, Terminal } from 'lucide-react';
 import { startComment } from '../../components/comments/start-comment';
@@ -20,8 +20,7 @@ export function NodeActions(props: NodeActionsProps) {
   const { nodeId, isPinned } = props;
   const togglePin = useAppStore((s) => s.togglePin);
   const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
-  const setDiagnosticsOpen = useAppStore((s) => s.setDiagnosticsOpen);
-  const setLogFilterPageId = useAppStore((s) => s.setLogFilterPageId);
+  const selectPage = useAppStore((s) => s.selectPage);
   return (
     <div className="page-node__actions">
       <button
@@ -40,12 +39,11 @@ export function NodeActions(props: NodeActionsProps) {
       <button
         type="button"
         className="icon-btn"
-        title="Лог экрана"
+        title="Статус и лог экрана — в панели справа"
         aria-label="Лог экрана"
         onClick={(e) => {
           e.stopPropagation();
-          setLogFilterPageId(nodeId);
-          setDiagnosticsOpen(true);
+          selectPage(nodeId);
         }}
       >
         <Terminal size={15} strokeWidth={1.75} />

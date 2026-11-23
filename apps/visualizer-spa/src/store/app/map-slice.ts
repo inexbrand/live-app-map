@@ -134,7 +134,6 @@ export const createMapSlice: AppSlice<MapSlice> = (set, get) => ({
       nodeViewports: new Map(),
       contentHeights: new Map(),
       interactPageId: null,
-      logFilterPageId: null,
     });
     get().pushLog({ level: 'info', source: 'system', message: 'Карта очищена' });
   },
