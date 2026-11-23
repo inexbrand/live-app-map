@@ -20,3 +20,4 @@
 - [Handy вместо STT Орки](handy-stt-setup.md) — whisper-large-v3, правый Option toggle, авто-Enter
 - [Git: origin — inexbrand](git-remotes-inexbrand.md) — форк Resterr1337 = remote user, бэкап chii-коммита
 - [Общий checkout: без stash](shared-checkout-no-stash.md) — параллельные агенты, коммитить только свои пути
+- [Автовход через dev-auth](lam-dev-auth-autologin.md) — /__lam_sessions/auto, копия обработчика в korbor, сид админа и ролей

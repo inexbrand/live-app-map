@@ -6,6 +6,7 @@ import { errorMessage, isLocalOrigin, readBody, requestPath, sendError, sendJson
 import { parseSetCookie, type StoredCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
 import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type BearerSource, type KorborRenewal } from './korbor-dogfood';
+import { gatewayDevAuthClient, syncDevAuth, type DevAuthSyncReport } from './dev-auth-sync';
 import { fetchSampleIds } from './sample-ids';
 import { summarize, type SessionStore } from './session-store';
 
@@ -43,8 +44,50 @@ function originOf(o: Record<string, unknown>): string | null {
 type Req = Parameters<DevMiddleware>[0];
 type Res = Parameters<DevMiddleware>[1];
 
-/** Окружение запроса: хранилище, порт шлюза, кэш Bearer и ответ. */
-type Ctx = { readonly store: SessionStore; readonly gatewayPort: number; readonly bearer: BearerSource; readonly req: Req; readonly res: Res; readonly path: string };
+/** Автовход в полёте по набору origin: двойной вызов (StrictMode, две вкладки) ждёт один. */
+type AutoRuns = Map<string, Promise<DevAuthSyncReport>>;
+
+/** Окружение запроса: хранилище, порт шлюза, кэш Bearer, автовходы в полёте и ответ. */
+type Ctx = { readonly store: SessionStore; readonly gatewayPort: number; readonly bearer: BearerSource; readonly auto: AutoRuns; readonly req: Req; readonly res: Res; readonly path: string };
+
+/** Имя «профиля» в пути, занятое автовходом. */
+export const AUTO_LOGIN_SEGMENT = 'auto';
+
+/** Origin экранов из тела автовхода; не массив адресов — null. */
+function autoOrigins(o: Record<string, unknown> | null): string[] | null {
+  const raw = o?.['origins'];
+  if (!Array.isArray(raw)) {
+    return null;
+  }
+  const out = new Set<string>();
+  for (const v of raw) {
+    try {
+      out.add(new URL(String(v)).origin);
+    } catch {
+      return null;
+    }
+  }
+  return [...out].sort();
+}
+
+/** Автовход: роли приложений карты → профили; отвечает итогом и профилями. */
+async function handleAuto(ctx: Ctx): Promise<void> {
+  const body = await readBody(ctx.req, MAX_BODY);
+  if (!body.ok) {
+    sendError(ctx.res, body.status, body.error);
+    return;
+  }
+  const origins = autoOrigins(asObject(body.text));
+  if (origins === null || origins.length === 0) {
+    fieldError(ctx.res, 'origins', 'origins обязателен: адреса приложений карты, например ["http://localhost:16002"]');
+    return;
+  }
+  const key = origins.join(' ');
+  const run = ctx.auto.get(key) ?? syncDevAuth(ctx.store, origins, gatewayDevAuthClient()).finally(() => ctx.auto.delete(key));
+  ctx.auto.set(key, run);
+  const report = await run;
+  sendJson(ctx.res, 200, { ok: true, sources: report.sources, roles: report.profiles, profiles: ctx.store.list().map(summarize) });
+}
 
 /** Тело запроса профиля: объект и origin приложения. */
 type ProfileBody = { readonly o: Record<string, unknown>; readonly origin: string };
@@ -61,6 +104,10 @@ function isVisualizerPage(req: Req): boolean {
 }
 
 async function handleSessions(ctx: Ctx, method: string, profileId: string, act: string): Promise<void> {
+  if (method === 'POST' && profileId === AUTO_LOGIN_SEGMENT && act === '') {
+    await handleAuto(ctx);
+    return;
+  }
   if (method === 'GET' && profileId === '') {
     sendJson(ctx.res, 200, { ok: true, gatewayPort: ctx.gatewayPort, profiles: ctx.store.list().map(summarize) });
     return;
@@ -215,6 +262,7 @@ async function sampleIds(ctx: Ctx, profileId: string, origin: string, rawLists: 
  */
 export function createSessionsMiddleware(store: SessionStore, gatewayPort: number): DevMiddleware {
   const bearer = createBearerCache();
+  const auto: AutoRuns = new Map();
   return (req, res, next) => {
     const p = requestPath(req);
     if (p !== SESSIONS_PATH && !p.startsWith(`${SESSIONS_PATH}/`)) {
@@ -226,7 +274,7 @@ export function createSessionsMiddleware(store: SessionStore, gatewayPort: numbe
       return;
     }
     const [profileId = '', act = ''] = p.slice(SESSIONS_PATH.length).split('/').filter((s) => s !== '');
-    void handleSessions({ store, gatewayPort, bearer, req, res, path: p }, req.method ?? 'GET', profileId, act).catch((err: unknown) => {
+    void handleSessions({ store, gatewayPort, bearer, auto, req, res, path: p }, req.method ?? 'GET', profileId, act).catch((err: unknown) => {
       sendError(res, 500, errorMessage(err));
     });
   };

@@ -1,6 +1,8 @@
 /**
- * Профили входа шлюза как у пользователя: список, выход, форма dev-входа и вставки кук.
- * Шлюз — подмена fetch для /__lam_sessions (настоящий dev-сервер в unit не поднят).
+ * Профили входа шлюза как у пользователя: автовход, «Смотреть как», список, выход,
+ * ручная форма dev-входа и вставки кук.
+ * Шлюз — подмена fetch для /__lam_sessions (настоящий dev-сервер в unit не поднят;
+ * сам автовход шлюза проверяется на настоящих серверах в lib/gateway/dev-auth-sync.test.ts).
  */
 import { useDom, type Ui } from '../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -8,6 +10,8 @@ import { act, fireEvent, render, waitFor, within } from '@testing-library/react'
 import type { ProfileSummary } from '../lib/gateway/session-store';
 import { useGatewayStore } from '../store/gateway-store';
 import { jsonResponse, openMap, resetStores, stubFetch } from '../test/fixtures';
+import { listOptions, pickOption } from '../test/select';
+import { useAppStore } from '../store/app-store';
 import { SessionProfilesPanel } from './SessionProfilesPanel';
 
 useDom();
@@ -23,6 +27,20 @@ const RECRUITER: ProfileSummary = {
   updatedAt: '2026-11-22T00:00:00Z',
 };
 const ADMIN: ProfileSummary = { id: 'admin', label: 'Админ', origins: [], updatedAt: '2026-11-22T00:00:00Z' };
+
+/** Ответ автовхода: рекрутер выдан, у клиента нет пользователя, сайт без автовхода. */
+const AUTO_REPLY = {
+  ok: true,
+  sources: [
+    { origin: 'http://localhost:16001', state: 'absent', roles: [], error: 'нет dev-входа' },
+    { origin: 'https://vite.localhost:5175', state: 'ok', roles: ['recruiter', 'employer'] },
+  ],
+  roles: [
+    { id: 'recruiter', label: 'Рекрутер', origin: 'https://vite.localhost:5175', state: 'issued' },
+    { id: 'employer', label: 'Клиент', origin: 'https://vite.localhost:5175', state: 'error', error: 'нет активного пользователя с ролью employer' },
+  ],
+  profiles: [{ ...RECRUITER, origins: [{ origin: 'https://vite.localhost:5175', cookies: [], storageKeys: ['lam_init_data'], autoUntil: '2099-01-01T00:00:00Z' }] }],
+};
 
 let profiles: unknown[] = [];
 let net: ReturnType<typeof stubFetch>;
@@ -41,6 +59,9 @@ beforeEach(() => {
     }
     if (url === '/__lam_sessions/employer/korbor-dogfood') {
       return jsonResponse({ ok: true });
+    }
+    if (url === '/__lam_sessions/auto' && method === 'POST') {
+      return jsonResponse(AUTO_REPLY);
     }
     if (url === '/__lam_sessions/employer' && method === 'PUT') {
       return jsonResponse({ error: 'origin не из карты' }, 400);
@@ -76,22 +97,27 @@ function fill(ui: Ui, values: Partial<Record<string, string>>): void {
 function panel(actors = ACTORS, actorsError: string | null = null, openForm = true) {
   const r = render(<SessionProfilesPanel actors={actors} actorsError={actorsError} apiBase="http://127.0.0.1:16000" />);
   const ui = within(r.container);
-  const add = ui.queryByRole('button', { name: 'Добавить вход' });
+  const add = ui.queryByRole('button', { name: 'Добавить вход вручную' });
   if (openForm && add !== null) {
     fireEvent.click(add);
   }
   return ui;
 }
 
+/** Профили в списке: подписи по порядку. */
+function profileTexts(ui: Ui): string[] {
+  return ui.queryAllByTestId(/^profile-/).map((el) => el.textContent ?? '');
+}
+
 describe('профили входа', () => {
-  test('форма входа скрыта до кнопки «Добавить вход», «Отмена» прячет её', async () => {
+  test('форма скрыта до кнопки «Добавить вход вручную», «Отмена» прячет её', async () => {
     await act(() => useGatewayStore.getState().refresh());
     const ui = panel(ACTORS, null, false);
     expect(ui.queryByRole('button', { name: 'Войти' })).toBeNull();
     expect(ui.queryByLabelText('Профиль (id)')).toBeNull();
-    fireEvent.click(ui.getByRole('button', { name: 'Добавить вход' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Добавить вход вручную' }));
     expect(ui.getByRole('button', { name: 'Войти' })).toBeTruthy();
-    expect(ui.queryByRole('button', { name: 'Добавить вход' })).toBeNull();
+    expect(ui.queryByRole('button', { name: 'Добавить вход вручную' })).toBeNull();
     fireEvent.click(ui.getByRole('button', { name: 'Отмена' }));
     expect(ui.queryByRole('button', { name: 'Войти' })).toBeNull();
   });
@@ -99,33 +125,29 @@ describe('профили входа', () => {
   test('шлюз не отвечает: сообщение с причиной', async () => {
     useGatewayStore.setState({ port: null, error: 'connect ECONNREFUSED' });
     const ui = panel();
-    expect(ui.getByRole('status').textContent).toBe('Шлюз живых экранов не отвечает: connect ECONNREFUSED. Он запускается вместе с dev-сервером визуализатора.');
+    expect(ui.getByRole('alert').textContent).toBe('Шлюз живых экранов не отвечаетconnect ECONNREFUSED. Он запускается вместе с dev-сервером визуализатора.');
     act(() => useGatewayStore.setState({ error: null }));
-    expect(ui.getByRole('status').textContent).toBe('Шлюз живых экранов не отвечает. Он запускается вместе с dev-сервером визуализатора.');
+    expect(ui.getByRole('alert').textContent).toBe('Шлюз живых экранов не отвечаетОн запускается вместе с dev-сервером визуализатора.');
   });
 
   test('список профилей из шлюза: что сохранено, выход', async () => {
     await act(() => useGatewayStore.getState().refresh());
     expect(useGatewayStore.getState().profiles.map((p) => p.id)).toEqual(['recruiter', 'admin']);
-    const ui = panel();
-    const items = ui.getAllByRole('listitem');
-    expect(items.map((li) => li.textContent)).toEqual([
-      'Рекрутер recruiterhttps://vite.localhost:5175 · кука sid, tghttp://localhost:16002 · пустоВыйти',
-      'Админ adminВыйти',
+    const ui = panel(ACTORS, null, false);
+    expect(profileTexts(ui)).toEqual([
+      'Рекрутерrecruiterhttps://vite.localhost:5175 · кука sid, tghttp://localhost:16002 · пустоВыйти',
+      'АдминadminВыйти',
     ]);
-    const admin = items[1];
-    if (admin === undefined) {
-      throw new Error('нет профиля admin');
-    }
-    fireEvent.click(within(admin).getByRole('button', { name: 'Выйти' }));
-    await waitFor(() => expect(ui.getAllByRole('listitem')).toHaveLength(1));
+    fireEvent.click(within(ui.getByTestId('profile-admin')).getByRole('button', { name: 'Выйти' }));
+    await waitFor(() => expect(profileTexts(ui)).toHaveLength(1));
   });
 
   test('пустой список и пустой список пользователей korbor', async () => {
     profiles = [];
     await act(() => useGatewayStore.getState().refresh());
     const ui = panel([], 'API korbor не отвечает');
-    expect(ui.getByText('Профилей нет: экраны открываются без входа.')).toBeTruthy();
+    expect(ui.getByText('Профилей нет')).toBeTruthy();
+    expect(ui.queryByLabelText('Смотреть как')).toBeNull();
     expect(ui.getByText('Список пуст: API korbor не отвечает')).toBeTruthy();
   });
 
@@ -133,9 +155,9 @@ describe('профили входа', () => {
     const doc = openMap('korbor-miniapp');
     await act(() => useGatewayStore.getState().refresh());
     const ui = panel([], null);
-    const options = within(ui.getByLabelText('Приложение')).getAllByRole('option').map((o) => o.getAttribute('value'));
+    const options = await listOptions(ui.getByLabelText('Приложение'));
     const expected = [...new Set(doc.nodes.flatMap((n) => (n.url !== undefined && /^https?:/.test(n.url) ? [new URL(n.url).origin] : [])))].sort();
-    expect(options).toEqual(['', ...expected]);
+    expect(options.map((o) => o.label)).toEqual(expected);
     expect(ui.getByText('Список пуст: нужен API korbor с DOGFOOD_DEV')).toBeTruthy();
   });
 
@@ -143,20 +165,22 @@ describe('профили входа', () => {
     openMap('korbor-miniapp');
     await act(() => useGatewayStore.getState().refresh());
     const ui = panel();
-    const origin = within(ui.getByLabelText('Приложение')).getAllByRole('option')[1]?.getAttribute('value') ?? '';
-    // React 19 после действия сбрасывает поля формы — каждый раз заполняем заново, как пользователь.
+    const origin = (await listOptions(ui.getByLabelText('Приложение')))[0]?.label ?? '';
+    // React 19 после действия сбрасывает текстовые поля формы — каждый раз заполняем заново, как пользователь.
     const attempt = async (f: Partial<Record<string, string>>): Promise<string | null> => {
       fill(ui, f);
       await submitForm(ui.getByRole('button', { name: 'Войти' }));
       return ui.queryByRole('alert')?.textContent ?? null;
     };
-    const full = { 'Профиль (id)': 'employer', 'Подпись': 'Клиент', 'Приложение': origin, 'Пользователь': 'user:u1', 'API korbor': 'http://127.0.0.1:16000' };
+    const text = { 'Профиль (id)': 'employer', 'Подпись': 'Клиент', 'API korbor': 'http://127.0.0.1:16000' };
     expect(await attempt({})).toBe('Впишите id: строчные латинские буквы, цифры, дефис — например recruiter');
     expect(await attempt({ 'Профиль (id)': 'employer' })).toBe('Впишите подпись профиля, например «Рекрутер»');
     expect(await attempt({ 'Профиль (id)': 'employer', 'Подпись': 'Клиент' })).toBe('Выберите приложение — адрес вида http://localhost:16002');
-    expect(await attempt({ ...full, 'Пользователь': '' })).toBe('Выберите пользователя из базы korbor');
-    expect(await attempt({ ...full, 'API korbor': 'не адрес' })).toBe('Впишите адрес API korbor, например http://127.0.0.1:16000');
-    expect(await attempt(full)).toBeNull();
+    await pickOption(ui.getByLabelText('Приложение'), origin);
+    expect(await attempt(text)).toBe('Выберите пользователя из базы korbor');
+    await pickOption(ui.getByLabelText('Пользователь'), '[employer] Анна');
+    expect(await attempt({ ...text, 'API korbor': 'не адрес' })).toBe('Впишите адрес API korbor, например http://127.0.0.1:16000');
+    expect(await attempt(text)).toBeNull();
     await waitFor(() => expect(ui.getByRole('status').textContent).toBe('Профиль «Клиент» сохранён — экраны откроются под ним'));
     const sent = net.calls.find((c) => c.url === '/__lam_sessions/employer/korbor-dogfood');
     expect(JSON.parse(sent?.body ?? '{}')).toEqual({ label: 'Клиент', role: '', origin, kind: 'user', actorId: 'u1', apiBase: 'http://127.0.0.1:16000' });
@@ -166,10 +190,11 @@ describe('профили входа', () => {
     openMap('korbor-miniapp');
     await act(() => useGatewayStore.getState().refresh());
     const ui = panel();
-    fireEvent.change(ui.getByLabelText('Как войти'), { target: { value: 'paste' } });
+    await pickOption(ui.getByLabelText('Как войти'), 'Вставить куки или токен');
     expect(ui.queryByLabelText('Пользователь')).toBeNull();
-    const origin = within(ui.getByLabelText('Приложение')).getAllByRole('option')[1]?.getAttribute('value') ?? '';
-    const base = { 'Профиль (id)': 'employer', 'Подпись': 'Клиент', 'Приложение': origin };
+    const origin = (await listOptions(ui.getByLabelText('Приложение')))[0]?.label ?? '';
+    await pickOption(ui.getByLabelText('Приложение'), origin);
+    const base = { 'Профиль (id)': 'employer', 'Подпись': 'Клиент' };
     const attempt = async (f: Partial<Record<string, string>>): Promise<string | null> => {
       fill(ui, { ...base, ...f });
       await submitForm(ui.getByRole('button', { name: 'Войти' }));
@@ -182,7 +207,7 @@ describe('профили входа', () => {
     await waitFor(() => expect(ui.getByRole('alert').textContent).toBe('origin не из карты'));
     const sent = net.calls.find((c) => c.method === 'PUT');
     expect(JSON.parse(sent?.body ?? '{}')).toEqual({ label: 'Клиент', role: '', origin, cookies: 'sid=1', storage: { tg: 'abc' } });
-    fireEvent.change(ui.getByLabelText('Как войти'), { target: { value: 'korbor-dogfood' } });
+    await pickOption(ui.getByLabelText('Как войти'), 'Пользователь из базы korbor (dev-вход)');
     expect(ui.getByLabelText('Пользователь')).toBeTruthy();
   });
 
@@ -190,10 +215,12 @@ describe('профили входа', () => {
     await act(() => useGatewayStore.getState().refresh());
     openMap('korbor-miniapp');
     const ui = panel();
-    const origin = within(ui.getByLabelText('Приложение')).getAllByRole('option')[1]?.getAttribute('value') ?? '';
+    const origin = (await listOptions(ui.getByLabelText('Приложение')))[0]?.label ?? '';
+    await pickOption(ui.getByLabelText('Приложение'), origin);
+    await pickOption(ui.getByLabelText('Пользователь'), '[employer] Анна');
     net.restore();
     net = stubFetch(() => { throw new Error('offline'); });
-    fill(ui, { 'Профиль (id)': 'employer', 'Подпись': 'Клиент', 'Приложение': origin, 'Пользователь': 'user:u1', 'API korbor': 'http://127.0.0.1:16000' });
+    fill(ui, { 'Профиль (id)': 'employer', 'Подпись': 'Клиент', 'API korbor': 'http://127.0.0.1:16000' });
     const errors: unknown[] = [];
     const onError = (e: ErrorEvent): void => { errors.push(e.error); e.preventDefault(); };
     window.addEventListener('error', onError);
@@ -204,6 +231,45 @@ describe('профили входа', () => {
   });
 });
 
+describe('автовход', () => {
+  test('карта открыта — профили ролей появились, ошибки и приложения без автовхода видны', async () => {
+    await act(() => useGatewayStore.getState().refresh());
+    await act(() => useGatewayStore.getState().autoLogin(['https://vite.localhost:5175', 'http://localhost:16001']));
+    const ui = panel(ACTORS, null, false);
+    expect(profileTexts(ui)).toEqual(['Рекрутерrecruiterавтовходhttps://vite.localhost:5175 · lam_init_dataВыйти']);
+    expect(ui.getByTestId('auto-login-problems').textContent).toContain('Клиент: нет активного пользователя с ролью employer');
+    expect(ui.getByText('Без автовхода: http://localhost:16001 — эти экраны открываются как есть.')).toBeTruthy();
+    const sent = net.calls.filter((c) => c.url === '/__lam_sessions/auto');
+    expect(JSON.parse(sent[0]?.body ?? '{}')).toEqual({ origins: ['http://localhost:16001', 'https://vite.localhost:5175'] });
+  });
+
+  test('тот же набор origin не спрашивается дважды; «Спросить ещё раз» — спрашивает', async () => {
+    await act(() => useGatewayStore.getState().refresh());
+    await act(() => useGatewayStore.getState().autoLogin(['https://vite.localhost:5175']));
+    await act(() => useGatewayStore.getState().autoLogin(['https://vite.localhost:5175']));
+    expect(net.calls.filter((c) => c.url === '/__lam_sessions/auto')).toHaveLength(1);
+    openMap('korbor-miniapp');
+    const ui = panel(ACTORS, null, false);
+    fireEvent.click(ui.getByRole('button', { name: 'Спросить ещё раз' }));
+    await waitFor(() => expect(net.calls.filter((c) => c.url === '/__lam_sessions/auto')).toHaveLength(2));
+  });
+
+  test('dev-сервер ответил не тем — состояние failed с причиной', async () => {
+    net.restore();
+    net = stubFetch((url) => (url === '/__lam_sessions/auto' ? jsonResponse({ nope: 1 }) : undefined));
+    await useGatewayStore.getState().autoLogin(['http://localhost:16002']);
+    expect(useGatewayStore.getState().auto).toMatchObject({ status: 'failed', error: 'неверный ответ автовхода' });
+  });
+
+  test('«Смотреть как» — роли профилей, выбор меняет роль экранов', async () => {
+    await act(() => useGatewayStore.getState().refresh());
+    const ui = panel(ACTORS, null, false);
+    const options = await listOptions(ui.getByLabelText('Смотреть как'));
+    expect(options.map((o) => o.label)).toEqual(['Как задано у экрана', 'Рекрутер', 'Админ']);
+    await pickOption(ui.getByLabelText('Смотреть как'), 'Админ');
+    expect(useAppStore.getState().globalRole).toBe('admin');
+  });
+});
 describe('store шлюза', () => {
   test('шлюз отвечает не тем: порт сброшен, причина с HTTP-кодом', async () => {
     net.restore();

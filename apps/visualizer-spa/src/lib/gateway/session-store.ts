@@ -9,6 +9,8 @@ import path from 'node:path';
 import { mergeSetCookies, type StoredCookie } from './cookie-jar';
 import { isDogfoodValueStale, KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal, type MintResult } from './korbor-dogfood';
 import { isValidProfileId } from './gateway-host';
+import { DEV_AUTH_MARGIN_MS, gatewayDevAuthClient, reissueDevAuth, type DevAuthLink } from './dev-auth-sync';
+import { isDevAuthExpired } from '@live-app-map/dev-auth';
 
 /** Переменная окружения с папкой профилей. */
 export const LAM_SESSIONS_ENV = 'LAM_SESSIONS_DIR';
@@ -25,6 +27,8 @@ export type SessionProfile = {
   readonly storage: Readonly<Record<string, Readonly<Record<string, string>>>>;
   /** origin → как обновить dev-вход, когда он устареет. */
   readonly renewals?: Readonly<Record<string, KorborRenewal>>;
+  /** origin → автовход приложения (`@live-app-map/dev-auth`): откуда и до какого срока. */
+  readonly devAuth?: Readonly<Record<string, DevAuthLink>>;
   readonly updatedAt: string;
 };
 
@@ -33,7 +37,13 @@ export type ProfileSummary = {
   readonly id: string;
   readonly label: string;
   readonly role?: string;
-  readonly origins: ReadonlyArray<{ readonly origin: string; readonly cookies: readonly string[]; readonly storageKeys: readonly string[] }>;
+  readonly origins: ReadonlyArray<{
+    readonly origin: string;
+    readonly cookies: readonly string[];
+    readonly storageKeys: readonly string[];
+    /** Вход выдан автоматически приложением (до какого срока, ISO). */
+    readonly autoUntil?: string;
+  }>;
   readonly updatedAt: string;
 };
 
@@ -62,6 +72,7 @@ export function summarize(p: SessionProfile): ProfileSummary {
       origin,
       cookies: (p.cookies[origin] ?? []).map((c) => c.name),
       storageKeys: Object.keys(p.storage[origin] ?? {}),
+      ...(p.devAuth?.[origin] === undefined ? {} : { autoUntil: p.devAuth[origin].expiresAt }),
     })),
     updatedAt: p.updatedAt,
   };
@@ -76,6 +87,7 @@ export type ProfileInput = {
   readonly cookies?: readonly StoredCookie[];
   readonly storage?: Readonly<Record<string, string>>;
   readonly renewal?: KorborRenewal;
+  readonly devAuth?: DevAuthLink;
 };
 
 function checkProfileInput(input: ProfileInput): void {
@@ -88,14 +100,18 @@ function checkProfileInput(input: ProfileInput): void {
 }
 
 /** Куки, storage и продление прежнего профиля с данными нового origin поверх. */
-function mergeOrigin(prev: SessionProfile | undefined, input: ProfileInput): Pick<SessionProfile, 'cookies' | 'storage'> & { renewals: Record<string, KorborRenewal> } {
+function mergeOrigin(prev: SessionProfile | undefined, input: ProfileInput): Pick<SessionProfile, 'cookies' | 'storage'> & { renewals: Record<string, KorborRenewal>; devAuth: Record<string, DevAuthLink> } {
   const cookies = { ...(prev?.cookies ?? {}) };
   const storage = { ...(prev?.storage ?? {}) };
   const renewals = { ...(prev?.renewals ?? {}) };
+  const devAuth = { ...(prev?.devAuth ?? {}) };
   if (input.origin !== undefined) {
     putOrigin(input, input.origin, { cookies, storage, renewals });
+    if (input.devAuth !== undefined) {
+      devAuth[input.origin] = input.devAuth;
+    }
   }
-  return { cookies, storage, renewals };
+  return { cookies, storage, renewals, devAuth };
 }
 
 /** Данные одного origin поверх прежних: продление и куки заменяются, storage дополняется. */
@@ -160,7 +176,7 @@ export class SessionStore {
    */
   upsert(input: ProfileInput): SessionProfile {
     checkProfileInput(input);
-    const { cookies, storage, renewals } = mergeOrigin(this.profiles.get(input.id), input);
+    const { cookies, storage, renewals, devAuth } = mergeOrigin(this.profiles.get(input.id), input);
     const next: SessionProfile = {
       id: input.id,
       label: input.label.trim(),
@@ -168,6 +184,7 @@ export class SessionStore {
       cookies,
       storage,
       ...(Object.keys(renewals).length === 0 ? {} : { renewals }),
+      ...(Object.keys(devAuth).length === 0 ? {} : { devAuth }),
       updatedAt: new Date().toISOString(),
     };
     this.profiles.set(next.id, next);
@@ -212,6 +229,12 @@ export class SessionStore {
   }
 
   private async renew(id: string, origin: string): Promise<string | null> {
+    const link = this.profiles.get(id)?.devAuth?.[origin];
+    if (link !== undefined) {
+      return isDevAuthExpired(link.expiresAt, Date.now(), DEV_AUTH_MARGIN_MS)
+        ? reissueDevAuth(this, id, link, gatewayDevAuthClient()).catch((err: unknown) => (err instanceof Error ? err.message : String(err)))
+        : null;
+    }
     const profile = this.profiles.get(id);
     const renewal = profile === undefined ? undefined : staleRenewal(profile, origin);
     if (profile === undefined || renewal === undefined) {

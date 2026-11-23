@@ -1,5 +1,6 @@
 /**
  * Лист «Входы»: под каким пользователем открываются живые экраны карты.
+ * Профили приложений с автовходом появляются сами при загрузке карты.
  */
 import { getKorborApiBase } from '../../lib/dogfood-api';
 import { EdgeSheet } from '../EdgeSheet';
@@ -16,12 +17,12 @@ export type LoginsSheetProps = {
 /**
  * Лист входов.
  *
- * @param props - открыт ли и пользователи dev-входа
+ * @param props - открыт ли и пользователи ручного dev-входа
  */
 export function LoginsSheet(props: LoginsSheetProps) {
   const { open, onClose, dogfood } = props;
   return (
-    <EdgeSheet open={open} side="right" title="Входы" description="Войдите один раз — экраны приложения откроются уже под этим пользователем." onClose={onClose}>
+    <EdgeSheet open={open} side="right" title="Входы" description="Приложения с автовходом сами выдают роли — экраны открываются уже под ними." onClose={onClose}>
       <SessionProfilesPanel actors={dogfood.actors} actorsError={dogfood.error} apiBase={getKorborApiBase()} />
     </EdgeSheet>
   );

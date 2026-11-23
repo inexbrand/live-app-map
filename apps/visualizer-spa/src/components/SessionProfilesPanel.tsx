@@ -1,42 +1,24 @@
 /**
- * Профили сессий шлюза: кто вошёл в какие приложения, вход один раз
- * (dev-вход korbor или вставка кук/токена), выход.
+ * Профили входа шлюза: под кем открываются экраны карты. Приложения с
+ * автовходом (`@live-app-map/dev-auth`) заводят профили сами при загрузке
+ * карты; ручной вход — запасной путь.
  */
-import { useActionState, useMemo, useState } from 'react';
-import { requestJson, requestOk } from '../lib/dev-api';
+import { useMemo, useState } from 'react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Empty, EmptyDescription, EmptyHeader, EmptyTitle } from '@/components/ui/empty';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Item, ItemActions, ItemContent, ItemDescription, ItemGroup, ItemTitle } from '@/components/ui/item';
+import { Spinner } from '@/components/ui/spinner';
+import { requestOk } from '../lib/dev-api';
 import type { DogfoodActor } from '../lib/dogfood-api';
-import { buildSessionRequest, type SessionFormFields, type SessionMethod } from '../lib/gateway/session-form';
+import { mapOrigins } from '../lib/gateway/map-origins';
 import type { ProfileSummary } from '../lib/gateway/session-store';
 import { useAppStore } from '../store/app-store';
-import { useGatewayStore } from '../store/gateway-store';
-import { Button, Field, Input, Select, Textarea } from '../ui';
-
-/** Результат отправки формы. */
-type FormState = { readonly field: keyof SessionFormFields | null; readonly error: string | null; readonly done: string | null };
-
-const EMPTY: FormState = { field: null, error: null, done: null };
-
-/** Origin экранов карты — из чего выбирать приложение. */
-function mapOrigins(nodes: readonly { readonly url?: string }[]): string[] {
-  const set = new Set<string>();
-  for (const n of nodes) {
-    const origin = n.url === undefined ? null : httpOrigin(n.url);
-    if (origin !== null) {
-      set.add(origin);
-    }
-  }
-  return [...set].sort();
-}
-
-/** Origin http(s)-адреса; адрес без схемы или другой схемы — не приложение. */
-function httpOrigin(url: string): string | null {
-  try {
-    const u = new URL(url);
-    return u.protocol === 'http:' || u.protocol === 'https:' ? u.origin : null;
-  } catch {
-    return null;
-  }
-}
+import { useGatewayStore, type AutoLoginState } from '../store/gateway-store';
+import { OptionSelect } from './option-select';
+import { ManualLoginForm } from './toolbar/ManualLoginForm';
 
 /** Origin экранов открытой карты. */
 function useMapOrigins(): string[] {
@@ -44,65 +26,15 @@ function useMapOrigins(): string[] {
   return useMemo(() => mapOrigins(document?.nodes ?? []), [document]);
 }
 
-/** Строковое поле формы (нет поля — пусто). */
-function formText(form: FormData, k: string): string {
-  const v = form.get(k);
-  return typeof v === 'string' ? v : '';
-}
-
-/**
- * Отправка формы профиля: проверка полей, запрос к шлюзу, обновление списка.
- *
- * @param method - способ входа
- * @param form - поля формы
- * @param refresh - перечитать профили
- */
-async function submitSession(method: SessionMethod, form: FormData, refresh: () => Promise<void>): Promise<FormState> {
-  const text = (k: string): string => formText(form, k);
-  const req = buildSessionRequest({
-    id: text('id'),
-    label: text('label'),
-    role: text('role'),
-    origin: text('origin'),
-    method,
-    actor: text('actor'),
-    apiBase: text('apiBase'),
-    cookies: text('cookies'),
-    storageKey: text('storageKey'),
-    storageValue: text('storageValue'),
-  });
-  if (!req.ok) {
-    return { field: req.field, error: req.error, done: null };
-  }
-  const r = await requestJson(req.path, { method: req.method, json: req.body });
-  if (!r.ok && r.status === null) {
-    throw new Error(r.error);
-  }
-  if (!r.ok) {
-    return { field: null, error: r.error, done: null };
-  }
-  await refresh();
-  return { field: null, error: null, done: `Профиль «${text('label')}» сохранён — экраны откроются под ним` };
-}
-
-/** Подсказка под полем, если ошибка у него. */
-function FieldError(props: { readonly state: FormState; readonly field: keyof SessionFormFields }) {
-  return props.state.field === props.field && props.state.error !== null ? (
-    <span className="drawer__hint session-form__error" role="alert">
-      {props.state.error}
-    </span>
-  ) : null;
-}
-
 /** Шлюз не отвечает: профилей нет. */
 function GatewayDown(props: { readonly error: string | null }) {
   return (
-    <div className="sheet-block">
-      <div className="ui-field__label">Профили входа</div>
-      <p className="drawer__hint" role="status">
-        Шлюз живых экранов не отвечает{props.error === null ? '' : `: ${props.error}`}. Он запускается вместе с dev-сервером визуализатора.
-      </p>
-    </div>
+    <Alert>
+      <AlertTitle>Шлюз живых экранов не отвечает</AlertTitle>
+      <AlertDescription>
+        {props.error === null ? '' : `${props.error}. `}Он запускается вместе с dev-сервером визуализатора.
+      </AlertDescription>
+    </Alert>
   );
 }
 
@@ -111,180 +43,144 @@ function originContents(o: ProfileSummary['origins'][number]): string {
   return [...o.cookies.map((c) => `кука ${c}`), ...o.storageKeys].join(', ') || 'пусто';
 }
 
-/** Профиль в списке: кто, где вошёл, кнопка выхода. */
+/** Профиль в списке: кто, где вошёл, автовход ли, кнопка выхода. */
 function ProfileItem(props: { readonly profile: ProfileSummary; readonly refresh: () => Promise<void> }) {
   const p = props.profile;
+  const auto = p.origins.some((o) => o.autoUntil !== undefined);
   return (
-    <li className="session-profiles__item">
-      <div>
-        <strong>{p.label}</strong> <span className="drawer__hint">{p.role ?? p.id}</span>
+    <Item variant="outline" size="sm" data-testid={`profile-${p.id}`}>
+      <ItemContent>
+        <ItemTitle>
+          {p.label}
+          <Badge variant="secondary">{p.role ?? p.id}</Badge>
+          {auto ? <Badge variant="outline">автовход</Badge> : null}
+        </ItemTitle>
         {p.origins.map((o) => (
-          <div key={o.origin} className="drawer__hint">
+          <ItemDescription key={o.origin}>
             {o.origin} · {originContents(o)}
-          </div>
+          </ItemDescription>
         ))}
-      </div>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          void requestOk(`/__lam_sessions/${p.id}`, { method: 'DELETE' }).then(() => props.refresh());
-        }}
-      >
-        Выйти
-      </Button>
-    </li>
+      </ItemContent>
+      <ItemActions>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            void requestOk(`/__lam_sessions/${p.id}`, { method: 'DELETE' }).then(() => props.refresh());
+          }}
+        >
+          Выйти
+        </Button>
+      </ItemActions>
+    </Item>
   );
 }
 
-/** Поля входа пользователем из базы korbor. */
-function DogfoodFields(props: { readonly state: FormState; readonly actors: readonly DogfoodActor[]; readonly actorsError: string | null; readonly apiBase: string }) {
-  const { state, actors } = props;
+/** Ход автовхода: идёт, какие роли не выданы, у каких приложений его нет. */
+function AutoLoginStatus(props: { readonly auto: AutoLoginState; readonly onRetry: () => void }) {
+  const { auto } = props;
+  if (auto.status === 'idle') {
+    return null;
+  }
+  if (auto.status === 'running') {
+    return (
+      <p className="flex items-center gap-2 text-sm text-muted-foreground" role="status">
+        <Spinner /> Спрашиваем роли у приложений карты…
+      </p>
+    );
+  }
+  const failedRoles = auto.roles.filter((r) => r.state === 'error');
+  const brokenSources = auto.sources.filter((s) => s.state === 'error');
+  const withoutAuto = auto.sources.filter((s) => s.state === 'absent').map((s) => s.origin);
+  const problems = [
+    ...(auto.error === null ? [] : [auto.error]),
+    ...failedRoles.map((r) => `${r.label}: ${r.error ?? 'вход не выдан'}`),
+    ...brokenSources.map((s) => `${s.origin}: ${s.error ?? 'не отвечает'}`),
+  ];
   return (
     <>
-      <Field label="Пользователь" htmlFor="sess-actor" hint={actors.length === 0 ? `Список пуст: ${props.actorsError ?? 'нужен API korbor с DOGFOOD_DEV'}` : undefined}>
-        <Select id="sess-actor" name="actor" defaultValue="">
-          <option value="">— выберите —</option>
-          {actors.map((a) => (
-            <option key={`${a.kind}:${a.id}`} value={`${a.kind}:${a.id}`}>
-              [{a.role}] {a.label}
-            </option>
-          ))}
-        </Select>
-        <FieldError state={state} field="actor" />
-      </Field>
-      <Field label="API korbor" htmlFor="sess-api">
-        <Input id="sess-api" name="apiBase" defaultValue={props.apiBase} />
-        <FieldError state={state} field="apiBase" />
-      </Field>
-    </>
-  );
-}
-
-/** Поля вставки кук или токена. */
-function PasteFields(props: { readonly state: FormState }) {
-  const { state } = props;
-  return (
-    <>
-      <Field label="Куки" htmlFor="sess-cookies" hint="Из DevTools → Application → Cookies: «sid=…; csrf=…»">
-        <Textarea id="sess-cookies" name="cookies" rows={2} />
-        <FieldError state={state} field="cookies" />
-      </Field>
-      <Field label="Ключ sessionStorage" htmlFor="sess-skey">
-        <Input id="sess-skey" name="storageKey" />
-        <FieldError state={state} field="storageKey" />
-      </Field>
-      <Field label="Значение (токен)" htmlFor="sess-sval">
-        <Textarea id="sess-sval" name="storageValue" rows={2} />
-        <FieldError state={state} field="storageValue" />
-      </Field>
-    </>
-  );
-}
-
-/** Итог отправки: общая ошибка или «сохранён». */
-function FormOutcome(props: { readonly state: FormState }) {
-  const { state } = props;
-  return (
-    <>
-      {state.error !== null && state.field === null ? (
-        <p className="drawer__hint session-form__error" role="alert">
-          {state.error}
-        </p>
+      {problems.length > 0 ? (
+        <Alert variant="destructive" data-testid="auto-login-problems">
+          <AlertTitle>Автовход сработал не для всех</AlertTitle>
+          <AlertDescription>
+            <ul className="flex list-disc flex-col gap-1 pl-4">
+              {problems.map((p) => (
+                <li key={p}>{p}</li>
+              ))}
+            </ul>
+            <Button type="button" variant="outline" size="sm" className="mt-2" onClick={props.onRetry}>
+              Спросить ещё раз
+            </Button>
+          </AlertDescription>
+        </Alert>
       ) : null}
-      {state.done !== null ? (
-        <p className="drawer__hint" role="status">
-          {state.done}
-        </p>
-      ) : null}
+      {withoutAuto.length > 0 ? <p className="text-sm text-muted-foreground">Без автовхода: {withoutAuto.join(', ')} — эти экраны открываются как есть.</p> : null}
     </>
+  );
+}
+
+/** «Смотреть как»: роль экранов без своего стейта — переключает профиль входа. */
+function ViewAsField(props: { readonly profiles: readonly ProfileSummary[] }) {
+  const globalRole = useAppStore((s) => s.globalRole);
+  const setGlobalRole = useAppStore((s) => s.setGlobalRole);
+  const items = [{ value: '', label: 'Как задано у экрана' }, ...props.profiles.map((p) => ({ value: p.role ?? p.id, label: p.label }))];
+  return (
+    <Field>
+      <FieldLabel htmlFor="logins-view-as">Смотреть как</FieldLabel>
+      <OptionSelect id="logins-view-as" aria-label="Смотреть как" value={globalRole} onValueChange={setGlobalRole} items={items} placeholder="Как задано у экрана" />
+      <FieldDescription>Экраны приложения с этой ролью откроются под ней; у кого роли нет — под своей.</FieldDescription>
+    </Field>
   );
 }
 
 /**
  * Панель профилей.
  *
- * @param props.actors - пользователи из dev-API korbor (если доступно)
+ * @param props.actors - пользователи из dev-API korbor (для ручного входа)
  * @param props.actorsError - почему список пользователей пуст
- * @param props.apiBase - адрес API korbor для dev-входа
+ * @param props.apiBase - адрес API korbor для ручного dev-входа
  */
 export function SessionProfilesPanel(props: { readonly actors: readonly DogfoodActor[]; readonly actorsError: string | null; readonly apiBase: string }) {
   const port = useGatewayStore((s) => s.port);
   const profiles = useGatewayStore((s) => s.profiles);
   const gatewayError = useGatewayStore((s) => s.error);
   const refresh = useGatewayStore((s) => s.refresh);
+  const auto = useGatewayStore((s) => s.auto);
+  const autoLogin = useGatewayStore((s) => s.autoLogin);
   const origins = useMapOrigins();
-  const [method, setMethod] = useState<SessionMethod>('korbor-dogfood');
   // Форма — по кнопке: в листе сначала видно, кто уже вошёл
   const [adding, setAdding] = useState(false);
-  const [state, submit, pending] = useActionState((_prev: FormState, form: FormData) => submitSession(method, form, refresh), EMPTY);
 
   if (port === null) {
     return <GatewayDown error={gatewayError} />;
   }
 
   return (
-    <div className="sheet-block session-profiles" data-testid="session-profiles">
-      {profiles.length === 0 ? <p className="drawer__hint">Профилей нет: экраны открываются без входа.</p> : null}
-      <ul className="session-profiles__list">
-        {profiles.map((p) => (
-          <ProfileItem key={p.id} profile={p} refresh={refresh} />
-        ))}
-      </ul>
-
-      {adding ? null : (
-        <Button type="button" variant="primary" size="sm" onClick={() => setAdding(true)}>
-          Добавить вход
-        </Button>
+    <div className="flex flex-col gap-4" data-testid="session-profiles">
+      {profiles.length > 0 ? <ViewAsField profiles={profiles} /> : null}
+      <AutoLoginStatus auto={auto} onRetry={() => void autoLogin(origins, true)} />
+      {profiles.length === 0 && auto.status !== 'running' ? (
+        <Empty className="border">
+          <EmptyHeader>
+            <EmptyTitle>Профилей нет</EmptyTitle>
+            <EmptyDescription>Экраны открываются без входа. Подключите автовход в приложении (пакет @live-app-map/dev-auth) или добавьте вход вручную.</EmptyDescription>
+          </EmptyHeader>
+        </Empty>
+      ) : (
+        <ItemGroup className="gap-2">
+          {profiles.map((p) => (
+            <ProfileItem key={p.id} profile={p} refresh={refresh} />
+          ))}
+        </ItemGroup>
       )}
       {adding ? (
-      <form action={submit} className="session-form">
-        <Field label="Профиль (id)" htmlFor="sess-id" hint="recruiter, employer, admin — совпадает со стейтом ноды">
-          <Input id="sess-id" name="id" list="sess-id-list" />
-          <datalist id="sess-id-list">
-            <option value="recruiter" />
-            <option value="employer" />
-            <option value="admin" />
-          </datalist>
-          <FieldError state={state} field="id" />
-        </Field>
-        <Field label="Подпись" htmlFor="sess-label">
-          <Input id="sess-label" name="label" />
-          <FieldError state={state} field="label" />
-        </Field>
-        <Field label="Роль (необязательно)" htmlFor="sess-role">
-          <Input id="sess-role" name="role" />
-        </Field>
-        <Field label="Приложение" htmlFor="sess-origin">
-          <Select id="sess-origin" name="origin" defaultValue="">
-            <option value="">— выберите —</option>
-            {origins.map((o) => (
-              <option key={o} value={o}>
-                {o}
-              </option>
-            ))}
-          </Select>
-          <FieldError state={state} field="origin" />
-        </Field>
-        <Field label="Как войти" htmlFor="sess-method">
-          <Select id="sess-method" value={method} onChange={(e) => setMethod(e.target.value === 'paste' ? 'paste' : 'korbor-dogfood')}>
-            <option value="korbor-dogfood">Пользователь из базы korbor (dev-вход)</option>
-            <option value="paste">Вставить куки или токен</option>
-          </Select>
-        </Field>
-        {method === 'korbor-dogfood' ? <DogfoodFields state={state} actors={props.actors} actorsError={props.actorsError} apiBase={props.apiBase} /> : <PasteFields state={state} />}
-        <FormOutcome state={state} />
-        <div className="session-form__actions">
-          <Button type="submit" variant="primary" size="sm" disabled={pending}>
-            {pending ? 'Вход…' : 'Войти'}
-          </Button>
-          <Button type="button" variant="ghost" size="sm" onClick={() => setAdding(false)}>
-            Отмена
-          </Button>
-        </div>
-      </form>
-      ) : null}
+        <ManualLoginForm origins={origins} actors={props.actors} actorsError={props.actorsError} apiBase={props.apiBase} refresh={refresh} onCancel={() => setAdding(false)} />
+      ) : (
+        <Button type="button" variant="outline" size="sm" className="w-fit" onClick={() => setAdding(true)}>
+          Добавить вход вручную
+        </Button>
+      )}
     </div>
   );
 }

@@ -16,6 +16,7 @@
         "@base-ui/react": "^1.9.0",
         "@dagrejs/dagre": "^1.1.4",
         "@huggingface/transformers": "^4.3.2",
+        "@live-app-map/dev-auth": "workspace:*",
         "@live-app-map/export-appmap": "workspace:*",
         "@live-app-map/graph": "workspace:*",
         "@live-app-map/iframe-policy": "workspace:*",
@@ -73,6 +74,13 @@
         "@live-app-map/scanner-source": "workspace:*",
         "@live-app-map/schema": "workspace:*",
       },
+      "devDependencies": {
+        "typescript": "^5.8.2",
+      },
+    },
+    "packages/dev-auth": {
+      "name": "@live-app-map/dev-auth",
+      "version": "0.1.0",
       "devDependencies": {
         "typescript": "^5.8.2",
       },
@@ -480,6 +488,8 @@
     "@kwsites/promise-deferred": ["@kwsites/promise-deferred@1.1.1", "", {}, "sha512-GaHYm+c0O9MjZRu0ongGBRbinu8gVAMd2UZjji6jVmqKtZluZnptXGWhz1E8j8D2HJ3f/yMxKAUC0b+57wncIw=="],
 
     "@live-app-map/cli": ["@live-app-map/cli@workspace:packages/cli"],
+
+    "@live-app-map/dev-auth": ["@live-app-map/dev-auth@workspace:packages/dev-auth"],
 
     "@live-app-map/diagnostics": ["@live-app-map/diagnostics@workspace:packages/diagnostics"],
 

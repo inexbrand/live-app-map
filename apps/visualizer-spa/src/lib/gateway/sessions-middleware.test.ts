@@ -9,6 +9,7 @@ import path from 'node:path';
 import { serveMiddleware, type TestServer } from '../dev-http.test-helpers';
 import { SessionStore } from './session-store';
 import { createSessionsMiddleware } from './sessions-middleware';
+import { createDevAuthHandler } from '@live-app-map/dev-auth';
 
 const APP = 'http://localhost:16002';
 const initData = (): string => `auth_date=${Math.floor(Date.now() / 1000)}&hash=h`;
@@ -111,5 +112,28 @@ describe('sessions middleware', () => {
     const none = await call('POST', '/nobody/sample-ids', { origin: APP, lists: [] });
     expect(none.status).toBe(404);
     expect(String(none.json['error'])).toContain('войдите через «Профили»');
+  });
+});
+
+describe('автовход /__lam_sessions/auto', () => {
+  test('без origins — 400 с полем; роли приложения — профили в ответе', async () => {
+    expect(await call('POST', '/auto', {})).toMatchObject({ status: 400, json: { field: 'origins' } });
+    expect(await call('POST', '/auto', { origins: ['не адрес'] })).toMatchObject({ status: 400 });
+    const app = Bun.serve({
+      port: 0,
+      fetch: async (req, srv) => (await devAuth(req, srv.requestIP(req)?.address ?? '')) ?? new Response('', { status: 404 }),
+    });
+    const origin = `http://127.0.0.1:${app.port}`;
+    const devAuth = createDevAuthHandler({
+      environment: 'development',
+      roles: () => [{ id: 'admin', label: 'Админ', origin, issue: async () => ({ storage: { token: 'adm' }, expiresAt: '2099-01-01T00:00:00Z' }) }],
+    });
+    const r = await call('POST', '/auto', { origins: [`${origin}/some/page`] });
+    void app.stop(true);
+    expect(r.status).toBe(200);
+    expect(r.json['roles']).toEqual([{ id: 'admin', label: 'Админ', origin, state: 'issued' }]);
+    expect(r.json['profiles']).toEqual([
+      { id: 'admin', label: 'Админ', role: 'admin', origins: [{ origin, cookies: [], storageKeys: ['token'], autoUntil: '2099-01-01T00:00:00Z' }], updatedAt: store.get('admin')?.updatedAt },
+    ]);
   });
 });

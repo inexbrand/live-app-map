@@ -6,10 +6,50 @@ import { create } from 'zustand';
 import { requestJson } from '../lib/dev-api';
 import type { LamPageMessage } from '../lib/gateway/inject-script';
 import type { ProfileSummary } from '../lib/gateway/session-store';
+import type { DevAuthProfileReport, DevAuthSourceReport } from '../lib/gateway/dev-auth-sync';
 import { SampleRequestLog } from '../lib/gateway/sample-retry';
+
+/** Автовход по ролям приложений карты. */
+export type AutoLoginState = {
+  /** idle — не запускался; running — идёт; done — ответ получен; failed — dev-сервер не ответил. */
+  readonly status: 'idle' | 'running' | 'done' | 'failed';
+  /** Для каких origin карты. */
+  readonly origins: readonly string[];
+  /** Что ответило каждое приложение. */
+  readonly sources: readonly DevAuthSourceReport[];
+  /** Что стало с профилем каждой роли. */
+  readonly roles: readonly DevAuthProfileReport[];
+  readonly error: string | null;
+};
+
+const AUTO_IDLE: AutoLoginState = { status: 'idle', origins: [], sources: [], roles: [], error: null };
+
+/** Ответ POST /__lam_sessions/auto. */
+function parseAuto(body: unknown): { sources: DevAuthSourceReport[]; roles: DevAuthProfileReport[]; profiles: ProfileSummary[] } | null {
+  if (typeof body !== 'object' || body === null || !('sources' in body) || !('roles' in body) || !('profiles' in body)) {
+    return null;
+  }
+  const { sources, roles, profiles } = body;
+  if (!Array.isArray(sources) || !Array.isArray(roles) || !Array.isArray(profiles)) {
+    return null;
+  }
+  const isObj = (v: unknown): v is Record<string, unknown> => typeof v === 'object' && v !== null;
+  return {
+    sources: sources.filter(isObj).filter((s): s is DevAuthSourceReport => typeof s['origin'] === 'string' && typeof s['state'] === 'string' && Array.isArray(s['roles'])),
+    roles: roles.filter(isObj).filter((r): r is DevAuthProfileReport => typeof r['id'] === 'string' && typeof r['state'] === 'string' && typeof r['origin'] === 'string'),
+    profiles: profiles.filter(isProfileSummary),
+  };
+}
 
 /** Состояние шлюза. */
 type GatewayState = {
+  /** Автовход по ролям приложений карты. */
+  readonly auto: AutoLoginState;
+  /**
+   * Спрашивает роли у приложений карты и заводит профили входа. Тот же набор
+   * origin повторно не запускается, пока не попросят force.
+   */
+  readonly autoLogin: (origins: readonly string[], force?: boolean) => Promise<void>;
   /** Порт шлюза; null — шлюз не отвечает, экраны открываются напрямую. */
   readonly port: number | null;
   readonly profiles: readonly ProfileSummary[];
@@ -56,6 +96,23 @@ function isProfileSummary(v: unknown): v is ProfileSummary {
 export const useGatewayStore = create<GatewayState>((set, get) => ({
   port: null,
   profiles: [],
+  auto: AUTO_IDLE,
+  autoLogin: async (origins, force = false) => {
+    const sorted = [...new Set(origins)].sort();
+    const prev = get().auto;
+    const same = prev.origins.length === sorted.length && prev.origins.every((o, i) => o === sorted[i]);
+    if (sorted.length === 0 || (same && !force && prev.status !== 'idle' && prev.status !== 'failed')) {
+      return;
+    }
+    set({ auto: { ...AUTO_IDLE, status: 'running', origins: sorted } });
+    const r = await requestJson('/__lam_sessions/auto', { method: 'POST', json: { origins: sorted } });
+    const parsed = r.ok ? parseAuto(r.value) : null;
+    if (parsed === null) {
+      set({ auto: { ...AUTO_IDLE, status: 'failed', origins: sorted, error: r.ok ? 'неверный ответ автовхода' : r.error } });
+      return;
+    }
+    set({ auto: { status: 'done', origins: sorted, sources: parsed.sources, roles: parsed.roles, error: null }, profiles: parsed.profiles });
+  },
   reports: new Map(),
   error: null,
   samples: new Map(),

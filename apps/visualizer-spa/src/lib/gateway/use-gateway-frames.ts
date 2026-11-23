@@ -6,6 +6,7 @@ import { useEffect } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useGatewayStore } from '../../store/gateway-store';
 import { isLamPageMessage } from './inject-script';
+import { mapOrigins } from './map-origins';
 
 /** Атрибут iframe с id ноды — по нему отчёт находит свою ноду. */
 export const NODE_IFRAME_ATTR = 'data-lam-node-iframe';
@@ -27,10 +28,24 @@ function nodeIdOf(source: MessageEventSource | null): string | null {
   return null;
 }
 
+/** Автовход для открытой карты: роли её приложений становятся профилями входа. */
+function autoLoginFor(document: ReturnType<typeof useAppStore.getState>['document']): void {
+  if (document !== null) {
+    void useGatewayStore.getState().autoLogin(mapOrigins(document.nodes));
+  }
+}
+
 /** Хук: подключить один раз в корне приложения. */
 export function useGatewayFrames(): void {
   useEffect(() => {
     void useGatewayStore.getState().refresh();
+    // Карта открылась или сменилась — шлюз сам спрашивает роли у её приложений.
+    autoLoginFor(useAppStore.getState().document);
+    const offDocument = useAppStore.subscribe((s, prev) => {
+      if (s.document !== prev.document) {
+        autoLoginFor(s.document);
+      }
+    });
     const onMessage = (e: MessageEvent) => {
       if (!isLamPageMessage(e.data)) {
         return;
@@ -51,6 +66,7 @@ export function useGatewayFrames(): void {
     return () => {
       window.removeEventListener('message', onMessage);
       unsubscribe();
+      offDocument();
     };
   }, []);
 }
