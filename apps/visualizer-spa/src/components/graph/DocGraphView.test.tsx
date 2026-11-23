@@ -108,14 +108,18 @@ describe('граф документации', () => {
   test('фильтры типов и готовности меняют граф; «показать все» возвращает', async () => {
     openMap('korbor-miniapp');
     const { ui, container } = await view();
-    const all = stats(ui);
+    const start = stats(ui);
     dumpDom('graph-start', container);
-    fireEvent.click(ui.getByTestId('graph-kind-epoch'));
+    // По умолчанию типы, кроме файлов, включены: щелчок прячет тип, второй — возвращает
     expect(ui.getByTestId('graph-kind-epoch').getAttribute('aria-pressed')).toBe('true');
-    expect(stats(ui)).not.toBe(all);
+    fireEvent.click(ui.getByTestId('graph-kind-epoch'));
+    expect(ui.getByTestId('graph-kind-epoch').getAttribute('aria-pressed')).toBe('false');
+    expect(stats(ui)).not.toBe(start);
     dumpDom('graph-kind', container);
+    fireEvent.click(ui.getByTestId('graph-kind-epoch'));
+    expect(stats(ui)).toBe(start);
     fireEvent.click(ui.getByRole('button', { name: 'показать все' }));
-    expect(stats(ui)).toBe(all);
+    expect(stats(ui)).not.toBe(start);
     fireEvent.click(within(ui.getByRole('group', { name: 'Готовность эпох на графе' })).getByRole('button', { name: /^Не готово/ }));
     expect(useDocGraphStore.getState().readiness).toBe('not-ready');
     fireEvent.click(ui.getByTestId('graph-kind-route'));
@@ -256,5 +260,22 @@ describe('холст графа', () => {
     expect(el.getAttribute('data-selected')).not.toBe('');
     // Выбранный узел подписан ярче всех.
     expect(lastFrame(canvas.ctx.log).includes('fillStyle="labelS"') || lastFrame(canvas.ctx.log).some((e) => e.startsWith('fillStyle='))).toBe(true);
+  });
+});
+
+describe('граф по умолчанию (аудит, пункт 3)', () => {
+  test('только документы: файлов кода нет, узлов в разы меньше; «показать все» возвращает всё', async () => {
+    openMap('korbor-miniapp');
+    const { ui } = await view();
+    const count = (): number => Number((stats(ui).match(/^(\d+) узлов/) ?? [])[1] ?? NaN);
+    const byDefault = count();
+    const fileRow = ui.queryByTestId('graph-kind-file');
+    expect(fileRow).not.toBeNull();
+    expect(fileRow?.className).toContain('doc-graph__kind-row--off');
+    fireEvent.click(ui.getByRole('button', { name: 'показать все' }));
+    await frames();
+    const all = count();
+    expect(byDefault).toBeLessThan(all / 3);
+    expect(ui.getByTestId('graph-kind-file').className).not.toContain('--off');
   });
 });

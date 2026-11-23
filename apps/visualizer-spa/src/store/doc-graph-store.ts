@@ -6,9 +6,16 @@ import { create } from 'zustand';
 import type { EpochReadiness } from '@live-app-map/schema';
 import type { GraphNodeKind } from '../lib/doc-graph';
 
+/**
+ * Типы по умолчанию — документы: эпохи (их файлы — по раскрытию эпохи), заметки, руководства.
+ * Со всеми типами граф korbor — 544 узла, и эпохи теряются среди файлов кода, роутов и таблиц.
+ * Остальные включаются в «Типах узлов» или «показать все».
+ */
+export const DEFAULT_GRAPH_KINDS: ReadonlySet<GraphNodeKind> = new Set<GraphNodeKind>(['epoch', 'epoch-file', 'note', 'guide']);
+
 type DocGraphState = {
   readonly expanded: ReadonlySet<string>;
-  /** Видимые типы; пусто — все. */
+  /** Видимые типы; пусто — все. Сначала — DEFAULT_GRAPH_KINDS. */
   readonly kinds: ReadonlySet<GraphNodeKind>;
   readonly readiness: EpochReadiness | null;
   readonly selected: string | null;
@@ -29,7 +36,7 @@ type DocGraphState = {
 /** Store графа документации. */
 export const useDocGraphStore = create<DocGraphState>((set) => ({
   expanded: new Set(),
-  kinds: new Set(),
+  kinds: DEFAULT_GRAPH_KINDS,
   readiness: null,
   selected: null,
   query: '',

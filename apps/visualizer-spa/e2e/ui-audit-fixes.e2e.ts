@@ -129,6 +129,22 @@ test.describe('документация', () => {
   });
 });
 
+test.describe('граф документации', () => {
+  test('по умолчанию без файлов кода — около 40 узлов, файлы — по фильтру', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await expect(page.getByTestId('docs-view')).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    await page.getByTestId('docs-mode-graph').click();
+    const nodes = async (): Promise<number> => Number(((await page.getByTestId('graph-stats').textContent()) ?? '').match(/^(\d+) узлов/)?.[1] ?? NaN);
+    await expect.poll(nodes).toBeGreaterThan(0);
+    expect(await nodes()).toBeLessThanOrEqual(80);
+    await shot(page, 'after-docs-graph.png');
+    await page.getByRole('button', { name: 'показать все' }).click();
+    await expect.poll(nodes).toBeGreaterThan(200);
+  });
+});
+
 test.describe('числа документации', () => {
   test('снимок карты заменяется диском: пока читаю — строка-пояснение, после — числа с диска', async ({ page }) => {
     let release: () => void = () => undefined;
