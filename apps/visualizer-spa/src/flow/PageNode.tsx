@@ -18,8 +18,7 @@ import { useCommentsStore } from '../store/comments-store';
 import { useGatewayStore } from '../store/gateway-store';
 import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
 import { LiveFrame } from './page-node/LiveFrame';
-import { NodeActions } from './page-node/NodeActions';
-import { NodePath } from './page-node/NodePath';
+import { NodeTop } from './page-node/NodeTop';
 import { resolveIframeSandboxPreset, resolvePagePlaceholder, sandboxAttrForPreset, sandboxPresetLabel } from './page-node/sandbox';
 import { StateChips } from './page-node/StateChips';
 import { useNodeResize } from './page-node/use-node-resize';
@@ -299,12 +298,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       onMouseLeave={() => setHovered(false)}
     >
       <Handle type="target" position={Position.Left} />
-      <div className="page-node__header">
-        <div className="page-node__title" title={node.title}>{node.title}</div>
-        {showChrome ? <NodeActions nodeId={node.id} isPinned={f.isPinned} /> : null}
-      </div>
-      {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
-      <NodePath node={node} url={url} status={status} openComments={f.openComments} viewport={f.isSelected ? viewport : null} />
+      <NodeTop node={node} url={url} status={status} viewport={viewport} chrome={showChrome} selected={f.isSelected} isPinned={f.isPinned} openComments={f.openComments} />
       <div
         className="page-node__body"
         ref={bodyRef}
