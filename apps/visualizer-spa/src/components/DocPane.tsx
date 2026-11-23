@@ -5,6 +5,7 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Check, Link2, X } from 'lucide-react';
 import { buildCodeIndex, buildDocRefIndex } from '@live-app-map/graph';
+import { bugItems } from '@live-app-map/scanner-docs/bugs';
 import type { DocEpoch, DocFile, DocsModel } from '@live-app-map/schema';
 import { docsAssetUrl } from '../lib/docs-asset-url';
 import { epochDateLabel, epochFileLabel, galleryImages, readinessLabel, type OpenDoc } from '../lib/docs-view-model';
@@ -40,7 +41,7 @@ function CopyLink() {
 const BUGS_SHOWN = 5;
 
 /** Шапка эпохи: дата, статус, готовность, цель, открытые пункты. */
-function EpochHead(props: { readonly epoch: DocEpoch; readonly links: ReactNode; readonly renderBugs: (text: string) => ReactNode }) {
+function EpochHead(props: { readonly epoch: DocEpoch; readonly links: ReactNode; readonly showBugs: boolean; readonly renderBugs: (text: string) => ReactNode }) {
   const e = props.epoch;
   const [allBugs, setAllBugs] = useState(false);
   const bugs = allBugs ? e.openBugs : e.openBugs.slice(0, BUGS_SHOWN);
@@ -51,12 +52,12 @@ function EpochHead(props: { readonly epoch: DocEpoch; readonly links: ReactNode;
         {props.links}
       </div>
       <p className="docs-doc__meta">
-        {[epochDateLabel(e.date), e.declaredStatus === undefined ? '' : `статус: ${e.declaredStatus}`, readinessLabel(e)]
+        {[epochDateLabel(e.date), e.declaredStatus === undefined ? '' : `статус: ${e.declaredStatus}`, e.readiness === 'ready' ? '' : readinessLabel(e)]
           .filter((s) => s !== '')
           .join(' · ')}
       </p>
       {e.summary === undefined ? null : <p className="docs-doc__summary">{e.summary}</p>}
-      {e.openBugs.length === 0 ? null : (
+      {e.openBugs.length === 0 || !props.showBugs ? null : (
         <div className="docs-doc__bugs" data-testid="docs-open-bugs">
           <h3>
             Открытые пункты <span className="docs-count">{e.openBugs.length}</span>
@@ -146,22 +147,39 @@ function EpochTabs(props: { readonly epoch: DocEpoch; readonly current: string; 
   );
 }
 
-/** Файл эпохи: имя, отметки 09-bugs, текст, скриншоты. */
+/** Открыт файл 09-bugs эпохи с пунктами: их показывает блок «Пункты». */
+function isBugsWithItems(e: DocEpoch, file: DocFile): boolean {
+  return file.path === `${e.dir}/09-bugs.md` && bugItems(file.text).length > 0;
+}
+
+/** Файл эпохи: отметки 09-bugs (тогда текст файла свёрнут), текст, скриншоты. Имя файла — во вкладке. */
 function EpochBody(props: { readonly docs: DocsModel; readonly epoch: DocEpoch; readonly file: DocFile; readonly writable: true | string; readonly md: RenderMd; readonly onZoom: (src: string) => void }) {
   const { docs, epoch: e, file } = props;
+  const bugs = isBugsWithItems(e, file);
   return (
     <article className="docs-doc__body">
-      <p className="docs-doc__file">{file.path.slice(e.dir.length + 1)}</p>
-      {file.path === `${e.dir}/09-bugs.md` ? <BugMarks key={e.id} docs={docs} epoch={e} file={file} writable={props.writable} /> : null}
-      <DocText file={file} md={props.md} />
+      {bugs ? <BugMarks key={e.id} docs={docs} epoch={e} file={file} writable={props.writable} /> : null}
+      {bugs ? (
+        <details className="docs-doc__raw">
+          <summary>Текст файла</summary>
+          <DocText file={file} md={props.md} />
+        </details>
+      ) : (
+        <DocText file={file} md={props.md} />
+      )}
       <Gallery root={docs.root} images={galleryImages(e.images, file.path, file.text)} onOpen={props.onZoom} />
     </article>
   );
 }
 
+/** Текст без первого заголовка «# …»: документ уже назван шапкой и вкладкой. */
+export function withoutLeadingH1(text: string): string {
+  return text.replace(/^\s*# [^\n]*\n?/, '');
+}
+
 /** Текст документа; пустой файл — подсказка. */
 function DocText(props: { readonly file: DocFile; readonly md: RenderMd }) {
-  return props.file.text.trim() === '' ? <p className="docs-empty">Файл пуст — в нём ещё ничего не записано.</p> : <>{props.md(props.file.text, props.file.path)}</>;
+  return props.file.text.trim() === '' ? <p className="docs-empty">Файл пуст — в нём ещё ничего не записано.</p> : <>{props.md(withoutLeadingH1(props.file.text), props.file.path)}</>;
 }
 
 /** Картинка во весь экран; клик или «Закрыть» — закрыть. */
@@ -199,7 +217,7 @@ export function DocPane(props: { readonly docs: DocsModel; readonly open: OpenDo
         </>
       ) : (
         <>
-          <EpochHead key={e.id} epoch={e} links={<CopyLink />} renderBugs={(text) => md(text, `${e.dir}/09-bugs.md`, 'docs-open-bugs-md')} />
+          <EpochHead key={e.id} epoch={e} links={<CopyLink />} showBugs={!isBugsWithItems(e, open.file)} renderBugs={(text) => md(text, `${e.dir}/09-bugs.md`, 'docs-open-bugs-md')} />
           <EpochTabs epoch={e} current={open.file.path} onOpenDoc={props.onOpenDoc} />
           <EpochBody docs={docs} epoch={e} file={open.file} writable={props.writable} md={md} onZoom={setZoom} />
         </>

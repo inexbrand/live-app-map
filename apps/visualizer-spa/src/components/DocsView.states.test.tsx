@@ -119,11 +119,11 @@ describe('документ эпохи', () => {
     expect(ui.queryByTestId('docs-gallery')).toBeNull();
   });
 
-  test('вкладки: текущая отмечена, путь файла — без каталога эпохи; скриншоты подписаны именем файла', () => {
+  test('вкладки: текущая отмечена, путь файла — в подсказке вкладки, не строкой над текстом; скриншоты подписаны именем файла', () => {
     const { ui, container } = show('docs/epoch/alpha#20261101-101500/09-bugs.md');
     const tabs = within(ui.getByRole('navigation', { name: 'Файлы эпохи' })).getAllByRole('button');
     expect(tabs.map((t) => `${t.title}:${t.getAttribute('aria-current')}:${t.className}`)).toEqual(['00-brief.md:false:docs-tab', '09-bugs.md:true:docs-tab docs-tab--on']);
-    expect(container.querySelector('.docs-doc__file')?.textContent).toBe('09-bugs.md');
+    expect(container.querySelector('.docs-doc__file')).toBeNull();
     const gallery = within(ui.getByTestId('docs-gallery'));
     expect(gallery.getByRole('img').getAttribute('alt')).toBe('a.png');
   });

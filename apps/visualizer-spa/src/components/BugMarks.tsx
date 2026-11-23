@@ -3,7 +3,7 @@
  * markdown-файл на диске через dev-сервер после подтверждения, эпоха (готовность)
  * пересчитывается и заменяется в открытой карте.
  */
-import { useState } from 'react';
+import { useState, type ReactNode } from 'react';
 import { bugItems, type BugItem, type BugItemState } from '@live-app-map/scanner-docs/bugs';
 import type { DocEpoch, DocFile, DocsModel } from '@live-app-map/schema';
 import { markBug, withEpoch } from '../lib/docs-live-client';
@@ -11,6 +11,15 @@ import { useAppStore } from '../store/app-store';
 import { Button } from '../ui';
 
 const STATE_WORDS: Readonly<Record<BugItemState, string>> = { open: 'открыт', closed: 'закрыт', other: 'вне разделов' };
+
+/**
+ * Текст пункта с зачёркиванием markdown (~~…~~) — как в файле, без самих тильд.
+ *
+ * @param text - текст пункта
+ */
+export function struckText(text: string): ReactNode[] {
+  return text.split(/~~(.+?)~~/).map((part, i) => (i % 2 === 1 ? <del key={i}>{part}</del> : part));
+}
 
 /** Что подтверждается. */
 type Pending = { readonly item: BugItem; readonly state: 'open' | 'closed' };
@@ -58,7 +67,7 @@ function BugRow(props: { readonly item: BugItem; readonly file: string; readonly
   return (
     <li className={`docs-bugs__item docs-bugs__item--${item.state}`} data-testid="docs-bug-item" data-state={item.state}>
       <span className="docs-bugs__state">{STATE_WORDS[item.state]}</span>
-      <span className="docs-bugs__text">{item.text}</span>
+      <span className="docs-bugs__text">{struckText(item.text)}</span>
       <Button type="button" size="sm" variant="outline" disabled={props.writable !== true || marks.busy} onClick={() => marks.ask({ item, state: next })}>
         {next === 'closed' ? 'Закрыть' : 'Открыть'}
       </Button>

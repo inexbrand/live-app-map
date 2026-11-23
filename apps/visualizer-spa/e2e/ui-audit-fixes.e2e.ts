@@ -108,6 +108,44 @@ test.describe('API', () => {
   });
 });
 
+test.describe('документация', () => {
+  test('без повторов: «готово» не у каждой эпохи, чипа с нулём нет, файл без имени и второго заголовка, вкладки в один ряд', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await expect(page.getByTestId('docs-view')).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    const rows = page.getByTestId('docs-epoch-row');
+    await expect(rows.first()).toBeVisible();
+    await expect(page.locator('.docs-row__state', { hasText: /^готово$/ })).toHaveCount(0);
+    const chips = page.getByRole('group', { name: 'Готовность эпох' }).getByRole('button');
+    await expect(chips.filter({ hasText: /Не готово 0/ })).toHaveCount(0);
+    await rows.first().click();
+    await expect(page.locator('.docs-doc__file')).toHaveCount(0);
+    await expect(page.locator('.docs-doc__body h1')).toHaveCount(0);
+    const tabs = page.getByRole('navigation', { name: 'Файлы эпохи' });
+    const tabTops = await tabs.getByRole('button').evaluateAll((bs) => new Set(bs.map((b) => Math.round(b.getBoundingClientRect().top))).size);
+    expect(tabTops).toBe(1);
+    await shot(page, 'after-docs.png');
+  });
+});
+
+test.describe('числа документации', () => {
+  test('снимок карты заменяется диском: пока читаю — строка-пояснение, после — числа с диска', async ({ page }) => {
+    let release: () => void = () => undefined;
+    const gate = new Promise<void>((done) => { release = done; });
+    await page.route('**/__lam_docs/live**', async (route) => {
+      await gate;
+      await route.continue();
+    });
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await expect(page.getByTestId('docs-source')).toContainText('Показан снимок из карты (эпох: 26). Читаю документацию с диска…', { timeout: 30_000 });
+    await shot(page, 'after-docs-snapshot-note.png');
+    release();
+    await expect(page.getByTestId('docs-source')).toHaveCount(0);
+  });
+});
+
 test.describe('шапка', () => {
   test('на 768 px шапка не шире окна, «Источников» нет, крошка-дубль вкладки скрыта', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1000 });

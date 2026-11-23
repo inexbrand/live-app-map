@@ -11,6 +11,7 @@ import { Chip, Input } from '../ui';
 import { fetchLiveDocs } from '../lib/docs-live-client';
 import { EmptyView } from '../ui/empty-view';
 import { DocPane } from './DocPane';
+import { DocsSourceLine, READING_DOCS } from './DocsSourceLine';
 import { DocGraphView } from './graph/DocGraphView';
 
 /** Переключатель «Текст / Граф» вида «Документация». Клавиша G. */
@@ -53,7 +54,8 @@ function EpochRow(props: { readonly epoch: DocEpoch; readonly active: boolean; r
           <span className="docs-row__meta">{epochDateLabel(e.date)}</span>
         </span>
         {e.summary === undefined ? null : <span className="docs-row__summary">{e.summary}</span>}
-        <span className={`docs-row__state${e.readiness === 'not-ready' ? ' docs-row__state--open' : ''}`}>{readinessLabel(e)}</span>
+        {/* «готово» — обычное состояние, не повторяется в каждой строке */}
+        {e.readiness === 'ready' ? null : <span className={`docs-row__state${e.readiness === 'not-ready' ? ' docs-row__state--open' : ''}`}>{readinessLabel(e)}</span>}
       </button>
     </li>
   );
@@ -80,7 +82,7 @@ function FileRow(props: { readonly file: DocFile; readonly active: boolean; read
  */
 function useLiveDocs(root: string | undefined): true | string {
   const setDocs = useAppStore((s) => s.setDocs);
-  const [live, setLive] = useState<true | string>('читаю документацию с диска…');
+  const [live, setLive] = useState<true | string>(READING_DOCS);
   useEffect(() => {
     if (root === undefined) {
       return;
@@ -171,7 +173,7 @@ function EpochsSection(props: { readonly epochs: Sections['epochs']; readonly to
 function ReadinessFilter(props: { readonly value: EpochReadiness | null; readonly notReady: number; readonly onChange: (v: EpochReadiness | null) => void }) {
   return (
     <div className="docs-list__filters" role="group" aria-label="Готовность эпох">
-      {READINESS.map((r) => (
+      {READINESS.filter((r) => r.value !== 'not-ready' || props.notReady > 0).map((r) => (
         <Chip key={r.label} active={props.value === r.value} onClick={() => props.onChange(r.value)}>
           {r.label}
           {r.value === 'not-ready' ? ` ${props.notReady}` : ''}
@@ -214,6 +216,7 @@ function DocsText(props: { readonly docs: DocsModel; readonly live: true | strin
     <div className="docs-view" data-testid="docs-view">
       <aside className="docs-list">
         <DocsModeSwitch />
+        <DocsSourceLine live={props.live} />
         <Input id="docs-search" aria-label="Поиск по документации" value={query} placeholder="Эпоха, заметка, слово из текста" onChange={(ev) => setQuery(ev.target.value)} />
         <ReadinessFilter value={readiness} notReady={notReady} onChange={setReadiness} />
         <HitsSection hits={sections.hits} openDoc={openDoc} />
@@ -245,7 +248,14 @@ export function DocsView() {
   if (docsMode === 'graph') {
     return (
       <div className="docs-view docs-view--graph" data-testid="docs-view">
-        <DocGraphView switcher={<DocsModeSwitch />} />
+        <DocGraphView
+          switcher={
+            <>
+              <DocsModeSwitch />
+              <DocsSourceLine live={live} />
+            </>
+          }
+        />
       </div>
     );
   }
