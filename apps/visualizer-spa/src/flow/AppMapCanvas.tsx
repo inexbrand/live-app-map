@@ -81,8 +81,11 @@ function flowNode(doc: AppMapDocument, n: AppMapNode, pos: { readonly x: number;
   };
 }
 
-/** Ребро навигации; вызовы API экрана — пунктиром, чтобы не путать с навигацией. */
-function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number]): Edge {
+/**
+ * Ребро навигации; вызовы API экрана — пунктиром, чтобы не путать с навигацией.
+ * Подпись — только у рёбер выбранного экрана: иначе подписи налезают на карточки.
+ */
+function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number], selectedPageId: string | null): Edge {
   const target = e.to;
   if (target === null) {
     throw new Error(`Ожидалось ребро с target: ${e.id}`);
@@ -91,7 +94,7 @@ function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number]): 
     id: e.id,
     source: e.from,
     target,
-    label: e.label,
+    label: selectedPageId !== null && (e.from === selectedPageId || target === selectedPageId) ? e.label : undefined,
     animated: e.kind === 'redirect',
     style: e.kind === 'api' ? { stroke: 'var(--edge-api)', strokeDasharray: '4 4' } : { stroke: 'var(--edge)' },
   };
@@ -105,14 +108,14 @@ function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number]): 
  * @param sizing - масштаб и окна нод
  * @param selectedPageId - выбранный экран (у него шире рамка)
  */
-function canvasView(doc: AppMapDocument, searchQuery: string, sizing: CanvasSizing, selectedPageId: string | null): CanvasView {
+export function canvasView(doc: AppMapDocument, searchQuery: string, sizing: CanvasSizing, selectedPageId: string | null): CanvasView {
   const { filtered, navEdges, normalizedQuery } = filterCanvasGraph(doc, searchQuery);
   if (normalizedQuery.length > 0 && filtered.length === 0) {
     return { kind: 'miss', query: searchQuery.trim() };
   }
   const { boxes, packed } = layoutCanvas(doc, filtered, navEdges, sizing);
   const nodes = filtered.map((n) => flowNode(doc, n, packed.positions.get(n.id), sizing, selectedPageId === n.id));
-  return { kind: 'graph', graph: { nodes: [...frameNodes(packed, boxes), ...nodes], edges: navEdges.map(flowEdge), packed, boxes } };
+  return { kind: 'graph', graph: { nodes: [...frameNodes(packed, boxes), ...nodes], edges: navEdges.map((e) => flowEdge(e, selectedPageId)), packed, boxes } };
 }
 
 /** Холст по store: карта, фильтр, масштаб, окна и высоты нод, выбор. */
@@ -163,6 +166,24 @@ function SearchMiss({ query }: { readonly query: string }) {
   );
 }
 
+/** Ниже этого масштаба холст — обзор: крупные подписи вместо мелочей карточек. */
+export const OVERVIEW_ZOOM = 0.4;
+
+/**
+ * Масштаб в стили хоста: переменная --lam-zoom (подписи обзора растут обратно масштабу)
+ * и класс обзора. Через DOM, а не state: зум идёт каждый кадр, ноды не перерисовываются.
+ *
+ * @param el - хост холста
+ * @param zoom - масштаб камеры
+ */
+export function applyZoomStyle(el: HTMLElement | null, zoom: number): void {
+  if (el === null) {
+    return;
+  }
+  el.style.setProperty('--lam-zoom', String(zoom));
+  el.classList.toggle('flow-host--overview', zoom < OVERVIEW_ZOOM);
+}
+
 /**
  * Зум: живые iframe прячутся под свой снимок — пересборка их слоёв на каждом кадре
  * стоила ~10 кадров/с. Показ iframe дорогой: между шагами колеса не возвращаем, ждём паузу.
@@ -175,6 +196,7 @@ function useZoomHiding(hostRef: RefObject<HTMLDivElement | null>) {
       zoomAtStart.current = vp.zoom;
     },
     onMove: (_: unknown, vp: { readonly zoom: number }) => {
+      applyZoomStyle(hostRef.current, vp.zoom);
       if (vp.zoom !== zoomAtStart.current) {
         window.clearTimeout(zoomIdle.current);
         hostRef.current?.classList.add('flow-host--zooming');
@@ -210,7 +232,9 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
         onInit={(instance) => {
           const el = hostRef.current;
           const canvas = { width: el?.clientWidth ?? 1280, height: el?.clientHeight ?? 800 };
-          void instance.setViewport(startViewport(packed, boxes, canvas, START_ZOOM));
+          const start = startViewport(packed, boxes, canvas, START_ZOOM);
+          applyZoomStyle(el, start.zoom);
+          void instance.setViewport(start);
         }}
         {...zoom}
         onlyRenderVisibleElements

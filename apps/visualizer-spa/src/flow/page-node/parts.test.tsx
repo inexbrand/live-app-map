@@ -29,17 +29,25 @@ const viewport: DeviceViewport = { width: 390, height: 844, heightMode: 'auto', 
 const noStatus = { unauthorized: null, cropped: null, contentHeight: null };
 
 describe('строка пути', () => {
-  test('без отметок: путь и размер окна', () => {
-    const html = renderToStaticMarkup(<NodePath node={node} url={null} status={noStatus} openComments={0} isLive={false} isWarm={false} viewport={viewport} />);
+  test('выбранная нода без отметок: путь и размер окна, подпись пресета не повторяется', () => {
+    const html = renderToStaticMarkup(<NodePath node={node} url={null} status={noStatus} openComments={0} viewport={viewport} />);
     expect(html).toContain(`title="${node.pathPattern}"`);
     expect(html).toContain(node.pathExample ?? node.pathPattern);
-    expect(html).toContain('390×844 auto phone');
+    expect(html).toContain('390×844 целиком');
+    expect(html).not.toContain('phone');
     expect(html).not.toContain('ui-badge');
   });
 
-  test('не авторизован, обрезано, замечания, live', () => {
+  test('нода в покое: только путь, без размера окна', () => {
+    const html = renderToStaticMarkup(<NodePath node={node} url={null} status={noStatus} openComments={0} viewport={null} />);
+    expect(html).toContain(node.pathExample ?? node.pathPattern);
+    expect(html).not.toContain('page-node__size');
+    expect(html).not.toContain('×');
+  });
+
+  test('не авторизован, обрезано, замечания; служебных live и warm нет', () => {
     const status = { unauthorized: 'Не авторизован (профиль «a»): 401', cropped: 'Видно 844 из 2000 px', contentHeight: 2000 };
-    const html = renderToStaticMarkup(<NodePath node={node} url="http://x/" status={status} openComments={3} isLive={true} isWarm={true} viewport={{ ...viewport, heightMode: 'fixed' }} />);
+    const html = renderToStaticMarkup(<NodePath node={node} url="http://x/" status={status} openComments={3} viewport={{ ...viewport, heightMode: 'fixed' }} />);
     expect(html).toContain('title="http://x/"');
     expect(html).toContain('data-lam-auth="none"');
     expect(html).toContain('не авторизован');
@@ -47,14 +55,9 @@ describe('строка пути', () => {
     expect(html).toContain('Видно 844 из 2000 px. Выберите ноду и нажмите «целиком»');
     expect(html).toContain('data-lam-comments="3"');
     expect(html).toContain('3 замечания');
-    expect(html).toContain('>live<');
+    expect(html).not.toContain('>live<');
     expect(html).not.toContain('>warm<');
-    expect(html).not.toContain(' auto');
-  });
-
-  test('warm, если не live', () => {
-    const html = renderToStaticMarkup(<NodePath node={node} url={null} status={noStatus} openComments={0} isLive={false} isWarm={true} viewport={viewport} />);
-    expect(html).toContain('>warm<');
+    expect(html).not.toContain('целиком<');
   });
 });
 

@@ -10,7 +10,7 @@ import { useAppStore } from '../store/app-store';
 import { useGatewayStore } from '../store/gateway-store';
 import { useSnapshotStore } from '../store/snapshot-store';
 import { openMap, resetStores } from '../test/fixtures';
-import { AppMapCanvas } from './AppMapCanvas';
+import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
 
 useDom();
 
@@ -191,6 +191,7 @@ describe('холст карты', () => {
   test('кнопки ноды: лог экрана, закрепить и открепить, открыть во вкладке, замечание', async () => {
     const { doc, r } = await canvas();
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
+    fireEvent.mouseEnter(nodeEl(r.container, id));
     const node = within(nodeEl(r.container, id));
     fireEvent.click(node.getByLabelText('Лог экрана'));
     expect(useAppStore.getState().diagnosticsOpen).toBe(true);
@@ -204,6 +205,54 @@ describe('холст карты', () => {
     fireEvent.click(node.getByLabelText('Замечание к компоненту'));
     expect(useSnapshotStore.getState().session.phase).toBe('opening');
     expect(useAppStore.getState().selectedPageId).toBe(id);
+  });
+
+  test('карточка в покое — название и путь; кнопки под мышью, размер окна — у выбранной', async () => {
+    const { doc, r } = await canvas();
+    const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
+    const el = (): HTMLElement => nodeEl(r.container, id);
+    expect(el().querySelector('.page-node__actions')).toBeNull();
+    expect(el().querySelector('.page-node__size')).toBeNull();
+    expect(el().querySelector('.page-node__title')?.textContent).not.toBe('');
+    fireEvent.mouseEnter(el());
+    expect(el().querySelector('.page-node__actions')).not.toBeNull();
+    expect(el().querySelector('.page-node__size')).toBeNull();
+    fireEvent.mouseLeave(el());
+    expect(el().querySelector('.page-node__actions')).toBeNull();
+    act(() => useAppStore.getState().selectPage(id));
+    await settle();
+    expect(el().querySelector('.page-node__actions')).not.toBeNull();
+    expect(el().querySelector('.page-node__size')?.textContent).toMatch(/\d+×\d+/);
+    expect(r.container.querySelectorAll('.page-node .ui-badge').length === 0 || ![...r.container.querySelectorAll('.page-node .ui-badge')].some((b) => /^(live|warm)$/.test(b.textContent ?? ''))).toBe(true);
+  });
+
+  test('обзор: при отдалении у холста класс обзора и масштаб для подписей; при приближении — нет', async () => {
+    const { r } = await canvas();
+    const host = r.container.querySelector<HTMLElement>('.flow-host');
+    expect(host).not.toBeNull();
+    applyZoomStyle(host, OVERVIEW_ZOOM / 4);
+    expect(host?.classList.contains('flow-host--overview')).toBe(true);
+    expect(host?.style.getPropertyValue('--lam-zoom')).toBe(String(OVERVIEW_ZOOM / 4));
+    applyZoomStyle(host, 1);
+    expect(host?.classList.contains('flow-host--overview')).toBe(false);
+    expect(host?.style.getPropertyValue('--lam-zoom')).toBe('1');
+  });
+
+  test('подписи рёбер — только у выбранного экрана', () => {
+    const doc = openMap('korbor-miniapp');
+    const sizing: Parameters<typeof canvasView>[2] = { iframeScale: useAppStore.getState().iframeScale, nodeViewports: new Map(), contentHeights: new Map() };
+    const edgesOf = (selected: string | null) => {
+      const view = canvasView(doc, '', sizing, selected);
+      return view.kind === 'graph' ? view.graph.edges : [];
+    };
+    const all = edgesOf(null);
+    expect(all.length).toBeGreaterThan(0);
+    expect(all.filter((e) => e.label !== undefined)).toEqual([]);
+    const labeled = doc.edges.find((e) => e.label !== undefined && e.label !== '' && e.to !== null);
+    const picked = edgesOf(labeled?.from ?? null);
+    const withLabel = picked.filter((e) => e.label !== undefined);
+    expect(withLabel.map((e) => e.label)).toContain(labeled?.label);
+    expect(withLabel.every((e) => e.source === labeled?.from || e.target === labeled?.from)).toBe(true);
   });
 
   test('выбранная нода под шапкой — холст сдвигается вниз на просвет', async () => {

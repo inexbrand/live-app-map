@@ -264,6 +264,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [snapshotFailed, setSnapshotFailed] = useState(false);
+  // Кнопки шапки — только под мышью и у выбранной: в покое карточка — название и путь
+  const [hovered, setHovered] = useState(false);
+  const showChrome = f.isSelected || hovered;
 
   const viewport = useNodeViewport(node);
   const status = pageStatus(f.isMounted ? report : undefined, viewport.height);
@@ -292,14 +295,16 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       data-lam-content-h={layout.contentHeight}
       onClick={() => selectPage(node.id)}
       onDoubleClick={() => setInteract(node.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <Handle type="target" position={Position.Left} />
       <div className="page-node__header">
         <div className="page-node__title" title={node.title}>{node.title}</div>
-        <NodeActions nodeId={node.id} isPinned={f.isPinned} />
+        {showChrome ? <NodeActions nodeId={node.id} isPinned={f.isPinned} /> : null}
       </div>
       {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
-      <NodePath node={node} url={url} status={status} openComments={f.openComments} isLive={f.isLive} isWarm={f.isWarm} viewport={viewport} />
+      <NodePath node={node} url={url} status={status} openComments={f.openComments} viewport={f.isSelected ? viewport : null} />
       <div
         className="page-node__body"
         ref={bodyRef}
