@@ -50,12 +50,17 @@ describe('вид «API» на korbor', () => {
   });
 
   test('строка списка: авторское описание, иначе из кода с пометкой auto', () => {
-    const documented = index.code.routes.find((r) => r.doc !== undefined);
-    const bare = index.code.routes.find((r) => r.doc === undefined && r.comments === undefined);
-    expect(documented === undefined ? undefined : routeOneLine(index, documented).auto).toBe(false);
-    const line = bare === undefined ? undefined : routeOneLine(index, bare);
-    expect(line?.auto).toBe(true);
-    expect(line?.text.length).toBeGreaterThan(0);
+    // Один роут в двух видах: с JSDoc и без — сколько роутов korbor описано, тест не волнует.
+    const route = index.code.routes[0];
+    if (route === undefined) {
+      throw new Error('в карте нет роутов');
+    }
+    const { doc: _doc, comments: _comments, ...bare } = route;
+    const documented = routeOneLine(index, { ...bare, doc: 'Список вакансий для ленты.' });
+    expect(documented).toMatchObject({ auto: false, text: 'Список вакансий для ленты.' });
+    const line = routeOneLine(index, bare);
+    expect(line.auto).toBe(true);
+    expect(line.text.length).toBeGreaterThan(0);
   });
 
   test('дерево покрывает все роуты, разделы admin/employer/recruiter есть', () => {

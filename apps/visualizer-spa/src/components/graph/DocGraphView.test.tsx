@@ -11,7 +11,7 @@ import { useAppStore } from '../../store/app-store';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';
 import { circleCenters, installCanvas, lastFrame, type RecordingContext } from '../../test/canvas';
-import { openMap, resetStores } from '../../test/fixtures';
+import { openMap, openMapWithOpenEpoch, resetStores } from '../../test/fixtures';
 import { DocGraphView } from './DocGraphView';
 
 useDom();
@@ -107,7 +107,7 @@ describe('граф документации', () => {
   });
 
   test('фильтры типов и готовности меняют граф; «показать все» возвращает', async () => {
-    openMap('korbor-miniapp');
+    openMapWithOpenEpoch('korbor-miniapp');
     const { ui, container } = await view();
     const start = stats(ui);
     dumpDom('graph-start', container);

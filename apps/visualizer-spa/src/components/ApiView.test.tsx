@@ -10,7 +10,7 @@ import { buildCodeIndex } from '@live-app-map/graph';
 import { routeCard } from '../lib/api-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { openMap, resetStores } from '../test/fixtures';
+import { openMap, openMapWithUndocumentedRoute, resetStores } from '../test/fixtures';
 import { ApiView } from './ApiView';
 
 useDom();
@@ -221,8 +221,7 @@ describe('карточка роута', () => {
   });
 
   test('без авторского описания: подсказка с файлом обработчика', () => {
-    openMap('korbor-miniapp');
-    const id = pick((c) => c.summary === undefined);
+    const id = openMapWithUndocumentedRoute('korbor-miniapp');
     act(() => useViewStore.getState().openRoute(id));
     const { ui } = view();
     expect(within(ui.getByTestId('api-route-card')).getByText(/^Авторского описания нет — добавьте комментарий над обработчиком/)).toBeTruthy();

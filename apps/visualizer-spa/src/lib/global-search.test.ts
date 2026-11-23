@@ -5,6 +5,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
+import { OPEN_EPOCH_DIR, withOpenEpoch } from '../test/fixtures';
 import { buildSearchIndex, searchIndex, type SearchItem } from './global-search';
 
 const MAPS = path.resolve(import.meta.dir, '../../../../maps');
@@ -16,7 +17,8 @@ beforeAll(() => {
   if (!res.ok) {
     throw new Error('korbor-all не разобрана');
   }
-  korbor = liveAppMapToAppMap(res.document);
+  // Тестовая незакрытая эпоха: в korbor эпохи закрываются, а поиску нужна и такая
+  korbor = withOpenEpoch(liveAppMapToAppMap(res.document));
   index = buildSearchIndex(korbor);
 });
 
@@ -45,9 +47,9 @@ describe('searchIndex', () => {
   });
 
   test('эпоха по slug ведёт в каталог эпохи', () => {
-    const e = searchIndex(index, 'perf-load-test').find((h) => h.kind === 'epoch');
+    const e = searchIndex(index, 'test-open-task').find((h) => h.kind === 'epoch');
     expect(e?.target.kind).toBe('doc');
-    expect(e?.target.kind === 'doc' ? e.target.path : '').toMatch(/^docs\/epoch\/perf-load-test#/);
+    expect(e?.target.kind === 'doc' ? e.target.path : '').toBe(OPEN_EPOCH_DIR);
     expect(e?.detail).toContain('не готово');
   });
 
