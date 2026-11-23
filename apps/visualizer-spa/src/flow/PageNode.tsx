@@ -18,8 +18,7 @@ import { useCommentsStore } from '../store/comments-store';
 import { useGatewayStore } from '../store/gateway-store';
 import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
 import { LiveFrame } from './page-node/LiveFrame';
-import { NodeActions } from './page-node/NodeActions';
-import { NodePath } from './page-node/NodePath';
+import { NodeTop } from './page-node/NodeTop';
 import { resolveIframeSandboxPreset, resolvePagePlaceholder, sandboxAttrForPreset, sandboxPresetLabel } from './page-node/sandbox';
 import { StateChips } from './page-node/StateChips';
 import { useNodeResize } from './page-node/use-node-resize';
@@ -264,6 +263,9 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const bodyRef = useRef<HTMLDivElement>(null);
   const iframeRef = useRef<HTMLIFrameElement>(null);
   const [snapshotFailed, setSnapshotFailed] = useState(false);
+  // Кнопки шапки — только под мышью и у выбранной: в покое карточка — название и путь
+  const [hovered, setHovered] = useState(false);
+  const showChrome = f.isSelected || hovered;
 
   const viewport = useNodeViewport(node);
   const status = pageStatus(f.isMounted ? report : undefined, viewport.height);
@@ -292,14 +294,11 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
       data-lam-content-h={layout.contentHeight}
       onClick={() => selectPage(node.id)}
       onDoubleClick={() => setInteract(node.id)}
+      onMouseEnter={() => setHovered(true)}
+      onMouseLeave={() => setHovered(false)}
     >
       <Handle type="target" position={Position.Left} />
-      <div className="page-node__header">
-        <div className="page-node__title" title={node.title}>{node.title}</div>
-        <NodeActions nodeId={node.id} isPinned={f.isPinned} />
-      </div>
-      {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
-      <NodePath node={node} url={url} status={status} openComments={f.openComments} isLive={f.isLive} isWarm={f.isWarm} viewport={viewport} />
+      <NodeTop node={node} url={url} status={status} viewport={viewport} chrome={showChrome} selected={f.isSelected} isPinned={f.isPinned} openComments={f.openComments} />
       <div
         className="page-node__body"
         ref={bodyRef}

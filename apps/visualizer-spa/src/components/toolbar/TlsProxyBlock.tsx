@@ -32,15 +32,15 @@ export function TlsProxyBlock() {
 
   return (
     <div className="sheet-block">
-      <div className="ui-field__label">Iframe proxy (dogfood)</div>
+      <div className="ui-field__label">Прокси для экранов</div>
       <p className="drawer__hint">
-        Same-origin proxy: miniapp (TLS self-signed), admin :16002 и site
-        :16001 (снимает X-Frame-Options / CSP). Без proxy iframe часто
-        пустой или «отказ во фрейме».
+        Пропускает мини-приложение (свой сертификат), админку :16002 и сайт :16001
+        через визуализатор и снимает запрет на показ во фрейме. Без прокси экран
+        часто пустой.
       </p>
       <label className="ui-chip" style={{ cursor: 'pointer', width: 'fit-content' }}>
         <input type="checkbox" checked={useTlsProxy} onChange={(e) => setUseTlsProxy(e.target.checked)} style={{ marginRight: 8 }} />
-        Proxy iframe (miniapp + admin + site)
+        Прокси для мини-приложения, админки и сайта
       </label>
       <Button
         type="button"

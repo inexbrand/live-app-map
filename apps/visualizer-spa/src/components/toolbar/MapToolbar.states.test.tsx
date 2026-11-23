@@ -78,19 +78,19 @@ describe('вкладки видов', () => {
 });
 
 describe('листы шапки', () => {
-  test('кнопка листа отмечена и раскрыта, пока лист открыт; пользователи dev-входа грузятся только с настройками', () => {
+  test('кнопка листа отмечена и раскрыта, пока лист открыт; пользователи dev-входа грузятся только с листом «Входы»', () => {
     const ui = toolbar(null);
-    const state = () => ['Источники', 'Настройки'].map((name) => {
+    const state = () => ['Входы', 'Настройки'].map((name) => {
       const b = ui.getByRole('button', { name });
       return `${name}:${b.getAttribute('aria-expanded')}:${b.className.includes('ui-btn--primary')}`;
     });
     const dogfoodCalls = () => net.calls.filter((c) => c.url.endsWith('/dogfood/actors')).length;
-    expect(state()).toEqual(['Источники:false:false', 'Настройки:false:false']);
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
-    expect(state()).toEqual(['Источники:true:true', 'Настройки:false:false']);
-    expect(dogfoodCalls()).toBe(0);
+    expect(state()).toEqual(['Входы:false:false', 'Настройки:false:false']);
     fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
-    expect(state()).toEqual(['Источники:false:false', 'Настройки:true:true']);
+    expect(state()).toEqual(['Входы:false:false', 'Настройки:true:true']);
+    expect(dogfoodCalls()).toBe(0);
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
+    expect(state()).toEqual(['Входы:true:true', 'Настройки:false:false']);
     expect(dogfoodCalls()).toBe(1);
   });
 
@@ -135,7 +135,7 @@ describe('крошки', () => {
     expect(crumbs(ui)).toEqual(['BUTTON.crumbs__link|Документация', `>BUTTON.crumbs__link|${epoch.slug}`, `>SPAN.crumbs__current|${epochFileLabel(epoch.dir, first)}`]);
   });
 
-  test('карта без групп, кода и документации: экран, API, БД и документация — только корень', () => {
+  test('карта без групп, кода и документации: у экрана — корень и экран; на пустых видах крошек нет', () => {
     const doc = bareMap();
     const page = doc.nodes.find((n) => n.kind === 'page');
     if (page === undefined) {
@@ -144,10 +144,10 @@ describe('крошки', () => {
     const ui = toolbar(doc);
     act(() => useAppStore.getState().selectPage(page.id));
     expect(crumbs(ui)).toEqual(['BUTTON.crumbs__link|Экраны', `>SPAN.crumbs__current|${page.title}`]);
-    const roots: ReadonlyArray<readonly [AppView, string]> = [['api', 'API'], ['database', 'База данных'], ['docs', 'Документация']];
-    for (const [view, root] of roots) {
+    const views: readonly AppView[] = ['api', 'database', 'docs'];
+    for (const view of views) {
       act(() => useViewStore.getState().setView(view));
-      expect(crumbs(ui)).toEqual([`SPAN.crumbs__current|${root}`]);
+      expect(ui.queryByTestId('breadcrumbs')).toBeNull();
     }
     act(() => useViewStore.getState().openDoc('docs/agent-notes/x.md'));
     expect(crumbs(ui)).toEqual(['BUTTON.crumbs__link|Документация', '>SPAN.crumbs__current|docs/agent-notes/x.md']);

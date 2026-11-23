@@ -96,16 +96,22 @@ test.describe('вид «API» на korbor', () => {
 
 test.describe('вид «Документация»', () => {
   test('korbor: эпохи с готовностью, открытые пункты, ссылка из текста на роут', async ({ page }) => {
+    // Сценарий на снимке docs из карты (26 эпох, 4 не готовы). На этой машине диск korbor новее
+    // (29 и 0) и чтение с диска заменяет снимок — без этого тест зависел от гонки с чтением.
+    await page.route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
     await openMap(page, 'korbor-all.liveappmap.json');
     await page.getByTestId('view-docs').click();
     await expect(page.getByTestId('docs-epoch-row')).toHaveCount(26);
+    await expect(page.getByTestId('docs-source')).toContainText('Показан снимок из карты (эпох: 26). С диска не прочитать: диск отключён в тесте');
     await page.getByRole('button', { name: /^Не готово/ }).click();
     const notReady = page.getByTestId('docs-epoch-row');
     await expect.poll(async () => notReady.count()).toBeGreaterThan(0);
     await notReady.filter({ hasText: 'perf-load-test' }).click();
     await expect(page.getByTestId('docs-open-bugs')).toContainText('rate limiter');
     await page.getByRole('button', { name: 'Баги', exact: true }).click();
-    await expect(page.getByTestId('doc-markdown')).toContainText('Баги');
+    // Вкладка «Баги» — один список «Пункты», текст файла свёрнут
+    await expect(page.getByTestId('docs-bug-marks')).toContainText('rate limiter');
+    await expect(page.getByTestId('docs-open-bugs')).toHaveCount(0);
     await shot(page, 'docs-korbor-not-ready.png');
 
     await page.getByRole('button', { name: /^Все$/ }).click();

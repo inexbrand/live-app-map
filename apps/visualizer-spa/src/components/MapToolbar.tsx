@@ -1,8 +1,8 @@
 /**
  * Шапка визуализатора: выбор карты, вкладки видов, крошки, кнопки листов, тема, поиск.
- * Листы «Источники» и «Настройки» открываются по краям. Все подписи на русском.
+ * Листы «Входы» и «Настройки» открываются по краю. Карты — только в селекте. Все подписи на русском.
  */
-import { Layers, Search, Settings2 } from 'lucide-react';
+import { KeyRound, Search, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { MapCatalogEntry } from '../lib/map-catalog';
 import { useAppStore } from '../store/app-store';
@@ -11,7 +11,7 @@ import { Breadcrumbs } from './Breadcrumbs';
 import { CommentsToolbarButton } from './comments/CommentsToolbarButton';
 import { MapSelect } from './toolbar/MapSelect';
 import { SettingsSheet } from './toolbar/SettingsSheet';
-import { SourcesSheet } from './toolbar/SourcesSheet';
+import { LoginsSheet } from './toolbar/LoginsSheet';
 import { ThemeToggle } from './toolbar/ThemeToggle';
 import { ToolbarButton } from './toolbar/ToolbarButton';
 import { useDogfoodActors } from './toolbar/use-dogfood-actors';
@@ -19,7 +19,7 @@ import { MAP_FILE_INPUT_ID, useMapLoader } from './toolbar/use-map-loader';
 import { ViewTabs } from './toolbar/ViewTabs';
 
 /** Лист у края экрана. */
-type SheetId = 'sources' | 'settings' | null;
+type SheetId = 'logins' | 'settings' | null;
 
 /** Props шапки: каталог из App (fetch /maps/index.json). */
 export type MapToolbarProps = {
@@ -39,7 +39,7 @@ export function MapToolbar(props: MapToolbarProps) {
   const [sheet, setSheet] = useState<SheetId>(null);
   const closeSheet = (): void => setSheet(null);
   const toggleSheet = (id: Exclude<SheetId, null>): void => setSheet(sheet === id ? null : id);
-  const dogfood = useDogfoodActors(sheet === 'settings');
+  const dogfood = useDogfoodActors(sheet === 'logins');
   const loader = useMapLoader(catalog, dogfood, closeSheet);
 
   useEffect(() => {
@@ -63,17 +63,19 @@ export function MapToolbar(props: MapToolbarProps) {
         <div className="toolbar__group">
           {hasDocument ? <CommentsToolbarButton /> : null}
           <ToolbarButton
-            icon={Layers}
-            label="Источники"
-            labelCollapses={false}
-            selected={sheet === 'sources'}
-            onClick={() => toggleSheet('sources')}
-            aria-expanded={sheet === 'sources'}
+            icon={KeyRound}
+            label="Входы"
+            aria-label="Входы"
+            title="Входы: под каким пользователем открываются экраны"
+            selected={sheet === 'logins'}
+            onClick={() => toggleSheet('logins')}
+            aria-expanded={sheet === 'logins'}
           />
           <ToolbarButton
             icon={Settings2}
             label="Настройки"
-            labelCollapses={false}
+            aria-label="Настройки"
+            title="Настройки просмотра"
             selected={sheet === 'settings'}
             onClick={() => toggleSheet('settings')}
             aria-expanded={sheet === 'settings'}
@@ -90,7 +92,7 @@ export function MapToolbar(props: MapToolbarProps) {
             <kbd className="palette__kbd">⌘K</kbd>
           </ToolbarButton>
         </div>
-        {/* Вне листа «Источники»: пункт «Открыть…» в селекте работает и при закрытом листе */}
+        {/* Поле файла для пункта «Открыть JSON» селекта карты */}
         <input
           id={MAP_FILE_INPUT_ID}
           type="file"
@@ -103,8 +105,8 @@ export function MapToolbar(props: MapToolbarProps) {
         />
       </header>
 
-      <SourcesSheet open={sheet === 'sources'} onClose={closeSheet} catalog={catalog} catalogLoading={catalogLoading} loader={loader} />
-      <SettingsSheet open={sheet === 'settings'} onClose={closeSheet} dogfood={dogfood} />
+      <LoginsSheet open={sheet === 'logins'} onClose={closeSheet} dogfood={dogfood} />
+      <SettingsSheet open={sheet === 'settings'} onClose={closeSheet} />
     </>
   );
 }

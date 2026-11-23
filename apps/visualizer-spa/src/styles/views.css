@@ -176,13 +176,6 @@
   padding: 8px 8px;
   background: var(--background);
 }
-.api-module__prefix {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
 .api-row {
   display: grid;
   gap: 2px;
@@ -324,7 +317,19 @@
   color: var(--muted-foreground);
 }
 .api-row__doc--auto {
-  font-style: italic;
+  color: var(--muted-foreground);
+}
+.api-coverage-box > summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.api-coverage-box[open] > summary {
+  margin-bottom: 12px;
+}
+.api-mark--absent {
+  color: var(--muted-foreground);
 }
 .api-auto {
   display: grid;
@@ -551,7 +556,9 @@
   top: -24px;
   z-index: 2;
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: nowrap;
+  overflow-x: auto;
+  scrollbar-width: thin;
   gap: 4px;
   margin: 24px 0 0;
   padding: 8px 0;
@@ -580,10 +587,14 @@
   max-width: 720px;
   padding-top: 24px;
 }
-.docs-doc__file {
-  margin: 0 0 16px;
-  font-size: 12px;
-  line-height: 16px;
+.docs-tab {
+  flex: none;
+}
+.docs-doc__raw {
+  margin-top: 24px;
+}
+.docs-doc__raw > summary {
+  cursor: pointer;
   color: var(--muted-foreground);
 }
 .docs-gallery {
@@ -1353,3 +1364,11 @@
 .docs-bugs__confirm p { margin: 0; font-size: 13px; line-height: 20px; }
 .docs-bugs__actions { display: flex; gap: 8px; }
 .docs-bugs__error { color: #9b1c1c; }
+
+/* Документация: показан снимок из карты, а не диск */
+.docs-source {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+  color: var(--muted-foreground);
+}

@@ -65,13 +65,13 @@ describe('app-store pin / load / base', () => {
     s.setUseTlsProxy(false);
   });
 
-  test('loadUnknownJson invalid → lastLoadError + toast, document null', () => {
+  test('loadUnknownJson invalid → ошибка в lastLoadError (баннер), toast не дублирует, document null', () => {
     useAppStore.getState().loadUnknownJson({ foo: 1 });
     const s = useAppStore.getState();
     expect(s.document).toBeNull();
     expect(s.lastLoadError).toBeTruthy();
     expect(s.lastLoadError).toContain('Не удалось разобрать JSON');
-    expect(s.toast).toBe(s.lastLoadError);
+    expect(s.toast).toBeNull();
   });
 
   test('pin over DEFAULT_MAX_PINNED → toast, size не растёт', () => {

@@ -76,6 +76,8 @@ test.describe('понять проект', () => {
 
 test.describe('закрыть задачу', () => {
   test('незакрытая эпоха → баги → связи документа → ссылка на документ открывается заново', async ({ page }) => {
+    // Сценарий на снимке docs карты (4 эпохи не готовы); диск korbor новее (0) — чтение отключено.
+    await page.context().route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
     await openKorbor(page, '&view=docs');
     await page.getByRole('button', { name: /^Не готово/ }).click();
     await page.getByTestId('docs-epoch-row').filter({ hasText: 'perf-load-test' }).click();
@@ -99,14 +101,19 @@ test.describe('закрыть задачу', () => {
 });
 
 test.describe('граф документации', () => {
-  test('сотни узлов на canvas, фильтры, поиск, карточка узла, переход на карту', async ({ page }) => {
+  test('сначала только документы, «показать все» — сотни узлов на canvas, фильтры, поиск, карточка узла, переход на карту', async ({ page }) => {
+    // Фильтр «Не готово» нужен эпохам снимка карты (4 не готовы); на диске их 0 — чтение отключено.
+    await page.context().route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
     await openKorbor(page, '&view=docs');
     await page.keyboard.press('g');
     const canvas = page.getByTestId('doc-graph-canvas');
     await expect(canvas).toBeVisible();
     await expect(page).toHaveURL(/docs=graph/);
     const nodes = async (): Promise<number> => Number(await canvas.getAttribute('data-nodes'));
-    expect(await nodes()).toBeGreaterThan(300);
+    await expect.poll(nodes).toBeGreaterThan(0);
+    expect(await nodes()).toBeLessThan(100);
+    await page.getByRole('button', { name: 'показать все' }).click();
+    await expect.poll(nodes).toBeGreaterThan(300);
     // Холст действительно нарисован.
     await expect
       .poll(async () =>

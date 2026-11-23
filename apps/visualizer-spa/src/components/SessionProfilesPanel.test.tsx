@@ -72,12 +72,30 @@ function fill(ui: Ui, values: Partial<Record<string, string>>): void {
   }
 }
 
-function panel(actors = ACTORS, actorsError: string | null = null) {
+/** Панель как в листе «Входы»; openForm — нажать «Добавить вход», если кнопка есть. */
+function panel(actors = ACTORS, actorsError: string | null = null, openForm = true) {
   const r = render(<SessionProfilesPanel actors={actors} actorsError={actorsError} apiBase="http://127.0.0.1:16000" />);
-  return within(r.container);
+  const ui = within(r.container);
+  const add = ui.queryByRole('button', { name: 'Добавить вход' });
+  if (openForm && add !== null) {
+    fireEvent.click(add);
+  }
+  return ui;
 }
 
 describe('профили входа', () => {
+  test('форма входа скрыта до кнопки «Добавить вход», «Отмена» прячет её', async () => {
+    await act(() => useGatewayStore.getState().refresh());
+    const ui = panel(ACTORS, null, false);
+    expect(ui.queryByRole('button', { name: 'Войти' })).toBeNull();
+    expect(ui.queryByLabelText('Профиль (id)')).toBeNull();
+    fireEvent.click(ui.getByRole('button', { name: 'Добавить вход' }));
+    expect(ui.getByRole('button', { name: 'Войти' })).toBeTruthy();
+    expect(ui.queryByRole('button', { name: 'Добавить вход' })).toBeNull();
+    fireEvent.click(ui.getByRole('button', { name: 'Отмена' }));
+    expect(ui.queryByRole('button', { name: 'Войти' })).toBeNull();
+  });
+
   test('шлюз не отвечает: сообщение с причиной', async () => {
     useGatewayStore.setState({ port: null, error: 'connect ECONNREFUSED' });
     const ui = panel();

@@ -2,6 +2,8 @@
  * Горячие клавиши оболочки. В полях ввода работают только ⌘K/Ctrl+K и Esc.
  */
 import { useEffect } from 'react';
+import { useAppStore } from '../store/app-store';
+import { useSnapshotStore } from '../store/snapshot-store';
 import { useUiStore } from '../store/ui-store';
 import { useViewStore, type AppView } from '../store/view-store';
 import { isTypingTarget } from './typing-target';
@@ -29,12 +31,28 @@ function globalKey(e: KeyboardEvent, ui: Ui): boolean {
     ui.setPalette(!ui.palette);
     return true;
   }
-  if (e.key === 'Escape' && (ui.palette || ui.help)) {
+  if (e.key === 'Escape') {
+    return escape(ui);
+  }
+  return false;
+}
+
+/**
+ * Esc: сначала поиск и справка, затем панель выбранного экрана — если поверх нет окна
+ * (замечание, лист, голос) и не идёт выбор компонента: у них свой Esc.
+ */
+function escape(ui: Ui): boolean {
+  if (ui.palette || ui.help) {
     ui.setPalette(false);
     ui.setHelp(false);
     return true;
   }
-  return false;
+  const app = useAppStore.getState();
+  if (app.selectedPageId === null || useSnapshotStore.getState().session.phase !== 'idle' || document.querySelector('[role="dialog"]') !== null) {
+    return false;
+  }
+  app.selectPage(null);
+  return true;
 }
 
 /** Клавиши без карты: справка и тема. */

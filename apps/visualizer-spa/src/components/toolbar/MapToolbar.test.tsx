@@ -1,5 +1,5 @@
 /**
- * Шапка как у пользователя: вкладки видов, крошки, селект карты, листы «Источники» и «Настройки», тема.
+ * Шапка как у пользователя: вкладки видов, крошки, селект карты, листы «Входы» и «Настройки», тема.
  * Карта — настоящая korbor-miniapp; сеть (каталог, API korbor, проверка TLS) — подмена fetch.
  */
 import { useDom } from '../../test/dom';
@@ -71,12 +71,12 @@ describe('шапка без карты', () => {
     expect(ui.getByRole('group', { name: 'Вид' })).toBeTruthy();
   });
 
-  test('карта не загрузилась: ошибка в toast и в lastLoadError', async () => {
+  test('карта не загрузилась: понятная ошибка в баннере, без дубля во всплывающем', async () => {
     const { ui } = toolbar([EMPTY_ENTRY]);
     expect(ui.getByText('Пустая')).toBeTruthy();
     fireEvent.change(ui.getByTestId('map-select'), { target: { value: EMPTY_ENTRY.id } });
-    await waitFor(() => expect(useAppStore.getState().lastLoadError).toBe('Не удалось загрузить /maps/broken.json: HTTP 404'));
-    expect(useAppStore.getState().toast).toBe('Не удалось загрузить /maps/broken.json: HTTP 404');
+    await waitFor(() => expect(useAppStore.getState().lastLoadError).toBe('Карта: файл /maps/broken.json не найден (HTTP 404). Выберите карту в списке сверху или проверьте путь.'));
+    expect(useAppStore.getState().toast).toBeNull();
     expect(useMapSourceStore.getState().source).toBeNull();
   });
 
@@ -86,10 +86,8 @@ describe('шапка без карты', () => {
     await waitFor(() => expect(useMapSourceStore.getState().source).toEqual({ kind: 'catalog', id: MINIAPP.id, label: MINIAPP.label, path: MINIAPP.path }));
   });
 
-  test('открыть файл карты: источник — файл, лист закрывается', async () => {
+  test('открыть файл карты: источник — файл', async () => {
     const { ui, container } = toolbar();
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
-    expect(ui.getByRole('dialog', { name: 'Источники карты' })).toBeTruthy();
     const input = container.ownerDocument.getElementById('lam-file-input');
     if (!(input instanceof HTMLInputElement)) {
       throw new Error('нет поля файла');
@@ -97,11 +95,10 @@ describe('шапка без карты', () => {
     const file = new File([mapText('korbor-miniapp')], 'my.liveappmap.json', { type: 'application/json' });
     fireEvent.change(input, { target: { files: [file] } });
     await waitFor(() => expect(useMapSourceStore.getState().source).toEqual({ kind: 'file', name: 'my.liveappmap.json' }));
-    expect(ui.queryByRole('dialog', { name: 'Источники карты' })).toBeNull();
     expect(within(ui.getByTestId('map-select')).getByText('Файл: my.liveappmap.json')).toBeTruthy();
   });
 
-  test('файл не карта: ошибка в toast', async () => {
+  test('файл не карта: ошибка в баннере, всплывающего нет', async () => {
     const { container } = toolbar();
     const input = container.ownerDocument.getElementById('lam-file-input');
     if (!(input instanceof HTMLInputElement)) {
@@ -109,7 +106,7 @@ describe('шапка без карты', () => {
     }
     fireEvent.change(input, { target: { files: [new File(['{oops'], 'bad.json', { type: 'application/json' })] } });
     await waitFor(() => expect(useAppStore.getState().lastLoadError).not.toBeNull());
-    expect(useAppStore.getState().toast).toBe(useAppStore.getState().lastLoadError);
+    expect(useAppStore.getState().toast).toBeNull();
   });
 });
 
@@ -158,8 +155,7 @@ describe('шапка с картой', () => {
     fireEvent.click(crumbs().getByRole('button', { name: 'База данных' }));
     expect(useViewStore.getState().table).toBeNull();
     act(() => useViewStore.getState().setView('compare'));
-    fireEvent.click(crumbs().getByText('Сравнение'));
-    expect(crumbs().getAllByRole('listitem')).toHaveLength(1);
+    expect(ui.queryByTestId('breadcrumbs')).toBeNull();
   });
 
   test('крошки документации: эпоха и файл, заметка, граф', () => {
@@ -196,7 +192,8 @@ describe('шапка с картой', () => {
   });
 
   test('крошка «назад» — история браузера', () => {
-    openMap('korbor-miniapp');
+    const doc = openMap('korbor-miniapp');
+    act(() => useAppStore.getState().selectPage(doc.nodes.find((n) => n.kind === 'page')?.id ?? null));
     const { ui } = toolbar();
     let back = 0;
     const original = window.history.back.bind(window.history);
@@ -206,17 +203,12 @@ describe('шапка с картой', () => {
     expect(back).toBe(1);
   });
 
-  test('очистить карту из селекта и из листа источников', () => {
+  test('очистить карту из селекта', () => {
     openMap('korbor-miniapp');
     const { ui } = toolbar();
     fireEvent.change(ui.getByTestId('map-select'), { target: { value: '__clear__' } });
     expect(useAppStore.getState().document).toBeNull();
     expect(useAppStore.getState().toast).toBe('Карта очищена');
-    act(() => { openMap('korbor-miniapp'); });
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
-    fireEvent.click(ui.getByRole('button', { name: 'Очистить карту' }));
-    expect(useAppStore.getState().document).toBeNull();
-    expect(ui.queryByRole('dialog')).toBeNull();
   });
 
   test('«Открыть JSON» в селекте нажимает поле файла', () => {
@@ -228,18 +220,23 @@ describe('шапка с картой', () => {
     expect(clicked).toBe(1);
   });
 
-  test('лист источников: каталог с кнопками карт; пустой каталог', async () => {
-    const first = toolbar([]);
-    fireEvent.click(first.ui.getByRole('button', { name: 'Источники' }));
-    expect(first.ui.getByText('Каталог пуст. Положите *.liveappmap.json в public/maps.')).toBeTruthy();
-    first.unmount();
+  test('шапка без дублей: «Источников» нет — карты в селекте; крошка из одной вкладки не показывается', () => {
+    openMap('korbor-miniapp');
     const { ui } = toolbar();
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
-    const sheet = within(ui.getByRole('dialog', { name: 'Источники карты' }));
-    expect(sheet.getByRole('button', { name: 'Очистить карту' })).toHaveProperty('disabled', true);
-    fireEvent.click(sheet.getByRole('button', { name: 'Korbor miniapp · 40 экр.' }));
-    await waitFor(() => expect(useAppStore.getState().document).not.toBeNull());
-    await waitFor(() => expect(ui.queryByRole('dialog', { name: 'Источники карты' })).toBeNull());
+    expect(ui.queryByRole('button', { name: 'Источники' })).toBeNull();
+    expect(within(ui.getByTestId('map-select')).getByRole('option', { name: 'Korbor miniapp · 40 экр.' })).toBeTruthy();
+    expect(ui.queryByTestId('breadcrumbs')).toBeNull();
+    const page = useAppStore.getState().document?.nodes.find((n) => n.kind === 'page');
+    act(() => useAppStore.getState().selectPage(page?.id ?? null));
+    expect(within(ui.getByTestId('breadcrumbs')).getByText(page?.title ?? '')).toBeTruthy();
+  });
+
+  test('лист «Входы»: профили входа шлюза, пользователи dev-входа грузятся при открытии', async () => {
+    const { ui } = toolbar();
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
+    const sheet = within(ui.getByRole('dialog', { name: 'Входы' }));
+    expect(sheet.getByRole('status').textContent).toContain('Шлюз живых экранов не отвечает');
+    await waitFor(() => expect(net.calls.some((c) => c.url.endsWith('/api/v1/dev/dogfood/actors'))).toBe(true));
   });
 
   test('Esc и повторный клик закрывают лист', () => {
@@ -248,8 +245,8 @@ describe('шапка с картой', () => {
     expect(ui.getByRole('dialog', { name: 'Настройки просмотра' })).toBeTruthy();
     fireEvent.keyDown(window, { key: 'Escape' });
     expect(ui.queryByRole('dialog')).toBeNull();
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
-    fireEvent.click(ui.getByRole('button', { name: 'Источники' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
     expect(ui.queryByRole('dialog')).toBeNull();
   });
 
@@ -267,6 +264,21 @@ describe('шапка с картой', () => {
 });
 
 describe('лист настроек', () => {
+  test('простые настройки сверху, техника — под «Для разработчика»', () => {
+    openMap('korbor-miniapp');
+    const { ui } = toolbar();
+    fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
+    const dialog = ui.getByRole('dialog', { name: 'Настройки просмотра' });
+    const dev = dialog.querySelector('details');
+    expect(dev?.querySelector('summary')?.textContent).toBe('Для разработчика');
+    expect(dev?.open).toBe(false);
+    for (const tech of ['Сколько экранов живут одновременно', 'Сколько экранов держать на паузе', 'Адрес приложения']) {
+      expect(dev?.contains(within(dialog).getByLabelText(tech))).toBe(true);
+    }
+    expect(dev?.contains(within(dialog).getByLabelText('Смотреть как'))).toBe(false);
+    expect(dialog.textContent).not.toMatch(/iframe|unmount|keep-alive|layout JSON|measure|miniapp/);
+  });
+
   test('бюджет, масштаб, лимиты, роль, базовый URL', async () => {
     openMap('korbor-miniapp');
     const { ui } = toolbar();
@@ -276,23 +288,22 @@ describe('лист настроек', () => {
     expect(sheet.getByTestId('iframe-budget').textContent).toBe(`Живых экранов ${s.livePageIds.size} из ${s.maxLiveIframes} · на паузе ${s.warmPageIds.size} из ${s.maxWarmIframes} · закреплено 0`);
     fireEvent.change(sheet.getByLabelText('Масштаб превью'), { target: { value: '0.5' } });
     expect(useAppStore.getState().iframeScale).toBe(0.5);
-    fireEvent.change(sheet.getByLabelText('Макс. живых iframe'), { target: { value: '9999' } });
+    fireEvent.change(sheet.getByLabelText('Сколько экранов живут одновременно'), { target: { value: '9999' } });
     expect(useAppStore.getState().maxLiveIframes).toBe(9999);
     expect(sheet.getByTestId('iframe-budget').textContent).not.toContain(' из 9999');
-    fireEvent.change(sheet.getByLabelText('Warm keep-alive'), { target: { value: '0' } });
+    fireEvent.change(sheet.getByLabelText('Сколько экранов держать на паузе'), { target: { value: '0' } });
     expect(useAppStore.getState().maxWarmIframes).toBe(0);
-    expect(within(sheet.getByLabelText('Warm keep-alive')).getByText('0 (сразу unmount)')).toBeTruthy();
-    expect(within(sheet.getByLabelText('Макс. живых iframe')).getByText('8 (по умолчанию)')).toBeTruthy();
-    fireEvent.change(sheet.getByLabelText('Роль (miniapp)'), { target: { value: 'employer' } });
+    expect(within(sheet.getByLabelText('Сколько экранов держать на паузе')).getByText('0 — выгружать сразу')).toBeTruthy();
+    expect(within(sheet.getByLabelText('Сколько экранов живут одновременно')).getByText('8 (по умолчанию)')).toBeTruthy();
+    fireEvent.change(sheet.getByLabelText('Смотреть как'), { target: { value: 'employer' } });
     expect(useAppStore.getState().globalRole).toBe('employer');
-    fireEvent.change(sheet.getByLabelText('Базовый URL'), { target: { value: 'http://localhost:5175' } });
-    fireEvent.blur(sheet.getByLabelText('Базовый URL'));
+    fireEvent.change(sheet.getByLabelText('Адрес приложения'), { target: { value: 'http://localhost:5175' } });
+    fireEvent.blur(sheet.getByLabelText('Адрес приложения'));
     expect(useAppStore.getState().baseUrlOverride).toBe('http://localhost:5175');
     const adaptive = sheet.getByTestId('map-adaptive-select');
     expect(adaptive).toHaveProperty('disabled', false);
     fireEvent.change(adaptive, { target: { value: 'w768' } });
     expect(mapAdaptive(useAppStore.getState().document?.layout).presetId).toBe('w768');
-    await waitFor(() => expect(net.calls.some((c) => c.url.endsWith('/api/v1/dev/dogfood/actors'))).toBe(true));
   });
 
   test('без лимита в store — без «из N»; масштаб не из списка не меняется', () => {
@@ -348,9 +359,9 @@ describe('лист настроек', () => {
     net.restore();
     net = stubFetch(() => new Response('', { status: 500 }));
     const { ui } = toolbar();
-    fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
-    fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
-    fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
     await waitFor(() => expect(net.calls.length).toBeGreaterThan(0));
   });
 });

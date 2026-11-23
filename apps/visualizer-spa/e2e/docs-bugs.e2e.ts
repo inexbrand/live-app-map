@@ -53,9 +53,9 @@ test('закрыть и открыть пункт 09-bugs: файл на дис�
   await expect(page.getByTestId('docs-bug-confirm')).toContainText(`Записать в ${BUGS}`);
   await shot(page, 'docs-bug-confirm.png');
   await page.getByTestId('docs-bug-confirm').getByRole('button', { name: 'Записать' }).click();
-  await expect(page.getByTestId('docs-epoch-head')).toContainText('готово');
-  await expect(page.getByTestId('docs-epoch-head')).not.toContainText('не готово');
   await expect(page.getByTestId('docs-bug-item').filter({ hasText: 'Кнопка «Сохранить»' })).toHaveAttribute('data-state', 'closed');
+  // Готовая эпоха пометки не несёт: «готово» — обычное состояние, видно только «не готово»
+  await expect(page.getByTestId('docs-epoch-head')).not.toContainText('готово');
   expect(readFileSync(path.join(root, BUGS), 'utf8')).toBe('# Баги\n\n## Open\n\n## Closed\n\n- Старый баг\n- Кнопка «Сохранить» не нажимается\n');
   await shot(page, 'docs-bug-closed.png');
 

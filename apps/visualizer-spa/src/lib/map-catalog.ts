@@ -6,6 +6,7 @@
  * без правки кода. Здесь — тип записи, разбор на границе и fetch.
  */
 import { KORBOR_PRESETS } from '../korbor-presets';
+import { fetchJsonFile } from './load-error';
 
 /** Путь каталога относительно origin визуализатора. */
 export const MAP_CATALOG_URL = '/maps/index.json';
@@ -175,15 +176,6 @@ export async function fetchMapCatalog(
   fetchFn: typeof fetch = fetch,
   url: string = MAP_CATALOG_URL,
 ): Promise<FetchMapCatalogResult> {
-  try {
-    const res = await fetchFn(url, { cache: 'no-store' });
-    if (!res.ok) {
-      return { ok: false, error: `Каталог карт ${url}: HTTP ${res.status}` };
-    }
-    const json: unknown = await res.json();
-    return parseMapCatalog(json);
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `Каталог карт ${url}: ${message}` };
-  }
+  const r = await fetchJsonFile('Каталог карт', url, fetchFn, { cache: 'no-store' });
+  return r.ok ? parseMapCatalog(r.json) : r;
 }

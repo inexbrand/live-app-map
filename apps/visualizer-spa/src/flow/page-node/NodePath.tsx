@@ -1,5 +1,6 @@
 /**
- * Строка пути ноды: состояние (не авторизован, обрезано, замечания, live/warm), путь, размер окна.
+ * Строка пути ноды: проблемы экрана (не авторизован, обрезано, замечания), путь;
+ * размер окна — только у выбранной ноды.
  */
 import type { AppMapNode, DeviceViewport } from '@live-app-map/schema';
 import { commentsLabel } from '../../lib/comments/format';
@@ -12,9 +13,8 @@ export type NodePathProps = {
   readonly url: string | null;
   readonly status: PageStatus;
   readonly openComments: number;
-  readonly isLive: boolean;
-  readonly isWarm: boolean;
-  readonly viewport: DeviceViewport;
+  /** Окно ноды; null — размер не показывать (нода не выбрана). */
+  readonly viewport: DeviceViewport | null;
 };
 
 /**
@@ -23,23 +23,24 @@ export type NodePathProps = {
  * @param props - нода, адрес, состояние и окно
  */
 export function NodePath(props: NodePathProps) {
-  const { node, url, status, openComments, isLive, isWarm, viewport } = props;
+  const { node, url, status, openComments, viewport } = props;
   return (
   <div className="page-node__path" title={url ?? node.pathPattern}>
-    <StatusBadges status={status} openComments={openComments} isLive={isLive} isWarm={isWarm} />
+    <StatusBadges status={status} openComments={openComments} />
     <span className="page-node__path-text">{node.pathExample ?? node.pathPattern}</span>
-    <span className="page-node__size">
-      {' '}
-      · {viewport.width}×{viewport.height}
-      {viewport.heightMode === 'auto' ? ' auto' : ''}
-      {viewport.label ? ` ${viewport.label}` : ''}
-    </span>
+    {viewport === null ? null : (
+      <span className="page-node__size">
+        {' '}
+        · {viewport.width}×{viewport.height}
+        {viewport.heightMode === 'auto' ? ' целиком' : ''}
+      </span>
+    )}
   </div>
   );
 }
 
-/** Метки состояния окна: вход, обрезка, замечания, live/warm. */
-function StatusBadges({ status, openComments, isLive, isWarm }: Pick<NodePathProps, 'status' | 'openComments' | 'isLive' | 'isWarm'>) {
+/** Метки проблем окна: вход, обрезка, замечания. Служебное состояние iframe — в логе. */
+function StatusBadges({ status, openComments }: Pick<NodePathProps, 'status' | 'openComments'>) {
   return (
   <>
     {status.unauthorized !== null ? (
@@ -56,11 +57,6 @@ function StatusBadges({ status, openComments, isLive, isWarm }: Pick<NodePathPro
       <Badge className="ui-badge--comments" data-lam-comments={openComments} title="Открытые замечания к экрану">
         {commentsLabel(openComments)}
       </Badge>
-    ) : null}
-    {isLive ? (
-      <Badge>live</Badge>
-    ) : isWarm ? (
-      <Badge>warm</Badge>
     ) : null}
   </>
   );

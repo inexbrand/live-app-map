@@ -10,7 +10,7 @@ import { useAppStore } from '../../store/app-store';
 import { useMapSourceStore, type MapSourceRef } from '../../store/map-source-store';
 import type { DogfoodActorsState } from './use-dogfood-actors';
 
-/** id поля выбора файла карты (одно на страницу, вне листа «Источники»). */
+/** id поля выбора файла карты (одно на страницу, для пункта «Открыть JSON» селекта). */
 export const MAP_FILE_INPUT_ID = 'lam-file-input';
 
 /** Значение селекта для карты из файла. */
@@ -63,7 +63,6 @@ async function openMapFile(file: File | null, setSource: (s: MapSourceRef) => vo
   const app = useAppStore.getState();
   if (!result.ok) {
     app.setLastLoadError(result.error);
-    app.setToast(result.error);
     return;
   }
   if (app.loadUnknownJson(result.json)) {
@@ -112,7 +111,6 @@ async function loadCatalogMap(preset: MapCatalogEntry, dogfood: DogfoodActorsSta
   });
   if (!res.ok) {
     app.setLastLoadError(res.error);
-    app.setToast(res.error);
     return false;
   }
   setSource(catalogSource(preset));
