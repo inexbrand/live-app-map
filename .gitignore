@@ -28,6 +28,10 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 .lam-sessions
 .lam-snapshots
 .lam-models/
+# кэш моделей e2e (LAM_MODELS_DIR=.lam-models-e2e) и разовые скрипты/скриншоты проверок
+.lam-models-e2e/
+.mm-tmp*.mjs
+.lam-*-check.png
 *-probe.tmp.mjs
 # замеры Reassure (база и текущий прогон — локальные)
 .reassure/
