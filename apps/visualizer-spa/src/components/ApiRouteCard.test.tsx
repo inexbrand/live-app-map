@@ -1,6 +1,6 @@
 /**
- * Карточка роута, метод и отметки строки — на собранных вручную роутах:
- * каждый раздел карточки виден пользователю ровно в том виде, в каком описан.
+ * Доска роута, метод и отметки строки — на собранных вручную роутах:
+ * каждый блок доски виден пользователю ровно в том виде, в каком описан.
  */
 import { useDom } from '../test/dom';
 import { beforeEach, describe, expect, test } from 'bun:test';
@@ -8,7 +8,7 @@ import { fireEvent, render, within } from '@testing-library/react';
 import type { ApiRoute, HttpMethod } from '@live-app-map/schema';
 import type { RouteCard } from '../lib/api-view-model';
 import { resetStores } from '../test/fixtures';
-import { Card, Marks, Method, usualChecks } from './ApiRouteCard';
+import { Marks, Method, RouteBoard, usualChecks } from './ApiRouteCard';
 
 useDom();
 
@@ -26,7 +26,24 @@ const ROUTE: ApiRoute = {
 };
 
 /** Карточка: пустые разделы, без сервиса и описания. */
-const BARE: RouteCard = { route: ROUTE, reads: [], writes: [], callers: [], auto: { summary: 'Запись', lines: [], facts: 0 }, inputs: [] };
+const BARE: RouteCard = {
+  route: ROUTE,
+  reads: [],
+  writes: [],
+  callers: [],
+  auto: { summary: 'Запись', lines: [], facts: 0 },
+  inputs: [],
+  domain: 'orders',
+  pathParams: ['id'],
+  effects: [],
+  tables: [],
+};
+
+const ORDERS_COLUMNS = [
+  { name: 'id', type: 'uuid', primaryKey: true, notNull: true },
+  { name: 'userId', sqlName: 'user_id', type: 'uuid', notNull: true, references: { table: 'users', column: 'id' } },
+  { name: 'status', type: 'text', default: "'draft'" },
+];
 
 /** Карточка, где заполнено всё. */
 const FULL: RouteCard = {
@@ -41,6 +58,16 @@ const FULL: RouteCard = {
   ],
   reads: [{ table: 'products', operations: ['select'], count: 2, inLoop: true }],
   writes: [{ table: 'orders', dbName: 'orders_tbl', operations: ['insert', 'update'], count: 1, inLoop: false }],
+  domain: 'orders',
+  pathParams: [],
+  effects: [
+    { label: 'Добавляет строки', tables: ['orders_tbl'] },
+    { label: 'Обновляет', tables: ['orders_tbl'] },
+  ],
+  tables: [
+    { touch: { table: 'products', operations: ['select'], count: 2, inLoop: true }, mode: 'read', columns: [] },
+    { touch: { table: 'orders', dbName: 'orders_tbl', operations: ['insert', 'update'], count: 1, inLoop: false }, mode: 'write', columns: ORDERS_COLUMNS },
+  ],
   inputs: [
     { part: 'params', label: 'Параметры пути', schema: { kind: 'typebox', fields: [], type: 'record<string, string>' } },
     {
@@ -51,77 +78,88 @@ const FULL: RouteCard = {
   ],
 };
 
-function card(c: RouteCard) {
-  const r = render(<Card card={c} />);
+function board(c: RouteCard) {
+  const r = render(<RouteBoard card={c} />);
   return within(r.container);
 }
 
-/** Блоки раздела карточки под заголовком h3 через «|». */
-function section(ui: ReturnType<typeof within>, title: string): string {
-  const h = ui.getAllByRole('heading', { level: 3 }).find((x: HTMLElement) => x.textContent === title);
-  return [...(h?.parentElement?.children ?? [])].slice(1).map((c) => (c.textContent ?? '').replace(/\s+/g, ' ').trim()).filter((s) => s !== '').join('|');
+/** Текст блока доски по заголовку: строки содержимого через «|». */
+function block(ui: ReturnType<typeof within>, title: string): string {
+  const head = ui.getAllByText(title).find((x: HTMLElement) => x.getAttribute('data-slot') === 'card-title');
+  const content = head?.closest('[data-slot="card"]')?.querySelector('[data-slot="card-content"]');
+  return [...(content?.children ?? [])].map((c) => (c.textContent ?? '').replace(/\s+/g, ' ').trim()).filter((s) => s !== '').join('|');
 }
 
-describe('карточка роута', () => {
-  test('пустая карточка: подсказки во всех разделах, сервис — id, обработчик встроенный', () => {
-    const ui = card(BARE);
-    const head = ui.getByRole('banner');
-    expect(head.querySelector('.api-card__meta')?.textContent).toBe('svc-api · elysiaapps/api/src/orders.ts:12');
+describe('доска роута', () => {
+  test('пустая доска: домен, параметры пути из пути, подсказки во всех блоках', () => {
+    const ui = board(BARE);
+    expect(ui.getByRole('banner').textContent).toBe('POST/orders/:idorderssvc-api · elysiaapps/api/src/orders.ts:12');
     expect(ui.getByText(/Авторского описания нет/).textContent).toBe('Авторского описания нет — добавьте комментарий над обработчиком (apps/api/src/orders.ts:12).');
-    expect(ui.queryAllByTestId('api-response')).toEqual([]);
-    expect([section(ui, 'Вход'), section(ui, 'Доступ'), section(ui, 'Таблицы'), section(ui, 'Экраны'), section(ui, 'Обработчик')]).toEqual([
-      'Схемы входа в коде не найдено.',
+    expect([block(ui, 'Принимает'), block(ui, 'Отдаёт'), block(ui, 'Доступ'), block(ui, 'База данных'), block(ui, 'Экраны'), block(ui, 'Код')]).toEqual([
+      'Параметры пути без схемы:id|Схемы входа в коде не найдено.',
+      'Ответ в коде не найден.',
       'Проверок доступа в коде не найдено — роут открыт.',
       'Запросов в БД не найдено.',
       '',
-      'встроенная функция · apps/api/src/orders.ts:14',
+      'Обработчиквстроенная функция|apps/api/src/orders.ts:14',
     ]);
   });
 
-  test('полная карточка: сервис, описание с «Полностью», ответ, вход, доступ, таблицы, экраны', () => {
-    const ui = card(FULL);
-    expect(ui.getByRole('banner').querySelector('.api-card__meta')?.textContent).toBe('API · elysiaapps/api/src/orders.ts:12');
+  test('полная доска: описание с «Полностью», вход, ответ, доступ, что меняет, таблицы с колонками, экраны', () => {
+    const ui = board({ ...FULL, route: { ...FULL.route, response: { fields: ['id', 'status'], statuses: [201, 409] } } });
     expect(ui.getByText('Создаёт заказ.')).toBeTruthy();
     fireEvent.click(ui.getByRole('button', { name: 'Полностью' }));
     expect(ui.queryByRole('button', { name: 'Полностью' })).toBeNull();
-    expect(ui.getByTestId('api-response').textContent).toBe('Ответ: { id }');
-    expect(section(ui, 'Вход')).toBe('Параметры пути · TypeBoxrecord<string, string>|Тело · OrderBody · zod · необязательноitemsobject[] · min 1sku?string');
-    expect(ui.getAllByTestId('api-input-field').map((tr) => `${tr.getAttribute('data-depth')}:${tr.querySelector('td')?.getAttribute('style')}`)).toEqual(['0:padding-left: 0px;', '1:padding-left: 14px;']);
-    expect(section(ui, 'Доступ')).toBe('Нужен вход|Ролиadmin|Праваorders.write|ПроверкиrequireAdmin, requireOwner');
-    expect(section(ui, 'Таблицы')).toBe('Читаетproducts · в цикле|Пишетorders_tbl');
-    expect(ui.getAllByTestId('api-table-link').map((b) => `${b.textContent}|${b.getAttribute('title')}`)).toEqual(['products · в цикле|select ×2', 'orders_tbl|insert, update ×1']);
+    expect(block(ui, 'Принимает')).toBe('Параметры пути · TypeBoxrecord<string, string>|Тело · OrderBody · zod · необязательноПолеТипОбязательноПравилаitemsobject[]даmin 1skustringнет');
+    expect(ui.getAllByTestId('api-input-field').map((tr) => `${tr.getAttribute('data-depth')}:${tr.querySelector('td')?.getAttribute('style')}`)).toEqual(['0:padding-left: 8px;', '1:padding-left: 22px;']);
+    expect(block(ui, 'Отдаёт')).toBe('Поляidstatus|Статусы201409');
+    expect(block(ui, 'Доступ')).toBe('Нужен вход|Ролиadmin|Праваorders.write|ПроверкиrequireAdminrequireOwner');
+    expect(ui.getByTestId('api-effects').textContent).toBe('Добавляет строки:orders_tblОбновляет:orders_tbl');
+    expect(ui.getAllByTestId('api-db-table').map((x) => `${x.getAttribute('data-mode')}|${(x.textContent ?? '').trim()}`)).toEqual([
+      'read|productsчитаетselect×2в цикленет в схеме',
+      'write|orders_tblпишетinsertupdate×1',
+    ]);
+    expect(ui.getAllByTestId('api-table-link').map((b) => b.textContent)).toEqual(['products', 'orders_tbl']);
+    expect(ui.getByRole('button', { name: 'Колонки products' }).hasAttribute('disabled')).toBe(true);
+    fireEvent.click(ui.getByRole('button', { name: 'Колонки orders_tbl' }));
+    expect(ui.getAllByTestId('api-db-column').map((r) => [...r.querySelectorAll('td')].map((td) => td.textContent).join('|'))).toEqual([
+      'id|uuid|ключ, not null',
+      'user_id|uuid|not null, → users.id',
+      "status|text|по умолчанию 'draft'",
+    ]);
     expect(ui.getByTestId('api-screen-gap').textContent).toBe('Экраны карты не вызывают: вызов в недостижимом файле.a.ts, b.ts');
     expect(ui.getAllByTestId('api-screen-link').map((b) => `${b.textContent}|${b.getAttribute('title')}|${b.hasAttribute('disabled')}`)).toEqual(['Корзина|cart.tsx|false', 'Без ноды|x.tsx · через useOrders|true']);
-    expect(section(ui, 'Обработчик')).toBe('createOrder · apps/api/src/h.ts:3');
+    expect(block(ui, 'Код')).toBe('ОбработчикcreateOrder|apps/api/src/h.ts:3');
   });
 
-  test('описание из одного абзаца — без «Полностью»; разрыв без файлов — без строки файлов; доступ без входа', () => {
-    const ui = card({ ...FULL, summary: 'Один абзац.', gap: { kind: 'no-caller', text: 'никто не вызывает', files: [] }, route: { ...FULL.route, access: { roles: ['x'] } } });
+  test('описание из одного абзаца — без «Полностью»; разрыв без файлов — без строки файлов; доступ без входа; только чтение', () => {
+    const ui = board({ ...FULL, summary: 'Один абзац.', gap: { kind: 'no-caller', text: 'никто не вызывает', files: [] }, route: { ...FULL.route, access: { roles: ['x'] } }, effects: [] });
     expect(ui.queryByRole('button', { name: 'Полностью' })).toBeNull();
     expect(ui.getByTestId('api-screen-gap').querySelectorAll('p')).toHaveLength(1);
-    expect(section(ui, 'Доступ')).toBe('Ролиx');
+    expect(block(ui, 'Доступ')).toBe('Ролиx');
+    expect(ui.getByText('Только читает — данных не меняет.')).toBeTruthy();
   });
 });
 
 test('метод: цвет по виду — чтение, удаление, запись', () => {
   const methods: readonly HttpMethod[] = ['GET', 'HEAD', 'OPTIONS', 'DELETE', 'POST', 'PUT', 'PATCH', 'ALL'];
   const r = render(<>{methods.map((m) => <Method key={m} method={m} />)}</>);
-  expect([...r.container.querySelectorAll('.api-method')].map((s) => s.className)).toEqual([
-    'api-method api-method--read',
-    'api-method api-method--read',
-    'api-method api-method--read',
-    'api-method api-method--delete',
-    'api-method api-method--write',
-    'api-method api-method--write',
-    'api-method api-method--write',
-    'api-method api-method--write',
+  expect([...r.container.querySelectorAll('[data-kind]')].map((s) => `${s.textContent}:${s.getAttribute('data-kind')}`)).toEqual([
+    'GET:read',
+    'HEAD:read',
+    'OPTIONS:read',
+    'DELETE:delete',
+    'POST:write',
+    'PUT:write',
+    'PATCH:write',
+    'ALL:write',
   ]);
 });
 
 test('отметки строки: значок только у отличия от большинства', () => {
   const marks = (route: ApiRoute, usual = { input: false, access: false }) => {
     const r = render(<Marks route={route} usual={usual} />);
-    const out = [...r.container.querySelectorAll('.api-mark')].map((m) => `${m.getAttribute('title')}|${m.querySelector('svg')?.getAttribute('aria-label') ?? ''}`);
+    const out = [...r.container.querySelectorAll('[data-testid="api-mark"]')].map((m) => `${m.getAttribute('title')}|${m.querySelector('svg')?.getAttribute('aria-label') ?? ''}`);
     r.unmount();
     return out;
   };

@@ -155,7 +155,7 @@ describe('шапка с картой', () => {
     const { ui } = toolbar();
     fireEvent.click(ui.getByRole('button', { name: 'Входы' }));
     const sheet = within(ui.getByRole('dialog', { name: 'Входы' }));
-    expect(sheet.getByRole('status').textContent).toContain('Шлюз живых экранов не отвечает');
+    expect(sheet.getByRole('alert').textContent).toContain('Шлюз живых экранов не отвечает');
     await waitFor(() => expect(net.calls.some((c) => c.url.endsWith('/api/v1/dev/dogfood/actors'))).toBe(true));
   });
 
@@ -173,7 +173,7 @@ describe('шапка с картой', () => {
     const { ui } = toolbar();
     const header = ui.getByTestId('toolbar');
     const search = ui.getByTestId('open-palette');
-    expect([...header.children].indexOf(search)).toBe(1);
+    expect([...header.children].indexOf(search.parentElement ?? search)).toBe(1);
     fireEvent.click(search);
     expect(useUiStore.getState().palette).toBe(true);
     expect(ui.queryByTestId('theme-toggle')).toBeNull();

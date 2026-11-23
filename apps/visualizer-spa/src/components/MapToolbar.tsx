@@ -53,26 +53,28 @@ export function MapToolbar(props: MapToolbarProps) {
 
   return (
     <>
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b bg-background px-3 py-2" data-testid="toolbar">
-        <div className="flex min-w-0 items-center gap-2">
+      <header className="flex items-center gap-3 border-b bg-background px-3 py-2" data-testid="toolbar">
+        <div className="flex shrink-0 items-center gap-2">
           <MapSelect catalog={catalog} catalogLoading={catalogLoading} loader={loader} />
           {hasDocument ? <ViewTabs /> : null}
         </div>
 
+        <div className="flex min-w-0 flex-1 justify-center">
         <button
           type="button"
           onClick={() => setPalette(true)}
           aria-label="Поиск по проекту"
           title="Поиск по экранам, роутам, таблицам, эпохам, документам и файлам (⌘K, /)"
           data-testid="open-palette"
-          className="flex h-8 w-[min(420px,32vw)] items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-input/50"
+          className="flex h-8 w-full max-w-[420px] min-w-0 items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-input/50"
         >
           <Search className="size-4" strokeWidth={1.75} />
           <span className="flex-1 truncate text-left">Поиск</span>
           <Kbd>⌘K</Kbd>
         </button>
+        </div>
 
-        <div className="flex items-center justify-end gap-2">
+        <div className="flex shrink-0 items-center justify-end gap-2">
           {hasDocument ? <CommentsToolbarButton /> : null}
           <ToolbarButton
             icon={KeyRound}

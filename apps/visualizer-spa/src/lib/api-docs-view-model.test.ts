@@ -6,7 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildCodeIndex, type CodeIndex } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
-import { apiViewState, routeCard, routeOneLine, schemaInline } from './api-view-model';
+import { apiViewState, routeCard, routeEffects, routeOneLine, schemaInline } from './api-view-model';
 import {
   docsSections,
   epochDateLabel,
@@ -63,12 +63,41 @@ describe('вид «API» на korbor', () => {
     expect(line.text.length).toBeGreaterThan(0);
   });
 
-  test('дерево покрывает все роуты, разделы admin/employer/recruiter есть', () => {
+  test('домены покрывают все роуты; аудиторий admin/employer/recruiter среди доменов нет', () => {
     const s = apiViewState(index, {});
     expect(s.routes.length).toBe(korbor.code?.routes.length ?? -1);
-    const api = s.tree.find((t) => t.service.name === '@korbor/api');
-    expect(api?.sections.map((x) => x.prefix)).toEqual(expect.arrayContaining(['/api/v1/admin', '/api/v1/employer', '/api/v1/recruiter']));
+    const names = s.domains.map((d) => d.name);
+    expect(names).toEqual(expect.arrayContaining(['auth', 'vacancies', 'deals']));
+    expect(names.filter((n) => ['admin', 'employer', 'recruiter'].includes(n))).toEqual([]);
     expect(s.methods).toEqual(['GET', 'POST', 'PUT', 'PATCH', 'DELETE']);
+  });
+
+  test('доска: домен, параметры пути без схемы, таблицы с колонками, что меняет', () => {
+    const patch = index.code.routes.find((r) => r.method === 'PATCH' && r.path === '/api/v1/admin/vacancies/:id');
+    const card = patch === undefined ? null : routeCard(index, patch.id);
+    expect(card?.domain).toBe('vacancies');
+    const known = new Set(patch?.input?.params?.fields.map((f) => f.name) ?? []);
+    expect(card?.pathParams).toEqual(known.has('id') ? [] : ['id']);
+    const written = card?.tables.filter((t) => t.mode === 'write') ?? [];
+    expect(written.length).toBeGreaterThan(0);
+    expect(written.some((t) => t.columns.length > 0)).toBe(true);
+    expect(card?.effects.map((e) => e.label)).toContain('Обновляет');
+  });
+
+  test('что меняет: по виду операции, имя из БД; только чтение — пусто', () => {
+    expect(
+      routeEffects([
+        { table: 'orders', dbName: 'orders_tbl', operations: ['insert', 'update'], count: 2, inLoop: false },
+        { table: 'logs', operations: ['delete'], count: 1, inLoop: false },
+        { table: 'kv', operations: ['upsert'], count: 1, inLoop: false },
+      ]),
+    ).toEqual([
+      { label: 'Добавляет строки', tables: ['orders_tbl'] },
+      { label: 'Добавляет или обновляет', tables: ['kv'] },
+      { label: 'Обновляет', tables: ['orders_tbl'] },
+      { label: 'Удаляет', tables: ['logs'] },
+    ]);
+    expect(routeEffects([])).toEqual([]);
   });
 
   test('фильтр метода и таблицы сужает дерево, покрытие считается по отфильтрованным', () => {

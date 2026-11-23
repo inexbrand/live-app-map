@@ -58,7 +58,7 @@ export function MapSelect(props: MapSelectProps) {
     <OptionSelect
       aria-label="Карта"
       data-testid="map-select"
-      className="w-60 max-[900px]:w-44"
+      className="w-60 shrink-0 max-[900px]:w-44"
       placeholder={catalogLoading ? 'Каталог…' : 'Выберите карту…'}
       items={items}
       actions={[

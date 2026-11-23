@@ -1,5 +1,5 @@
 /**
- * Вид «API» как у пользователя: покрытие, дерево разделов, фильтры, список, карточка роута.
+ * Вид «API» как у пользователя: покрытие, домены, фильтры, список, доска роута.
  * Карта — настоящая korbor-miniapp (314 роутов korbor).
  */
 import { dumpDom, useDom, type Ui } from '../test/dom';
@@ -22,6 +22,17 @@ function view() {
   return { ui: within(r.container), container: r.container };
 }
 
+/** Раскрывает покрытие (свёрнуто по умолчанию). */
+function openCoverage(ui: Ui): HTMLElement {
+  fireEvent.click(within(ui.getByTestId('api-coverage-box')).getByRole('button'));
+  return ui.getByTestId('api-coverage');
+}
+
+/** Строки покрытия, которые включают фильтр. */
+function clickableCoverage(ui: Ui): HTMLElement[] {
+  return [...openCoverage(ui).querySelectorAll<HTMLElement>('[title^="Нажмите"]')];
+}
+
 function rows(ui: Ui): string[] {
   return ui.queryAllByTestId('api-route-row').map((b) => b.getAttribute('data-route-id') ?? '');
 }
@@ -33,11 +44,11 @@ describe('вид «API»', () => {
     dumpDom('api-empty', container);
   });
 
-  test('покрытие, дерево и список всех роутов', () => {
+  test('покрытие, домены и список всех роутов', () => {
     const doc = openMap('korbor-miniapp');
     const { ui, container } = view();
     const total = doc.code?.routes.length ?? 0;
-    const cov = within(ui.getByTestId('api-coverage')).getAllByRole('term').map((dt) => dt.textContent);
+    const cov = within(openCoverage(ui)).getAllByRole('term').map((dt) => dt.textContent);
     expect(cov).toEqual(['Описания авторов', 'Описания из кода', 'Проверка входа', 'Доступ', 'Вызываются экранами']);
     expect(within(ui.getByTestId('api-coverage')).getAllByRole('definition').every((dd) => dd.textContent?.endsWith(`из ${total}`))).toBe(true);
     expect(rows(ui)).toHaveLength(total);
@@ -46,27 +57,31 @@ describe('вид «API»', () => {
     dumpDom('api-all', container);
   });
 
-  test('раздел дерева сужает список и раскрывает модули; «Все роуты» возвращает', () => {
+  test('домены вместо сервисов и аудиторий; домен сужает список; «Все роуты» возвращает', () => {
     openMap('korbor-miniapp');
     const { ui, container } = view();
     const total = rows(ui).length;
-    const sections = ui.getAllByTestId('api-section');
-    const big = sections.find((s) => Number(s.querySelector('.api-count')?.textContent) > 1) ?? sections[0];
-    if (big === undefined) {
-      throw new Error('нет разделов');
+    const domains = ui.getAllByTestId('api-domain');
+    const names = domains.map((d) => d.querySelector('span')?.textContent ?? '');
+    expect(names).toEqual(expect.arrayContaining(['auth', 'vacancies', 'deals', 'candidates']));
+    for (const audience of ['admin', 'employer', 'recruiter']) {
+      expect(names).not.toContain(audience);
     }
-    fireEvent.click(big);
-    expect(useViewStore.getState().apiScope).toBe(big.getAttribute('title'));
-    expect(rows(ui).length).toBe(Number(big.querySelector('.api-count')?.textContent));
-    expect(big.className).toContain('api-tree__row--on');
+    expect(names).toEqual([...names].sort((a, b) => a.localeCompare(b)));
+    const count = (d: HTMLElement): number => Number(d.querySelectorAll('span')[1]?.textContent);
+    expect(domains.reduce((n, d) => n + count(d), 0)).toBe(total);
+    const vac = domains[names.indexOf('vacancies')];
+    if (vac === undefined) {
+      throw new Error('нет домена vacancies');
+    }
+    fireEvent.click(vac);
+    expect(useViewStore.getState().apiScope).toBe('vacancies');
+    expect(rows(ui).length).toBe(count(vac));
+    expect(vac.getAttribute('aria-pressed')).toBe('true');
+    const paths = rows(ui).map((id) => useAppStore.getState().document?.code?.routes.find((r) => r.id === id)?.path ?? '');
+    expect(paths.every((p) => p.includes('/vacancies'))).toBe(true);
+    expect(new Set(paths.map((p) => p.split('/')[3])).size).toBeGreaterThan(1);
     dumpDom('api-scope', container);
-    const modules = container.querySelectorAll('.api-tree__row--module');
-    const mod = modules[0];
-    if (mod instanceof HTMLElement) {
-      fireEvent.click(mod);
-      expect(useViewStore.getState().apiScope).toBe(mod.getAttribute('title'));
-      expect(rows(ui).length).toBe(Number(mod.querySelector('.api-count')?.textContent));
-    }
     fireEvent.click(ui.getByRole('button', { name: `Все роуты ${total}` }));
     expect(useViewStore.getState().apiScope).toBeNull();
   });
@@ -102,13 +117,17 @@ describe('вид «API»', () => {
 
   test('строки покрытия «Описания авторов» и «Вызываются экранами» включают фильтры', () => {
     openMap('korbor-miniapp');
-    const { container } = view();
-    const clickable = container.querySelectorAll('.api-coverage__row--click');
+    const { ui } = view();
+    const clickable = clickableCoverage(ui);
     expect(clickable).toHaveLength(2);
     clickable.forEach((row) => fireEvent.click(row));
     expect(useViewStore.getState().apiFilter).toEqual({ undocumented: true, noScreens: true });
     act(() => useViewStore.getState().setApiFilter({ methods: ['DELETE'] }));
-    fireEvent.click(container.querySelectorAll('.api-coverage__row--click')[0] ?? container);
+    const first = ui.getByTestId('api-coverage').querySelector<HTMLElement>('[title^="Нажмите"]');
+    if (first === null) {
+      throw new Error('нет строки покрытия');
+    }
+    fireEvent.click(first);
     expect(useViewStore.getState().apiFilter).toEqual({ methods: ['DELETE'], undocumented: true });
   });
 
@@ -121,7 +140,7 @@ describe('вид «API»', () => {
     }
   });
 
-  test('выбор роута: карточка; скрытый фильтром — «Показать все роуты»', () => {
+  test('выбор роута: доска; скрытый фильтром — «Показать все роуты»', () => {
     const doc = openMap('korbor-miniapp');
     const { ui, container } = view();
     const first = ui.getAllByTestId('api-route-row')[0];
@@ -131,7 +150,7 @@ describe('вид «API»', () => {
     fireEvent.click(first);
     const id = first.getAttribute('data-route-id') ?? '';
     expect(useViewStore.getState().route).toBe(id);
-    expect(first.className).toContain('api-row--on');
+    expect(first.getAttribute('aria-current')).toBe('true');
     const route = doc.code?.routes.find((r) => r.id === id);
     expect(within(ui.getByTestId('api-route-card')).getByText(route?.path ?? '-')).toBeTruthy();
     dumpDom('api-card-first', container);
@@ -143,7 +162,7 @@ describe('вид «API»', () => {
   });
 });
 
-describe('карточка роута', () => {
+describe('доска роута', () => {
   /** Роут, у которого карточка удовлетворяет условию. */
   function pick(cond: (c: NonNullable<ReturnType<typeof routeCard>>) => boolean): string {
     const doc = useAppStore.getState().document;
@@ -212,7 +231,7 @@ describe('карточка роута', () => {
     const id = pick((c) => c.summary !== undefined && /\n\s*\n/.test(c.summary));
     act(() => useViewStore.getState().openRoute(id));
     const { ui, container } = view();
-    const doc = () => ui.getByTestId('api-route-card').querySelector('.api-card__doc')?.textContent ?? '';
+    const doc = () => ui.getByTestId('api-route-card').querySelector('[data-testid="api-summary"]')?.textContent ?? '';
     const before = doc();
     dumpDom('api-card-summary', container);
     fireEvent.click(ui.getByRole('button', { name: 'Полностью' }));
@@ -233,10 +252,10 @@ describe('вид «API» без шума (аудит)', () => {
     const doc = openMap('korbor-miniapp');
     const { ui } = view();
     const total = doc.code?.routes.length ?? 0;
-    const box = ui.getByTestId('api-coverage-box');
-    expect(box.tagName).toBe('DETAILS');
-    expect(box.hasAttribute('open')).toBe(false);
-    expect(box.querySelector('summary')?.textContent).toMatch(new RegExp(`^Покрытие: описано \\d+ из ${total} · вызываются экранами \\d+ из ${total}$`));
+    const trigger = within(ui.getByTestId('api-coverage-box')).getByRole('button');
+    expect(trigger.getAttribute('aria-expanded')).toBe('false');
+    expect(ui.queryByTestId('api-coverage')).toBeNull();
+    expect(trigger.textContent).toMatch(new RegExp(`^Покрытие: описано \\d+ из ${total} · вызываются экранами \\d+ из ${total}$`));
   });
 
   test('ключ и замок — только у роутов, которые отличаются от большинства', () => {
@@ -246,19 +265,22 @@ describe('вид «API» без шума (аудит)', () => {
     const accessUsual = routes.filter((r) => r.access !== undefined).length * 2 >= routes.length;
     const deviating = routes.filter((r) => (r.input !== undefined) !== inputUsual || (r.access !== undefined) !== accessUsual).map((r) => r.id).sort();
     const { ui } = view();
-    const marked = ui.getAllByTestId('api-route-row').filter((b) => b.querySelector('.api-mark svg') !== null).map((b) => b.getAttribute('data-route-id') ?? '').sort();
+    const marked = ui.getAllByTestId('api-route-row').filter((b) => b.querySelector('[data-testid="api-mark"] svg') !== null).map((b) => b.getAttribute('data-route-id') ?? '').sort();
     expect(marked).toEqual(deviating);
     expect(marked.length).toBeLessThan(routes.length / 2);
-    const labels = new Set(ui.getAllByTestId('api-route-row').flatMap((b) => [...b.querySelectorAll('.api-mark svg')].map((s) => s.getAttribute('aria-label'))));
+    const labels = new Set(ui.getAllByTestId('api-route-row').flatMap((b) => [...b.querySelectorAll('[data-testid="api-mark"] svg')].map((s) => s.getAttribute('aria-label'))));
     for (const l of labels) {
       expect(['вход проверяется', 'вход не проверяется', 'доступ проверяется', 'доступ не проверяется']).toContain(l ?? '');
     }
   });
 
-  test('путь группы справа не повторяется', () => {
-    openMap('korbor-miniapp');
-    const { container } = view();
-    expect(container.querySelector('.api-module__prefix')).toBeNull();
-    expect(container.querySelectorAll('.api-module__title').length).toBeGreaterThan(0);
+  test('группы списка — те же домены, что слева, без имён сервисов', () => {
+    const doc = openMap('korbor-miniapp');
+    const { ui } = view();
+    const groups = ui.getAllByTestId('api-domain-group').map((g) => g.querySelector('h3')?.firstChild?.textContent?.trim() ?? '');
+    const domains = ui.getAllByTestId('api-domain').map((d) => d.querySelector('span')?.textContent ?? '');
+    expect(groups).toEqual(domains);
+    const serviceNames = (doc.code?.services ?? []).map((s) => s.name);
+    expect(groups.some((g) => serviceNames.includes(g))).toBe(false);
   });
 });

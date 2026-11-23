@@ -1,20 +1,23 @@
 /**
- * Вид «API»: архитектура API проекта — сервисы, разделы и модули роутов, фильтры
- * (поиск, метод, сервис, таблица, «без описания», «без экранов»), карточка роута:
- * авторское описание и собранное из кода, вход, доступ, таблицы, экраны (или почему
- * их нет), файл:строка. Переходы роут ↔ таблица ↔ экран.
+ * Вид «API»: роуты по доменам (не по сервисам), фильтры и доска выбранного роута —
+ * вход, ответ, доступ, таблицы с колонками, что меняет, экраны, код.
  */
 import { useEffect, useMemo, useRef, type RefObject } from 'react';
+import { ChevronRight, Search } from 'lucide-react';
 
 import { AUTO_DOC_NOTE, buildCodeIndex, type ApiFilter, type CodeIndex } from '@live-app-map/graph';
 import type { HttpMethod } from '@live-app-map/schema';
-import { apiViewState, routeCard, routeOneLine } from '../lib/api-view-model';
-
+import { Button } from '@/components/ui/button';
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
+import { Empty, EmptyDescription } from '@/components/ui/empty';
+import { Input } from '@/components/ui/input';
+import { InputGroup, InputGroupAddon, InputGroupInput } from '@/components/ui/input-group';
+import { Toggle } from '@/components/ui/toggle';
+import { cn } from '@/lib/utils';
+import { apiViewState, routeCard, routeOneLine, type ApiViewState } from '../lib/api-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
-import { Button, Chip, Input, Select } from '../ui';
-import { EmptyView } from '../ui/empty-view';
-import { Card, Marks, Method, usualChecks, type UsualChecks } from './ApiRouteCard';
+import { Marks, Method, RouteBoard, usualChecks, type UsualChecks } from './ApiRouteCard';
 
 /** Пустой фильтр. */
 const EMPTY: ApiFilter = {};
@@ -24,16 +27,14 @@ function filterCount(f: ApiFilter): number {
   return [
     f.query !== undefined && f.query !== '',
     (f.methods?.length ?? 0) > 0,
-    f.service !== undefined && f.service !== '',
     f.table !== undefined && f.table !== '',
     f.undocumented === true,
     f.noScreens === true,
   ].filter(Boolean).length;
 }
 
-type ApiState = NonNullable<ReturnType<typeof apiViewState>>;
-type Module = ApiState['tree'][number]['sections'][number]['modules'][number] & { readonly service: string };
-type Coverage = ApiState['coverage'];
+type Domain = ApiViewState['domains'][number];
+type Coverage = ApiViewState['coverage'];
 type SetFilter = (patch: Partial<ApiFilter>) => void;
 
 /** Список методов после щелчка по методу: был — убрать, не было — добавить. */
@@ -45,23 +46,6 @@ function toggledMethods(methods: readonly HttpMethod[] | undefined, m: HttpMetho
     now.add(m);
   }
   return [...now];
-}
-
-/** Префикс внутри выбранного раздела дерева (null — все). */
-function inScope(scope: string | null, prefix: string): boolean {
-  return scope === null || prefix === scope || prefix.startsWith(`${scope}/`);
-}
-
-/** Модули выбранного раздела, с именем сервиса. */
-function scopedModules(state: ApiState, scope: string | null): Module[] {
-  return state.tree.flatMap((s) =>
-    s.sections.flatMap((sec) => sec.modules.filter((m) => inScope(scope, m.prefix)).map((m) => ({ service: s.service.name, ...m }))),
-  );
-}
-
-/** Роуты больше чем одного сервиса — показывать сервисы. */
-function hasManyServices(index: CodeIndex): boolean {
-  return index.code.services.filter((s) => index.code.routes.some((r) => r.serviceId === s.id)).length > 1;
 }
 
 /** Строка покрытия. */
@@ -88,124 +72,110 @@ function percent(value: number, total: number): number {
   return total === 0 ? 0 : Math.round((value / total) * 100);
 }
 
-/** Покрытие API: одна строка-итог, строки с полосами — по раскрытию. */
+/** Покрытие API: строка-итог, строки с полосами — по раскрытию. */
 function CoverageList(props: { readonly cov: Coverage; readonly filter: ApiFilter; readonly set: SetFilter }) {
   const { cov } = props;
   return (
-    <details className="api-coverage-box" data-testid="api-coverage-box">
-      <summary>
+    <Collapsible data-testid="api-coverage-box" className="border-b border-border px-3 py-2">
+      <CollapsibleTrigger render={<Button variant="ghost" size="sm" className="h-auto w-full justify-start gap-1 px-1 py-1 text-left text-xs font-normal whitespace-normal text-muted-foreground" />}>
+        <ChevronRight className="size-3.5 shrink-0" />
         Покрытие: описано {cov.described} из {cov.routes} · вызываются экранами {cov.withScreens} из {cov.routes}
-      </summary>
-    <dl className="api-coverage" data-testid="api-coverage">
-      {coverageRows(cov, props.filter, props.set).map((c) => (
-        <div key={c.label} className={`api-coverage__row${c.onClick === undefined ? '' : ' api-coverage__row--click'}`} onClick={c.onClick} title={c.hint}>
-          <dt>{c.label}</dt>
-          <dd>
-            {c.value} из {cov.routes}
-          </dd>
-          <span className="api-coverage__bar">
-            <span style={{ width: `${percent(c.value, cov.routes)}%` }} />
-          </span>
-        </div>
-      ))}
-    </dl>
-    </details>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <dl className="mt-2 flex flex-col gap-2" data-testid="api-coverage">
+          {coverageRows(cov, props.filter, props.set).map((c) => (
+            <div
+              key={c.label}
+              className={cn('grid grid-cols-[1fr_auto] gap-x-2 gap-y-1 rounded-md px-1 py-1 text-xs', c.onClick !== undefined && 'cursor-pointer hover:bg-muted')}
+              onClick={c.onClick}
+              title={c.hint}
+            >
+              <dt className="text-muted-foreground">{c.label}</dt>
+              <dd className="tabular-nums">
+                {c.value} из {cov.routes}
+              </dd>
+              <span className="col-span-2 h-1 overflow-hidden rounded-full bg-muted">
+                <span className="block h-full bg-foreground/60" style={{ width: `${percent(c.value, cov.routes)}%` }} />
+              </span>
+            </div>
+          ))}
+        </dl>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
-/** Класс строки дерева: выбранная подсвечена. */
-function treeRowClass(base: string, on: boolean): string {
-  return `${base}${on ? ' api-tree__row--on' : ''}`;
-}
-
-/** Раздел дерева и, если он открыт и модулей несколько, его модули. */
-function TreeSection(props: { readonly sec: ApiState['tree'][number]['sections'][number]; readonly scope: string | null; readonly setScope: (p: string | null) => void }) {
-  const { sec, scope, setScope } = props;
-  const showModules = inScope(scope, sec.prefix) && scope !== null && sec.modules.length > 1;
+/** Строка списка доменов. */
+function DomainRow(props: { readonly label: string; readonly count: number; readonly on: boolean; readonly onClick: () => void; readonly testId?: string }) {
   return (
-    <div>
-      <button type="button" className={treeRowClass('api-tree__row', scope === sec.prefix)} onClick={() => setScope(sec.prefix)} title={sec.prefix} data-testid="api-section">
-        <span>{sec.name}</span>
-        <span className="api-count">{sec.count}</span>
-      </button>
-      {showModules
-        ? sec.modules.map((m) => (
-            <button key={m.prefix} type="button" className={treeRowClass('api-tree__row api-tree__row--module', scope === m.prefix)} onClick={() => setScope(m.prefix)} title={m.prefix}>
-              <span>{m.name}</span>
-              <span className="api-count">{m.routes.length}</span>
-            </button>
-          ))
-        : null}
-    </div>
+    <Button
+      variant={props.on ? 'secondary' : 'ghost'}
+      size="sm"
+      className="w-full justify-between font-normal"
+      onClick={props.onClick}
+      aria-pressed={props.on}
+      data-testid={props.testId}
+    >
+      <span className="truncate">{props.label}</span>
+      <span className="text-xs text-muted-foreground tabular-nums">{props.count}</span>
+    </Button>
   );
 }
 
-/** Дерево разделов: все роуты, сервисы, разделы, модули. */
-function ApiTree(props: { readonly state: ApiState; readonly multiService: boolean; readonly scope: string | null; readonly setScope: (p: string | null) => void }) {
+/** Домены: «Все роуты» и домены по алфавиту. */
+function DomainList(props: { readonly state: ApiViewState; readonly scope: string | null; readonly setScope: (d: string | null) => void }) {
   const { state, scope, setScope } = props;
   return (
-    <nav className="api-tree__nav" aria-label="Разделы API">
-      <button type="button" className={treeRowClass('api-tree__row', scope === null)} onClick={() => setScope(null)}>
-        <span>Все роуты</span>
-        <span className="api-count">{state.routes.length}</span>
-      </button>
-      {state.tree.map((s) => (
-        <div key={s.service.id} className="api-tree__service">
-          {props.multiService ? <p className="api-tree__service-name">{s.service.name}</p> : null}
-          {s.sections.map((sec) => (
-            <TreeSection key={sec.prefix} sec={sec} scope={scope} setScope={setScope} />
-          ))}
-        </div>
+    <nav className="flex min-h-0 flex-1 flex-col gap-0.5 overflow-y-auto p-2" aria-label="Домены API">
+      <DomainRow label="Все роуты" count={state.routes.length} on={scope === null} onClick={() => setScope(null)} />
+      {state.domains.map((d) => (
+        <DomainRow key={d.name} label={d.name} count={d.routes.length} on={scope === d.name} onClick={() => setScope(d.name)} testId="api-domain" />
       ))}
     </nav>
   );
 }
 
-/** Фильтры списка: поиск, методы, сервис, таблица, «без описания», «без экранов», сброс. */
-function ApiFilters(props: { readonly index: CodeIndex; readonly state: ApiState; readonly filter: ApiFilter; readonly set: SetFilter; readonly reset: () => void; readonly multiService: boolean }) {
+/** Переключатель фильтра. */
+function FilterToggle(props: { readonly on: boolean; readonly onChange: () => void; readonly testId: string; readonly title?: string; readonly children: string }) {
+  return (
+    <Toggle variant="outline" size="sm" pressed={props.on} onPressedChange={props.onChange} data-testid={props.testId} title={props.title}>
+      {props.children}
+    </Toggle>
+  );
+}
+
+/** Фильтры списка: поиск, методы, таблица, «без описания», «без экранов», сброс. */
+function ApiFilters(props: { readonly index: CodeIndex; readonly state: ApiViewState; readonly filter: ApiFilter; readonly set: SetFilter; readonly reset: () => void }) {
   const { index, state, filter, set } = props;
   const n = filterCount(filter);
   return (
-    <div className="api-filters" role="search">
-      <Input id="api-search" aria-label="Поиск роутов" value={filter.query ?? ''} placeholder="Путь, описание, обработчик, файл" onChange={(e) => set({ query: e.target.value })} />
-      <div className="api-filters__row">
+    <div className="flex flex-col gap-2 border-b border-border p-3" role="search">
+      <InputGroup>
+        <InputGroupAddon>
+          <Search />
+        </InputGroupAddon>
+        <InputGroupInput id="api-search" aria-label="Поиск роутов" value={filter.query ?? ''} placeholder="Путь, описание, обработчик, файл" onChange={(e) => set({ query: e.target.value })} />
+      </InputGroup>
+      <div className="flex flex-wrap items-center gap-1.5">
         {state.methods.map((m) => (
-          <Chip key={m} active={filter.methods?.includes(m) === true} onClick={() => set({ methods: toggledMethods(filter.methods, m) })} data-testid={`api-method-${m}`}>
+          <FilterToggle key={m} on={filter.methods?.includes(m) === true} onChange={() => set({ methods: toggledMethods(filter.methods, m) })} testId={`api-method-${m}`}>
             {m}
-          </Chip>
+          </FilterToggle>
         ))}
-        {props.multiService ? (
-          <Select aria-label="Сервис" value={filter.service ?? ''} onChange={(e) => set({ service: e.target.value })}>
-            <option value="">Все сервисы</option>
-            {state.tree.map((s) => (
-              <option key={s.service.id} value={s.service.id}>
-                {s.service.name}
-              </option>
-            ))}
-          </Select>
-        ) : null}
-        <Input
-          id="api-table"
-          list="api-tables"
-          aria-label="Таблица"
-          className="api-filters__table"
-          value={filter.table ?? ''}
-          placeholder="Таблица"
-          onChange={(e) => set({ table: e.target.value })}
-        />
+        <Input id="api-table" list="api-tables" aria-label="Таблица" className="h-7 w-32" value={filter.table ?? ''} placeholder="Таблица" onChange={(e) => set({ table: e.target.value })} />
         <datalist id="api-tables">
           {index.code.tables.map((t) => (
             <option key={t.id} value={t.name} />
           ))}
         </datalist>
-        <Chip active={filter.undocumented === true} onClick={() => set({ undocumented: filter.undocumented !== true })} data-testid="api-undocumented" title="Без авторского описания">
+        <FilterToggle on={filter.undocumented === true} onChange={() => set({ undocumented: filter.undocumented !== true })} testId="api-undocumented" title="Без авторского описания">
           Без описания
-        </Chip>
-        <Chip active={filter.noScreens === true} onClick={() => set({ noScreens: filter.noScreens !== true })} data-testid="api-no-screens">
+        </FilterToggle>
+        <FilterToggle on={filter.noScreens === true} onChange={() => set({ noScreens: filter.noScreens !== true })} testId="api-no-screens">
           Без экранов
-        </Chip>
+        </FilterToggle>
         {n === 0 ? null : (
-          <Button type="button" size="sm" variant="ghost" onClick={props.reset}>
+          <Button size="sm" variant="ghost" onClick={props.reset}>
             Сбросить ({n})
           </Button>
         )}
@@ -215,18 +185,26 @@ function ApiFilters(props: { readonly index: CodeIndex; readonly state: ApiState
 }
 
 /** Строка роута в списке. */
-function RouteRow(props: { readonly index: CodeIndex; readonly route: Module['routes'][number]; readonly usual: UsualChecks; readonly selected: string | null; readonly openRoute: (id: string) => void }) {
+function RouteRow(props: { readonly index: CodeIndex; readonly route: Domain['routes'][number]; readonly usual: UsualChecks; readonly selected: string | null; readonly openRoute: (id: string) => void }) {
   const { route: r } = props;
   const line = routeOneLine(props.index, r);
+  const on = r.id === props.selected;
   return (
     <li>
-      <button type="button" className={`api-row${r.id === props.selected ? ' api-row--on' : ''}`} onClick={() => props.openRoute(r.id)} data-route-id={r.id} data-testid="api-route-row">
-        <span className="api-row__line">
+      <button
+        type="button"
+        className={cn('flex w-full flex-col gap-0.5 rounded-md px-2 py-1.5 text-left hover:bg-muted', on && 'bg-muted')}
+        onClick={() => props.openRoute(r.id)}
+        aria-current={on ? 'true' : undefined}
+        data-route-id={r.id}
+        data-testid="api-route-row"
+      >
+        <span className="flex items-center gap-2">
           <Method method={r.method} />
-          <span className="api-row__path">{r.path}</span>
+          <span className="min-w-0 flex-1 truncate font-mono text-xs">{r.path}</span>
           <Marks route={r} usual={props.usual} />
         </span>
-        <span className={`api-row__doc${line.auto ? ' api-row__doc--auto' : ''}`} title={line.auto ? AUTO_DOC_NOTE : undefined}>
+        <span className={cn('line-clamp-1 pl-14 text-xs text-muted-foreground', line.auto && 'italic')} title={line.auto ? AUTO_DOC_NOTE : undefined}>
           {line.text}
         </span>
       </button>
@@ -238,39 +216,39 @@ function RouteRow(props: { readonly index: CodeIndex; readonly route: Module['ro
 function NothingFound(props: { readonly query: string | undefined; readonly reset: () => void }) {
   const q = props.query;
   return (
-    <div className="api-empty">
-      <p>Ничего не найдено{q === undefined || q === '' ? '' : ` по «${q}»`}.</p>
-      <Button type="button" size="sm" variant="outline" onClick={props.reset}>
+    <Empty className="py-8">
+      <EmptyDescription>Ничего не найдено{q === undefined || q === '' ? '' : ` по «${q}»`}.</EmptyDescription>
+      <Button size="sm" variant="outline" onClick={props.reset}>
         Сбросить фильтры
       </Button>
-    </div>
+    </Empty>
   );
 }
 
-/** Список модулей с роутами; выбранный скрыт фильтром — подсказка. */
-function RouteList(props: { readonly index: CodeIndex; readonly modules: readonly Module[]; readonly selected: string | null; readonly openRoute: (id: string) => void; readonly query: string | undefined; readonly resetAll: () => void }) {
-  const { modules, selected } = props;
+/** Список доменов с роутами; выбранный скрыт фильтром — подсказка. */
+function RouteList(props: { readonly index: CodeIndex; readonly domains: readonly Domain[]; readonly selected: string | null; readonly openRoute: (id: string) => void; readonly query: string | undefined; readonly resetAll: () => void }) {
+  const { domains, selected } = props;
   const usual = useMemo(() => usualChecks(props.index.code.routes), [props.index]);
-  const shown = modules.reduce((n, m) => n + m.routes.length, 0);
-  const hiddenSelected = selected !== null && !modules.some((m) => m.routes.some((r) => r.id === selected));
+  const shown = domains.reduce((n, d) => n + d.routes.length, 0);
+  const hiddenSelected = selected !== null && !domains.some((d) => d.routes.some((r) => r.id === selected));
   return (
     <>
       {hiddenSelected && shown > 0 ? (
-        <div className="api-empty api-empty--inline" data-testid="api-hidden-selected">
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border p-2 text-xs" data-testid="api-hidden-selected">
           <p>Выбранный роут скрыт фильтром.</p>
-          <Button type="button" size="sm" variant="outline" onClick={props.resetAll}>
+          <Button size="sm" variant="outline" onClick={props.resetAll}>
             Показать все роуты
           </Button>
         </div>
       ) : null}
       {shown === 0 ? <NothingFound query={props.query} reset={props.resetAll} /> : null}
-      {modules.map((m) => (
-        <section key={`${m.service}${m.prefix}`} className="api-module">
-          <h3 className="api-module__title" title={m.prefix}>
-            {m.name} <span className="api-count">{m.routes.length}</span>
+      {domains.map((d) => (
+        <section key={d.name} className="flex flex-col gap-0.5" data-testid="api-domain-group">
+          <h3 className="sticky top-0 z-10 bg-background px-2 py-1 text-sm font-medium">
+            {d.name} <span className="text-xs font-normal text-muted-foreground tabular-nums">{d.routes.length}</span>
           </h3>
-          <ul>
-            {m.routes.map((r) => (
+          <ul className="flex flex-col">
+            {d.routes.map((r) => (
               <RouteRow key={r.id} index={props.index} route={r} usual={usual} selected={selected} openRoute={props.openRoute} />
             ))}
           </ul>
@@ -301,16 +279,18 @@ export function ApiView() {
 
   if (index === null || state === null) {
     return (
-      <EmptyView view="api-view">
-        В карте нет роутов API. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code>.
-      </EmptyView>
+      <Empty data-testid="api-view" className="h-full">
+        <EmptyDescription>
+          В карте нет роутов API. Сканируйте с исходниками: <code>scan --code-dir &lt;корень репо&gt;</code>.
+        </EmptyDescription>
+      </Empty>
     );
   }
   return <ApiLayout index={index} state={state} filter={filter} selected={selected} listRef={listRef} />;
 }
 
-/** Три колонки вида: дерево с покрытием, список с фильтрами, карточка роута. */
-function ApiLayout(props: { readonly index: CodeIndex; readonly state: ApiState; readonly filter: ApiFilter; readonly selected: string | null; readonly listRef: RefObject<HTMLDivElement | null> }) {
+/** Колонки вида: домены с покрытием, список с фильтрами, доска роута. */
+function ApiLayout(props: { readonly index: CodeIndex; readonly state: ApiViewState; readonly filter: ApiFilter; readonly selected: string | null; readonly listRef: RefObject<HTMLDivElement | null> }) {
   const { index, state, filter, selected } = props;
   const openRoute = useViewStore((s) => s.openRoute);
   const setFilter = useViewStore((s) => s.setApiFilter);
@@ -321,28 +301,28 @@ function ApiLayout(props: { readonly index: CodeIndex; readonly state: ApiState;
     setFilter(EMPTY);
     setScope(null);
   };
-  const multiService = hasManyServices(index);
   const card = selected === null ? null : routeCard(index, selected);
+  const domains = scope === null ? state.domains : state.domains.filter((d) => d.name === scope);
   return (
-    <div className="api-view" data-testid="api-view">
-      <aside className="api-tree">
+    <div className="grid h-full min-h-0 grid-cols-[200px_minmax(320px,420px)_1fr] bg-background text-foreground" data-testid="api-view">
+      <aside className="flex min-h-0 flex-col border-r border-border">
         <CoverageList cov={state.coverage} filter={filter} set={set} />
-        <ApiTree state={state} multiService={multiService} scope={scope} setScope={setScope} />
+        <DomainList state={state} scope={scope} setScope={setScope} />
       </aside>
 
-      <section className="api-list">
-        <ApiFilters index={index} state={state} filter={filter} set={set} reset={() => setFilter(EMPTY)} multiService={multiService} />
-        <div className="api-list__scroll" ref={props.listRef}>
-          <RouteList index={index} modules={scopedModules(state, scope)} selected={selected} openRoute={openRoute} query={filter.query} resetAll={resetAll} />
+      <section className="flex min-h-0 flex-col border-r border-border">
+        <ApiFilters index={index} state={state} filter={filter} set={set} reset={() => setFilter(EMPTY)} />
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2" ref={props.listRef}>
+          <RouteList index={index} domains={domains} selected={selected} openRoute={openRoute} query={filter.query} resetAll={resetAll} />
         </div>
       </section>
 
       {card === null ? (
-        <aside className="api-card api-card--empty">
-          <p className="api-card__empty">Выберите роут — {index.code.routes.length} в карте.</p>
-        </aside>
+        <Empty className="h-full">
+          <EmptyDescription>Выберите роут — {index.code.routes.length} в карте.</EmptyDescription>
+        </Empty>
       ) : (
-        <Card card={card} />
+        <RouteBoard card={card} />
       )}
     </div>
   );

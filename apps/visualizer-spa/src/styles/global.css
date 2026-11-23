@@ -25,16 +25,19 @@ body,
   text-rendering: optimizeLegibility;
 }
 
-button,
-input,
-select,
-textarea {
-  font: inherit;
-  color: inherit;
-}
+/* В слое base: иначе правило без слоя перебивает утилиты Tailwind (цвет текста кнопок shadcn). */
+@layer base {
+  button,
+  input,
+  select,
+  textarea {
+    font: inherit;
+    color: inherit;
+  }
 
-button {
-  cursor: pointer;
+  button {
+    cursor: pointer;
+  }
 }
 
 code,
