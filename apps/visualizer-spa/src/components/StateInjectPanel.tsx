@@ -76,12 +76,6 @@ function SidePanel(props: { readonly title: string; readonly description?: strin
   );
 }
 
-/** Роли «Глобальная роль»; пустое значение — без роли. */
-const ROLE_ITEMS = [
-  { value: 'recruiter', label: 'Рекрутер' },
-  { value: 'employer', label: 'Клиент (работодатель)' },
-];
-
 /** Drawer сервиса: панель кода. */
 function ServiceDrawer(props: { readonly node: MapNode; readonly codeView: CodeView }) {
   const { node, codeView } = props;
@@ -144,19 +138,12 @@ function PageActions(props: { readonly node: MapNode; readonly liveUrl: string |
 /** Drawer экрана: живой URL, роль, стейты, действия, код. */
 function PageDrawer(props: { readonly node: MapNode; readonly codeView: CodeView }) {
   const { node, codeView } = props;
-  const globalRole = useAppStore((s) => s.globalRole);
-  const setGlobalRole = useAppStore((s) => s.setGlobalRole);
   const liveUrl = useAppStore((s) => s.resolveLiveUrl(node.id));
   return (
     <SidePanel title={node.title} description={node.pathExample ?? node.pathPattern} testId="page-drawer">
       <Field>
         <FieldLabel htmlFor="live-url-view">Живой URL</FieldLabel>
         <Textarea id="live-url-view" className="font-mono text-xs" readOnly rows={3} value={liveUrl ?? '—'} />
-      </Field>
-
-      <Field>
-        <FieldLabel htmlFor="node-global-role">Глобальная роль</FieldLabel>
-        <OptionSelect id="node-global-role" aria-label="Глобальная роль" value={globalRole} onValueChange={setGlobalRole} items={ROLE_ITEMS} placeholder="Без роли" />
       </Field>
 
       <StateChips node={node} />

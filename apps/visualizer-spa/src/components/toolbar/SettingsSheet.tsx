@@ -36,12 +36,6 @@ const PRESET_NOTE: Readonly<Record<string, string>> = {
   w1920: ' · монитор',
 };
 
-/** Роли «Смотреть как»; пустое значение — без роли. */
-const ROLE_ITEMS = [
-  { value: 'recruiter', label: 'Рекрутер' },
-  { value: 'employer', label: 'Клиент (работодатель)' },
-];
-
 /** Тема интерфейса: светлая или тёмная (то же делает клавиша T). */
 function ThemeField() {
   const [theme, setTheme] = useState<Theme>(currentTheme);
@@ -147,19 +141,6 @@ function ScaleField() {
   );
 }
 
-/** Роль, от лица которой открываются экраны. */
-function RoleField() {
-  const globalRole = useAppStore((s) => s.globalRole);
-  const setGlobalRole = useAppStore((s) => s.setGlobalRole);
-  return (
-    <Field>
-      <FieldLabel htmlFor="set-role">Смотреть как</FieldLabel>
-      <OptionSelect id="set-role" aria-label="Смотреть как" value={globalRole} onValueChange={setGlobalRole} items={ROLE_ITEMS} placeholder="Без роли" />
-      <FieldDescription>Экраны мини-приложения откроются от лица этой роли.</FieldDescription>
-    </Field>
-  );
-}
-
 /** Техника: сколько экранов живут, адрес приложения, прокси. */
 function DeveloperBlock() {
   const maxLive = useAppStore((s) => s.maxLiveIframes);
@@ -218,7 +199,6 @@ export function SettingsSheet(props: SettingsSheetProps) {
       <IframeBudgetLine />
       <ScaleField />
       <MapAdaptiveField />
-      <RoleField />
       <DeveloperBlock />
     </EdgeSheet>
   );

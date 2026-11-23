@@ -199,7 +199,7 @@ describe('лист настроек', () => {
     fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
     const dialog = ui.getByRole('dialog', { name: 'Настройки просмотра' });
     const ui2 = within(dialog);
-    expect(ui2.getByRole('combobox', { name: 'Смотреть как' })).toBeTruthy();
+    expect(ui2.queryByRole('combobox', { name: 'Смотреть как' })).toBeNull();
     expect(ui2.queryByLabelText('Адрес приложения')).toBeNull();
     fireEvent.click(ui2.getByRole('button', { name: 'Для разработчика' }));
     expect(ui2.getByRole('combobox', { name: 'Сколько экранов живут одновременно' })).toBeTruthy();
@@ -208,7 +208,7 @@ describe('лист настроек', () => {
     expect(dialog.textContent).not.toMatch(/iframe|unmount|keep-alive|layout JSON|measure|miniapp/);
   });
 
-  test('бюджет, масштаб, лимиты, роль, базовый URL', async () => {
+  test('бюджет, масштаб, лимиты, базовый URL', async () => {
     openMap('korbor-miniapp');
     const { ui } = toolbar();
     fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
@@ -225,8 +225,6 @@ describe('лист настроек', () => {
     expect(sheet.getByTestId('iframe-budget').textContent).not.toContain(' из 9999');
     await pickOption(sheet.getByRole('combobox', { name: 'Сколько экранов держать на паузе' }), '0 — выгружать сразу');
     expect(useAppStore.getState().maxWarmIframes).toBe(0);
-    await pickOption(sheet.getByRole('combobox', { name: 'Смотреть как' }), 'Клиент (работодатель)');
-    expect(useAppStore.getState().globalRole).toBe('employer');
     fireEvent.change(sheet.getByLabelText('Адрес приложения'), { target: { value: 'http://localhost:5175' } });
     fireEvent.blur(sheet.getByLabelText('Адрес приложения'));
     expect(useAppStore.getState().baseUrlOverride).toBe('http://localhost:5175');
