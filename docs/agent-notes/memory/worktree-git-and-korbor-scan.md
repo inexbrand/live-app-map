@@ -29,6 +29,7 @@ metadata:
 - `ls` тоже обёрнут rtk и добавляет размер к имени файла — в скриптах `/bin/ls -1`.
 - «Сравнение» в worktree на свежем master показывает «изменений нет» — в e2e не требовать там прокрутку (2026-11-23).
 - Глобального python нет — скрипты ~/.claude запускать через python3.
+- Хук stop-auto-commit коммитит всё неотслеживаемое (так в master попал codedb.snapshot 24 МБ, PR #25 → убран в #26 и в .gitignore): перед слиянием смотреть `gh pr view N --json files`.
 
 **Why:** на этом потеряно время в задачах api-docs-views и e2e-green.
 **How to apply:** перед git- и scan-командами в worktree live-app-map. См. [[visualizer-dev-runtime]].
