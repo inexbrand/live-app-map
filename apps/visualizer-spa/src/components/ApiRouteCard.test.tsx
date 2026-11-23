@@ -8,7 +8,7 @@ import { fireEvent, render, within } from '@testing-library/react';
 import type { ApiRoute, HttpMethod } from '@live-app-map/schema';
 import type { RouteCard } from '../lib/api-view-model';
 import { resetStores } from '../test/fixtures';
-import { Card, Marks, Method } from './ApiRouteCard';
+import { Card, Marks, Method, usualChecks } from './ApiRouteCard';
 
 useDom();
 
@@ -118,13 +118,23 @@ test('метод: цвет по виду — чтение, удаление, з�
   ]);
 });
 
-test('отметки строки: подсказки и значки входа и доступа', () => {
-  const marks = (route: ApiRoute) => {
-    const r = render(<Marks route={route} />);
+test('отметки строки: значок только у отличия от большинства', () => {
+  const marks = (route: ApiRoute, usual = { input: false, access: false }) => {
+    const r = render(<Marks route={route} usual={usual} />);
     const out = [...r.container.querySelectorAll('.api-mark')].map((m) => `${m.getAttribute('title')}|${m.querySelector('svg')?.getAttribute('aria-label') ?? ''}`);
     r.unmount();
     return out;
   };
   expect(marks(ROUTE)).toEqual(['Схемы входа нет|', 'Проверок доступа в коде нет|']);
-  expect(marks({ ...ROUTE, input: { body: { kind: 'zod', fields: [] } }, access: {} })).toEqual(['Есть проверка входа (схема)|вход проверяется', 'Есть проверка доступа|доступ проверяется']);
+  const checked: ApiRoute = { ...ROUTE, input: { body: { kind: 'zod', fields: [] } }, access: {} };
+  expect(marks(checked)).toEqual(['Есть проверка входа (схема)|вход проверяется', 'Есть проверка доступа|доступ проверяется']);
+  const allChecked = { input: true, access: true };
+  expect(marks(checked, allChecked)).toEqual(['Есть проверка входа (схема)|', 'Есть проверка доступа|']);
+  expect(marks(ROUTE, allChecked)).toEqual(['Схемы входа нет|вход не проверяется', 'Проверок доступа в коде нет|доступ не проверяется']);
+});
+
+test('обычное для карты — признак у половины роутов и больше', () => {
+  const withInput: ApiRoute = { ...ROUTE, input: { body: { kind: 'zod', fields: [] } } };
+  expect(usualChecks([withInput, ROUTE])).toEqual({ input: true, access: false });
+  expect(usualChecks([withInput, ROUTE, ROUTE])).toEqual({ input: false, access: false });
 });

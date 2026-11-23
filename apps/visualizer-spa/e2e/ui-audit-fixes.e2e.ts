@@ -84,6 +84,30 @@ test.describe('ошибки загрузки', () => {
   });
 });
 
+test.describe('API', () => {
+  test('покрытие свёрнуто, значков у обычных роутов нет, описание из кода без курсива', async ({ page }) => {
+    await page.setViewportSize({ width: 1600, height: 1000 });
+    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=api');
+    await expect(page.getByTestId('api-view')).toBeVisible({ timeout: 30_000 });
+    await page.keyboard.press('Escape');
+    const box = page.getByTestId('api-coverage-box');
+    await expect(box.locator('summary')).toContainText('Покрытие: описано');
+    await expect(page.getByTestId('api-coverage')).toBeHidden();
+    const rows = page.getByTestId('api-route-row');
+    const total = await rows.count();
+    const marked = await page.locator('[data-testid=api-route-row]:has(.api-mark svg)').count();
+    expect(marked).toBeLessThan(total / 2);
+    await expect(page.locator('.api-module__prefix')).toHaveCount(0);
+    const auto = page.locator('.api-row__doc--auto').first();
+    if ((await auto.count()) > 0) {
+      expect(await auto.evaluate((el) => getComputedStyle(el).fontStyle)).toBe('normal');
+    }
+    await shot(page, 'after-api.png');
+    await box.locator('summary').click();
+    await expect(page.getByTestId('api-coverage')).toBeVisible();
+  });
+});
+
 test.describe('шапка', () => {
   test('на 768 px шапка не шире окна, «Источников» нет, крошка-дубль вкладки скрыта', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1000 });

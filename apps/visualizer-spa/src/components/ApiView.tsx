@@ -14,7 +14,7 @@ import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Button, Chip, Input, Select } from '../ui';
 import { EmptyView } from '../ui/empty-view';
-import { Card, Marks, Method } from './ApiRouteCard';
+import { Card, Marks, Method, usualChecks, type UsualChecks } from './ApiRouteCard';
 
 /** Пустой фильтр. */
 const EMPTY: ApiFilter = {};
@@ -88,10 +88,14 @@ function percent(value: number, total: number): number {
   return total === 0 ? 0 : Math.round((value / total) * 100);
 }
 
-/** Покрытие API: строки с полосами. */
+/** Покрытие API: одна строка-итог, строки с полосами — по раскрытию. */
 function CoverageList(props: { readonly cov: Coverage; readonly filter: ApiFilter; readonly set: SetFilter }) {
   const { cov } = props;
   return (
+    <details className="api-coverage-box" data-testid="api-coverage-box">
+      <summary>
+        Покрытие: описано {cov.described} из {cov.routes} · вызываются экранами {cov.withScreens} из {cov.routes}
+      </summary>
     <dl className="api-coverage" data-testid="api-coverage">
       {coverageRows(cov, props.filter, props.set).map((c) => (
         <div key={c.label} className={`api-coverage__row${c.onClick === undefined ? '' : ' api-coverage__row--click'}`} onClick={c.onClick} title={c.hint}>
@@ -105,6 +109,7 @@ function CoverageList(props: { readonly cov: Coverage; readonly filter: ApiFilte
         </div>
       ))}
     </dl>
+    </details>
   );
 }
 
@@ -210,7 +215,7 @@ function ApiFilters(props: { readonly index: CodeIndex; readonly state: ApiState
 }
 
 /** Строка роута в списке. */
-function RouteRow(props: { readonly index: CodeIndex; readonly route: Module['routes'][number]; readonly selected: string | null; readonly openRoute: (id: string) => void }) {
+function RouteRow(props: { readonly index: CodeIndex; readonly route: Module['routes'][number]; readonly usual: UsualChecks; readonly selected: string | null; readonly openRoute: (id: string) => void }) {
   const { route: r } = props;
   const line = routeOneLine(props.index, r);
   return (
@@ -219,7 +224,7 @@ function RouteRow(props: { readonly index: CodeIndex; readonly route: Module['ro
         <span className="api-row__line">
           <Method method={r.method} />
           <span className="api-row__path">{r.path}</span>
-          <Marks route={r} />
+          <Marks route={r} usual={props.usual} />
         </span>
         <span className={`api-row__doc${line.auto ? ' api-row__doc--auto' : ''}`} title={line.auto ? AUTO_DOC_NOTE : undefined}>
           {line.text}
@@ -245,6 +250,7 @@ function NothingFound(props: { readonly query: string | undefined; readonly rese
 /** Список модулей с роутами; выбранный скрыт фильтром — подсказка. */
 function RouteList(props: { readonly index: CodeIndex; readonly modules: readonly Module[]; readonly selected: string | null; readonly openRoute: (id: string) => void; readonly query: string | undefined; readonly resetAll: () => void }) {
   const { modules, selected } = props;
+  const usual = useMemo(() => usualChecks(props.index.code.routes), [props.index]);
   const shown = modules.reduce((n, m) => n + m.routes.length, 0);
   const hiddenSelected = selected !== null && !modules.some((m) => m.routes.some((r) => r.id === selected));
   return (
@@ -260,13 +266,12 @@ function RouteList(props: { readonly index: CodeIndex; readonly modules: readonl
       {shown === 0 ? <NothingFound query={props.query} reset={props.resetAll} /> : null}
       {modules.map((m) => (
         <section key={`${m.service}${m.prefix}`} className="api-module">
-          <h3 className="api-module__title">
+          <h3 className="api-module__title" title={m.prefix}>
             {m.name} <span className="api-count">{m.routes.length}</span>
-            <span className="api-module__prefix">{m.prefix}</span>
           </h3>
           <ul>
             {m.routes.map((r) => (
-              <RouteRow key={r.id} index={props.index} route={r} selected={selected} openRoute={props.openRoute} />
+              <RouteRow key={r.id} index={props.index} route={r} usual={usual} selected={selected} openRoute={props.openRoute} />
             ))}
           </ul>
         </section>

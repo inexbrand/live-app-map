@@ -228,3 +228,38 @@ describe('карточка роута', () => {
     expect(within(ui.getByTestId('api-route-card')).getByText(/^Авторского описания нет — добавьте комментарий над обработчиком/)).toBeTruthy();
   });
 });
+
+describe('вид «API» без шума (аудит)', () => {
+  test('покрытие свёрнуто в одну строку и раскрывается', () => {
+    const doc = openMap('korbor-miniapp');
+    const { ui } = view();
+    const total = doc.code?.routes.length ?? 0;
+    const box = ui.getByTestId('api-coverage-box');
+    expect(box.tagName).toBe('DETAILS');
+    expect(box.hasAttribute('open')).toBe(false);
+    expect(box.querySelector('summary')?.textContent).toMatch(new RegExp(`^Покрытие: описано \\d+ из ${total} · вызываются экранами \\d+ из ${total}$`));
+  });
+
+  test('ключ и замок — только у роутов, которые отличаются от большинства', () => {
+    const doc = openMap('korbor-miniapp');
+    const routes = doc.code?.routes ?? [];
+    const inputUsual = routes.filter((r) => r.input !== undefined).length * 2 >= routes.length;
+    const accessUsual = routes.filter((r) => r.access !== undefined).length * 2 >= routes.length;
+    const deviating = routes.filter((r) => (r.input !== undefined) !== inputUsual || (r.access !== undefined) !== accessUsual).map((r) => r.id).sort();
+    const { ui } = view();
+    const marked = ui.getAllByTestId('api-route-row').filter((b) => b.querySelector('.api-mark svg') !== null).map((b) => b.getAttribute('data-route-id') ?? '').sort();
+    expect(marked).toEqual(deviating);
+    expect(marked.length).toBeLessThan(routes.length / 2);
+    const labels = new Set(ui.getAllByTestId('api-route-row').flatMap((b) => [...b.querySelectorAll('.api-mark svg')].map((s) => s.getAttribute('aria-label'))));
+    for (const l of labels) {
+      expect(['вход проверяется', 'вход не проверяется', 'доступ проверяется', 'доступ не проверяется']).toContain(l ?? '');
+    }
+  });
+
+  test('путь группы справа не повторяется', () => {
+    openMap('korbor-miniapp');
+    const { container } = view();
+    expect(container.querySelector('.api-module__prefix')).toBeNull();
+    expect(container.querySelectorAll('.api-module__title').length).toBeGreaterThan(0);
+  });
+});

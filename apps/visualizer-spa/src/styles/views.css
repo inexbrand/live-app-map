@@ -176,13 +176,6 @@
   padding: 8px 8px;
   background: var(--background);
 }
-.api-module__prefix {
-  margin-left: auto;
-  font-size: 12px;
-  font-weight: 400;
-  color: var(--muted-foreground);
-  font-variant-numeric: tabular-nums;
-}
 .api-row {
   display: grid;
   gap: 2px;
@@ -324,7 +317,19 @@
   color: var(--muted-foreground);
 }
 .api-row__doc--auto {
-  font-style: italic;
+  color: var(--muted-foreground);
+}
+.api-coverage-box > summary {
+  cursor: pointer;
+  color: var(--muted-foreground);
+  font-size: 13px;
+  line-height: 1.4;
+}
+.api-coverage-box[open] > summary {
+  margin-bottom: 12px;
+}
+.api-mark--absent {
+  color: var(--muted-foreground);
 }
 .api-auto {
   display: grid;

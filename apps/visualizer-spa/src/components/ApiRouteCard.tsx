@@ -2,7 +2,7 @@
  * Карточка роута в виде «API»: метод, отметки доступа, описание, вход, таблицы, экраны, файл:строка.
  */
 import { Fragment, useState } from 'react';
-import { KeyRound, Lock } from 'lucide-react';
+import { KeyRound, Lock, LockOpen } from 'lucide-react';
 import { AUTO_DOC_NOTE, type TableTouch } from '@live-app-map/graph';
 import type { ApiRoute, HttpMethod, RouteSchemaField } from '@live-app-map/schema';
 import { type RouteCard } from '../lib/api-view-model';
@@ -22,16 +22,34 @@ function methodKind(m: HttpMethod): 'read' | 'delete' | 'write' {
   return m === 'DELETE' ? 'delete' : 'write';
 }
 
-/** Признаки строки роута: проверка входа и доступ (пустой слот держит колонку). */
-export function Marks(props: { readonly route: ApiRoute }) {
-  const r = props.route;
+/** Что у большинства роутов карты: есть ли проверка входа и доступа. */
+export type UsualChecks = { readonly input: boolean; readonly access: boolean };
+
+/**
+ * Обычное для карты: признак есть хотя бы у половины роутов.
+ *
+ * @param routes - роуты карты
+ */
+export function usualChecks(routes: readonly ApiRoute[]): UsualChecks {
+  const half = (n: number): boolean => n * 2 >= routes.length;
+  return { input: half(routes.filter((r) => r.input !== undefined).length), access: half(routes.filter((r) => r.access !== undefined).length) };
+}
+
+/**
+ * Признаки строки роута — только отличия от большинства: обычное не повторяется в каждой строке
+ * (пустой слот держит колонку).
+ */
+export function Marks(props: { readonly route: ApiRoute; readonly usual: UsualChecks }) {
+  const { route: r, usual } = props;
+  const hasInput = r.input !== undefined;
+  const hasAccess = r.access !== undefined;
   return (
     <span className="api-marks">
-      <span className="api-mark" title={r.input === undefined ? 'Схемы входа нет' : 'Есть проверка входа (схема)'}>
-        {r.input === undefined ? null : <KeyRound size={14} aria-label="вход проверяется" />}
+      <span className="api-mark" title={hasInput ? 'Есть проверка входа (схема)' : 'Схемы входа нет'}>
+        {hasInput === usual.input ? null : <KeyRound size={14} className={hasInput ? undefined : 'api-mark--absent'} aria-label={hasInput ? 'вход проверяется' : 'вход не проверяется'} />}
       </span>
-      <span className="api-mark" title={r.access === undefined ? 'Проверок доступа в коде нет' : 'Есть проверка доступа'}>
-        {r.access === undefined ? null : <Lock size={14} aria-label="доступ проверяется" />}
+      <span className="api-mark" title={hasAccess ? 'Есть проверка доступа' : 'Проверок доступа в коде нет'}>
+        {hasAccess === usual.access ? null : hasAccess ? <Lock size={14} aria-label="доступ проверяется" /> : <LockOpen size={14} className="api-mark--absent" aria-label="доступ не проверяется" />}
       </span>
     </span>
   );
