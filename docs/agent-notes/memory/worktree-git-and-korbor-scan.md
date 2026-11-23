@@ -27,6 +27,8 @@ metadata:
 
 - Ветка в снимке gitStatus в начале сессии Orca может быть чужой (показал Resterr1337/sander, а была design-expert-task-…): перед push смотреть `/usr/bin/git status -sb` и пушить `HEAD` в свою ветку, иначе рождается лишняя удалённая ветка (2026-11-23).
 - `ls` тоже обёрнут rtk и добавляет размер к имени файла — в скриптах `/bin/ls -1`.
+- «Сравнение» в worktree на свежем master показывает «изменений нет» — в e2e не требовать там прокрутку (2026-11-23).
+- Глобального python нет — скрипты ~/.claude запускать через python3.
 
 **Why:** на этом потеряно время в задачах api-docs-views и e2e-green.
 **How to apply:** перед git- и scan-командами в worktree live-app-map. См. [[visualizer-dev-runtime]].
