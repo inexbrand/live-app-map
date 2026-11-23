@@ -357,7 +357,7 @@ function MapArea({ doc }: { readonly doc: AppMapDocument }) {
       <MainView doc={doc} />
       {appView === 'screens' ? <ScreenCommentsPanel /> : null}
       <CommentsListPanel />
-      <StateInjectPanel />
+      {appView === 'screens' ? <StateInjectPanel /> : null}
       <SnapshotOverlay />
     </div>
   );

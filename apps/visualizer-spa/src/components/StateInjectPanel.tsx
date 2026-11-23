@@ -1,7 +1,7 @@
 /**
  * Панель стейтов / ролей / interact (UI kit).
  */
-import { Copy, MousePointer2, ExternalLink } from 'lucide-react';
+import { Copy, MousePointer2, ExternalLink, X } from 'lucide-react';
 import { useMemo } from 'react';
 import { selectNodeCode } from '../lib/node-code';
 import { CodePanel } from './CodePanel';
@@ -43,12 +43,22 @@ function hasPageCode(codeView: CodeView): codeView is NonNullable<CodeView> {
   return codeView !== null && (codeView.symbols.length > 0 || (codeView.kind === 'page' && codeView.api.length + codeView.unmatched.length > 0));
 }
 
+/** Крестик панели: снимает выбор экрана, панель закрывается. */
+function CloseButton() {
+  const selectPage = useAppStore((s) => s.selectPage);
+  return (
+    <Button type="button" variant="ghost" size="icon-sm" aria-label="Закрыть панель" title="Закрыть (Esc)" onClick={() => selectPage(null)}>
+      <X size={16} />
+    </Button>
+  );
+}
+
 /** Drawer сервиса: панель кода. */
 function ServiceDrawer(props: { readonly node: MapNode; readonly codeView: CodeView }) {
   const { node, codeView } = props;
   return (
     <aside className="drawer ui-panel drawer--edge drawer--code" data-testid="service-drawer">
-      <PanelHeader title={node.title} description={node.pathPattern} />
+      <PanelHeader title={node.title} description={node.pathPattern} action={<CloseButton />} />
       <PanelBody>
         {codeView === null ? <p className="drawer__hint">В карте нет раздела code для сервиса.</p> : <CodePanel view={codeView} />}
       </PanelBody>
@@ -113,7 +123,7 @@ function PageDrawer(props: { readonly node: MapNode; readonly codeView: CodeView
   const liveUrl = useAppStore((s) => s.resolveLiveUrl(node.id));
   return (
     <aside className="drawer ui-panel drawer--edge">
-      <PanelHeader title={node.title} description={node.pathExample ?? node.pathPattern} />
+      <PanelHeader title={node.title} description={node.pathExample ?? node.pathPattern} action={<CloseButton />} />
       <PanelBody>
         <Field label="Живой URL" htmlFor="live-url-view">
           <textarea id="live-url-view" className="ui-textarea font-mono" readOnly rows={3} value={liveUrl ?? '—'} />
