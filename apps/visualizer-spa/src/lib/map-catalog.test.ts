@@ -41,8 +41,8 @@ describe('fetchMapCatalog', () => {
 
   test('404 и не-JSON → понятная ошибка', async () => {
     const r404 = await fetchMapCatalog(fakeFetch(404, 'nope'));
-    expect(r404).toEqual({ ok: false, error: 'Каталог карт /maps/index.json: HTTP 404' });
+    expect(r404).toEqual({ ok: false, error: 'Каталог карт: файл /maps/index.json не найден (HTTP 404). Выберите карту в списке сверху или проверьте путь.' });
     const html = await fetchMapCatalog(fakeFetch(200, '<html>'));
-    expect(html.ok).toBe(false);
+    expect(html).toEqual({ ok: false, error: 'Каталог карт: по адресу /maps/index.json нет файла — сервер вернул веб-страницу. Выберите карту в списке сверху или проверьте путь.' });
   });
 });

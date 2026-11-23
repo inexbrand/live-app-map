@@ -3,6 +3,7 @@
  * Порядок: fetch → setBaseUrlOverride → loadUnknownJson → setMode('live');
  * store обязан сохранить absolute multi-host URL (korbor-all).
  */
+import { fetchJsonFile } from './load-error';
 
 /** Откуда грузить карту: JSON и dev-сервер приложения. */
 export type MapSource = {
@@ -33,17 +34,7 @@ export async function fetchMapJson(
   path: string,
   fetchFn: typeof fetch = fetch,
 ): Promise<LoadMapResult> {
-  try {
-    const res = await fetchFn(path);
-    if (!res.ok) {
-      return { ok: false, error: `Не удалось загрузить ${path}: HTTP ${res.status}` };
-    }
-    const json: unknown = await res.json();
-    return { ok: true, json };
-  } catch (err) {
-    const message = err instanceof Error ? err.message : String(err);
-    return { ok: false, error: `Сеть: ${path} — ${message}` };
-  }
+  return fetchJsonFile('Карта', path, fetchFn);
 }
 
 /**

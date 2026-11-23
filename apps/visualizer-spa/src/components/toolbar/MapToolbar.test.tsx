@@ -71,12 +71,12 @@ describe('шапка без карты', () => {
     expect(ui.getByRole('group', { name: 'Вид' })).toBeTruthy();
   });
 
-  test('карта не загрузилась: ошибка в toast и в lastLoadError', async () => {
+  test('карта не загрузилась: понятная ошибка в баннере, без дубля во всплывающем', async () => {
     const { ui } = toolbar([EMPTY_ENTRY]);
     expect(ui.getByText('Пустая')).toBeTruthy();
     fireEvent.change(ui.getByTestId('map-select'), { target: { value: EMPTY_ENTRY.id } });
-    await waitFor(() => expect(useAppStore.getState().lastLoadError).toBe('Не удалось загрузить /maps/broken.json: HTTP 404'));
-    expect(useAppStore.getState().toast).toBe('Не удалось загрузить /maps/broken.json: HTTP 404');
+    await waitFor(() => expect(useAppStore.getState().lastLoadError).toBe('Карта: файл /maps/broken.json не найден (HTTP 404). Выберите карту в списке сверху или проверьте путь.'));
+    expect(useAppStore.getState().toast).toBeNull();
     expect(useMapSourceStore.getState().source).toBeNull();
   });
 
@@ -98,7 +98,7 @@ describe('шапка без карты', () => {
     expect(within(ui.getByTestId('map-select')).getByText('Файл: my.liveappmap.json')).toBeTruthy();
   });
 
-  test('файл не карта: ошибка в toast', async () => {
+  test('файл не карта: ошибка в баннере, всплывающего нет', async () => {
     const { container } = toolbar();
     const input = container.ownerDocument.getElementById('lam-file-input');
     if (!(input instanceof HTMLInputElement)) {
@@ -106,7 +106,7 @@ describe('шапка без карты', () => {
     }
     fireEvent.change(input, { target: { files: [new File(['{oops'], 'bad.json', { type: 'application/json' })] } });
     await waitFor(() => expect(useAppStore.getState().lastLoadError).not.toBeNull());
-    expect(useAppStore.getState().toast).toBe(useAppStore.getState().lastLoadError);
+    expect(useAppStore.getState().toast).toBeNull();
   });
 });
 

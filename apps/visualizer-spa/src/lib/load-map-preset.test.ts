@@ -42,7 +42,7 @@ describe('loadMapPresetIntoStore', () => {
 
   test('HTTP 404 — ошибка, store не тронут', async () => {
     const res = await loadMapPresetIntoStore(source, storeActions, fakeFetch(404, ''));
-    expect(res).toEqual({ ok: false, error: 'Не удалось загрузить /maps/korbor-site.liveappmap.json: HTTP 404' });
+    expect(res).toEqual({ ok: false, error: 'Карта: файл /maps/korbor-site.liveappmap.json не найден (HTTP 404). Выберите карту в списке сверху или проверьте путь.' });
     expect(useAppStore.getState().document).toBeNull();
     expect(useAppStore.getState().baseUrlOverride).toBe('');
   });

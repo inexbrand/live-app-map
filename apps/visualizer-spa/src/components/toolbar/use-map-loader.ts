@@ -63,7 +63,6 @@ async function openMapFile(file: File | null, setSource: (s: MapSourceRef) => vo
   const app = useAppStore.getState();
   if (!result.ok) {
     app.setLastLoadError(result.error);
-    app.setToast(result.error);
     return;
   }
   if (app.loadUnknownJson(result.json)) {
@@ -112,7 +111,6 @@ async function loadCatalogMap(preset: MapCatalogEntry, dogfood: DogfoodActorsSta
   });
   if (!res.ok) {
     app.setLastLoadError(res.error);
-    app.setToast(res.error);
     return false;
   }
   setSource(catalogSource(preset));

@@ -72,6 +72,18 @@ test.describe('экраны', () => {
   });
 });
 
+test.describe('ошибки загрузки', () => {
+  test('карты нет по адресу: понятный баннер, без «Unexpected token» и без дубля во всплывающем', async ({ page }) => {
+    await page.setViewportSize({ width: 1280, height: 720 });
+    await page.goto('/?map=/maps/nope.liveappmap.json');
+    const banner = page.locator('.error-banner');
+    await expect(banner).toContainText('нет файла — сервер вернул веб-страницу');
+    await expect(banner).not.toContainText('Unexpected token');
+    await expect(page.locator('.toast', { hasText: 'nope.liveappmap.json' })).toHaveCount(0);
+    await shot(page, 'after-load-error.png');
+  });
+});
+
 test.describe('шапка', () => {
   test('на 768 px шапка не шире окна, «Источников» нет, крошка-дубль вкладки скрыта', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1000 });

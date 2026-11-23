@@ -26,7 +26,7 @@ import { useNavHistory } from './lib/use-nav-history';
 import { useHotkeys } from './lib/use-hotkeys';
 import { CommandPalette } from './components/CommandPalette';
 import { ShortcutsHelp } from './components/ShortcutsHelp';
-import { requestJson } from './lib/dev-api';
+import { fetchJsonFile } from './lib/load-error';
 import { ensureDogfoodSessions } from './lib/ensure-dogfood-sessions';
 import { importMapFile } from './lib/import-map';
 import { loadMapPresetIntoStore } from './lib/load-map-preset';
@@ -39,11 +39,9 @@ import { Button } from './ui';
 
 type LoadError = (msg: string) => void;
 
-/** Ошибка загрузки карты: баннер и toast. */
+/** Ошибка загрузки карты — в баннере (один раз, без дубля во всплывающем сообщении). */
 function reportLoadError(msg: string): void {
-  const app = useAppStore.getState();
-  app.setLastLoadError(msg);
-  app.setToast(msg);
+  useAppStore.getState().setLastLoadError(msg);
 }
 
 /** Каталог карт: записи, ошибка, идёт ли загрузка. */
@@ -112,13 +110,13 @@ function useLoadPreset(): { readonly loadingId: string | null; readonly load: (p
 
 /** Карта по ссылке: JSON по адресу, режим live, dogfood. */
 async function loadLinkedMap(map: string, onError: LoadError): Promise<void> {
-  const r = await requestJson(map);
+  const r = await fetchJsonFile('Карта', map);
   if (!r.ok) {
-    onError(r.status === null ? r.error : `Не удалось загрузить карту ${map}: HTTP ${r.status}`);
+    onError(r.error);
     return;
   }
   const app = useAppStore.getState();
-  app.loadUnknownJson(r.value);
+  app.loadUnknownJson(r.json);
   app.setMode('live');
   // Deep-link / refresh: auto dogfood (раньше только через select карты)
   await runDogfoodAfterMapLoad();

@@ -103,10 +103,8 @@ export const createMapSlice: AppSlice<MapSlice> = (set, get) => ({
       return true;
     }
     const message = parsed.message;
-    set({
-      lastLoadError: message,
-      toast: message,
-    });
+    // Ошибка — в баннере; всплывающее сообщение её не дублирует
+    set({ lastLoadError: message });
     get().pushLog({ level: 'error', source: 'system', message });
     return false;
   },
