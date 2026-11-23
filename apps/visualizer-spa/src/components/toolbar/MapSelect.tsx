@@ -1,16 +1,16 @@
 /**
- * Селект карты в шапке: карты каталога и действия «открыть файл», «очистить».
+ * Выбор карты в шапке: карты каталога и действия «открыть файл», «очистить».
  */
 import type { MapCatalogEntry } from '../../lib/map-catalog';
 import { useAppStore } from '../../store/app-store';
-import { Select } from '../../ui';
+import { OptionSelect, type OptionItem } from '../option-select';
 import { catalogLabel, FILE_MAP_ID, MAP_FILE_INPUT_ID, type MapLoader } from './use-map-loader';
 
 const OPEN_FILE = '__open_file__';
 const CLEAR = '__clear__';
 
 /**
- * Выбор в селекте: id карты или действие.
+ * Выбор в списке: id карты или действие.
  *
  * @param value - значение пункта
  * @param catalog - каталог карт
@@ -35,7 +35,7 @@ function chooseMap(value: string, catalog: readonly MapCatalogEntry[], loader: M
   }
 }
 
-/** Props селекта карты. */
+/** Props выбора карты. */
 export type MapSelectProps = {
   readonly catalog: readonly MapCatalogEntry[];
   readonly catalogLoading: boolean;
@@ -43,41 +43,31 @@ export type MapSelectProps = {
 };
 
 /**
- * Селект карты.
+ * Выбор карты.
  *
  * @param props - каталог и загрузчик карт
  */
 export function MapSelect(props: MapSelectProps) {
   const { catalog, catalogLoading, loader } = props;
   const hasDocument = useAppStore((s) => s.document !== null);
-  const choose = (value: string): void => chooseMap(value, catalog, loader);
-
+  const items: OptionItem[] = catalog.map((c) => ({ value: c.id, label: catalogLabel(c) }));
+  if (loader.source?.kind === 'file') {
+    items.push({ value: FILE_MAP_ID, label: `Файл: ${loader.source.name}`, disabled: true });
+  }
   return (
-    <label className="toolbar-map-select" title="Выбор карты / действия">
-      <span className="sr-only">Карта</span>
-      <Select
-        aria-label="Карта"
-        data-testid="map-select"
-        value={loader.activeMapId}
-        disabled={catalogLoading || loader.loadingPresetId !== null}
-        onChange={(e) => choose(e.target.value)}
-      >
-        <option value="">{catalogLoading ? 'Каталог…' : 'Выберите карту…'}</option>
-        {catalog.map((c) => (
-          <option key={c.id} value={c.id}>
-            {catalogLabel(c)}
-          </option>
-        ))}
-        {loader.source?.kind === 'file' ? (
-          <option value={FILE_MAP_ID} disabled>
-            Файл: {loader.source.name}
-          </option>
-        ) : null}
-        <option value={OPEN_FILE}>── Открыть JSON / .appmap ──</option>
-        <option value={CLEAR} disabled={!hasDocument}>
-          ── Очистить карту ──
-        </option>
-      </Select>
-    </label>
+    <OptionSelect
+      aria-label="Карта"
+      data-testid="map-select"
+      className="w-60 max-[900px]:w-44"
+      placeholder={catalogLoading ? 'Каталог…' : 'Выберите карту…'}
+      items={items}
+      actions={[
+        { value: OPEN_FILE, label: 'Открыть JSON / .appmap' },
+        { value: CLEAR, label: 'Очистить карту', disabled: !hasDocument },
+      ]}
+      value={loader.activeMapId}
+      disabled={catalogLoading || loader.loadingPresetId !== null}
+      onValueChange={(v) => chooseMap(v, catalog, loader)}
+    />
   );
 }

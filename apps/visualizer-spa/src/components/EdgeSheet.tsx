@@ -1,9 +1,9 @@
 /**
- * Край экрана: модальная панель (лист) поверх карты.
+ * Лист у края экрана (shadcn Sheet) или окно по центру (shadcn Dialog) поверх карты.
  */
-import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { Button } from '../ui';
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 
 export type EdgeSheetSide = 'left' | 'right' | 'top' | 'bottom' | 'center';
 
@@ -17,47 +17,39 @@ export type EdgeSheetProps = {
 };
 
 /**
- * Модалка у края / по центру с затемнением.
+ * Лист с заголовком и прокручиваемым телом; закрывается крестиком, фоном и Esc.
+ *
+ * @param props - открыт ли, заголовок, сторона и содержимое
  */
 export function EdgeSheet(props: EdgeSheetProps) {
   const { open, title, description, side = 'center', onClose, children } = props;
-  if (!open) {
-    return null;
+  const onOpenChange = (next: boolean): void => {
+    if (!next) {
+      onClose();
+    }
+  };
+  if (side === 'center') {
+    return (
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>{title}</DialogTitle>
+            {description ? <DialogDescription>{description}</DialogDescription> : null}
+          </DialogHeader>
+          <div className="flex flex-col gap-4">{children}</div>
+        </DialogContent>
+      </Dialog>
+    );
   }
-
   return (
-    <div className="edge-sheet-root" role="presentation">
-      <button
-        type="button"
-        className="edge-sheet-backdrop"
-        aria-label="Закрыть"
-        onClick={onClose}
-      />
-      <aside
-        className={`edge-sheet edge-sheet--${side}`}
-        role="dialog"
-        aria-modal="true"
-        aria-label={title}
-      >
-        <header className="edge-sheet__header">
-          <div>
-            <h2 className="edge-sheet__title">{title}</h2>
-            {description ? (
-              <p className="edge-sheet__desc">{description}</p>
-            ) : null}
-          </div>
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon-sm"
-            onClick={onClose}
-            aria-label="Закрыть панель"
-          >
-            <X size={16} strokeWidth={1.75} />
-          </Button>
-        </header>
-        <div className="edge-sheet__body">{children}</div>
-      </aside>
-    </div>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      <SheetContent side={side} className="w-full gap-0 sm:max-w-md">
+        <SheetHeader className="border-b">
+          <SheetTitle>{title}</SheetTitle>
+          {description ? <SheetDescription>{description}</SheetDescription> : null}
+        </SheetHeader>
+        <div className="flex min-h-0 flex-1 flex-col gap-5 overflow-y-auto p-4">{children}</div>
+      </SheetContent>
+    </Sheet>
   );
 }

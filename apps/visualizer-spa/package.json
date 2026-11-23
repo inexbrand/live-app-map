@@ -27,6 +27,7 @@
     "@tailwindcss/vite": "^4.3.5",
     "@xyflow/react": "^12.6.0",
     "class-variance-authority": "^0.7.1",
+    "cmdk": "^1.1.1",
     "cn": "^0.5.2",
     "d3-force": "^3",
     "lucide-react": "^0.487.0",

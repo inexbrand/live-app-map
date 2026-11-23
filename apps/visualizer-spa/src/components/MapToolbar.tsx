@@ -1,18 +1,17 @@
 /**
- * Шапка визуализатора: выбор карты, вкладки видов, крошки, кнопки листов, тема, поиск.
- * Листы «Входы» и «Настройки» открываются по краю. Карты — только в селекте. Все подписи на русском.
+ * Шапка визуализатора: слева карта и вкладки видов, по центру поиск, справа замечания и листы
+ * «Входы» и «Настройки» (тема — в настройках). Все подписи на русском.
  */
 import { KeyRound, Search, Settings2 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import type { MapCatalogEntry } from '../lib/map-catalog';
 import { useAppStore } from '../store/app-store';
 import { useUiStore } from '../store/ui-store';
-import { Breadcrumbs } from './Breadcrumbs';
 import { CommentsToolbarButton } from './comments/CommentsToolbarButton';
 import { MapSelect } from './toolbar/MapSelect';
 import { SettingsSheet } from './toolbar/SettingsSheet';
 import { LoginsSheet } from './toolbar/LoginsSheet';
-import { ThemeToggle } from './toolbar/ThemeToggle';
+import { Kbd } from '@/components/ui/kbd';
 import { ToolbarButton } from './toolbar/ToolbarButton';
 import { useDogfoodActors } from './toolbar/use-dogfood-actors';
 import { MAP_FILE_INPUT_ID, useMapLoader } from './toolbar/use-map-loader';
@@ -54,13 +53,26 @@ export function MapToolbar(props: MapToolbarProps) {
 
   return (
     <>
-      <header className="toolbar toolbar--slim">
-        <MapSelect catalog={catalog} catalogLoading={catalogLoading} loader={loader} />
-        {hasDocument ? <ViewTabs /> : null}
-        {hasDocument ? <Breadcrumbs /> : null}
-        <div className="toolbar__spacer" />
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b bg-background px-3 py-2" data-testid="toolbar">
+        <div className="flex min-w-0 items-center gap-2">
+          <MapSelect catalog={catalog} catalogLoading={catalogLoading} loader={loader} />
+          {hasDocument ? <ViewTabs /> : null}
+        </div>
 
-        <div className="toolbar__group">
+        <button
+          type="button"
+          onClick={() => setPalette(true)}
+          aria-label="Поиск по проекту"
+          title="Поиск по экранам, роутам, таблицам, эпохам, документам и файлам (⌘K, /)"
+          data-testid="open-palette"
+          className="flex h-8 w-[min(420px,32vw)] items-center gap-2 rounded-lg border border-input bg-input/30 px-2.5 text-sm text-muted-foreground transition-colors hover:bg-input/50"
+        >
+          <Search className="size-4" strokeWidth={1.75} />
+          <span className="flex-1 truncate text-left">Поиск</span>
+          <Kbd>⌘K</Kbd>
+        </button>
+
+        <div className="flex items-center justify-end gap-2">
           {hasDocument ? <CommentsToolbarButton /> : null}
           <ToolbarButton
             icon={KeyRound}
@@ -80,17 +92,6 @@ export function MapToolbar(props: MapToolbarProps) {
             onClick={() => toggleSheet('settings')}
             aria-expanded={sheet === 'settings'}
           />
-          <ThemeToggle />
-          <ToolbarButton
-            icon={Search}
-            label="Поиск"
-            onClick={() => setPalette(true)}
-            aria-label="Поиск по проекту"
-            title="Поиск по экранам, роутам, таблицам, эпохам, документам и файлам (⌘K, /)"
-            data-testid="open-palette"
-          >
-            <kbd className="palette__kbd">⌘K</kbd>
-          </ToolbarButton>
         </div>
         {/* Поле файла для пункта «Открыть JSON» селекта карты */}
         <input

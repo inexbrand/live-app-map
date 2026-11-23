@@ -1,7 +1,8 @@
 /**
  * Выбор лимита iframe: число из списка или «без лимита» (9999).
  */
-import { Field, Select } from '../../ui';
+import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { OptionSelect } from '../option-select';
 
 /** Значение «без лимита» в store. */
 const UNLIMITED = 9999;
@@ -22,6 +23,12 @@ export type BudgetFieldProps = {
   readonly unlimitedLabel: string;
 };
 
+/** Подпись числа в списке. */
+function countLabel(n: number, zeroLabel: string | undefined): string {
+  const base = n === 0 && zeroLabel !== undefined ? zeroLabel : String(n);
+  return n === DEFAULT_COUNT ? `${base} (по умолчанию)` : base;
+}
+
 /**
  * Поле лимита.
  *
@@ -29,17 +36,12 @@ export type BudgetFieldProps = {
  */
 export function BudgetField(props: BudgetFieldProps) {
   const { id, label, hint, value, onChange, counts, zeroLabel, unlimitedLabel } = props;
+  const items = [...counts.map((n) => ({ value: String(n), label: countLabel(n, zeroLabel) })), { value: String(UNLIMITED), label: unlimitedLabel }];
   return (
-    <Field label={label} htmlFor={id} hint={hint}>
-      <Select id={id} value={value >= UNLIMITED ? UNLIMITED : value} onChange={(e) => onChange(Number(e.target.value))}>
-        {counts.map((n) => (
-          <option key={n} value={n}>
-            {n === 0 && zeroLabel !== undefined ? zeroLabel : n}
-            {n === DEFAULT_COUNT ? ' (по умолчанию)' : ''}
-          </option>
-        ))}
-        <option value={UNLIMITED}>{unlimitedLabel}</option>
-      </Select>
+    <Field>
+      <FieldLabel htmlFor={id}>{label}</FieldLabel>
+      <OptionSelect id={id} aria-label={label} items={items} value={String(value >= UNLIMITED ? UNLIMITED : value)} onValueChange={(v) => onChange(Number(v))} />
+      <FieldDescription>{hint}</FieldDescription>
     </Field>
   );
 }

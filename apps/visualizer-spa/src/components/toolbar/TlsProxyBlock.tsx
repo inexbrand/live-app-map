@@ -3,7 +3,9 @@
  */
 import { anyBody, errorText, requestJson } from '../../lib/dev-api';
 import { useAppStore } from '../../store/app-store';
-import { Button } from '../../ui';
+import { Button } from '@/components/ui/button';
+import { Field, FieldContent, FieldDescription, FieldLabel } from '@/components/ui/field';
+import { Switch } from '@/components/ui/switch';
 import { tlsCheckMessage, tlsCheckOf } from './tls-check';
 
 /** Origin мини-приложения, если базовый URL не задан. */
@@ -31,38 +33,38 @@ export function TlsProxyBlock() {
   };
 
   return (
-    <div className="sheet-block">
-      <div className="ui-field__label">Прокси для экранов</div>
-      <p className="drawer__hint">
-        Пропускает мини-приложение (свой сертификат), админку :16002 и сайт :16001
-        через визуализатор и снимает запрет на показ во фрейме. Без прокси экран
-        часто пустой.
-      </p>
-      <label className="ui-chip" style={{ cursor: 'pointer', width: 'fit-content' }}>
-        <input type="checkbox" checked={useTlsProxy} onChange={(e) => setUseTlsProxy(e.target.checked)} style={{ marginRight: 8 }} />
-        Прокси для мини-приложения, админки и сайта
-      </label>
-      <Button
-        type="button"
-        variant="outline"
-        size="sm"
-        onClick={() => {
-          void checkTls().catch((err: unknown) => setToast(`TLS check: ${errorText(err)}`));
-        }}
-      >
-        Проверить TLS origin
-      </Button>
-      <Button
-        type="button"
-        variant="ghost"
-        size="sm"
-        onClick={() => {
-          window.open(origin(), '_blank', 'noopener,noreferrer');
-          setToast('Откройте origin и примите сертификат в браузере (если proxy выкл)');
-        }}
-      >
-        Открыть origin (доверие cert)
-      </Button>
+    <div className="flex flex-col gap-3">
+      <Field orientation="horizontal">
+        <FieldContent>
+          <FieldLabel htmlFor="set-tls-proxy">Прокси для экранов</FieldLabel>
+          <FieldDescription>
+            Пропускает мини-приложение (свой сертификат), админку :16002 и сайт :16001 через визуализатор и снимает запрет
+            на показ во фрейме. Без прокси экран часто пустой.
+          </FieldDescription>
+        </FieldContent>
+        <Switch id="set-tls-proxy" checked={useTlsProxy} onCheckedChange={(checked) => setUseTlsProxy(checked)} />
+      </Field>
+      <div className="flex flex-wrap gap-2">
+        <Button
+          variant="outline"
+          size="sm"
+          onClick={() => {
+            void checkTls().catch((err: unknown) => setToast(`TLS check: ${errorText(err)}`));
+          }}
+        >
+          Проверить TLS origin
+        </Button>
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => {
+            window.open(origin(), '_blank', 'noopener,noreferrer');
+            setToast('Откройте origin и примите сертификат в браузере (если proxy выкл)');
+          }}
+        >
+          Открыть origin (доверие cert)
+        </Button>
+      </div>
     </div>
   );
 }
