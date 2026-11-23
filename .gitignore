@@ -34,3 +34,4 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 
 target/
 .metrics/
+codedb.snapshot
