@@ -102,6 +102,8 @@ test.describe('закрыть задачу', () => {
 
 test.describe('граф документации', () => {
   test('сначала только документы, «показать все» — сотни узлов на canvas, фильтры, поиск, карточка узла, переход на карту', async ({ page }) => {
+    // Фильтр «Не готово» нужен эпохам снимка карты (4 не готовы); на диске их 0 — чтение отключено.
+    await page.context().route('**/__lam_docs/live**', (route) => route.fulfill({ status: 404, json: { error: 'диск отключён в тесте' } }));
     await openKorbor(page, '&view=docs');
     await page.keyboard.press('g');
     const canvas = page.getByTestId('doc-graph-canvas');

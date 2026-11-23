@@ -4,7 +4,7 @@
  */
 import { useEffect, useMemo, useState } from 'react';
 import type { DocEpoch, DocFile, DocsModel, EpochReadiness } from '@live-app-map/schema';
-import { docsSections, epochDateLabel, openDocOf, readinessLabel } from '../lib/docs-view-model';
+import { docsSections, epochDateLabel, openDocOf, readinessLabel, shownReadiness } from '../lib/docs-view-model';
 import { useAppStore } from '../store/app-store';
 import { useViewStore } from '../store/view-store';
 import { Chip, Input } from '../ui';
@@ -173,7 +173,7 @@ function EpochsSection(props: { readonly epochs: Sections['epochs']; readonly to
 function ReadinessFilter(props: { readonly value: EpochReadiness | null; readonly notReady: number; readonly onChange: (v: EpochReadiness | null) => void }) {
   return (
     <div className="docs-list__filters" role="group" aria-label="Готовность эпох">
-      {READINESS.filter((r) => r.value !== 'not-ready' || props.notReady > 0).map((r) => (
+      {shownReadiness(READINESS, props.notReady).map((r) => (
         <Chip key={r.label} active={props.value === r.value} onClick={() => props.onChange(r.value)}>
           {r.label}
           {r.value === 'not-ready' ? ` ${props.notReady}` : ''}

@@ -66,6 +66,16 @@ export function readinessLabel(e: Pick<DocEpoch, 'readiness' | 'openBugs'>): str
   }
 }
 
+/**
+ * Выбор готовности без пустого: «Не готово» скрыт, когда таких эпох нет (иначе ведёт в пустой список).
+ *
+ * @param choices - варианты фильтра
+ * @param notReady - сколько эпох не готовы
+ */
+export function shownReadiness<T extends { readonly value: EpochReadiness | null }>(choices: readonly T[], notReady: number): T[] {
+  return choices.filter((c) => c.value !== 'not-ready' || notReady > 0);
+}
+
 /** Секции левой колонки. */
 export type DocsSections = {
   readonly epochs: readonly DocEpoch[];

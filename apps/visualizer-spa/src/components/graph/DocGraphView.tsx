@@ -6,6 +6,7 @@ import { useMemo, type ReactNode } from 'react';
 import { ChevronDown, ChevronRight, FileText, MapPin } from 'lucide-react';
 import type { EpochReadiness } from '@live-app-map/schema';
 import { NODE_KIND_LABELS, NODE_KIND_SINGULAR, type DocGraph, type GraphNode, type GraphNodeKind } from '../../lib/doc-graph';
+import { shownReadiness } from '../../lib/docs-view-model';
 import { collapseEpochs, filterGraph, graphNeighbors, searchGraph } from '../../lib/doc-graph-query';
 import { useDocGraph, useOpenGraphNode } from '../../lib/use-doc-graph';
 import { useDocGraphStore } from '../../store/doc-graph-store';
@@ -185,7 +186,7 @@ function ReadinessSection(props: { readonly full: DocGraph; readonly st: GraphSt
     <section className="docs-group">
       <h3 className="docs-group__title">Готовность эпох</h3>
       <div className="docs-list__filters" role="group" aria-label="Готовность эпох на графе">
-        {READINESS.map((r) => (
+        {shownReadiness(READINESS, notReady).map((r) => (
           <Chip key={r.label} active={st.readiness === r.value} onClick={() => st.setReadiness(r.value)}>
             {r.label}
             {r.value === 'not-ready' ? <span className="docs-count"> {notReady}</span> : null}

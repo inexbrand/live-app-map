@@ -7,6 +7,7 @@ import { dumpDom, useDom } from '../../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
+import { useAppStore } from '../../store/app-store';
 import { useDocGraphStore } from '../../store/doc-graph-store';
 import { useViewStore } from '../../store/view-store';
 import { circleCenters, installCanvas, lastFrame, type RecordingContext } from '../../test/canvas';
@@ -277,5 +278,20 @@ describe('граф по умолчанию (аудит, пункт 3)', () => {
     const all = count();
     expect(byDefault).toBeLessThan(all / 3);
     expect(ui.getByTestId('graph-kind-file').className).not.toContain('--off');
+  });
+});
+
+describe('готовность на графе без нуля', () => {
+  test('все эпохи готовы — чипа «Не готово» нет', async () => {
+    const doc = openMap('korbor-miniapp');
+    const docs = doc.docs;
+    if (docs === undefined) {
+      throw new Error('нет docs');
+    }
+    act(() => useAppStore.getState().setDocs({ ...docs, epochs: docs.epochs.map((e) => ({ ...e, readiness: 'ready', openBugs: [] })) }));
+    const { ui } = await view();
+    const chips = within(ui.getByRole('group', { name: 'Готовность эпох на графе' })).getAllByRole('button').map((b) => b.textContent ?? '');
+    expect(chips.some((c) => c.startsWith('Не готово'))).toBe(false);
+    expect(chips).toContain('Все');
   });
 });
