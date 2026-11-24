@@ -5,12 +5,12 @@ import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import { mkdtempSync, readFileSync, statSync, utimesSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { chromium } from '@playwright/test';
 import type { Server } from 'bun';
 import { serveMiddleware } from '../dev-http.test-helpers';
 import { startGateway } from './gateway-server';
 import { SessionStore } from './session-store';
 import { createSnapshotMiddleware, parseSnapshotQuery } from './snapshot-middleware';
+import { launchSnapshotBrowser } from './snapshot-browser';
 import { SnapshotService } from './snapshot-service';
 
 let app: Server<undefined>;
@@ -21,12 +21,15 @@ beforeAll(() => {
   app = Bun.serve({
     port: 0,
     hostname: '127.0.0.1',
-    fetch() {
-      hits++;
+    fetch(req) {
+      // Полный Chromium (Helium) сам просит /favicon.ico — это не загрузка экрана.
+      if (new URL(req.url).pathname !== '/favicon.ico') {
+        hits++;
+      }
       return new Response('<html><body style="margin:0;background:#c00"><h1>снимок</h1></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
     },
   });
-  service = new SnapshotService({ dir: mkdtempSync(path.join(tmpdir(), 'lam-snap-')), launch: () => chromium.launch(), freshMs: 60_000, idleCloseMs: 500 });
+  service = new SnapshotService({ dir: mkdtempSync(path.join(tmpdir(), 'lam-snap-')), launch: launchSnapshotBrowser, freshMs: 60_000, idleCloseMs: 500 });
 });
 
 afterAll(async () => {

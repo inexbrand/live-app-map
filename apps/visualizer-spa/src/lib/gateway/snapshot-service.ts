@@ -111,7 +111,7 @@ export class SnapshotService {
     const b = this.browser;
     this.browser = null;
     if (b !== null) {
-      await (await b).close();
+      await b.then((browser) => browser.close(), () => undefined);
     }
   }
 
@@ -145,9 +145,22 @@ export class SnapshotService {
     }
   }
 
+  /** Запуск браузера; неудачный не запоминается, иначе его ждали бы снова и close() бросал бы. */
+  private openBrowser(): Promise<SnapshotBrowser> {
+    if (this.browser === null) {
+      const launching = this.opts.launch();
+      this.browser = launching;
+      launching.catch(() => {
+        if (this.browser === launching) {
+          this.browser = null;
+        }
+      });
+    }
+    return this.browser;
+  }
+
   private async shoot(req: SnapshotRequest, file: string): Promise<string> {
-    this.browser ??= this.opts.launch();
-    const browser = await this.browser;
+    const browser = await this.openBrowser();
     const ctx = await browser.newContext({ viewport: { width: req.width, height: req.height }, deviceScaleFactor: 1 });
     try {
       const page = await ctx.newPage();

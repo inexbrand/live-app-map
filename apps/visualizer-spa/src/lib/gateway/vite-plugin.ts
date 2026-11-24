@@ -5,7 +5,7 @@
 import type { Plugin } from 'vite';
 import { resolveLamDir } from '@live-app-map/mcp-server';
 import path from 'node:path';
-import { chromium } from '@playwright/test';
+import { launchSnapshotBrowser } from './snapshot-browser';
 import { startGateway } from './gateway-server';
 import { createSnapshotMiddleware } from './snapshot-middleware';
 import { SnapshotService } from './snapshot-service';
@@ -54,7 +54,7 @@ function mountGateway(server: ViteServer, gateway: ReturnType<typeof startGatewa
   server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
   const port = gateway.port ?? wanted;
   // Снимки рядом с профилями, тоже вне git: на них могут быть данные под входом.
-  const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: () => chromium.launch() });
+  const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: launchSnapshotBrowser });
   server.middlewares.use(createSessionsMiddleware(store, port));
   server.middlewares.use(createSnapshotMiddleware(snapshots, port));
   server.httpServer?.on('close', () => {
