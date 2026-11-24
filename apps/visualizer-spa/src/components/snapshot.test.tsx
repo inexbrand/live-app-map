@@ -131,7 +131,7 @@ describe('снимок экрана', () => {
     expect(phase()).toBe('idle');
   });
 
-  test('⌥⇧S: замечание по области выбранного экрана — черновик со снимком; без экрана — подсказка', async () => {
+  test('⌥⇧S: замечание по области выбранного экрана — окно к экрану со снимком; без экрана — подсказка', async () => {
     const doc = openMap('korbor-miniapp');
     const r = app();
     const box = within(r.container);
@@ -143,30 +143,32 @@ describe('снимок экрана', () => {
     await waitFor(() => expect(phase()).toBe('selecting'));
     expect(box.getByText(/Выделите область для снимка/)).toBeTruthy();
     select(box, [50, 60], [450, 360]);
-    await waitFor(() => expect(useCommentsStore.getState().draft).not.toBeNull());
-    expect(useCommentsStore.getState().draft?.viewRect).toEqual({ x: 50, y: 60, width: 400, height: 300 });
-    expect(useCommentsStore.getState().draft?.shot).toStartWith('data:');
+    await waitFor(() => expect(useCommentsStore.getState().target?.shot).toStartWith('data:'));
+    // Область — замечание к экрану целиком со снимком
+    expect(useCommentsStore.getState().target?.anchor).toMatchObject({ pageId: page?.id, element: null });
     // Кадр 1440×900: область масштабирована в пиксели кадра
     expect(canvas.ctx.log.at(-1)).toBe(`drawImage(${[50 * 1440 / window.innerWidth, 60 * 900 / window.innerHeight, 400 * 1440 / window.innerWidth, 300 * 900 / window.innerHeight].map((v) => Math.round(v)).join(',')},0,0,${Math.round(400 * 1440 / window.innerWidth)},${Math.round(300 * 900 / window.innerHeight)})`);
     // Поток держится для следующего замечания
     expect(media.stopped).toBe(0);
   });
 
-  test('C — выбор компонента: подсказка, «Область» переключает на выделение; Esc отменяет', async () => {
-    openMap('korbor-miniapp');
-    const r = app();
-    const box = within(r.container);
+  test('C, I, W у выбранного экрана: режим выбора или приложения, окно к экрану; без выбора — ничего', () => {
+    const doc = openMap('korbor-miniapp');
+    app();
+    key('KeyI');
+    key('KeyW');
+    expect(useAppStore.getState().interactPageId).toBeNull();
+    expect(useCommentsStore.getState().target).toBeNull();
+    const page = doc.nodes.find((n) => n.kind === 'page');
+    act(() => useAppStore.getState().selectPage(page?.id ?? null));
+    key('KeyI');
+    expect(useAppStore.getState().interactPageId).toBe(page?.id ?? null);
     key('KeyC');
-    await waitFor(() => expect(box.getByTestId('pick-hint')).toBeTruthy());
-    fireEvent.click(box.getByText('Область'));
-    // Без выбранного экрана область недоступна — выбор компонента остаётся
-    expect(useAppStore.getState().toast).toBe('Выберите экран, к которому относится область');
-    act(() => {
-      window.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
-    });
+    expect(useAppStore.getState().interactPageId).toBeNull();
+    key('KeyW');
+    expect(useCommentsStore.getState().target?.anchor).toMatchObject({ pageId: page?.id, element: null });
     expect(phase()).toBe('idle');
   });
-
   test('браузер без захвата экрана — понятная причина в toast', async () => {
     openMap('korbor-miniapp');
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });
@@ -178,26 +180,17 @@ describe('снимок экрана', () => {
     await waitFor(() => expect(useAppStore.getState().toast).toStartWith('Снимок: браузер не умеет снимать экран'));
   });
 
-  test('выбор компонента без доступа к вкладке: замечание продолжается без снимка', async () => {
-    openMap('korbor-miniapp');
-    media.deny = 'denied';
-    const r = app();
-    key('KeyC');
-    await waitFor(() => expect(within(r.container).getByTestId('pick-hint')).toBeTruthy());
-    expect(useAppStore.getState().toast).toBe('Снимок недоступен (доступ к экрану не дан) — замечание сохранится без него');
-  });
-
   test('⇧C открывает и закрывает список замечаний; в поле и с ⌘ — нет; без карты — ничего', () => {
     const r = app();
     key('KeyC', { shiftKey: true });
-    expect(useCommentsStore.getState().listOpen).toBe(false);
+    expect(useCommentsStore.getState().sheetOpen).toBe(false);
     act(() => {
       openMap('korbor-miniapp');
     });
     key('KeyC', { shiftKey: true });
-    expect(useCommentsStore.getState().listOpen).toBe(true);
+    expect(useCommentsStore.getState().sheetOpen).toBe(true);
     key('KeyC', { shiftKey: true, metaKey: true });
-    expect(useCommentsStore.getState().listOpen).toBe(true);
+    expect(useCommentsStore.getState().sheetOpen).toBe(true);
     const input = document.createElement('input');
     r.container.append(input);
     act(() => {
@@ -218,23 +211,6 @@ describe('снимок экрана', () => {
     expect(phase()).toBe('idle');
   });
 
-  test('выбор компонента: элемент выбран — снимок в черновик, экран черновика выбран', async () => {
-    const doc = openMap('korbor-miniapp');
-    const page = doc.nodes.find((n) => n.kind === 'page');
-    const r = app();
-    key('KeyC');
-    await waitFor(() => expect(within(r.container).getByTestId('pick-hint')).toBeTruthy());
-    const anchor = anchorPage(page?.id ?? '');
-    act(() => {
-      if (anchor !== null) {
-        useCommentsStore.getState().startDraft({ anchor: screenAnchor(anchor), viewRect: { x: 0, y: 0, width: 300, height: 200 }, shot: 'pending' });
-      }
-      useSnapshotStore.getState().beginCapture({ x: 0, y: 0, width: 300, height: 200 });
-    });
-    await waitFor(() => expect(useCommentsStore.getState().draft?.shot).toStartWith('data:'));
-    expect(useAppStore.getState().selectedPageId).toBe(page?.id ?? null);
-    expect(phase()).toBe('idle');
-  });
 });
 
 describe('мост к агенту', () => {

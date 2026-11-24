@@ -12,7 +12,8 @@ import { useCommentsStore } from '../../store/comments-store';
 import { useVoiceStore } from '../../store/voice-store';
 import { jsonResponse, openMap, resetStores, stubFetch } from '../../test/fixtures';
 import { installVoiceEnv, type VoiceEnv } from '../../test/voice';
-import { CommentComposer } from './CommentComposer';
+import { useAppStore } from '../../store/app-store';
+import { CommentPopover } from './CommentPopover';
 import { VoiceModelDialog } from './VoiceModelDialog';
 
 useDom();
@@ -156,9 +157,17 @@ describe('окно модели', () => {
 describe('голос в поле замечания', () => {
   function composer() {
     openMap('korbor-miniapp');
-    const page = 'route:/';
-    act(() => useCommentsStore.getState().startDraft({ anchor: { mapName: null, pageId: page, pageTitle: 'Главная', pageUrl: null, role: null, element: null }, viewRect: { x: 0, y: 0, width: 10, height: 10 }, shot: null }));
-    const r = render(<CommentComposer />);
+    const page = useAppStore.getState().document?.nodes.find((n) => n.kind === 'page')?.id ?? '';
+    act(() => {
+      useAppStore.getState().selectPage(page);
+      useCommentsStore.getState().openTarget({ anchor: { mapName: null, pageId: page, pageTitle: 'Главная', pageUrl: null, role: null, element: null }, frame: null, shot: null });
+    });
+    // Тело ноды на холсте: окно встаёт напротив него
+    const body = document.createElement('div');
+    body.setAttribute('data-lam-preview-body', '');
+    body.setAttribute('data-page-id', page);
+    document.body.append(body);
+    const r = render(<CommentPopover />);
     const ui = within(r.container);
     const text = ui.getByLabelText('Что не так');
     if (!(text instanceof HTMLTextAreaElement)) {
@@ -199,7 +208,7 @@ describe('голос в поле замечания', () => {
     voice.speak(1);
     fireEvent.keyDown(text, { key: 'Escape' });
     await waitFor(() => expect(ui.queryByTestId('voice-draft')).toBeNull());
-    expect(ui.queryByTestId('comment-composer')).not.toBeNull();
+    expect(ui.queryByTestId('comment-popover')).not.toBeNull();
     expect(text.value).toBe('');
     fireEvent.keyDown(text, { key: 'Alt' });
     await waitFor(() => expect(ui.queryByTestId('voice-draft')).not.toBeNull(), { timeout: 2000 });
