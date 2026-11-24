@@ -272,7 +272,7 @@ export const LAM_VITE_HINT =
 
 /** Команда скана проекта из клона Live App Map. */
 export function scanCommand(projectDir: string): string {
-  return `bun run scan --project "${projectDir}"`;
+  return `bun run scan -- --project "${projectDir}"`;
 }
 
 /** Команда визуализатора проекта из клона Live App Map. */

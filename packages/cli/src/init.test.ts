@@ -148,7 +148,8 @@ describe('runInit', () => {
     const text = out.join('\n');
     expect(text).toContain('создан: .live-app-map/config.ts');
     expect(text).toContain('впишите baseUrl (адрес dev-сервера) в .live-app-map/config.ts для: admin');
-    expect(text).toContain(`--project "${dir}"`);
+    expect(text).toContain(`bun run scan -- --project "${dir}"`);
+    expect(text).toContain(`bun run dev -- --project "${dir}"`);
   });
 
   test('без package.json — понятная ошибка', async () => {
