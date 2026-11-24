@@ -10,6 +10,7 @@ import {
   runInit,
   vitePort,
 } from './init';
+import { runCli } from './commands';
 
 const SKILL = path.resolve(import.meta.dir, '../../../skills/live-app-map/SKILL.md');
 const dirs: string[] = [];
@@ -121,6 +122,25 @@ describe('runInit', () => {
     expect(second.kept).toEqual(['.live-app-map/config.ts', '.live-app-map/states.ts']);
     expect(read(dir, '.live-app-map/config.ts')).toBe('// правка пользователя\n');
     expect(read(dir, '.gitignore')).toBe('node_modules\n.live-app-map/map.json\n');
+  });
+
+  test('команда init печатает созданное и что вписать', async () => {
+    const dir = project({
+      'package.json': '{"name":"shop","devDependencies":{"@live-app-map/sdk":"file:sdk.tgz"}}',
+      'apps/admin/vite.config.ts': 'export default {};',
+    });
+    const out: string[] = [];
+    const code = await runCli(['init', '--project', dir, '--tarball', 'file:sdk.tgz'], {
+      log: (t) => out.push(t),
+      error: (t) => out.push(t),
+      cwd: dir,
+      now: () => new Date(),
+    });
+    expect(code).toBe(0);
+    const text = out.join('\n');
+    expect(text).toContain('создан: .live-app-map/config.ts');
+    expect(text).toContain('впишите baseUrl (адрес dev-сервера) в .live-app-map/config.ts для: admin');
+    expect(text).toContain(`--project "${dir}"`);
   });
 
   test('без package.json — понятная ошибка', async () => {

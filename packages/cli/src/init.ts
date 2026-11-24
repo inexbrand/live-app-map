@@ -266,6 +266,20 @@ async function bunAddDev(projectDir: string, spec: string): Promise<void> {
   }
 }
 
+/** Подсказка: как подключить плагин sdk в vite.config приложения. */
+export const LAM_VITE_HINT =
+  "в vite.config каждого приложения: import { lamVite } from '@live-app-map/sdk/vite'; и plugins: [..., lamVite()] (работает только в dev)";
+
+/** Команда скана проекта из клона Live App Map. */
+export function scanCommand(projectDir: string): string {
+  return `bun run scan --project "${projectDir}"`;
+}
+
+/** Команда визуализатора проекта из клона Live App Map. */
+export function devCommand(projectDir: string): string {
+  return `bun run dev -- --project "${projectDir}"`;
+}
+
 /** Пишет файл, если его нет; возвращает true, если создал. */
 function writeIfMissing(file: string, text: string): boolean {
   if (existsSync(file)) return false;
@@ -327,4 +341,38 @@ export async function runInit(opts: InitOptions): Promise<InitReport> {
     missingBaseUrl: apps.filter((a) => a.baseUrl === '').map((a) => a.id),
     nextApps,
   };
+}
+
+/**
+ * Текст для пользователя после init: что сделано и что сделать руками.
+ *
+ * @param report - результат runInit
+ * @param lamHome - каталог клона Live App Map (для команд scan/dev)
+ * @param projectDir - корень проекта (для команд scan/dev)
+ * @returns многострочный текст
+ */
+export function initSummary(report: InitReport, lamHome: string, projectDir: string): string {
+  const lines: string[] = [
+    report.installed ? `sdk поставлен: ${report.sdkSpec}` : `sdk уже стоит: ${report.sdkSpec}`,
+    ...report.created.map((f) => `создан: ${f}`),
+    ...report.kept.map((f) => `уже есть, не тронут: ${f}`),
+    `приложения: ${report.apps.map((a) => `${a.id} (${a.dir})`).join(', ')}`,
+  ];
+  if (report.nextApps.length > 0) {
+    lines.push(`пропущены Next-приложения (lamVite только для Vite): ${report.nextApps.join(', ')}`);
+  }
+  lines.push('', 'Дальше:');
+  let step = 0;
+  const add = (text: string): void => {
+    step++;
+    lines.push(`${step}) ${text}`);
+  };
+  if (report.missingBaseUrl.length > 0) {
+    add(`впишите baseUrl (адрес dev-сервера) в .live-app-map/config.ts для: ${report.missingBaseUrl.join(', ')} — порт не найден числом в server.port vite.config`);
+  }
+  add(LAM_VITE_HINT);
+  add(`скан: cd "${lamHome}" && ${scanCommand(projectDir)}`);
+  add(`визуализатор: cd "${lamHome}" && ${devCommand(projectDir)}`);
+  add('состояния экранов и компонентов: попросите агента в проекте «заполни состояния Live App Map» (скилл .claude/skills/live-app-map)');
+  return lines.join('\n');
 }

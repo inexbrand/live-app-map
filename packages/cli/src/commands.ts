@@ -9,6 +9,7 @@ import { exportAppMapZip } from '@live-app-map/export-appmap';
 import { diffChangeCount } from '@live-app-map/graph';
 import { parseAppMapDocument, type CodeModel, type Diagnostic } from '@live-app-map/schema';
 import { runCodeScan, runDiff, runDoctor, runScan } from './index';
+import { initSummary, runInit } from './init';
 
 /** Вывод команды: stdout, stderr, рабочий каталог и часы (для имени файла замечания). */
 export type CliIo = {
@@ -29,6 +30,7 @@ Usage:
   live-app-map doctor [--dir <path>]
   live-app-map export <appmap.json> -o map.appmap
   live-app-map feedback --file feedback.json [--print-prompt]
+  live-app-map init [--project <path>] [--tarball <url|path.tgz>]
   live-app-map dev --target-url <url> [--port 4310] [--map <file.json>]
 
 Examples:
@@ -302,6 +304,20 @@ const dev: Command = async (argv, io) => {
   return 0;
 };
 
+/** Клон Live App Map, из которого запущен CLI (packages/cli/src → корень). */
+const LAM_HOME = path.resolve(import.meta.dir, '../../..');
+
+const init: Command = async (argv, io) => {
+  const projectDir = path.resolve(io.cwd, flag(argv, '--project') ?? '.');
+  const report = await runInit({
+    projectDir,
+    tarball: flag(argv, '--tarball'),
+    skillSource: path.join(LAM_HOME, 'skills', 'live-app-map', 'SKILL.md'),
+  });
+  io.log(initSummary(report, LAM_HOME, projectDir));
+  return 0;
+};
+
 const COMMANDS = new Map<string, Command>([
   ['scan', scan],
   ['code', code],
@@ -310,6 +326,7 @@ const COMMANDS = new Map<string, Command>([
   ['export', exportCmd],
   ['feedback', feedback],
   ['dev', dev],
+  ['init', init],
 ]);
 
 /**
