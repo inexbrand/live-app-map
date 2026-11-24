@@ -14,7 +14,8 @@
 - [x] `GET /__lam_project/states` отвечает (200 `{screens, components}`; без проекта 404)
 - [x] `maps/korbor-*`, `public/maps/korbor-*` удалены, тесты на срезах `test-fixtures/maps`
 - [x] README, AGENTS.md
-- [ ] связи, которых нет в коде (табы мини-аппа, «лента → вакансия», сайт → корни) — ждёт решения лида по полю `links` контракта
+- [x] связи, которых нет в коде — `config.links` (3795579), в korbor 10 связей; рёбер 132 (link 56, api 76), как было
+- [x] `GET /__lam_project/config` — LamProjectConfig для вкладки «Компоненты» (sdk)
 
 ## Вне scope
 

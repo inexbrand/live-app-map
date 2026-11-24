@@ -6,3 +6,5 @@
 - f948410/a004db9 (auto-save соседей): удаление карт korbor, срезы test-fixtures/maps, mcp-server тесты.
 - 6afe227 feat(visualizer): --project / LAM_PROJECT, каталог, states, e2e на карту проекта.
 - 0f0b8aa docs: README, AGENTS.md.
+- 3795579 feat(project): GET /__lam_project/config, чтение config.links в скане.
+- korbor: связи вне кода в config.links.

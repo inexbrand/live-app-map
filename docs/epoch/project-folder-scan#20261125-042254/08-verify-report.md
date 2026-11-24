@@ -12,4 +12,6 @@
 - Живой dev :4411 (`bun run dev -- --project ../korbor --port 4411`, шлюз 4412, трансляция 4413): `/maps/index.json` — первая
   запись `korbor` (91), `/__lam_project/map.json` 200 5 МБ, `/__lam_project/states` 200 `{"screens":{},"components":{}}`;
   headless Helium: «korbor · 91 экр.», группа «Мини-приложение 20», ошибок страницы нет. Сервер остановлен.
+- После links: `bun run scan -- --project ../korbor` → 91 экран, 132 ребра (link 56, api 76) — как прежняя korbor-all; 9 рёбер config-link (10-я связь уже была в коде).
+- `bun test packages/cli/src/project apps/visualizer-spa/src/lib/project` — 31 pass (links, /__lam_project/config, перечитывание config.ts).
 - e2e (playwright) не запускались: только tsc e2e. Сценарий сравнения по коммиту git заменён на «файл против скана».

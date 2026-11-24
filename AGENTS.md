@@ -23,7 +23,7 @@ bun run dev -- --project ../korbor
 
 ## Korbor dogfood
 
-Проект korbor: `../korbor/.live-app-map/config.ts` (приложения ниже, бэкенд `apps/api` + `packages/db`),
+Проект korbor: `../korbor/.live-app-map/config.ts` (приложения ниже, бэкенд `apps/api` + `packages/db`, связи вне кода — `links`),
 карта — `../korbor/.live-app-map/map.json` (не в git, пишет `bun run scan -- --project ../korbor`).
 
 | App | Dir | Live baseUrl | Roles |
