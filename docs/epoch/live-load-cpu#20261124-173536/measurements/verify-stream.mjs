@@ -18,6 +18,8 @@ const state = () => page.evaluate(() => ({
   placeholders: document.querySelectorAll('.page-node__placeholder').length,
   nodes: document.querySelectorAll('.page-node').length,
 }));
+if (process.env.CSS) await page.addStyleTag({ content: process.env.CSS });
+await page.waitForTimeout(500);
 const before = await state();
 async function frames(name, action) {
   const p0 = await procs();
