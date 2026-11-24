@@ -26,3 +26,4 @@
 - [Браузер Helium и MCP](helium-browser-mcp.md) — helium-agent свой профиль, helium autoConnect к открытому
 - [Экраны карты — трансляция вместо iframe](visualizer-stream-screens.md) — ScreenView, lib/stream, 12 живых, замер FPS на прод-сборке
 - [UX замечаний: выбран вариант Б](screen-feedback-ux-choice.md) — поле у компонента, общий список с «исправлено», хранение файлы+SSE
+- [Фокус экрана Б3: грабли](visualizer-focus-lessons.md) — zustand ?? [], up после выбора, stream.ready в тестах, Base UI роли
