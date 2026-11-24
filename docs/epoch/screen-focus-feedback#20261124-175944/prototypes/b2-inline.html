@@ -1,6 +1,6 @@
 <!doctype html>
 <html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Вариант Б2 — поле у компонента и все замечания</title>
+<title>Вариант Б2 — без правой панели</title>
 <style>
 @font-face{font-family:'Medeo Sans';src:url('../../../../apps/visualizer-spa/public/fonts/medeo-cyr.woff2') format('woff2');font-weight:100 900;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+20BD}
 @font-face{font-family:'Medeo Sans';src:url('../../../../apps/visualizer-spa/public/fonts/medeo-lat.woff2') format('woff2');font-weight:100 900}
@@ -168,10 +168,28 @@ body.panel-on .panel{transform:none}
 .drafts button{display:flex;gap:8px;align-items:baseline;border:0;background:none;padding:8px;margin:0 -8px;border-radius:6px;text-align:left;cursor:pointer;color:var(--fg)}
 .drafts button:hover{background:var(--muted)}
 .drafts button span{color:var(--mfg);font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-.toast{top:56px;bottom:auto}</style></head>
+.toast{top:56px;bottom:auto}
+.panel{width:440px;z-index:30;box-shadow:-16px 0 40px rgba(0,0,0,.35)}
+body.focus .panel{transform:translateX(100%)}
+body.panel-on .panel{transform:none}
+.proto{max-width:calc(100% - 40px)}
+body.focus .scr.is-focus .scr__title{visibility:hidden}
+.over{position:absolute;display:none;align-items:center;gap:8px;transform:translateX(-50%);white-space:nowrap;z-index:5}
+body.focus .over{display:flex}
+.over__t{display:flex;align-items:baseline;gap:8px;margin-right:8px}
+.over__t b{font-size:18px;line-height:24px;font-weight:600}
+.over__t span{color:var(--faint);font-size:13px}
+.linkbtn{height:32px;padding:0 10px;border:0;background:none;color:var(--att);font-size:13px;font-weight:600;border-radius:6px;cursor:pointer}
+.linkbtn:hover{background:var(--att-dim)}
+.linkbtn--muted{color:var(--mfg);font-weight:400}
+.navbtn.ghostish{color:var(--fg)}
+.app mark.pin.has-draft{border-color:#2f6bff}
+.sheet-x{position:absolute;inset:0;z-index:25;background:transparent;display:none}
+body.panel-on .sheet-x{display:block}
+.proto{left:12px;right:auto;top:56px;bottom:auto}</style></head>
 <body>
-<div class="top"><b>Мини-приложение</b><span style="color:var(--faint)">20 экранов</span><button class="tbtn on">Экраны</button><button class="tbtn">API</button><button class="tbtn">База данных</button><button class="tbtn">Документация</button><span class="sp"></span><span style="color:var(--faint);font-size:12px">Вариант Б2 — поле у компонента и все замечания</span><a class="tbtn" href="index.html" style="display:inline-flex;align-items:center;text-decoration:none">Все варианты</a></div>
-<div class="stage"><div class="world"></div><div class="under"></div><div class="overlay"></div></div>
+<div class="top"><b>Мини-приложение</b><span style="color:var(--faint)">20 экранов</span><button class="tbtn on">Экраны</button><button class="tbtn">API</button><button class="tbtn">База данных</button><button class="tbtn">Документация</button><span class="sp"></span><span style="color:var(--faint);font-size:12px">Вариант Б2 — без правой панели</span><a class="tbtn" href="index.html" style="display:inline-flex;align-items:center;text-decoration:none">Все варианты</a></div>
+<div class="stage"><div class="world"></div><div class="under"></div><div class="over"></div><div class="overlay"></div></div><div class="sheet-x" data-act="allclose"></div>
 <aside class="panel" aria-label="Экран"></aside>
 <div class="proto"></div><div class="toast" role="status"></div>
 <script>const ICONS={"x":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M18 6 6 18M6 6l12 12\"/></svg>","ext":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6\"/></svg>","copy":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><rect x=\"9\" y=\"9\" width=\"13\" height=\"13\" rx=\"2\"/><path d=\"M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1\"/></svg>","mic":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><rect x=\"9\" y=\"2\" width=\"6\" height=\"12\" rx=\"3\"/><path d=\"M19 10a7 7 0 0 1-14 0M12 17v5\"/></svg>","cross":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><circle cx=\"12\" cy=\"12\" r=\"9\"/><path d=\"M12 3v4M12 17v4M3 12h4M17 12h4\"/></svg>","back":"<svg viewBox=\"0 0 24 24\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.75\"><path d=\"m15 18-6-6 6-6\"/></svg>","dots":"<svg viewBox=\"0 0 24 24\" fill=\"currentColor\"><circle cx=\"5\" cy=\"12\" r=\"1.6\"/><circle cx=\"12\" cy=\"12\" r=\"1.6\"/><circle cx=\"19\" cy=\"12\" r=\"1.6\"/></svg>"};
@@ -419,7 +437,7 @@ function renderPop(){
  const was=!!$('.pop');
  ov.innerHTML='<div class="pop'+(was?'':' is-in')+'" role="dialog" aria-label="Замечание к '+name+'"><span class="pop__arrow"></span>'+
  '<div class="pop__h"><b>'+name+'</b><span title="'+src+'">'+src.split('/').pop()+'</span><button class="ib" data-act="pclose" title="Закрыть (Esc), черновик сохранится">'+ICONS.x+'</button></div>'+hist+
- '<div class="cmp"><textarea aria-label="Замечание" placeholder="Что не так с '+name+'?">'+esc(d)+'</textarea>'+voice+err+
+ '<div class="cmp"><textarea aria-label="Замечание" placeholder="'+(S.open.k==='__screen'?'Что не так на экране?':'Что не так с '+name+'?')+'">'+esc(d)+'</textarea>'+voice+err+
  '<div class="cmp__bar"><button class="ib" title="Держите ⌥ и говорите">'+ICONS.mic+'</button><span class="cmp__hint"><kbd>Enter</kbd> отправить <kbd>⌥</kbd> голос</span><button class="btn btn--pri" data-act="psend">Отправить</button></div></div></div>';
  const ta=$('.pop textarea');
  ta.oninput=()=>{S.drafts[k]=ta.value;if(S.popErr){S.popErr=null}};
@@ -505,7 +523,7 @@ function gotoItem(id){
  setTimeout(()=>flash(t.k),same?50:520);
  const el=$('.panel [data-id="'+id+'"]');el&&el.scrollIntoView({block:'nearest'});
 }
-function act(a,b){
+function actBase(a,b){
  const t=b.dataset.id&&DB.find(x=>x.id===b.dataset.id);
  switch(a){
   case 'accept':t.st='done';t.notes=t.notes||[];if(S.active===t.id)nextActive();render();toast('Принято: исправлено');break;
@@ -531,8 +549,8 @@ function bootstrap(){
   if(p==='fail'){S.failNext=!S.failNext;b.textContent='Сбой при отправке: '+(S.failNext?'вкл':'выкл');b.classList.toggle('on',S.failNext)}
   if(p==='reset'){DB=JSON.parse(JSON.stringify(DB0));S.drafts={};S.open=null;S.reason=null;render()}
   if(p==='theme')document.documentElement.classList.toggle('light')});
- document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!['send','close','copy','untarget','pick','accept-old'].includes(b.dataset.act)&&act.length){if(['accept','reject','rsend','rcancel','showdone','expand','pclose','psend','all','allclose','draft'].includes(b.dataset.act)){e.stopPropagation();act(b.dataset.act,b);return}}
-  const g=e.target.closest('[data-goto]');if(g&&!e.target.closest('button,input'))gotoItem(g.dataset.goto)},true);
+ document.addEventListener('click',e=>{const b=e.target.closest('[data-act]');if(b&&!['send','close','copy','untarget','pick','accept-old'].includes(b.dataset.act)&&act.length){if(['accept','reject','rsend','rcancel','showdone','expand','pclose','psend','all','allclose','draft','whole','screenall'].includes(b.dataset.act)){e.stopPropagation();act(b.dataset.act,b);return}}
+  const g=e.target.closest('[data-goto]');if(g&&!e.target.closest('button,input'))chooseItem(g.dataset.goto)},true);
  // перетаскивание и колесо
  const stage=$('.stage');let drag=null;
  stage.addEventListener('mousedown',e=>{if(e.target.closest('.scr,.pop,.under'))return;drag={x:e.clientX,y:e.clientY,c:{...S.cam}};stage.classList.add('drag')});
@@ -553,13 +571,113 @@ function bootstrap(){
   if((k==='i'||k==='ш')&&S.focus){S.mode='use';render()}
   if(k==='t'||k==='е')document.documentElement.classList.toggle('light');
   if((e.key==='['||e.key===']')&&S.focus){const i=idx(S.focus);S.focus=SCREENS[(i+(e.key===']'?1:7))%8][0];render()}
-  if(S.all&&(k==='j'||k==='о'||k==='k'||k==='л')){const l=[...$$('.panel [data-goto]')].map(x=>x.dataset.goto);if(!l.length)return;const i=l.indexOf(S.active);gotoItem(l[(k==='j'||k==='о')?Math.min(l.length-1,i+1):Math.max(0,i-1)])}
+  if(S.all&&(k==='j'||k==='о'||k==='k'||k==='л')){const l=[...$$('.panel [data-goto]')].map(x=>x.dataset.goto);if(!l.length)return;const i=l.indexOf(S.active);markItem(l[(k==='j'||k==='о')?Math.min(l.length-1,i+1):Math.max(0,i-1)])}
+  if(S.all&&S.active&&e.key==='Enter'){chooseItem(S.active)}
+  if(!S.all&&S.focus&&(k==='w'||k==='ц')){openPop(S.focus,'__screen')}
   if(S.all&&S.active&&(k==='a'||k==='ф')){const t=DB.find(x=>x.id===S.active);if(t&&t.st==='review')act('accept',{dataset:{id:t.id}})}
   if(S.all&&S.active&&(k==='n'||k==='т')){const t=DB.find(x=>x.id===S.active);if(t&&t.st!=='waiting')act('reject',{dataset:{id:t.id}})}
  });
  document.addEventListener('keyup',e=>{if(e.key==='Alt'&&S.voice&&S.open){S.voice=false;const k=key(S.open);S.drafts[k]=((S.drafts[k]||'')+' цвет статуса почти не виден').trim();renderPop();placePop();$('.pop textarea').focus()}});
  window.addEventListener('resize',()=>camera());
  S.focus='applications';render();
+}
+
+// ===== Б2 без правой панели =====
+DB.push({id:'s1',screen:'applications',k:'__screen',text:'Нет пустого состояния, когда заявок ноль',st:'waiting',at:'5 мин',notes:[]});
+DB0.push({id:'s1',screen:'applications',k:'__screen',text:'Нет пустого состояния, когда заявок ноль',st:'waiting',at:'5 мин',notes:[]});
+function panelW(){return 0}
+function frameOf(id){return $('.scr[data-id="'+id+'"] .scr__frame')}
+function anchorEl(o){return o.k==='__screen'?frameOf(o.screen):$('.scr[data-id="'+o.screen+'"] [data-k="'+o.k+'"]')}
+function placeUnder(){
+ const u=$('.under'),ov=$('.over');
+ if(!S.focus){u.style.display='none';ov.style.display='none';return}
+ u.style.display='';ov.style.display='';
+ const st=$('.stage').getBoundingClientRect(),fr=frameOf(S.focus).getBoundingClientRect();
+ const cx=(fr.left+fr.width/2-st.left)+'px';
+ u.style.left=cx;u.style.top=(fr.bottom-st.top+12)+'px';
+ ov.style.left=cx;ov.style.top=(fr.top-st.top-44)+'px';
+}
+function over(){
+ const sc=SCREENS[idx(S.focus)],mine=DB.filter(t=>t.screen===S.focus),open=mine.filter(t=>t.st!=='done').length;
+ const dr=Object.entries(S.drafts).filter(([k,v])=>v.trim()&&k.startsWith(S.focus+':')&&!(S.open&&key(S.open)===k));
+ return '<span class="over__t"><b>'+sc[1]+'</b><span>'+sc[2]+'</span></span>'+
+  (open?'<button class="linkbtn" data-act="screenall" title="Замечания этого экрана в общем списке">'+open+' открыто</button>':'')+
+  (dr.length?'<button class="linkbtn linkbtn--muted" data-act="draft" data-k="'+dr[0][0].split(':')[1]+'" title="Вернуться к черновику">Черновик'+(dr.length>1?': '+dr.length:'')+'</button>':'')+
+  '<span class="seg"><button class="on">Рекрутер</button><button>Клиент</button></span>'+
+  '<button class="ib" title="Открыть во вкладке">'+ICONS.ext+'</button>';
+}
+function under(){
+ const i=idx(S.focus),prev=SCREENS[(i+7)%8],next=SCREENS[(i+1)%8];
+ return '<button class="navbtn" data-go="'+prev[0]+'" title="Предыдущий экран ([)">‹ '+prev[1]+'</button>'+
+ '<span class="seg"><button data-mode="pick" class="'+(S.mode==='pick'?'on':'')+'" title="Наведите и нажмите на компонент">Выбор компонента <kbd>C</kbd></button><button data-mode="use" class="'+(S.mode==='use'?'on':'')+'" title="Нажатия уходят в приложение">Работа с приложением <kbd>I</kbd></button></span>'+
+ '<button class="navbtn ghostish" data-act="whole" title="Замечание к экрану целиком (W)">Замечание к экрану</button>'+
+ '<button class="navbtn" data-go="'+next[0]+'" title="Следующий экран (])">'+next[1]+' ›</button>';
+}
+function placePop(){
+ const pop=$('.pop');if(!pop||!S.open)return;
+ const el=anchorEl(S.open);if(!el)return;
+ const st=$('.stage').getBoundingClientRect(),r=el.getBoundingClientRect(),fr=frameOf(S.open.screen).getBoundingClientRect();
+ const visR=st.right;
+ const out=r.bottom<st.top||r.top>st.bottom||r.right<st.left||r.left>visR;
+ if(out){if(S.anim){pop.style.visibility='hidden';return}closePop(true);return}
+ pop.style.visibility='';
+ const pw=360,gap=16;let left=fr.right-st.left+gap,side='right';
+ if(fr.right+gap+pw>visR&&fr.left-gap-pw>st.left){left=fr.left-st.left-gap-pw;side='left'}
+ else if(fr.right+gap+pw>visR){left=visR-st.left-pw-8}
+ pop.classList.toggle('pop--left',side==='left');
+ const ph=pop.offsetHeight,cy=S.open.k==='__screen'?Math.max(r.top-st.top+24,24):r.top-st.top+Math.min(r.height/2,20);
+ const top=Math.max(12,Math.min(cy-24,st.height-ph-12));
+ pop.style.left=left+'px';pop.style.top=top+'px';
+ pop.querySelector('.pop__arrow').style.top=Math.max(12,Math.min(cy-top-6,ph-24))+'px';
+}
+function renderPanel(){
+ const p=$('.panel');
+ if(!S.all){p.innerHTML='';return}
+ const c=counts(DB);
+ const opts=SCREENS.filter(s=>DB.some(t=>t.screen===s[0])).map(s=>'<option value="'+s[0]+'"'+(S.filter.screen===s[0]?' selected':'')+'>'+s[1]+' · '+DB.filter(t=>t.screen===s[0]&&t.st!=='done').length+'</option>').join('');
+ p.innerHTML='<div class="ph"><div class="ph__row"><div class="ph__t"><h2>Все замечания</h2><p class="sum"><span class="st st--check">Проверить: '+c.r+'</span><span class="st st--wait">Ждут: '+c.w+'</span><span class="st st--fixed">Исправлено: '+c.d+'</span></p></div><button class="ib" data-act="allclose" title="Закрыть (Esc)">'+ICONS.x+'</button></div></div>'+
+ '<div class="flt"><select aria-label="Экран"><option value="all">Все экраны</option>'+opts+'</select><input aria-label="Поиск" placeholder="Текст, экран, компонент" value="'+esc(S.filter.q)+'"></div>'+
+ '<div class="pb" style="border-top:1px solid var(--border)">'+allList()+'</div><div class="foot" style="padding:12px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--faint);display:flex;gap:12px;flex-wrap:wrap"><span><kbd>J</kbd> <kbd>K</kbd> выбрать</span><span><kbd>Enter</kbd> открыть на экране</span><span><kbd>A</kbd> принять</span><span><kbd>N</kbd> не исправлено</span></div>';
+ p.querySelector('select').onchange=e=>{S.filter.screen=e.target.value;p.querySelector('.pb').innerHTML=allList()};
+ p.querySelector('.flt input').oninput=e=>{S.filter.q=e.target.value;p.querySelector('.pb').innerHTML=allList()};
+}
+function pins(){
+ $$('.pin').forEach(p=>p.remove());$$('.is-target').forEach(e=>e.classList.remove('is-target'));
+ $$('.scr').forEach(scr=>{
+  const id=scr.dataset.id,mine=DB.filter(t=>t.screen===id),open=mine.filter(t=>t.st!=='done').length;
+  scr.querySelector('.cnt').textContent=open?open+' открыто':'';
+  const byK={};mine.forEach(t=>{if(t.k==='__screen')return;if(!byK[t.k]||RANK[t.st]<RANK[byK[t.k]])byK[t.k]=t.st});
+  const dk=new Set(Object.entries(S.drafts).filter(([k,v])=>v.trim()&&k.startsWith(id+':')).map(([k])=>k.split(':')[1]));
+  dk.forEach(k=>{if(k!=='__screen')byK[k]=byK[k]||'draft'});
+  Object.entries(byK).forEach(([k,st])=>{const el=scr.querySelector('[data-k="'+k+'"]');if(!el)return;const p=document.createElement('mark');
+   p.className='pin pin--'+({review:'check',waiting:'wait',sending:'wait',done:'fixed',draft:'draft'}[st])+(dk.has(k)&&st!=='draft'?' has-draft':'');p.title=st==='draft'?'Черновик':'Замечания';
+   p.onclick=ev=>{ev.stopPropagation();openPop(id,k)};el.appendChild(p)});
+ });
+ if(S.open&&S.open.k!=='__screen'){const el=anchorEl(S.open);el&&el.classList.add('is-target')}
+}
+function render(){
+ if(S.open&&S.open.screen!==S.focus){const d=(S.drafts[key(S.open)]||'').trim(),c=comp(S.open.k)[0];S.open=null;S.voice=false;if(d)setTimeout(()=>toast('Черновик к '+c+' сохранён'),0)}
+ const fc=S._lf!==S.focus;S._lf=S.focus;
+ document.body.classList.toggle('focus',!!S.focus);
+ document.body.classList.toggle('pick',!!S.focus&&S.mode==='pick');
+ document.body.classList.toggle('panel-on',S.all);
+ $$('.scr').forEach(s=>s.classList.toggle('is-focus',s.dataset.id===S.focus));
+ pins();renderPanel();$('.under').innerHTML=S.focus?under():'';$('.over').innerHTML=S.focus?over():'';bind();renderPop();topCount();
+ if(fc)camera();else afterCam();
+}
+function markItem(id){S.active=id;$$('.panel .th').forEach(e=>e.classList.toggle('is-active',e.dataset.id===id));const el=$('.panel [data-id="'+id+'"]');el&&el.scrollIntoView({block:'nearest'})}
+function chooseItem(id){
+ const t=DB.find(x=>x.id===id);if(!t)return;S.active=id;S.all=false;
+ const same=S.focus===t.screen;S.focus=t.screen;render();
+ setTimeout(()=>{openPop(t.screen,t.k);S.expand=true;renderPop();placePop();flash(t.k)},same?60:540);
+}
+function act(a,b){
+ if(a==='whole'){openPop(S.focus,'__screen');return}
+ if(a==='screenall'){S.filter.screen=S.focus;S.all=true;render();return}
+ if(a==='all'){S.all=!S.all;render();return}
+ if(a==='allclose'){S.all=false;render();return}
+ if(a==='draft'){openPop(S.focus,b.dataset.k);return}
+ return actBase(a,b);
 }
 
 bootstrap();</script>
