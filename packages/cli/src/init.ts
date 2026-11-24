@@ -308,7 +308,8 @@ export async function runInit(opts: InitOptions): Promise<InitReport> {
 
   const resolved = opts.tarball ?? (await latestSdkTarball());
   const sdkSpec = existsSync(resolved) ? path.resolve(resolved) : resolved;
-  const installed = currentSdkSpec(projectDir) !== sdkSpec;
+  // bun пишет локальный путь с прямыми слешами — сравниваем без разницы в слешах.
+  const installed = currentSdkSpec(projectDir)?.replaceAll('\\', '/') !== sdkSpec.replaceAll('\\', '/');
   if (installed) await bunAddDev(projectDir, sdkSpec);
 
   const created: string[] = [];

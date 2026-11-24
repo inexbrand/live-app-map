@@ -30,6 +30,14 @@ function read(dir: string, rel: string): string {
   return readFileSync(path.join(dir, rel), 'utf8');
 }
 
+/** Настоящий tarball пакета с именем sdk (npm pack маленького пакета). */
+function fakeSdkTarball(): string {
+  const pkg = project({ 'package.json': '{"name":"@live-app-map/sdk","version":"9.9.9","main":"index.js"}', 'index.js': 'export const x = 1;' });
+  const packed = Bun.spawnSync(['npm', 'pack', '--silent'], { cwd: pkg });
+  expect(packed.exitCode).toBe(0);
+  return path.join(pkg, packed.stdout.toString().trim());
+}
+
 afterEach(() => {
   for (const d of dirs.splice(0)) rmSync(d, { recursive: true, force: true });
 });
@@ -153,16 +161,30 @@ describe('runInit', () => {
     await expect(runInit({ projectDir: dir, tarball: 'file:x.tgz', skillSource: SKILL })).rejects.toThrow('vite.config');
   });
 
-  test('ставит настоящий tarball через bun add -d', async () => {
-    const pkg = project({ 'package.json': '{"name":"@live-app-map/sdk","version":"9.9.9","main":"index.js"}', 'index.js': 'export const x = 1;' });
-    const packed = Bun.spawnSync(['npm', 'pack', '--silent'], { cwd: pkg });
-    expect(packed.exitCode).toBe(0);
-    const tgz = path.join(pkg, packed.stdout.toString().trim());
+  test('ставит настоящий tarball через bun add -d; повтор с тем же путём не переставляет', async () => {
+    const tgz = fakeSdkTarball();
     const dir = project({ 'package.json': '{"name":"shop"}', 'vite.config.ts': 'export default {}' });
     const report = await runInit({ projectDir: dir, tarball: tgz, skillSource: SKILL });
     expect(report.installed).toBe(true);
     expect(existsSync(path.join(dir, 'node_modules/@live-app-map/sdk/index.js'))).toBe(true);
     const json = JSON.parse(read(dir, 'package.json')) as { devDependencies: Record<string, string> };
     expect(Object.keys(json.devDependencies)).toEqual(['@live-app-map/sdk']);
+    expect((await runInit({ projectDir: dir, tarball: tgz, skillSource: SKILL })).installed).toBe(false);
+  }, 60_000);
+
+  test('ставит tarball по URL (как из релиза GitHub)', async () => {
+    const tgz = fakeSdkTarball();
+    const server = Bun.serve({ port: 0, fetch: () => new Response(Bun.file(tgz)) });
+    try {
+      const url = `http://localhost:${server.port}/live-app-map-sdk-9.9.9.tgz`;
+      const dir = project({ 'package.json': '{"name":"shop"}', 'vite.config.ts': 'export default {}' });
+      expect((await runInit({ projectDir: dir, tarball: url, skillSource: SKILL })).installed).toBe(true);
+      const json = JSON.parse(read(dir, 'package.json')) as { devDependencies: Record<string, string> };
+      expect(json.devDependencies['@live-app-map/sdk']).toBe(url);
+      expect(existsSync(path.join(dir, 'node_modules/@live-app-map/sdk/index.js'))).toBe(true);
+      expect((await runInit({ projectDir: dir, tarball: url, skillSource: SKILL })).installed).toBe(false);
+    } finally {
+      server.stop(true);
+    }
   }, 60_000);
 });
