@@ -4,6 +4,19 @@ Professional developer tool: сканирует Next.js / React Router прил�
 
 Канон: [`docs/live-app-map-enterprise-tdd.md`](./docs/live-app-map-enterprise-tdd.md) · viewer seed: [`docs/live-app-map-design.md`](./docs/live-app-map-design.md).
 
+## Установка в проект приложения
+
+В корне проекта (bash или Git Bash на Windows, нужны git и bun):
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/inexbrand/live-app-map/master/install.sh | bash
+```
+
+Клонирует Live App Map в `~/.live-app-map` (`LAM_HOME`), ставит `@live-app-map/sdk` из последнего релиза `sdk-v*`
+(`LAM_SDK_TARBALL` — свой tarball), создаёт `.live-app-map/config.ts` и `states.ts`, прячет `map.json` в .gitignore,
+кладёт скилл агента в `.claude/skills/live-app-map/`. Повтор ничего не затирает. Логика — команда `init` (`packages/cli/src/init.ts`).
+Релиз sdk: версия в `packages/sdk/package.json`, тег `sdk-v<версия>` → workflow `release-sdk` собирает tarball (`bun run --cwd packages/sdk pack:tarball`).
+
 ## Packages
 
 | Package | Role |
