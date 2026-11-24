@@ -31,7 +31,7 @@ for (let r = 0; r < 2; r++) {
 runs.push(await frames('простой 5 с', async () => { await page.waitForTimeout(5000); }));
 await page.screenshot({ path: process.env.SHOT ?? 'proto.png' });
 // наведение на кнопку и уход с неё: hover перекрашивает кнопку — кадр точно будет
-const lat = []; for (let i = 0; i < 8; i++) { lat.push(Math.round(await page.evaluate(([k, on]) => new Promise((res) => { const t = performance.now(); window.__waitFrame(k, () => res(performance.now() - t)); window.__move(k, 195, on ? 182 : 600); setTimeout(() => res(-1), 3000); }), [i % 4, i % 2 === 0]))); await page.waitForTimeout(400); }
+const lat = []; for (let i = 0; i < 8; i++) { lat.push(Math.round(await page.evaluate(([k, on]) => new Promise((res) => { const t = performance.now(); window.__waitFrame(k, () => res(performance.now() - t)); window.__mark(k, on); setTimeout(() => res(-1), 3000); }), [i % 4, i % 2 === 0]))); await page.waitForTimeout(400); }
 const mem = osCpu().reduce((a, p) => { const g = grp(p); if (g !== 'other') a[g] = Math.round((a[g] ?? 0) + p.ws / 1e6); return a; }, {});
 const stats = await (await fetch(base + '/stats')).json();
 console.log(JSON.stringify({ runs, clickToFrameMs: lat, memMB: mem, stats }, null, 1));

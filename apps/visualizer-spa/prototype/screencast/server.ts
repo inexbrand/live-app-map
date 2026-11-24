@@ -70,6 +70,18 @@ Bun.serve({
     if (url.pathname === '/screens.json') {
       return Response.json(screens.map((s) => ({ id: s.id, width: s.width, height: s.height })));
     }
+    if (url.pathname === '/debug') {
+      const i = Number(url.searchParams.get('i') ?? 0);
+      const page = pages[i];
+      const before = framesPerPage[i] ?? 0;
+      return (async () => {
+        const vis = await page?.evaluate(() => [document.visibilityState, document.hasFocus()]).catch((e: unknown) => String(e));
+        await page?.mouse.move(195, 182);
+        await page?.evaluate(() => { document.body.style.outline = '3px solid red'; }).catch(() => undefined);
+        await Bun.sleep(1000);
+        return Response.json({ vis, before, after: framesPerPage[i] ?? 0 });
+      })();
+    }
     if (url.pathname === '/stats') {
       return Response.json({ framesOut, bytesOut, pages: pages.length, framesPerPage });
     }
@@ -90,6 +102,10 @@ Bun.serve({
     message(_ws, data) {
       const m = JSON.parse(String(data)) as { readonly i: number; readonly x: number; readonly y: number; readonly wheel?: number };
       const page = pages[m.i];
+      if (m.wheel === -1) {
+        void page?.evaluate((on) => { document.body.style.outline = on ? '4px solid #e11' : '4px solid #1e1'; }, m.x > 0).catch(() => undefined);
+        return;
+      }
       if (m.wheel === 0) {
         void page?.mouse.move(m.x, m.y).catch(() => undefined);
         return;

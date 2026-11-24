@@ -21,6 +21,7 @@ const draw = () => { for (const [i, bmp] of latest) { cv[i].g.drawImage(bmp, 0, 
 requestAnimationFrame(draw);
 function click(i, px, py) { ws.send(JSON.stringify({ i, x: px, y: py })); }
 window.__waitFrame = (i, cb) => waiters.set(i, cb);
+window.__mark = (i, on) => ws.send(JSON.stringify({ i, x: on ? 1 : 0, y: 0, wheel: -1 }));
 window.__move = (i, x, y) => ws.send(JSON.stringify({ i, x, y, wheel: 0 }));
 window.__wheelLatency = (i, d) => new Promise((res) => { const t = performance.now(); waiters.set(i, () => res(performance.now() - t)); const s = cv[i].s; ws.send(JSON.stringify({ i, x: s.width / 2, y: s.height / 2, wheel: d })); setTimeout(() => res(-1), 3000); });
 window.__clickLatency = (i) => new Promise((res) => { const t = performance.now(); waiters.set(i, () => res(performance.now() - t)); const s = cv[i].s; click(i, s.width / 2, s.height / 2); setTimeout(() => res(-1), 3000); });
