@@ -182,10 +182,34 @@ export function applyZoomStyle(el: HTMLElement | null, zoom: number): void {
   el.classList.toggle('flow-host--overview', zoom < OVERVIEW_ZOOM);
 }
 
-/** Движение камеры: масштаб в стиль хоста (подписи, обзор); экраны — холсты, прятать нечего. */
-function zoomHandlers(hostRef: RefObject<HTMLDivElement | null>) {
+/** Пауза после зума, после которой рёбрам возвращается пунктир, мс. */
+export const ZOOM_SETTLE_MS = 150;
+
+/**
+ * Движение камеры: масштаб в стиль хоста (подписи, обзор). Пока меняется масштаб,
+ * хост помечен flow-host--zooming: пунктир рёбер на каждом новом масштабе
+ * растеризуется заново и стоил 20–30 кадров/с, на время зума он сплошной.
+ *
+ * @param hostRef - хост холста
+ */
+export function zoomHandlers(hostRef: RefObject<HTMLDivElement | null>) {
+  let startZoom = 1;
+  let idle: ReturnType<typeof setTimeout> | undefined;
   return {
-    onMove: (_: unknown, vp: { readonly zoom: number }) => applyZoomStyle(hostRef.current, vp.zoom),
+    onMoveStart: (_: unknown, vp: { readonly zoom: number }) => {
+      startZoom = vp.zoom;
+    },
+    onMove: (_: unknown, vp: { readonly zoom: number }) => {
+      applyZoomStyle(hostRef.current, vp.zoom);
+      if (vp.zoom !== startZoom) {
+        clearTimeout(idle);
+        hostRef.current?.classList.add('flow-host--zooming');
+      }
+    },
+    onMoveEnd: () => {
+      clearTimeout(idle);
+      idle = setTimeout(() => hostRef.current?.classList.remove('flow-host--zooming'), ZOOM_SETTLE_MS);
+    },
   };
 }
 
@@ -194,7 +218,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
   const selectPage = useAppStore((s) => s.selectPage);
   const selectedPageId = useAppStore((s) => s.selectedPageId);
   const hostRef = useRef<HTMLDivElement>(null);
-  const zoom = zoomHandlers(hostRef);
+  const zoom = useMemo(() => zoomHandlers(hostRef), []);
   const { nodes, edges, packed, boxes } = graph;
   const miniSize = useMemo(
     () => minimapSize(layoutBounds(nodes.map((n) => ({ x: n.position.x, y: n.position.y, width: n.width ?? 0, height: n.height ?? 0 })))),
@@ -202,7 +226,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
   );
   const groupOrder = useMemo(() => (doc.groups ?? []).map((g) => g.id), [doc]);
   return (
-    <div className="flow-host" ref={hostRef}>
+    <div className={`flow-host${selectedPageId !== null ? ' flow-host--focus' : ''}`} ref={hostRef}>
       <ReactFlow
         // Новая карта — новый экземпляр: fitView кадрирует её, а не камера прошлой карты
         key={doc.revision}

@@ -833,6 +833,9 @@ code,
   background: var(--secondary);
 }
 
+/* Зум: пунктир рёбер сплошной, иначе SVG растеризуется заново на каждом масштабе (см. zoomHandlers) */
+.flow-host--zooming .react-flow__edge-path { stroke-dasharray: none !important; }
+
 .page-node__screen-shell {
   position: absolute;
   inset: 0;
