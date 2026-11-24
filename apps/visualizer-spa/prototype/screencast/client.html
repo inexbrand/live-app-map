@@ -1,0 +1,27 @@
+<!doctype html><html lang="ru"><head><meta charset="utf-8"><title>Трансляция экранов</title>
+<style>html,body{margin:0;height:100%;overflow:hidden;background:#111}#world{position:absolute;left:0;top:0;transform-origin:0 0;will-change:transform}
+canvas{position:absolute;background:#222;outline:1px solid #333}</style></head><body><div id="world"></div><script type="module">
+const SCALE = 0.5, GAP = 40, ROW = 3800;
+const screens = await (await fetch('/screens.json')).json();
+const world = document.getElementById('world');
+let x = 0, y = 0, rowH = 0;
+const cv = screens.map((s) => { const c = document.createElement('canvas'); c.width = s.width; c.height = s.height; const w = s.width * SCALE, h = s.height * SCALE; if (x + w > ROW) { x = 0; y += rowH + GAP; rowH = 0; } c.style.cssText = `left:${x}px;top:${y}px;width:${w}px;height:${h}px`; x += w + GAP; rowH = Math.max(rowH, h); world.append(c); return { c, g: c.getContext('2d'), s }; });
+let cam = { x: 16, y: 16, z: 1 };
+const apply = () => { world.style.transform = `translate(${cam.x}px,${cam.y}px) scale(${cam.z})`; };
+apply();
+addEventListener('wheel', (e) => { e.preventDefault(); const k = Math.exp(-e.deltaY * 0.002); const nz = Math.min(1.5, Math.max(0.05, cam.z * k)); cam.x = e.clientX - (e.clientX - cam.x) * (nz / cam.z); cam.y = e.clientY - (e.clientY - cam.y) * (nz / cam.z); cam.z = nz; apply(); }, { passive: false });
+let drag = null, moved = false;
+addEventListener('pointerdown', (e) => { drag = { x: e.clientX, y: e.clientY }; moved = false; });
+addEventListener('pointermove', (e) => { if (!drag) return; const dx = e.clientX - drag.x, dy = e.clientY - drag.y; if (Math.abs(dx) + Math.abs(dy) > 3) moved = true; cam.x += dx; cam.y += dy; drag = { x: e.clientX, y: e.clientY }; apply(); });
+addEventListener('pointerup', (e) => { drag = null; if (moved) return; const i = cv.findIndex(({ c }) => c === e.target); if (i < 0) return; const r = e.target.getBoundingClientRect(); click(i, (e.clientX - r.left) / r.width * cv[i].s.width, (e.clientY - r.top) / r.height * cv[i].s.height); });
+const ws = new WebSocket(`ws://${location.host}/ws`); ws.binaryType = 'arraybuffer';
+const latest = new Map(); const waiters = new Map(); window.__frames = 0;
+ws.onmessage = async (m) => { const b = new Uint8Array(m.data); const i = (b[0] << 8) | b[1]; window.__frames++; waiters.get(i)?.(); waiters.delete(i); const bmp = await createImageBitmap(new Blob([b.subarray(2)], { type: 'image/jpeg' })); latest.get(i)?.close(); latest.set(i, bmp); };
+const draw = () => { for (const [i, bmp] of latest) { cv[i].g.drawImage(bmp, 0, 0); bmp.close(); } latest.clear(); requestAnimationFrame(draw); };
+requestAnimationFrame(draw);
+function click(i, px, py) { ws.send(JSON.stringify({ i, x: px, y: py })); }
+window.__waitFrame = (i, cb) => waiters.set(i, cb);
+window.__move = (i, x, y) => ws.send(JSON.stringify({ i, x, y, wheel: 0 }));
+window.__wheelLatency = (i, d) => new Promise((res) => { const t = performance.now(); waiters.set(i, () => res(performance.now() - t)); const s = cv[i].s; ws.send(JSON.stringify({ i, x: s.width / 2, y: s.height / 2, wheel: d })); setTimeout(() => res(-1), 3000); });
+window.__clickLatency = (i) => new Promise((res) => { const t = performance.now(); waiters.set(i, () => res(performance.now() - t)); const s = cv[i].s; click(i, s.width / 2, s.height / 2); setTimeout(() => res(-1), 3000); });
+</script></body></html>

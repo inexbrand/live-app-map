@@ -1,0 +1,107 @@
+{
+ "runs": [
+  {
+   "name": "зум колесом",
+   "fps": 179,
+   "p99": 5.7,
+   "max": 16.7,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "coresClient": 0.14,
+   "coresOs": {
+    "server": 0,
+    "headless": 0.01
+   },
+   "framesIn": 0
+  },
+  {
+   "name": "панорама",
+   "fps": 180,
+   "p99": 5.7,
+   "max": 5.7,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "coresClient": 0.36,
+   "coresOs": {
+    "server": 0,
+    "headless": 0
+   },
+   "framesIn": 0
+  },
+  {
+   "name": "зум колесом",
+   "fps": 180,
+   "p99": 5.7,
+   "max": 5.7,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "coresClient": 0.11,
+   "coresOs": {
+    "server": 0,
+    "headless": 0.01
+   },
+   "framesIn": 0
+  },
+  {
+   "name": "панорама",
+   "fps": 180,
+   "p99": 5.7,
+   "max": 5.7,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "coresClient": 0.28,
+   "coresOs": {
+    "server": 0.01,
+    "headless": 0
+   },
+   "framesIn": 0
+  },
+  {
+   "name": "простой 5 с",
+   "fps": 180,
+   "p99": 5.7,
+   "max": 16.7,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "coresClient": 0.08,
+   "coresOs": {
+    "server": 0,
+    "headless": 0
+   },
+   "framesIn": 0
+  }
+ ],
+ "clickToFrameMs": [
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1,
+  -1
+ ],
+ "memMB": {
+  "server": 156,
+  "headless": 538
+ },
+ "stats": {
+  "framesOut": 527,
+  "bytesOut": 2522944,
+  "pages": 12,
+  "framesPerPage": [
+   42,
+   42,
+   49,
+   43,
+   45,
+   44,
+   35,
+   41,
+   52,
+   43,
+   50,
+   41
+  ]
+ }
+}
