@@ -6,6 +6,7 @@
  * писатель: вызовы sync выполняются строго по очереди.
  */
 import type { Browser, BrowserContext, CDPSession, Page } from '@playwright/test';
+import { settleLoaded } from '../gateway/page-settle';
 import { PAGE_TO_HOST_TYPES, isPageToHost, planSync, type PageInput, type StreamScreen } from './stream-protocol';
 
 /** Опции сервиса. */
@@ -17,9 +18,21 @@ export type StreamServiceOptions = {
   readonly quality?: number;
 };
 
-type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession };
+/**
+ * Открытая страница экрана. readyAt — с какого момента (секунды эпохи, как
+ * metadata.timestamp кадра CDP) кадры показывают догруженную страницу; до
+ * него — пустой документ, и карта такие кадры не получает, даже если они
+ * доходят с опозданием. Пока страница грузится — Infinity. load — номер
+ * документа: готовность старого документа новый не отмечает.
+ */
+type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readyAt: number; load: number };
 
 const DEFAULT_QUALITY = 70;
+/** Сколько раз повторить оборванный переход и через сколько, мс. */
+const NAV_RETRIES = 2;
+const NAV_RETRY_MS = 300;
+
+const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const HOST_BINDING = '__lamHost';
 
 /** Мост в странице: сообщения страницы «родителю» (себе) уходят карте. */
@@ -107,7 +120,10 @@ export class StreamService {
     }
     for (const s of plan.navigate) {
       this.rememberScreen(s);
-      void this.entries.get(s.key)?.page.goto(s.url, { waitUntil: 'commit' }).catch(() => undefined);
+      const e = this.entries.get(s.key);
+      if (e !== undefined) {
+        void this.go(e, s.url, NAV_RETRIES);
+      }
     }
     for (const s of plan.start) {
       await this.setLive(s, true);
@@ -137,19 +153,68 @@ export class StreamService {
     await page.exposeBinding(HOST_BINDING, (_src, json: unknown) => this.fromPage(screen.key, json));
     await page.addInitScript(BRIDGE);
     const cdp = await ctx.newCDPSession(page);
+    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, readyAt: Infinity, load: 0 };
     cdp.on('Page.screencastFrame', (f) => {
       void cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => undefined);
-      const jpeg = new Uint8Array(Buffer.from(f.data, 'base64'));
-      this.last.set(screen.key, jpeg);
-      this.opts.onFrame(screen.key, jpeg);
+      if ((f.metadata.timestamp ?? 0) >= entry.readyAt) {
+        this.emit(screen.key, f.data);
+      }
     });
+    // Готовность — у документа, а не у вызова goto: страница уходит на новый
+    // документ и сама (ссылка, location.reload, редирект), и тогда снова пустая.
+    page.on('request', (req) => {
+      if (req.isNavigationRequest() && req.frame() === page.mainFrame()) {
+        entry.load += 1;
+        entry.readyAt = Infinity;
+      }
+    });
+    page.on('load', () => void this.settle(entry));
     await cdp.send('Emulation.setFocusEmulationEnabled', { enabled: true });
-    this.entries.set(screen.key, { screen: { ...screen, live: false }, page, cdp });
+    this.entries.set(screen.key, entry);
     if (screen.live) {
       await this.setLive(screen, true);
     }
-    // Не ждём загрузку: следующий экран открывается сразу, кадры придут сами.
-    void page.goto(screen.url, { waitUntil: 'commit' }).catch(() => undefined);
+    // Не ждём загрузку: следующий экран открывается сразу, кадр придёт после неё.
+    void this.go(entry, screen.url, NAV_RETRIES);
+  }
+
+  /**
+   * Переход экрана. Браузер иногда обрывает первый переход новой вкладки
+   * (ERR_ABORTED сразу после закрытия соседней с незавершённой загрузкой) —
+   * вкладка остаётся пустой about:blank навсегда; такой переход повторяем.
+   */
+  private async go(e: Entry, url: string, retries: number): Promise<void> {
+    const failed = await e.page.goto(url, { waitUntil: 'commit' }).then(() => false, () => true);
+    if (failed && retries > 0 && this.entries.get(e.screen.key) === e && e.page.url() === 'about:blank') {
+      await sleep(NAV_RETRY_MS);
+      await this.go(e, url, retries - 1);
+    }
+  }
+
+  /**
+   * Документ догрузился: кадры открыты, и сразу один кадр готовой страницы —
+   * трансляция шлёт кадры только на изменения, и неподвижная страница иначе
+   * так и осталась бы без кадра.
+   */
+  private async settle(e: Entry): Promise<void> {
+    const load = e.load;
+    // Страницу закрыли, пока ждали, — дальше проверка ниже вернёт управление
+    await settleLoaded(e.page).catch(() => undefined);
+    // about:blank — не экран: пустая вкладка до перехода или после оборванного
+    if (e.load !== load || this.entries.get(e.screen.key) !== e || e.page.url() === 'about:blank') {
+      return;
+    }
+    e.readyAt = Date.now() / 1000;
+    const shot = await e.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: this.quality }).catch(() => null);
+    if (shot !== null && e.load === load) {
+      this.emit(e.screen.key, shot.data);
+    }
+  }
+
+  private emit(key: string, base64: string): void {
+    const jpeg = new Uint8Array(Buffer.from(base64, 'base64'));
+    this.last.set(key, jpeg);
+    this.opts.onFrame(key, jpeg);
   }
 
   private fromPage(key: string, json: unknown): void {

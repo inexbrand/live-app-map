@@ -6,6 +6,7 @@
  * отдаются сразу, устаревшие — тоже сразу, а в фоне переснимаются.
  */
 import { createHash } from 'node:crypto';
+import { LOAD_TIMEOUT_MS, settleLoaded, type SettlingPage } from './page-settle';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -20,10 +21,8 @@ export type SnapshotContext = {
   close(): Promise<void>;
 };
 /** Страница. */
-export type SnapshotPage = {
+export type SnapshotPage = SettlingPage & {
   goto(url: string, opts: { waitUntil: 'load'; timeout: number }): Promise<unknown>;
-  waitForLoadState(state: 'networkidle', opts: { timeout: number }): Promise<void>;
-  waitForTimeout(ms: number): Promise<void>;
   screenshot(opts: { type: 'jpeg'; quality: number }): Promise<Uint8Array>;
 };
 
@@ -164,9 +163,8 @@ export class SnapshotService {
     const ctx = await browser.newContext({ viewport: { width: req.width, height: req.height }, deviceScaleFactor: 1 });
     try {
       const page = await ctx.newPage();
-      await page.goto(req.url, { waitUntil: 'load', timeout: 20_000 });
-      await page.waitForLoadState('networkidle', { timeout: 8000 }).catch(() => undefined);
-      await page.waitForTimeout(400);
+      await page.goto(req.url, { waitUntil: 'load', timeout: LOAD_TIMEOUT_MS });
+      await settleLoaded(page);
       const jpeg = await page.screenshot({ type: 'jpeg', quality: 72 });
       mkdirSync(this.opts.dir, { recursive: true });
       writeFileSync(file, jpeg);
