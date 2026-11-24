@@ -5,6 +5,7 @@ import type { GraphIndex } from '@live-app-map/graph';
 import type { ViewMode } from '@live-app-map/iframe-policy';
 import type { AppMapDocument, AppMapPageState, DeviceViewport, Diagnostic, DocsModel } from '@live-app-map/schema';
 import type { StateCreator } from 'zustand';
+import type { ProjectScreenStates } from '../../lib/state-nodes';
 
 /** Display scale ноды на холсте (viewport 1920×1080 * scale = preview). */
 export type IframeScale = 0.25 | 0.35 | 0.5 | 0.75 | 1;
@@ -34,6 +35,16 @@ export type MapSlice = {
   /** Номер загрузки карты: после сброса видимости ноды сообщают её заново (одна и та же карта может загрузиться дважды). */
   loadSeq: number;
   baseUrlOverride: string;
+  /** Состояния экранов узлами рядом с экраном (переключатель «Состояния»); index строится по такой карте. */
+  showStates: boolean;
+  /** Состояния из states.ts проекта (GET /__lam_project/states); главнее состояний карты. */
+  projectStates: ProjectScreenStates | null;
+  /** Ошибка шагов узла-состояния: id узла → «шаг N не выполнен: …». */
+  stepErrors: ReadonlyMap<string, string>;
+  setShowStates: (show: boolean) => void;
+  setProjectStates: (states: ProjectScreenStates | null) => void;
+  /** null — шаги прошли. */
+  setStepError: (nodeId: string, error: string | null) => void;
   loadDocument: (doc: AppMapDocument, warnings?: readonly Diagnostic[]) => void;
   /** Разбирает liveappmap / enterprise JSON; false — ошибка уже в lastLoadError */
   loadUnknownJson: (raw: unknown) => boolean;

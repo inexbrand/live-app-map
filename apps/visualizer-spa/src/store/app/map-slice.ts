@@ -3,10 +3,23 @@
  */
 import { indexDocument } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseAppMapDocument, parseLiveAppMapDocument, type Diagnostic } from '@live-app-map/schema';
+import { expandStateNodes, mergeProjectStates, type ProjectScreenStates } from '../../lib/state-nodes';
 import { checkBaseUrl, countAbsolutePageHosts, withBaseUrl } from './base-url';
+import { readLs, writeLs } from './browser-storage';
 import type { AppSlice, MapSlice } from './types';
 
 type AppMapDocument = Parameters<typeof indexDocument>[0];
+
+/** Ключ localStorage переключателя «Состояния»; '0' — выключен. */
+export const LS_SHOW_STATES = 'lam.view.showStates';
+
+/**
+ * Индекс холста: карта со слитыми состояниями проекта и, если вид включён, узлами-состояниями.
+ * `document` store остаётся картой как есть — её читают экспорт, сравнение и виды API.
+ */
+function indexFor(doc: AppMapDocument, project: ProjectScreenStates | null, show: boolean): ReturnType<typeof indexDocument> {
+  return indexDocument(expandStateNodes(mergeProjectStates(doc, project), show));
+}
 
 /**
  * Карта к загрузке: base — введённый пользователем, иначе из карты; ошибка base —
@@ -62,6 +75,42 @@ export const createMapSlice: AppSlice<MapSlice> = (set, get) => ({
   lastLoadError: null,
   loadSeq: 0,
   baseUrlOverride: '',
+  showStates: readLs(LS_SHOW_STATES) !== '0',
+  projectStates: null,
+  stepErrors: new Map(),
+
+  setShowStates: (show) => {
+    writeLs(LS_SHOW_STATES, show ? '' : '0');
+    set({ showStates: show });
+    const doc = get().document;
+    if (doc !== null) {
+      set({ index: indexFor(doc, get().projectStates, show) });
+      get().recomputeLive();
+    }
+  },
+
+  setProjectStates: (projectStates) => {
+    set({ projectStates });
+    const doc = get().document;
+    if (doc !== null) {
+      set({ index: indexFor(doc, projectStates, get().showStates) });
+      get().recomputeLive();
+    }
+  },
+
+  setStepError: (nodeId, error) => {
+    const cur = get().stepErrors;
+    if ((cur.get(nodeId) ?? null) === error) {
+      return;
+    }
+    const next = new Map(cur);
+    if (error === null) {
+      next.delete(nodeId);
+    } else {
+      next.set(nodeId, error);
+    }
+    set({ stepErrors: next });
+  },
 
   loadDocument: (doc, warnings = []) => {
     const { normalized, parseIssues, error } = normalizeForLoad(doc, get().baseUrlOverride.trim(), warnings);
@@ -70,7 +119,8 @@ export const createMapSlice: AppSlice<MapSlice> = (set, get) => ({
     );
     set({
       document: normalized,
-      index: indexDocument(normalized),
+      index: indexFor(normalized, get().projectStates, get().showStates),
+      stepErrors: new Map(),
       parseIssues,
       // Сброс resize-override + measure — дефолты из layout JSON
       nodeViewports: new Map(),

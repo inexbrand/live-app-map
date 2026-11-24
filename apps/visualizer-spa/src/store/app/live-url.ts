@@ -6,6 +6,7 @@ import { applyDogfoodToUrl, ensureMiniappHashRoute } from '../../lib/dogfood-url
 import { cellOf, toGatewayUrl } from '../../lib/gateway/gateway-host';
 import { pickNodeProfile } from '../../lib/gateway/profile-pick';
 import { sampledPath, withPathname } from '../../lib/route-samples';
+import { stateNodeInfo } from '../../lib/state-nodes';
 import { rewriteUrlThroughTlsProxy, shouldUseTlsProxyForUrl } from '../../lib/tls-proxy';
 import { useGatewayStore } from '../gateway-store';
 import type { AppStore } from './types';
@@ -21,7 +22,7 @@ type PageState = NonNullable<MapNode['states']>[number];
 
 /** Роль для URL: роль стейта, иначе общая; пусто — без роли. */
 function stateRole(pageState: PageState | undefined, globalRole: string): string | undefined {
-  const own = pageState?.inject?.role;
+  const own = pageState?.role ?? pageState?.inject?.role;
   if (own !== undefined && own !== '') {
     return own;
   }
@@ -30,9 +31,10 @@ function stateRole(pageState: PageState | undefined, globalRole: string): string
 
 /** URL с выбранным стейтом: его адрес (или base), роль, query и hash стейта. */
 function urlWithState(base: string, pageState: PageState | undefined, globalRole: string): string {
-  const roleQuery: Record<string, string> = globalRole !== '' ? { lam_role: globalRole } : {};
+  const role = stateRole(pageState, globalRole);
+  const roleQuery: Record<string, string> = role !== undefined ? { lam_role: role } : {};
   return applyStateToUrl(pageState?.url || base, {
-    role: stateRole(pageState, globalRole),
+    role,
     query: { ...roleQuery, ...pageState?.inject?.query },
     hash: pageState?.inject?.hash,
   });
@@ -82,8 +84,15 @@ function baseUrlOf(node: MapNode, baseUrl: string | null | undefined): string | 
   return resolveNodeUrl(node, baseUrl ?? null) || node.url || null;
 }
 
-/** Выбранный стейт экрана: имя и описание (нет имени — без стейта). */
+/**
+ * Выбранный стейт экрана: имя и описание (нет имени — без стейта). У узла-состояния
+ * стейт свой и выбран всегда; имя — его роль (по ней шлюз выбирает профиль входа).
+ */
 function activeState(node: MapNode, store: LiveUrlInput, id: string): { readonly name: string | undefined; readonly state: PageState | undefined } {
+  const own = stateNodeInfo(node);
+  if (own !== null) {
+    return { name: own.role, state: node.states?.[0] };
+  }
   const name = store.activeStates.get(id);
   return { name, state: name ? node.states?.find((s) => s.name === name) : undefined };
 }
