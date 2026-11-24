@@ -3,7 +3,7 @@
  * каждая панель помещается в окно, а если содержимое выше панели — листается колесом мыши.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openMap } from './helpers';
+import { openMap, PROJECT_MAP } from './helpers';
 
 /** Окна, в которых владелец видел, что вид «API» не листается. */
 const VIEWPORTS = [
@@ -42,7 +42,7 @@ async function expectWheelScrolls(page: Page, selector: string, over = selector)
 for (const viewport of VIEWPORTS) {
   test.describe(`прокрутка видов в окне ${viewport.width}×${viewport.height}`, () => {
     test.beforeEach(async ({ page }) => {
-      await openMap(page, 'korbor-all.liveappmap.json');
+      await openMap(page, PROJECT_MAP);
       await page.setViewportSize(viewport);
     });
 

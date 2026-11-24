@@ -6,13 +6,13 @@
  */
 import { expect, test } from '@playwright/test';
 import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
-import { collectPageErrors, openMap, shot } from './helpers';
+import { collectPageErrors, openMap, shot, PROJECT_MAP, SELF_MAP } from './helpers';
 
 
 test.describe('вид «API» на korbor', () => {
   test('дерево, фильтры, карточка, переходы к таблице, обратно к роуту и к экрану', async ({ page }) => {
     const errors = collectPageErrors(page);
-    await openMap(page, 'korbor-all.liveappmap.json');
+    await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-api').click();
     const rows = page.getByTestId('api-route-row');
     await expect(rows).toHaveCount(314);
@@ -61,7 +61,7 @@ test.describe('вид «API» на korbor', () => {
   });
 
   test('«без описания» оставляет роуты без авторского описания, у каждого — описание из кода', async ({ page }) => {
-    await openMap(page, 'korbor-all.liveappmap.json');
+    await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-api').click();
     const rows = page.getByTestId('api-route-row');
     await expect(rows).not.toHaveCount(0);
@@ -75,7 +75,7 @@ test.describe('вид «API» на korbor', () => {
   });
 
   test('карточка: описание из кода, экран админки; «без экранов» — с причиной', async ({ page }) => {
-    await openMap(page, 'korbor-all.liveappmap.json');
+    await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-api').click();
     const rows = page.getByTestId('api-route-row');
     await page.locator('#api-search').fill('/api/v1/admin/vacancies');
@@ -102,7 +102,7 @@ test.describe('вид «Документация»', () => {
   test('korbor: эпохи с готовностью, открытые пункты, ссылка из текста на роут', async ({ page }) => {
     // Снимок карты с тестовой незакрытой эпохой; чтение диска отключено — виден снимок и причина.
     const docs = await pinKorborDocs(page, 'off');
-    await openMap(page, 'korbor-all.liveappmap.json');
+    await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-docs').click();
     const total = docs().epochs.length;
     await expect(page.getByTestId('docs-epoch-row')).toHaveCount(total);
@@ -128,7 +128,7 @@ test.describe('вид «Документация»', () => {
   });
 
   test('live-app-map: свои эпохи видны, скриншоты эпохи грузятся', async ({ page }) => {
-    await openMap(page, 'live-app-map.liveappmap.json');
+    await openMap(page, SELF_MAP);
     await page.getByTestId('view-docs').click();
     await expect(page.getByTestId('docs-epoch-row').filter({ hasText: 'api-docs-views' })).toBeVisible();
     await page.getByTestId('docs-epoch-row').filter({ hasText: 'live-korbor-e2e' }).click();

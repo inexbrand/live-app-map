@@ -19,9 +19,10 @@ import { useAppStore } from '../app-store';
 import { checkBaseUrl, countAbsolutePageHosts, withBaseUrl } from './base-url';
 import { clampMaxLive, clampMaxWarm, computeLiveBudget, type LiveBudgetInput } from './iframe-budget';
 import { resolveLiveUrl, type LiveUrlInput } from './live-url';
+import { mapText } from '../../test/fixtures';
 
 function miniapp(): AppMapDocument {
-  const raw: unknown = JSON.parse(readFileSync(new URL('../../../public/maps/korbor-miniapp.liveappmap.json', import.meta.url), 'utf8'));
+  const raw: unknown = JSON.parse(mapText('korbor-miniapp'));
   const parsed = parseLiveAppMapDocument(raw);
   if (!parsed.ok) {
     throw new Error('карта korbor-miniapp не разобралась');
@@ -270,7 +271,7 @@ describe('загрузка карты в store', () => {
   });
 
   test('разбор JSON: карта — true, не карта — false и ошибка первого разборщика', () => {
-    expect(useAppStore.getState().loadUnknownJson(JSON.parse(readFileSync(new URL('../../../public/maps/korbor-miniapp.liveappmap.json', import.meta.url), 'utf8')))).toBe(true);
+    expect(useAppStore.getState().loadUnknownJson(JSON.parse(mapText('korbor-miniapp')))).toBe(true);
     // Ошибки разборщиков различаются: видно, чья и какая по счёту взята
     const bad = { version: '1.0', pages: 'x' };
     expect(useAppStore.getState().loadUnknownJson(bad)).toBe(false);

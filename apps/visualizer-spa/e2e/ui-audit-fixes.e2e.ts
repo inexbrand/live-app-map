@@ -5,7 +5,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { pinKorborDocs } from './docs-fixture';
-import { collectPageErrors, openAndSelectNode, shot } from './helpers';
+import { collectPageErrors, openAndSelectNode, shot, PROJECT_MAP } from './helpers';
 
 /** Шапка не шире окна: ничего не вылезает и не обрезается прокруткой. */
 async function headerFits(page: Page): Promise<{ readonly scroll: number; readonly client: number }> {
@@ -88,7 +88,7 @@ test.describe('ошибки загрузки', () => {
 test.describe('API', () => {
   test('покрытие свёрнуто, значков у обычных роутов нет, описание из кода без курсива', async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=api');
+    await page.goto(`/?map=${PROJECT_MAP}&view=api`);
     await expect(page.getByTestId('api-view')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
     const box = page.getByTestId('api-coverage-box');
@@ -112,7 +112,7 @@ test.describe('API', () => {
 test.describe('документация', () => {
   test('без повторов: «готово» не у каждой эпохи, чипа с нулём нет, файл без имени и второго заголовка, вкладки в один ряд', async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await page.goto(`/?map=${PROJECT_MAP}&view=docs`);
     await expect(page.getByTestId('docs-view')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
     const rows = page.getByTestId('docs-epoch-row');
@@ -133,7 +133,7 @@ test.describe('документация', () => {
 test.describe('граф документации', () => {
   test('по умолчанию без файлов кода — около 40 узлов, файлы — по фильтру', async ({ page }) => {
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await page.goto(`/?map=${PROJECT_MAP}&view=docs`);
     await expect(page.getByTestId('docs-view')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
     await page.getByTestId('docs-mode-graph').click();
@@ -156,7 +156,7 @@ test.describe('числа документации', () => {
       await route.fulfill({ json: { docs: { ...d, epochs: d.epochs.slice(1) } } });
     });
     await page.setViewportSize({ width: 1600, height: 1000 });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json&view=docs');
+    await page.goto(`/?map=${PROJECT_MAP}&view=docs`);
     const source = page.getByTestId('docs-source');
     await expect(source).toContainText('Читаю документацию с диска…', { timeout: 30_000 });
     const snapshot = docs().epochs.length;
@@ -172,7 +172,7 @@ test.describe('числа документации', () => {
 test.describe('шапка', () => {
   test('на 768 px шапка не шире окна, «Источников» нет, крошка-дубль вкладки скрыта', async ({ page }) => {
     await page.setViewportSize({ width: 768, height: 1000 });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json');
+    await page.goto(`/?map=${PROJECT_MAP}`);
     await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Источники' })).toHaveCount(0);

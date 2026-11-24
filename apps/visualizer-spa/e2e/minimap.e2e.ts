@@ -4,7 +4,7 @@
  * клик центрирует холст в точке клика, перетаскивание и колесо пропорциональны.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { WIDE_VIEWPORT } from './helpers';
+import { WIDE_VIEWPORT, PROJECT_MAP } from './helpers';
 import { inside, matrixOf, minimapRaw, viewBoxOf, type Rect } from './probes';
 
 /** Снимок состояния мини-карты и холста в координатах экрана. */
@@ -62,12 +62,12 @@ function canvasCenter(s: MiniState) {
 
 async function open(page: Page, map: string): Promise<MiniState> {
   await page.setViewportSize(WIDE_VIEWPORT);
-  await page.goto(`/?map=/maps/${map}.liveappmap.json`);
+  await page.goto(`/?map=${map}`);
   await expect(page.locator('.react-flow__minimap-node').first()).toBeAttached({ timeout: 30_000 });
   return readState(page);
 }
 
-for (const map of ['korbor-all', 'korbor-miniapp']) {
+for (const map of [PROJECT_MAP]) {
   test(`${map}: SVG и ноды целиком в контейнере мини-карты, ноды занимают её`, async ({ page }) => {
     const s = await open(page, map);
     expect(inside(s.svg, s.box)).toBe(true);
@@ -89,7 +89,7 @@ for (const map of ['korbor-all', 'korbor-miniapp']) {
 }
 
 test('клик по мини-карте центрирует холст в точке клика', async ({ page }) => {
-  const s = await open(page, 'korbor-miniapp');
+  const s = await open(page, PROJECT_MAP);
   const map = svgMapping(s);
   // Точка в правой нижней части нод — далеко от текущего центра.
   const target = s.nodes.reduce((a, n) => (n.x + n.y > a.x + a.y ? n : a));
@@ -106,7 +106,7 @@ test('клик по мини-карте центрирует холст в то�
 });
 
 test('перетаскивание по мини-карте сдвигает рамку вьюпорта ровно за курсором', async ({ page }) => {
-  const s = await open(page, 'korbor-miniapp');
+  const s = await open(page, PROJECT_MAP);
   const before = viewportFrame(s);
   const sx = before.x + Math.min(before.w, 20) / 2;
   const sy = before.y + Math.min(before.h, 20) / 2;
@@ -120,7 +120,7 @@ test('перетаскивание по мини-карте сдвигает р�
 });
 
 test('колесо по мини-карте меняет зум, рамка вьюпорта всегда внутри контейнера', async ({ page }) => {
-  const s = await open(page, 'korbor-all');
+  const s = await open(page, PROJECT_MAP);
   expect(inside(viewportFrame(s), s.box)).toBe(true);
   await page.mouse.move(s.box.x + s.box.w / 2, s.box.y + s.box.h / 2);
   let zoom = s.zoom;

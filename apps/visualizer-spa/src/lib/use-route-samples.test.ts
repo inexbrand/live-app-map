@@ -3,8 +3,9 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { liveAppMapToAppMap, parseLiveAppMapJson } from '@live-app-map/schema';
 import { sampleRequests } from './use-route-samples';
+import { mapText } from '../test/fixtures';
 
-const parsed = parseLiveAppMapJson(readFileSync(path.join(import.meta.dir, '../../public/maps/korbor-all.liveappmap.json'), 'utf8'));
+const parsed = parseLiveAppMapJson(mapText('korbor-all'));
 if (!parsed.ok) {
   throw new Error('карта korbor-all не читается');
 }

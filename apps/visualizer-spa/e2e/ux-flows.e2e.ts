@@ -5,10 +5,10 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
-import { collectPageErrors, openMap, shot, WIDE_VIEWPORT } from './helpers';
+import { collectPageErrors, openMap, shot, WIDE_VIEWPORT, PROJECT_MAP } from './helpers';
 
 function openKorbor(page: Page, query = ''): Promise<void> {
-  return openMap(page, 'korbor-all.liveappmap.json', { query });
+  return openMap(page, PROJECT_MAP, { query });
 }
 
 /** Открыть результат глобального поиска нужного типа. */

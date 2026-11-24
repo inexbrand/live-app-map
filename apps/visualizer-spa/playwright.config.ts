@@ -21,6 +21,10 @@ const executablePath = resolveSnapshotBrowserPath(process.env, existsSync);
 const VOICE_WAV = fileURLToPath(new URL('./e2e/fixtures/voice-ru.wav', import.meta.url));
 
 
+/** Проект, чью карту открывают e2e: LAM_PROJECT или соседний ../korbor. */
+const LAM_PROJECT = process.env['LAM_PROJECT'] ?? fileURLToPath(new URL('../../../korbor', import.meta.url));
+process.env['LAM_PROJECT'] = LAM_PROJECT;
+
 const PORT = 4310;
 const baseURL =
   process.env.PLAYWRIGHT_BASE_URL ?? `http://127.0.0.1:${PORT}`;
@@ -86,7 +90,7 @@ export default defineConfig({
     : {
         command: 'bun run dev',
         // e2e читают DOM страниц экранов через CDP браузера трансляции (e2e/stream-page.ts)
-        env: { LAM_STREAM_CDP_PORT: process.env['LAM_STREAM_CDP_PORT'] ?? '9333' },
+        env: { LAM_STREAM_CDP_PORT: process.env['LAM_STREAM_CDP_PORT'] ?? '9333', LAM_PROJECT },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

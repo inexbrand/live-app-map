@@ -3,9 +3,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { parseLiveAppMapJson, liveAppMapToAppMap } from '@live-app-map/schema';
 import { firstId, isListPath, nodeSampleLists, paramSources, sampledPath } from './route-samples';
+import { mapText } from '../test/fixtures';
 
 /** Настоящая карта мини-аппа korbor из public/maps. */
-const parsed = parseLiveAppMapJson(readFileSync(path.join(import.meta.dir, '../../public/maps/korbor-miniapp.liveappmap.json'), 'utf8'));
+const parsed = parseLiveAppMapJson(mapText('korbor-miniapp'));
 if (!parsed.ok) {
   throw new Error('карта korbor-miniapp не читается');
 }
@@ -64,7 +65,7 @@ test('firstId: ответы разной формы', () => {
   expect(firstId({ items: [] })).toBeNull();
 });
 describe('экраны без сопоставленных вызовов (админка korbor-all)', () => {
-  const allParsed = parseLiveAppMapJson(readFileSync(path.join(import.meta.dir, '../../public/maps/korbor-all.liveappmap.json'), 'utf8'));
+  const allParsed = parseLiveAppMapJson(mapText('korbor-all'));
   if (!allParsed.ok) {
     throw new Error('карта korbor-all не читается');
   }

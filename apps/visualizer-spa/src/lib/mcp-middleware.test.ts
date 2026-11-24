@@ -7,8 +7,9 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { serveMiddleware, type TestServer } from './dev-http.test-helpers';
 import { createMcpAgentMiddleware } from './mcp-middleware';
+import { testMapPath } from '../test/fixtures';
 
-const siteMap = path.resolve(import.meta.dir, '../../public/maps/korbor-site.liveappmap.json');
+const siteMap = testMapPath('korbor-site');
 
 let server: TestServer;
 beforeEach(async () => {

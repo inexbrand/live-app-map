@@ -1,10 +1,11 @@
 /**
- * Документация korbor-all для e2e без зависимости от состояния korbor: в docs карты
+ * Документация карты проекта (korbor) для e2e без зависимости от состояния korbor: в docs карты
  * добавляется тестовая незакрытая эпоха, «диск» отдаёт тот же docs. Карту пересобирают
  * (scan:korbor), эпохи на диске закрываются — сценарии от этого не меняются.
  */
 import type { DocsModel } from '@live-app-map/schema';
 import type { Page, Route } from '@playwright/test';
+import { PROJECT_MAP } from './helpers';
 
 /** Тестовая незакрытая эпоха: самая новая, один открытый пункт со ссылкой на роут. */
 export const OPEN_EPOCH = {
@@ -57,7 +58,7 @@ export function withOpenEpoch(docs: DocsModel): DocsModel {
 export type LiveDocs = 'same' | 'off' | ((route: Route, docs: DocsModel) => Promise<void>);
 
 /**
- * Подменяет docs карты korbor-all и ответ чтения диска во всём контексте (и в новых вкладках).
+ * Подменяет docs карты проекта и ответ чтения диска во всём контексте (и в новых вкладках).
  *
  * @param page - страница
  * @param live - что отдаёт чтение диска
@@ -67,16 +68,16 @@ export async function pinKorborDocs(page: Page, live: LiveDocs = 'same'): Promis
   let pinned: DocsModel | null = null;
   const docs = (): DocsModel => {
     if (pinned === null) {
-      throw new Error('карта korbor-all ещё не загружена');
+      throw new Error('карта проекта ещё не загружена');
     }
     return pinned;
   };
-  // По пути запроса, а не по всему адресу: адрес страницы тоже содержит ?map=/maps/korbor-all…
-  await page.context().route((url) => url.pathname.endsWith('/maps/korbor-all.liveappmap.json'), async (route) => {
+  // По пути запроса, а не по всему адресу: адрес страницы тоже содержит ?map=/__lam_project/map.json
+  await page.context().route((url) => url.pathname === PROJECT_MAP, async (route) => {
     const res = await route.fetch();
     const map: { docs?: DocsModel } = await res.json();
     if (map.docs === undefined) {
-      throw new Error('в карте korbor-all нет docs');
+      throw new Error('в карте проекта нет docs');
     }
     pinned = withOpenEpoch(map.docs);
     await route.fulfill({ response: res, json: { ...map, docs: pinned } });

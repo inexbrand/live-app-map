@@ -5,6 +5,29 @@ import path from 'node:path';
 import { expect, type Page } from '@playwright/test';
 import { firstNodeInView, mcpResult } from './probes';
 
+/** Карта открытого проекта (dev-сервер с LAM_PROJECT, см. playwright.config). */
+export const PROJECT_MAP = '/__lam_project/map.json';
+
+/** id карты проекта в каталоге — имя проекта из config.ts. */
+export const PROJECT_MAP_ID = process.env['LAM_E2E_PROJECT_ID'] ?? 'korbor';
+
+/** Карта самого live-app-map в public/maps. */
+export const SELF_MAP = '/maps/live-app-map.liveappmap.json';
+
+/**
+ * Файл карты проекта на диске: LAM_PROJECT → .live-app-map/map.json.
+ *
+ * @returns абсолютный путь
+ * @throws Error — LAM_PROJECT не задан
+ */
+export function projectMapFile(): string {
+  const project = process.env['LAM_PROJECT'];
+  if (project === undefined || project === '') {
+    throw new Error('LAM_PROJECT не задан: e2e открывают карту проекта (playwright.config задаёт ../korbor)');
+  }
+  return path.join(path.resolve(project), '.live-app-map', 'map.json');
+}
+
 /** Папка скриншотов для отчёта эпохи; без неё скриншоты не снимаются. */
 const SHOTS = process.env['LAM_SHOTS_DIR'];
 
@@ -39,7 +62,7 @@ export function collectPageErrors(page: Page): string[] {
  * Открывает карту каталога в широком окне: ждёт переключатель видов и закрывает всплывающее Esc.
  *
  * @param page - страница
- * @param map - файл карты в public/maps, например korbor-all.liveappmap.json
+ * @param map - адрес карты: {@link PROJECT_MAP} или {@link SELF_MAP}
  * @param options - добавка к адресу (`&view=api`) и своё ожидание готовности вместо переключателя видов
  */
 export async function openMap(
@@ -49,7 +72,7 @@ export async function openMap(
 ): Promise<void> {
   const { query = '', ready = viewSwitchShown } = options;
   await page.setViewportSize(WIDE_VIEWPORT);
-  await page.goto(`/?map=/maps/${map}${query}`);
+  await page.goto(`/?map=${map}${query}`);
   await ready(page);
   await page.keyboard.press('Escape');
 }
@@ -61,13 +84,13 @@ async function viewSwitchShown(page: Page): Promise<void> {
 
 /**
  * Открывает карту и выбирает первый экран, видимый целиком: экран в фокусе, плашка под ним.
- * По умолчанию — сайт korbor (:16001): его экраны открываются без входа.
+ * По умолчанию — карта проекта; первым целиком видимым обычно оказывается экран сайта.
  *
  * @param page - страница
- * @param map - файл карты в public/maps
+ * @param map - адрес карты
  * @returns id выбранной ноды
  */
-export async function openAndSelectNode(page: Page, map = 'korbor-site.liveappmap.json'): Promise<string> {
+export async function openAndSelectNode(page: Page, map = PROJECT_MAP): Promise<string> {
   await openMap(page, map);
   const pages = page.locator('.react-flow__node:has(.page-node)');
   await expect.poll(async () => pages.count(), { timeout: 30_000 }).toBeGreaterThan(3);

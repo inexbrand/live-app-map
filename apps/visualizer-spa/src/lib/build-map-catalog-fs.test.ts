@@ -43,10 +43,11 @@ describe('buildMapCatalog — папка с настоящими картами'
 
   test('withExtraMaps: карты вне папки (проект) и их пропуски — первыми', () => {
     const extra = { id: 'korbor', label: 'korbor', path: '/__lam_project/map.json', baseUrl: 'http://x', pageCount: 3 };
-    const base = { version: 1, maps: [{ ...extra, id: 'a', path: '/maps/a.liveappmap.json' }], skipped: [{ file: 'b', reason: 'r' }] };
+    const own = { ...extra, id: 'a', path: '/maps/a.liveappmap.json' };
+    const base = { version: 1, maps: [own], skipped: [{ file: 'b', reason: 'r' }] };
     expect(withExtraMaps(base, { maps: [extra], skipped: [{ file: 'map.json', reason: 'нет' }] })).toEqual({
       version: 1,
-      maps: [extra, base.maps[0]],
+      maps: [extra, own],
       skipped: [{ file: 'map.json', reason: 'нет' }, { file: 'b', reason: 'r' }],
     });
   });

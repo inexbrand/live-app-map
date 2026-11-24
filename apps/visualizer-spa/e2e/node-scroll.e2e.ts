@@ -8,7 +8,7 @@
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
 import { scrollTopOf } from './probes';
-import { WIDE_VIEWPORT } from './helpers';
+import { WIDE_VIEWPORT, PROJECT_MAP } from './helpers';
 import { screenPage } from './stream-page';
 
 const NODE = 'route:/feed';
@@ -40,7 +40,7 @@ async function center(l: Locator): Promise<{ x: number; y: number }> {
 test('колесо: над экраном в «окне» — страница, вне — холст, «целиком» — без обрезки и меню не закрывает контент', async ({ page }) => {
   test.setTimeout(120_000);
   await page.setViewportSize(WIDE_VIEWPORT);
-  await page.goto('/?map=/maps/korbor-miniapp.liveappmap.json');
+  await page.goto(`/?map=${PROJECT_MAP}`);
   const node = page.locator(`[data-lam-node="${NODE}"]`);
   await node.locator('.page-node__title').click();
   const frame = await liveFrame(node);

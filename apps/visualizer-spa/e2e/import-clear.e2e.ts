@@ -10,7 +10,7 @@ import { expect, test } from '@playwright/test';
 import { minimapPages } from './minimap-pages';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
-const miniappMap = path.resolve(dir, '../public/maps/korbor-miniapp.liveappmap.json');
+const miniappMap = path.resolve(dir, '../../../test-fixtures/maps/korbor-miniapp.liveappmap.json');
 /** Экраны файла: сервисы и внешние ссылки на холсте не экраны. */
 const miniappPages = (JSON.parse(readFileSync(miniappMap, 'utf8')) as { pages: Array<{ type?: string }> }).pages.filter(
   (p) => p.type !== 'service' && p.type !== 'external',

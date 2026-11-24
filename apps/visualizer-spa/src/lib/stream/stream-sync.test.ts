@@ -5,12 +5,13 @@ import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument } from
 import { useAppStore } from '../../store/app-store';
 import { screensOf, type StreamSyncInput } from './stream-sync';
 import { expandStateNodes, stateNodeId } from '../state-nodes';
+import { mapText } from '../../test/fixtures';
 
 const base = useAppStore.getInitialState();
 
 /** Настоящая карта мини-аппа с подменёнными экранами. */
 function doc(): AppMapDocument {
-  const parsed = parseLiveAppMapDocument(JSON.parse(readFileSync(new URL('../../../public/maps/korbor-miniapp.liveappmap.json', import.meta.url), 'utf8')));
+  const parsed = parseLiveAppMapDocument(JSON.parse(mapText('korbor-miniapp')));
   if (!parsed.ok) {
     throw new Error('карта korbor-miniapp не разобралась');
   }

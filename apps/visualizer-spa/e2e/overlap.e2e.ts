@@ -5,6 +5,7 @@
  */
 import { expect, test, type Page } from '@playwright/test';
 import { layoutItems, probeOf, type Probe } from './probes';
+import { PROJECT_MAP } from './helpers';
 
 const OVERLAYS = ['.toolbar', '.drawer', '.diag-fab', '.react-flow__minimap', '.react-flow__controls'];
 
@@ -19,7 +20,7 @@ for (const { width, height } of [
 ]) {
   test(`нет наложений панелей ${width}×${height}`, async ({ page }) => {
     await page.setViewportSize({ width, height });
-    await page.goto('/?map=/maps/korbor-all.liveappmap.json');
+    await page.goto(`/?map=${PROJECT_MAP}`);
     await expect(page.locator('.page-node__title').first()).toBeVisible({ timeout: 30_000 });
     await page.locator('.page-node__title').first().click();
     await expect(page.locator('.drawer').first()).toBeVisible();
