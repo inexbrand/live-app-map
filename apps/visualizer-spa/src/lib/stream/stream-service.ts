@@ -7,6 +7,7 @@
  */
 import type { Browser, BrowserContext, CDPSession, Page } from '@playwright/test';
 import { settleLoaded } from '../gateway/page-settle';
+import { runStateSteps } from './state-steps';
 import { PAGE_TO_HOST_TYPES, isPageToHost, planSync, type PageInput, type StreamScreen } from './stream-protocol';
 
 /** Опции сервиса. */
@@ -14,6 +15,8 @@ export type StreamServiceOptions = {
   readonly launch: () => Promise<Browser>;
   readonly onFrame: (key: string, jpeg: Uint8Array) => void;
   readonly onPageMessage: (key: string, data: unknown) => void;
+  /** Итог шагов состояния экрана: null — выполнены, иначе «шаг N не выполнен: …». */
+  readonly onSteps?: (key: string, error: string | null) => void;
   /** Качество JPEG, 1–100. */
   readonly quality?: number;
 };
@@ -25,7 +28,7 @@ export type StreamServiceOptions = {
  * доходят с опозданием. Пока страница грузится — Infinity. load — номер
  * документа: готовность старого документа новый не отмечает.
  */
-type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readyAt: number; load: number };
+type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readyAt: number; load: number; stepsPending: boolean };
 
 const DEFAULT_QUALITY = 70;
 /** Сколько раз повторить оборванный переход и через сколько, мс. */
@@ -153,7 +156,7 @@ export class StreamService {
     await page.exposeBinding(HOST_BINDING, (_src, json: unknown) => this.fromPage(screen.key, json));
     await page.addInitScript(BRIDGE);
     const cdp = await ctx.newCDPSession(page);
-    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, readyAt: Infinity, load: 0 };
+    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, readyAt: Infinity, load: 0, stepsPending: false };
     cdp.on('Page.screencastFrame', (f) => {
       void cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => undefined);
       if ((f.metadata.timestamp ?? 0) >= entry.readyAt) {
@@ -184,6 +187,8 @@ export class StreamService {
    * вкладка остаётся пустой about:blank навсегда; такой переход повторяем.
    */
   private async go(e: Entry, url: string, retries: number): Promise<void> {
+    // Шаги — один раз на переход карты: документ, на который увёл сам шаг, их не повторяет
+    e.stepsPending = (e.screen.steps?.length ?? 0) > 0;
     const failed = await e.page.goto(url, { waitUntil: 'commit' }).then(() => false, () => true);
     if (failed && retries > 0 && this.entries.get(e.screen.key) === e && e.page.url() === 'about:blank') {
       await sleep(NAV_RETRY_MS);
@@ -203,6 +208,15 @@ export class StreamService {
     // about:blank — не экран: пустая вкладка до перехода или после оборванного
     if (e.load !== load || this.entries.get(e.screen.key) !== e || e.page.url() === 'about:blank') {
       return;
+    }
+    if (e.stepsPending) {
+      e.stepsPending = false;
+      const error = await runStateSteps(e.page, e.screen.steps ?? []);
+      this.opts.onSteps?.(e.screen.key, error);
+      // Шаг увёл на другой документ — готовность отметит его загрузка
+      if (e.load !== load || this.entries.get(e.screen.key) !== e) {
+        return;
+      }
     }
     e.readyAt = Date.now() / 1000;
     const shot = await e.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: this.quality }).catch(() => null);

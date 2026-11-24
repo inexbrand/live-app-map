@@ -4,6 +4,7 @@
  */
 import { useEffect } from 'react';
 import { resolveNodeViewport } from '../viewport';
+import { stateNodeInfo } from '../state-nodes';
 import { useAppStore } from '../../store/app-store';
 import type { AppStore } from '../../store/app/types';
 import { useGatewayStore } from '../../store/gateway-store';
@@ -28,13 +29,15 @@ export function screensOf(s: StreamSyncInput): StreamScreen[] {
     if (url === null || url === '') {
       continue;
     }
+    const node = s.index?.nodesById.get(id);
+    const steps = node === undefined ? [] : (stateNodeInfo(node)?.steps ?? []);
     const v = resolveNodeViewport({
-      nodeViewport: s.index?.nodesById.get(id)?.viewport,
+      nodeViewport: node?.viewport,
       override: s.nodeViewports.get(id),
       layout: s.document?.layout,
       measuredHeight: s.contentHeights.get(id),
     });
-    out.push({ key: id, url, width: Math.round(v.width), height: Math.round(v.height), live: s.livePageIds.has(id) });
+    out.push({ key: id, url, width: Math.round(v.width), height: Math.round(v.height), live: s.livePageIds.has(id), ...(steps.length === 0 ? {} : { steps }) });
   }
   return out;
 }
@@ -47,7 +50,10 @@ export function useStreamSync(): void {
     const offApp = useAppStore.subscribe(push);
     // Порт и профили шлюза входят в адреса экранов
     const offGateway = useGatewayStore.subscribe(push);
+    // Итог шагов узла-состояния — подпись на узле
+    const offSteps = streamClient.onSteps((key, error) => useAppStore.getState().setStepError(key, error));
     return () => {
+      offSteps();
       offApp();
       offGateway();
     };

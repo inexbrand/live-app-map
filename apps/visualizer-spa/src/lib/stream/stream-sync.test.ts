@@ -4,6 +4,7 @@ import { indexDocument } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument } from '@live-app-map/schema';
 import { useAppStore } from '../../store/app-store';
 import { screensOf, type StreamSyncInput } from './stream-sync';
+import { expandStateNodes, stateNodeId } from '../state-nodes';
 
 const base = useAppStore.getInitialState();
 
@@ -58,5 +59,20 @@ describe('набор экранов трансляции', () => {
   test('не живой режим — пусто', () => {
     expect(screensOf(input({ mode: 'map-only' }))).toEqual([]);
     expect(base.mode).toBe('live');
+  });
+});
+
+describe('узел-состояние в трансляции', () => {
+  test('шаги состояния уходят вместе с экраном; у обычного экрана шагов нет', () => {
+    const d = doc();
+    const withState: AppMapDocument = {
+      ...d,
+      nodes: d.nodes.map((n) => (n.id === 'a' ? { ...n, states: [{ name: 'f', id: 'f', label: 'Фильтры', kind: 'ui' as const, steps: [{ click: 'text=Фильтры' }] }] } : n)),
+    };
+    const expanded = expandStateNodes(withState, true);
+    const id = stateNodeId('a', 'f');
+    const out = screensOf(input({ index: indexDocument(expanded), document: withState, mountedPageIds: new Set(['a', id]) }));
+    expect(out.find((x) => x.key === id)?.steps).toEqual([{ click: 'text=Фильтры' }]);
+    expect(out.find((x) => x.key === 'a')?.steps).toBeUndefined();
   });
 });

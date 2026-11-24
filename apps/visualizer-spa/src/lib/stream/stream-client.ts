@@ -9,11 +9,16 @@ import { decodeFrame, type PageInput, type ServerMessage, type StreamScreen } fr
 export type FrameListener = (frame: Blob) => void;
 /** Подписчик сообщений страниц. */
 export type PageListener = (key: string, data: unknown) => void;
+/** Подписчик итога шагов состояния: null — выполнены, иначе «шаг N не выполнен: …». */
+export type StepsListener = (key: string, error: string | null) => void;
 
 const RECONNECT_MS = 1000;
 
 function isServerMessage(v: unknown): v is ServerMessage {
-  return typeof v === 'object' && v !== null && 't' in v && v.t === 'page' && 'key' in v && typeof v.key === 'string';
+  if (typeof v !== 'object' || v === null || !('key' in v) || typeof v.key !== 'string' || !('t' in v)) {
+    return false;
+  }
+  return v.t === 'page' || (v.t === 'steps' && 'error' in v && (v.error === null || typeof v.error === 'string'));
 }
 
 /** Клиент трансляции. */
@@ -27,6 +32,7 @@ export class StreamClient {
   private readonly urls = new Map<string, string>();
   private readonly frameListeners = new Map<string, Set<FrameListener>>();
   private readonly pageListeners = new Set<PageListener>();
+  private readonly stepsListeners = new Set<StepsListener>();
 
   /**
    * @param resolveUrl - адрес WebSocket сервера; null — сервера нет
@@ -134,6 +140,17 @@ export class StreamClient {
     return () => this.pageListeners.delete(cb);
   }
 
+  /**
+   * Подписка на итог шагов состояния экранов.
+   *
+   * @param cb - ключ экрана и ошибка (null — шаги выполнены)
+   * @returns отписка
+   */
+  onSteps(cb: StepsListener): () => void {
+    this.stepsListeners.add(cb);
+    return () => this.stepsListeners.delete(cb);
+  }
+
   /** Закрыть соединение навсегда (тесты, выгрузка). */
   close(): void {
     this.closed = true;
@@ -216,10 +233,17 @@ export class StreamClient {
     } catch {
       return;
     }
-    if (isServerMessage(v)) {
-      for (const cb of this.pageListeners) {
-        cb(v.key, v.data);
+    if (!isServerMessage(v)) {
+      return;
+    }
+    if (v.t === 'steps') {
+      for (const cb of this.stepsListeners) {
+        cb(v.key, v.error);
       }
+      return;
+    }
+    for (const cb of this.pageListeners) {
+      cb(v.key, v.data);
     }
   }
 }

@@ -3,6 +3,7 @@
  * Экраны рендерит headless-браузер на сервере, карта получает кадры JPEG
  * и шлёт обратно набор экранов, ввод и сообщения для страниц.
  */
+import type { AppMapStateStep } from '@live-app-map/schema';
 
 /** Экран в трансляции: ключ — id ноды карты. */
 export type StreamScreen = {
@@ -12,6 +13,8 @@ export type StreamScreen = {
   readonly height: number;
   /** Живой — кадры идут; нет — страница открыта, кадров нет (на карте последний кадр). */
   readonly live: boolean;
+  /** Шаги состояния после загрузки страницы (узел-состояние); кадр готовности — после них. */
+  readonly steps?: readonly AppMapStateStep[];
 };
 
 /** Ввод мыши в страницу, координаты — px страницы. */
@@ -39,8 +42,13 @@ export type ClientMessage =
   | { readonly t: 'post'; readonly key: string; readonly data: unknown }
   | { readonly t: 'input'; readonly key: string; readonly input: PageInput };
 
-/** Сообщение сервера карте (кроме кадров): что прислала страница. */
-export type ServerMessage = { readonly t: 'page'; readonly key: string; readonly data: unknown };
+/**
+ * Сообщение сервера карте (кроме кадров): что прислала страница; итог шагов
+ * состояния (error null — выполнены, иначе «шаг N не выполнен: …»).
+ */
+export type ServerMessage =
+  | { readonly t: 'page'; readonly key: string; readonly data: unknown }
+  | { readonly t: 'steps'; readonly key: string; readonly error: string | null };
 
 /** Что сделать, чтобы открытые страницы совпали с набором карты. */
 export type SyncPlan = {
@@ -96,8 +104,41 @@ function isNum(v: unknown): v is number {
   return typeof v === 'number' && Number.isFinite(v);
 }
 
+function isStep(v: unknown): v is AppMapStateStep {
+  if (!isRecord(v)) {
+    return false;
+  }
+  const keys = Object.keys(v);
+  if (keys.length === 1 && (keys[0] === 'click' || keys[0] === 'press' || keys[0] === 'waitFor')) {
+    return typeof v[keys[0]] === 'string' && v[keys[0]] !== '';
+  }
+  if (keys.length === 1 && keys[0] === 'scroll') {
+    return isNum(v['scroll']);
+  }
+  return keys.length === 2 && typeof v['fill'] === 'string' && v['fill'] !== '' && typeof v['value'] === 'string';
+}
+
 function isScreen(v: unknown): v is StreamScreen {
-  return isRecord(v) && typeof v['key'] === 'string' && typeof v['url'] === 'string' && isNum(v['width']) && isNum(v['height']) && typeof v['live'] === 'boolean';
+  const steps = isRecord(v) ? v['steps'] : undefined;
+  return (
+    isRecord(v) &&
+    typeof v['key'] === 'string' &&
+    typeof v['url'] === 'string' &&
+    isNum(v['width']) &&
+    isNum(v['height']) &&
+    typeof v['live'] === 'boolean' &&
+    (steps === undefined || (Array.isArray(steps) && steps.every(isStep)))
+  );
+}
+
+/**
+ * Одинаковые ли шаги у двух описаний экрана.
+ *
+ * @param a - шаги
+ * @param b - шаги
+ */
+export function sameSteps(a: StreamScreen['steps'], b: StreamScreen['steps']): boolean {
+  return JSON.stringify(a ?? []) === JSON.stringify(b ?? []);
 }
 
 function isMouse(v: Record<string, unknown>): boolean {
@@ -172,7 +213,8 @@ export function planSync(current: ReadonlyMap<string, StreamScreen>, desired: re
       open.push(s);
       continue;
     }
-    if (was.url !== s.url) {
+    // Другие шаги — та же страница заново: шаги выполняются после загрузки
+    if (was.url !== s.url || !sameSteps(was.steps, s.steps)) {
       navigate.push(s);
     }
     if (was.width !== s.width || was.height !== s.height) {

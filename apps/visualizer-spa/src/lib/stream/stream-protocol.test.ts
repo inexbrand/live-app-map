@@ -81,3 +81,20 @@ describe('что страница шлёт карте', () => {
     }
   });
 });
+
+describe('шаги состояния в наборе', () => {
+  const s = { key: 'k', url: 'http://x/', width: 400, height: 300, live: true };
+  test('экран с шагами разбирается; неверный шаг — сообщение отклонено', () => {
+    const ok = parseClientMessage(JSON.stringify({ t: 'sync', screens: [{ ...s, steps: [{ click: 'text=Фильтры' }, { fill: '#q', value: '' }, { press: 'Enter' }, { waitFor: '.m' }, { scroll: 300 }] }] }));
+    expect(ok?.t === 'sync' ? ok.screens[0]?.steps?.length : 0).toBe(5);
+    expect(parseClientMessage(JSON.stringify({ t: 'sync', screens: [{ ...s, steps: [{ hover: 'a' }] }] }))).toBeNull();
+    expect(parseClientMessage(JSON.stringify({ t: 'sync', screens: [{ ...s, steps: [{ click: 'a', press: 'b' }] }] }))).toBeNull();
+  });
+
+  test('другие шаги при том же адресе — переход заново', () => {
+    const current = new Map([['k', { ...s, steps: [{ click: 'a' }] }]]);
+    expect(planSync(current, [{ ...s, steps: [{ click: 'b' }] }]).navigate.map((x) => x.key)).toEqual(['k']);
+    expect(planSync(current, [{ ...s, steps: [{ click: 'a' }] }]).navigate).toEqual([]);
+    expect(planSync(new Map([['k', s]]), [s]).navigate).toEqual([]);
+  });
+});

@@ -29,6 +29,8 @@ const DEFAULT_IDLE_CLOSE_MS = 30_000;
 export function startStreamServer(opts: StreamServerOptions): StreamServer {
   const clients = new Set<ServerWebSocket<undefined>>();
   let idle: ReturnType<typeof setTimeout> | null = null;
+  /** Итог шагов каждого экрана: новая карта получает его сразу. */
+  const steps = new Map<string, string>();
   const service = new StreamService({
     launch: opts.launch,
     onFrame: (key, jpeg) => {
@@ -40,6 +42,14 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
     onPageMessage: (key, data) => {
       const msg: ServerMessage = { t: 'page', key, data };
       const text = JSON.stringify(msg);
+      for (const c of clients) {
+        c.send(text);
+      }
+    },
+    onSteps: (key, error) => {
+      const msg: ServerMessage = { t: 'steps', key, error };
+      const text = JSON.stringify(msg);
+      steps.set(key, text);
       for (const c of clients) {
         c.send(text);
       }
@@ -60,6 +70,9 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
         }
         for (const [key, jpeg] of service.lastFrames()) {
           ws.send(encodeFrame(key, jpeg));
+        }
+        for (const text of steps.values()) {
+          ws.send(text);
         }
       },
       message(_ws, raw) {
