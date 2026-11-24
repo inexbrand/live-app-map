@@ -22,11 +22,20 @@ function TitleNode({ data }: NodeProps<TitleFlowNode>) {
 
 const NODE_TYPES = { component: ComponentNode, title: TitleNode };
 
-/** JSON по адресу; не 2xx — ошибка с текстом ответа. */
+/** JSON по адресу; не 2xx — ошибка с полем error ответа (или его текстом). */
 async function fetchJson(url: string): Promise<unknown> {
   const res = await fetch(url);
   if (!res.ok) {
-    throw new Error(await res.text());
+    const text = await res.text();
+    let message = text;
+    try {
+      const body: unknown = JSON.parse(text);
+      const err = typeof body === 'object' && body !== null ? Reflect.get(body, 'error') : undefined;
+      message = typeof err === 'string' ? err : text;
+    } catch {
+      message = text;
+    }
+    throw new Error(url + ': ' + message);
   }
   return res.json();
 }
