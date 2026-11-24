@@ -13,6 +13,7 @@ import { useStreamSync } from '../lib/stream/stream-sync';
 import { startFakeStream } from '../test/fake-stream';
 import { openMap, resetStores } from '../test/fixtures';
 import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
+import { VISIBILITY_SETTLE_MS } from './page-node/use-node-visibility';
 
 useDom();
 
@@ -283,7 +284,7 @@ describe('холст карты', () => {
     el?.setAttribute('data-id', id);
   });
 
-  test('нода вошла в кадр — видима и живая; вышла — нет; промежуточная доля ничего не меняет', async () => {
+  test('нода вошла в кадр — видима и живая после остановки камеры; вышла — нет; промежуточная доля ничего не меняет', async () => {
     const watchers = new Map<Element, IntersectionObserverCallback>();
     const Real = window.IntersectionObserver;
     class FakeObserver {
@@ -301,21 +302,32 @@ describe('холст карты', () => {
       const { doc, r } = await canvas();
       const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
       const body = nodeEl(r.container, id).querySelector('.page-node__body');
-      const report = (ratio: number): void => {
+      const report = async (ratio: number): Promise<void> => {
         const cb = body === null ? undefined : watchers.get(body);
         act(() => {
           if (cb !== undefined) {
             Reflect.apply(cb, undefined, [[{ intersectionRatio: ratio, target: body }], {}]);
           }
         });
+        await act(async () => {
+          await new Promise((done) => setTimeout(done, VISIBILITY_SETTLE_MS + 30));
+        });
       };
-      report(0.5);
+      const cb = body === null ? undefined : watchers.get(body);
+      act(() => {
+        if (cb !== undefined) {
+          Reflect.apply(cb, undefined, [[{ intersectionRatio: 0.5, target: body }], {}]);
+        }
+      });
+      // Камера ещё движется — набор живых не трогаем
+      expect(useAppStore.getState().visiblePageIds.has(id)).toBe(false);
+      await report(0.5);
       expect(useAppStore.getState().visiblePageIds.has(id)).toBe(true);
       expect(useAppStore.getState().livePageIds.has(id)).toBe(true);
       const same = useAppStore.getState().visiblePageIds;
-      report(0.1);
+      await report(0.1);
       expect(useAppStore.getState().visiblePageIds).toBe(same);
-      report(0);
+      await report(0);
       expect(useAppStore.getState().visiblePageIds.has(id)).toBe(false);
     } finally {
       Reflect.set(window, 'IntersectionObserver', Real);

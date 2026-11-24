@@ -1,16 +1,28 @@
 /**
- * Видимость ноды в кадре: IntersectionObserver сообщает store, какие экраны видны.
+ * Видимость ноды в кадре: IntersectionObserver сообщает, какие экраны видны.
+ * Замеры копятся, пока камера движется, и уходят в store одним набором после
+ * паузы: на каждом шаге зума пересчёт живых и перерисовка нод стоили долгих
+ * задач и кадров.
  */
 import { useEffect, type RefObject } from 'react';
 import { useAppStore } from '../../store/app-store';
 
-/** Видимые экраны после замера ноды: вошла (≥ 15 %) — добавить, вышла (≤ 2 %) — убрать. */
-function visibleAfter(prev: ReadonlySet<string>, nodeId: string, ratio: number): Set<string> {
+/** Пауза без новых замеров, после которой набор видимых уходит в store, мс. */
+export const VISIBILITY_SETTLE_MS = 150;
+
+/** Доля ноды в кадре по последнему замеру; null — нода ушла с холста. */
+const pending = new Map<string, number | null>();
+let timer: ReturnType<typeof setTimeout> | null = null;
+
+/** Видимые экраны после замеров: вошла (≥ 15 %) — добавить, вышла (≤ 2 %) или ушла — убрать. */
+function visibleAfter(prev: ReadonlySet<string>, changes: ReadonlyMap<string, number | null>): Set<string> {
   const next = new Set(prev);
-  if (ratio >= 0.15) {
-    next.add(nodeId);
-  } else if (ratio <= 0.02) {
-    next.delete(nodeId);
+  for (const [nodeId, ratio] of changes) {
+    if (ratio === null || ratio <= 0.02) {
+      next.delete(nodeId);
+    } else if (ratio >= 0.15) {
+      next.add(nodeId);
+    }
   }
   return next;
 }
@@ -19,25 +31,24 @@ function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
   return a.size === b.size && [...b].every((id) => a.has(id));
 }
 
-/** Замеры пересечения ноды: store узнаёт новое множество, только если оно изменилось. */
-function onIntersect(entries: readonly IntersectionObserverEntry[], nodeId: string): void {
-  for (const entry of entries) {
-    const prev = useAppStore.getState().visiblePageIds;
-    const next = visibleAfter(prev, nodeId, entry.intersectionRatio);
-    if (!sameSet(prev, next)) {
-      useAppStore.getState().setVisible(next);
-    }
+/** Применить накопленные замеры; store узнаёт новый набор, только если он изменился. */
+function flush(): void {
+  timer = null;
+  const prev = useAppStore.getState().visiblePageIds;
+  const next = visibleAfter(prev, pending);
+  pending.clear();
+  if (!sameSet(prev, next)) {
+    useAppStore.getState().setVisible(next);
   }
 }
 
-/** Нода ушла с холста (React Flow не рисует невидимые) — она больше не видна. */
-function forgetVisible(nodeId: string): void {
-  const prev = useAppStore.getState().visiblePageIds;
-  if (prev.has(nodeId)) {
-    const next = new Set(prev);
-    next.delete(nodeId);
-    useAppStore.getState().setVisible(next);
+/** Запомнить замер и отложить применение до паузы. */
+function note(nodeId: string, ratio: number | null): void {
+  pending.set(nodeId, ratio);
+  if (timer !== null) {
+    clearTimeout(timer);
   }
+  timer = setTimeout(flush, VISIBILITY_SETTLE_MS);
 }
 
 /**
@@ -53,11 +64,19 @@ export function useNodeVisibility(bodyRef: RefObject<HTMLDivElement | null>, nod
     if (!el) {
       return;
     }
-    const io = new IntersectionObserver((entries) => onIntersect(entries, nodeId), { root: null, threshold: [0, 0.02, 0.15, 0.5, 1], rootMargin: '80px' });
+    const io = new IntersectionObserver(
+      (entries) => {
+        for (const entry of entries) {
+          note(nodeId, entry.intersectionRatio);
+        }
+      },
+      { root: null, threshold: [0, 0.02, 0.15, 0.5, 1], rootMargin: '80px' },
+    );
     io.observe(el);
     return () => {
       io.disconnect();
-      forgetVisible(nodeId);
+      // Нода ушла с холста (React Flow не рисует невидимые) — она больше не видна
+      note(nodeId, null);
     };
   }, [nodeId, loadSeq]);
 }
