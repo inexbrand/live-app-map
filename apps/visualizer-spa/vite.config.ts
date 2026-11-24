@@ -22,6 +22,7 @@ import { attachFrameBypass, stripProxyPrefix } from './src/lib/frame-bypass';
 import { mapsIndexMiddleware } from './src/lib/maps-index-middleware';
 import { tlsCheckMiddleware } from './src/lib/tls-check-middleware';
 import { lamGatewayPlugin } from './src/lib/gateway/vite-plugin';
+import { lamStreamPlugin } from './src/lib/stream/stream-plugin';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
@@ -114,6 +115,7 @@ export default defineConfig({
     tlsCheckPlugin(),
     errorReportsPlugin(),
     lamGatewayPlugin(),
+    lamStreamPlugin(),
   ],
   server: {
     port: 4310,
