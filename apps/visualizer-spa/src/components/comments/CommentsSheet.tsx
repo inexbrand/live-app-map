@@ -22,13 +22,16 @@ function whereOf(anchor: CommentThread['anchor']): string {
   return c === '' ? anchor.pageTitle : `${anchor.pageTitle} · ${c}`;
 }
 
+/** Пункт «Все экраны»: пустое значение выбор считает «ничего не выбрано» и не подписывает. */
+const ALL_PAGES = '*';
+
 /** Экраны с замечаниями для фильтра. */
 function pageItems(threads: readonly CommentThread[]): { readonly value: string; readonly label: string }[] {
   const seen = new Map<string, string>();
   for (const t of threads) {
     seen.set(t.anchor.pageId, t.anchor.pageTitle);
   }
-  return [{ value: '', label: 'Все экраны' }, ...[...seen].map(([value, label]) => ({ value, label }))];
+  return [{ value: ALL_PAGES, label: 'Все экраны' }, ...[...seen].map(([value, label]) => ({ value, label }))];
 }
 
 function Group(props: { readonly title: string; readonly threads: readonly CommentThread[]; readonly active: string | null }) {
@@ -158,7 +161,7 @@ function SheetBody() {
         </Button>
       </header>
       <div className="comments-sheet__filters">
-        <OptionSelect aria-label="Экран" size="sm" className="w-44 shrink-0" items={pageItems(threads)} value={page ?? ''} onValueChange={(v) => store.openSheet(v === '' ? null : v)} />
+        <OptionSelect aria-label="Экран" size="sm" className="w-44 shrink-0" items={pageItems(threads)} value={page ?? ALL_PAGES} onValueChange={(v) => store.openSheet(v === ALL_PAGES ? null : v)} />
         <Input aria-label="Поиск по замечаниям" placeholder="Текст, экран, компонент" value={query} onChange={(e) => store.setQuery(e.target.value)} />
       </div>
       <div className="comments-sheet__list">

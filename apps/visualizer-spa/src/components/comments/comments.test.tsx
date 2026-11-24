@@ -210,6 +210,7 @@ describe('кнопка и лист всех замечаний', () => {
     await loadThreads();
     act(() => useCommentsStore.getState().openSheet(null));
     const sheet = within(ui.getByTestId('comments-sheet'));
+    expect(sheet.getByLabelText('Экран').textContent).toContain('Все экраны');
     await pickOption(sheet.getByLabelText('Экран'), `Экран ${pageIds()[1]}`);
     expect(ids(ui)).toEqual(['c3']);
     await pickOption(sheet.getByLabelText('Экран'), 'Все экраны');
@@ -315,6 +316,16 @@ describe('окно у компонента', () => {
     openOn(p1, true);
     fireEvent.click(ui.getByText('Замечаний к компоненту: 3, проверить: 1'));
     expect(within(ui.getByTestId('comment-history')).getAllByTestId('comment-thread')).toHaveLength(3);
+  });
+
+  test('лист открыт — окно закрыто, текст остаётся черновиком', async () => {
+    const ui = shell();
+    await loadThreads();
+    openOn(pageIds()[1], true);
+    await typeInto(ui.getByLabelText('Что не так'), 'Съехала цена');
+    act(() => useCommentsStore.getState().openSheet(null));
+    expect(ui.queryByTestId('comment-popover')).toBeNull();
+    expect(ui.getByTestId('sheet-draft').textContent).toContain('Съехала цена');
   });
 
   test('другой экран в фокусе — окно закрывается', async () => {

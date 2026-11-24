@@ -77,6 +77,9 @@ function useFrames(nodeId: string, canvas: HTMLCanvasElement | null, onFirst: ()
   }, [nodeId, canvas, onFirst]);
 }
 
+/** Холсты, на которых нажатие началось при включённом вводе (отпускание без нажатия — чужое). */
+const pressed = new WeakSet<HTMLCanvasElement>();
+
 /** Обработчики ввода холста: точка экрана → точка страницы. */
 function inputHandlers(nodeId: string, viewport: DeviceViewport) {
   const mouse = (type: MouseInput['type'], e: PointerEvent<HTMLCanvasElement>): void => {
@@ -94,12 +97,16 @@ function inputHandlers(nodeId: string, viewport: DeviceViewport) {
       e.stopPropagation();
       e.currentTarget.focus();
       e.currentTarget.setPointerCapture(e.pointerId);
+      pressed.add(e.currentTarget);
       mouse('down', e);
     },
     onPointerMove: (e: PointerEvent<HTMLCanvasElement>) => mouse('move', e),
     onPointerUp: (e: PointerEvent<HTMLCanvasElement>) => {
       e.stopPropagation();
-      mouse('up', e);
+      // Клик, который выбрал экран, начался до включения ввода — в страницу не уходит
+      if (pressed.delete(e.currentTarget)) {
+        mouse('up', e);
+      }
     },
     onKeyDown: (e: KeyboardEvent<HTMLCanvasElement>) => key('down', e),
     onKeyUp: (e: KeyboardEvent<HTMLCanvasElement>) => key('up', e),

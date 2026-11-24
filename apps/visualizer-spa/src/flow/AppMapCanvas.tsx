@@ -18,7 +18,7 @@ import { useAppStore } from '../store/app-store';
 import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
 import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
-import { RevealSelected } from './RevealSelected';
+import { MAX_ZOOM, RevealSelected } from './RevealSelected';
 import { LamMiniMap } from './LamMiniMap';
 import { layoutBounds, minimapSize } from './minimap';
 import { PageNode, type PageNodeData } from './PageNode';
@@ -243,7 +243,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
         {...zoom}
         onlyRenderVisibleElements
         minZoom={0.05}
-        maxZoom={1.5}
+        maxZoom={MAX_ZOOM}
         proOptions={{ hideAttribution: true }}
         onPaneClick={() => selectPage(null)}
         onNodeClick={(_, n) => {

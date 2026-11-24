@@ -9,6 +9,9 @@ import { useAppStore } from '../store/app-store';
 import { revealShift, type DockedPanel, type ScreenRect } from './reveal';
 
 const GAP = 16;
+/** Наибольший масштаб холста: фокус вписывает экран в высоту окна до него. */
+export const MAX_ZOOM = 1.5;
+
 /** Место сверху (шапка) и снизу (плашка фокуса) при подгонке экрана. */
 const TOP_RESERVE = 72;
 const BOTTOM_RESERVE = 88;
@@ -24,13 +27,13 @@ const MIN_READABLE_ZOOM = 0.55;
 export function focusCamera(node: { readonly x: number; readonly y: number; readonly w: number; readonly h: number }, view: { readonly width: number; readonly height: number }): { readonly x: number; readonly y: number; readonly zoom: number } {
   const availH = Math.max(120, view.height - TOP_RESERVE - BOTTOM_RESERVE);
   const availW = Math.max(120, view.width - 2 * GAP);
-  const fit = Math.min(1, availH / node.h, availW / node.w);
+  const fit = Math.min(MAX_ZOOM, availH / node.h, availW / node.w);
   const cx = node.x + node.w / 2;
   if (fit >= MIN_READABLE_ZOOM) {
     // Центр чуть ниже середины окна: сверху шапка меньше плашки снизу — сдвиг на половину разницы
     return { x: cx, y: node.y + node.h / 2 + (BOTTOM_RESERVE - TOP_RESERVE) / 2 / fit, zoom: fit };
   }
-  const zoom = Math.min(1, availW / node.w);
+  const zoom = Math.min(MAX_ZOOM, availW / node.w);
   return { x: cx, y: node.y + (view.height / 2 - TOP_RESERVE) / zoom, zoom };
 }
 

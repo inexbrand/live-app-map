@@ -230,7 +230,8 @@ export const useCommentsStore = create<CommentsState>((set, get) => ({
       set({ threads: get().threads.map((t) => (t.id === id ? parsed.data.comment : t)) });
     }
   },
-  openSheet: (sheetPage) => set({ sheetOpen: true, sheetPage }),
+  // Окно у компонента и лист не живут вместе: текст окна уже в черновиках
+  openSheet: (sheetPage) => set({ sheetOpen: true, sheetPage, target: null, saveError: null }),
   closeSheet: () => set({ sheetOpen: false }),
   setQuery: (query) => set({ query }),
   focus: (focusId) => set({ focusId }),

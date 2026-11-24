@@ -13,7 +13,7 @@ import { startFakeStream } from '../test/fake-stream';
 import { openMap, resetStores } from '../test/fixtures';
 import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
 import { VISIBILITY_SETTLE_MS } from './page-node/use-node-visibility';
-import { focusCamera } from './RevealSelected';
+import { focusCamera, MAX_ZOOM } from './RevealSelected';
 
 useDom();
 
@@ -251,18 +251,19 @@ describe('холст карты', () => {
     expect(withLabel.every((e) => e.source === labeled?.from || e.target === labeled?.from)).toBe(true);
   });
 
-  test('фокус экрана: короткий вписан по высоте под шапкой и над плашкой; длинная страница — 1:1 от верха', () => {
+  test('фокус экрана: короткий вписан по высоте под шапкой и над плашкой; длинная страница — крупно от верха', () => {
     const view = { width: 1440, height: 900 };
     const short = focusCamera({ x: 0, y: 0, w: 390, h: 600 }, view);
-    expect(short.zoom).toBe(1);
+    // Высота окна без шапки и плашки — 740: короткий экран увеличен до неё
+    expect(short.zoom).toBeCloseTo(740 / 600, 5);
     // Центр ниже середины ноды на половину разницы плашки и шапки
     expect(short.y).toBeGreaterThan(300);
     const tall = focusCamera({ x: 0, y: 0, w: 390, h: 4000 }, view);
-    expect(tall.zoom).toBe(1);
+    expect(tall.zoom).toBe(MAX_ZOOM);
     // Верх страницы — сразу под шапкой: центр окна на (высота/2 − шапка) ниже верха ноды
     expect(tall.y).toBeLessThan(view.height / 2);
     const mid = focusCamera({ x: 0, y: 0, w: 390, h: 1000 }, view);
-    expect(mid.zoom).toBeLessThan(1);
+    expect(mid.zoom).toBeLessThan(MAX_ZOOM);
     expect(mid.zoom * 1000).toBeLessThanOrEqual(view.height);
   });
 
