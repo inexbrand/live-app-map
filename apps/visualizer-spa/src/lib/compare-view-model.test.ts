@@ -5,10 +5,11 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import type { AppMapDocument } from '@live-app-map/schema';
+import { mapText } from '../test/fixtures';
 import { compareMaps } from './compare-view-model';
 import { documentFromJson } from './import-map';
 
-const raw: unknown = JSON.parse(readFileSync(path.join(import.meta.dir, '../../public/maps/korbor-all.liveappmap.json'), 'utf8'));
+const raw: unknown = JSON.parse(mapText('korbor-all'));
 const parsed = documentFromJson(raw);
 if (!parsed.ok) {
   throw new Error(parsed.error);

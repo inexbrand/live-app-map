@@ -6,9 +6,10 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { tableDetail } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapDocument } from '@live-app-map/schema';
+import { mapText } from '../test/fixtures';
 import { dbIndexOf, tableRows, tableView } from './db-view-model';
 
-const raw: unknown = JSON.parse(readFileSync(path.join(import.meta.dir, '../../public/maps/korbor-all.liveappmap.json'), 'utf8'));
+const raw: unknown = JSON.parse(mapText('korbor-all'));
 const parsed = parseLiveAppMapDocument(raw);
 if (!parsed.ok) {
   throw new Error('карта korbor-all не разобралась');

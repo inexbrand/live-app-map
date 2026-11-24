@@ -5,9 +5,10 @@ import { beforeEach, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { useAppStore } from '../store/app-store';
+import { testMapPath } from '../test/fixtures';
 import { loadMapPresetIntoStore, type MapPresetStoreActions } from './load-map-preset';
 
-const sitePath = path.resolve(import.meta.dir, '../../public/maps/korbor-site.liveappmap.json');
+const sitePath = testMapPath('korbor-site');
 
 function fakeFetch(status: number, body: string): typeof fetch {
   const fn = async (): Promise<Response> => new Response(body, { status });

@@ -3,19 +3,18 @@
  * выбранного размера (с полосой выбора) — как их раскладывает холст.
  */
 import { describe, expect, test } from 'bun:test';
-import { readdirSync, readFileSync } from 'node:fs';
-import path from 'node:path';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
 import { filterCanvasGraph } from './canvas-graph';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
 import { findOverlaps } from './pack-layout';
 import { expandStateNodes, stateNodeInfo } from '../lib/state-nodes';
+import { mapText, type MapName } from '../test/fixtures';
 
-const mapsDir = path.resolve(import.meta.dir, '../../public/maps');
-const maps: Array<[string, AppMapDocument]> = readdirSync(mapsDir)
-  .filter((f) => f.endsWith('.liveappmap.json'))
-  .map((f) => {
-    const parsed = parseLiveAppMapJson(readFileSync(path.join(mapsDir, f), 'utf8'));
+const MAP_NAMES: readonly MapName[] = ['korbor-all', 'korbor-miniapp', 'korbor-admin', 'korbor-site', 'live-app-map'];
+const maps: Array<[string, AppMapDocument]> = MAP_NAMES
+  .map((name) => {
+    const f = `${name}.liveappmap.json`;
+    const parsed = parseLiveAppMapJson(mapText(name));
     if (!parsed.ok) {
       throw new Error(`карта ${f} не разобралась`);
     }

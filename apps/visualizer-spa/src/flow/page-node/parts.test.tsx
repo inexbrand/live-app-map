@@ -1,18 +1,18 @@
 /**
  * Части ноды карты, которые показывают состояние: строка пути, панель окна, стейты.
- * Нода — настоящая, из карты korbor-miniapp в public/maps.
+ * Нода — настоящая, из среза карты korbor-miniapp (test/maps).
  */
 import { describe, expect, test } from 'bun:test';
-import { readFileSync } from 'node:fs';
 import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapNode, type DeviceViewport } from '@live-app-map/schema';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { BUILTIN_VIEWPORT_PRESETS } from '../../lib/viewport';
+import { mapText } from '../../test/fixtures';
 import { NodePath } from './NodePath';
 import { StateChips } from './StateChips';
 import { ViewportBar } from './ViewportBar';
 
 function firstPage(): AppMapNode {
-  const raw: unknown = JSON.parse(readFileSync(new URL('../../../public/maps/korbor-miniapp.liveappmap.json', import.meta.url), 'utf8'));
+  const raw: unknown = JSON.parse(mapText('korbor-miniapp'));
   const parsed = parseLiveAppMapDocument(raw);
   if (!parsed.ok) {
     throw new Error('карта korbor-miniapp не разобралась');

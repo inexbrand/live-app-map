@@ -5,9 +5,10 @@ import { describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { liveAppMapToAppMap, parseLiveAppMapJson } from '@live-app-map/schema';
+import { testMapPath } from '../test/fixtures';
 import { findOverlaps, NODE_GAP, packLayout, startViewport, type LayoutBox } from './pack-layout';
 
-const allMap = path.resolve(import.meta.dir, '../../public/maps/korbor-all.liveappmap.json');
+const allMap = testMapPath('korbor-all');
 
 function korborBoxes(): { boxes: LayoutBox[]; links: Array<{ from: string; to: string }> } {
   const parsed = parseLiveAppMapJson(readFileSync(allMap, 'utf8'));

@@ -5,7 +5,7 @@ import { beforeAll, describe, expect, test } from 'bun:test';
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
-import { OPEN_EPOCH_DIR, withOpenEpoch } from '../test/fixtures';
+import { OPEN_EPOCH_DIR, testMapPath, withOpenEpoch } from '../test/fixtures';
 import { buildSearchIndex, searchIndex, type SearchItem } from './global-search';
 
 const MAPS = path.resolve(import.meta.dir, '../../../../maps');
@@ -13,7 +13,7 @@ let korbor: AppMapDocument;
 let index: SearchItem[];
 
 beforeAll(() => {
-  const res = parseLiveAppMapJson(readFileSync(path.join(MAPS, 'korbor-all.liveappmap.json'), 'utf8'));
+  const res = parseLiveAppMapJson(readFileSync(testMapPath('korbor-all'), 'utf8'));
   if (!res.ok) {
     throw new Error('korbor-all не разобрана');
   }

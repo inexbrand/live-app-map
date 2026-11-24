@@ -4,21 +4,15 @@
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { existsSync, readFileSync } from 'node:fs';
-import path from 'node:path';
-import { KORBOR_PRESETS } from '../korbor-presets';
 import { mapSessionToInject } from '../lib/dogfood-api';
-import { applyLoadedMapPreset } from '../lib/load-map-preset';
+import { applyLoadedMapPreset, type MapSource } from '../lib/load-map-preset';
+import { testMapPath } from '../test/fixtures';
 import { useAppStore } from './app-store';
 
-const allPath = path.resolve(
-  import.meta.dir,
-  '../../../../maps/korbor-all.liveappmap.json',
-);
+const allPath = testMapPath('korbor-all');
 
-const allPreset = KORBOR_PRESETS.find((p) => p.id === 'all');
-if (allPreset === undefined) {
-  throw new Error('KORBOR_PRESETS missing id=all');
-}
+/** Общая карта korbor: у экранов свои хосты, baseUrl — запасной адрес сайта. */
+const allPreset: MapSource = { path: '/maps/korbor-all.liveappmap.json', baseUrl: 'http://localhost:16001' };
 
 function pageHosts(
   doc: NonNullable<ReturnType<typeof useAppStore.getState>['document']>,
@@ -185,16 +179,8 @@ describe('korbor-all multi-host via REAL UI load path', () => {
   });
 
   test('single-surface override still force-rewrites (admin map → custom base)', () => {
-    const adminPath = path.resolve(
-      import.meta.dir,
-      '../../../../maps/korbor-admin.liveappmap.json',
-    );
+    const adminPath = testMapPath('korbor-admin');
     expect(existsSync(adminPath)).toBe(true);
-    const adminPreset = KORBOR_PRESETS.find((p) => p.id === 'admin');
-    expect(adminPreset).toBeTruthy();
-    if (!adminPreset) {
-      return;
-    }
     const raw = JSON.parse(readFileSync(adminPath, 'utf8')) as unknown;
     // Pretend user retargets: set override then load
     useAppStore.getState().setBaseUrlOverride('http://localhost:9999');

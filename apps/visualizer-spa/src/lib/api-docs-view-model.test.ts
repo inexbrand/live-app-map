@@ -6,6 +6,7 @@ import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { buildCodeIndex, type CodeIndex } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@live-app-map/schema';
+import { testMapPath } from '../test/fixtures';
 import { apiViewState, routeCard, routeEffects, routeOneLine, schemaInline } from './api-view-model';
 import {
   docsSections,
@@ -20,7 +21,7 @@ import {
 const MAPS = path.resolve(import.meta.dir, '../../../../maps');
 
 function load(name: string): AppMapDocument {
-  const res = parseLiveAppMapJson(readFileSync(path.join(MAPS, name), 'utf8'));
+  const res = parseLiveAppMapJson(readFileSync(path.isAbsolute(name) ? name : path.join(MAPS, name), 'utf8'));
   if (!res.ok) {
     throw new Error(res.errors.map((e) => e.message).join('\n'));
   }
@@ -32,7 +33,7 @@ let index: CodeIndex;
 let self: AppMapDocument;
 
 beforeAll(() => {
-  korbor = load('korbor-all.liveappmap.json');
+  korbor = load(testMapPath('korbor-all'));
   index = buildCodeIndex(korbor);
   self = load('live-app-map.liveappmap.json');
 });
