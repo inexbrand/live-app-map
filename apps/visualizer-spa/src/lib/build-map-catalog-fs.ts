@@ -56,6 +56,35 @@ function summaryOf(fileName: string, appName: string | undefined, baseUrl: strin
 }
 
 /**
+ * Запись каталога для карты вне `public/maps` (карта проекта): свои id, подпись и адрес.
+ *
+ * @param id - id карты
+ * @param label - подпись в селекте
+ * @param mapPath - адрес JSON карты на dev-сервере
+ * @param summary - что прочитано из файла
+ */
+export function buildMapCatalogEntryFor(id: string, label: string, mapPath: string, summary: MapFileSummary): MapCatalogEntry {
+  return { id, label, path: mapPath, baseUrl: summary.baseUrl ?? '', pageCount: summary.pageCount };
+}
+
+/** Карты вне папки, которые идут в каталог первыми (карта проекта). */
+export type ExtraCatalogItems = {
+  readonly maps: readonly MapCatalogEntry[];
+  readonly skipped: readonly SkippedMapFile[];
+};
+
+/**
+ * Каталог с картами вне папки: они первыми, их пропуски — первыми.
+ *
+ * @param catalog - каталог папки
+ * @param extra - карты вне папки
+ * @returns новый каталог
+ */
+export function withExtraMaps(catalog: MapCatalog, extra: ExtraCatalogItems): MapCatalog {
+  return { ...catalog, maps: [...extra.maps, ...catalog.maps], skipped: [...extra.skipped, ...catalog.skipped] };
+}
+
+/**
  * Каталог карт папки (без записи на диск).
  *
  * @param mapsDir - абсолютный путь `public/maps`

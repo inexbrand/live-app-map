@@ -5,7 +5,6 @@
  * `public/maps/*.liveappmap.json` — любая карта в папке появляется в UI
  * без правки кода. Здесь — тип записи, разбор на границе и fetch.
  */
-import { KORBOR_PRESETS } from '../korbor-presets';
 import { fetchJsonFile } from './load-error';
 
 /** Путь каталога относительно origin визуализатора. */
@@ -19,11 +18,11 @@ export const MAP_CATALOG_VERSION = 1;
 
 /** Карта в каталоге. */
 export type MapCatalogEntry = {
-  /** Имя файла без `.liveappmap.json` (`korbor-miniapp`). */
+  /** Имя файла без `.liveappmap.json` (`live-app-map`) или имя проекта (`korbor`). */
   readonly id: string;
   /** Подпись в селекте. */
   readonly label: string;
-  /** URL JSON карты (`/maps/korbor-miniapp.liveappmap.json`). */
+  /** URL JSON карты (`/maps/live-app-map.liveappmap.json`, `/__lam_project/map.json`). */
   readonly path: string;
   /** Dev-сервер приложения; пустая строка — карта без baseUrl. */
   readonly baseUrl: string;
@@ -60,8 +59,8 @@ export type MapFileSummary = {
 /**
  * id карты по имени файла.
  *
- * @param fileName - `korbor-site.liveappmap.json`
- * @returns `korbor-site`
+ * @param fileName - `live-app-map.liveappmap.json`
+ * @returns `live-app-map`
  */
 export function mapIdFromFileName(fileName: string): string {
   return fileName.endsWith(MAP_FILE_SUFFIX)
@@ -70,39 +69,30 @@ export function mapIdFromFileName(fileName: string): string {
 }
 
 /**
- * Запись каталога. Для карт из `KORBOR_PRESETS` подпись и baseUrl берутся
- * из пресета (dogfood-порты), для остальных — из самой карты.
+ * Запись каталога для файла `public/maps`: подпись — имя приложения из карты, адрес — из карты.
  *
  * @param summary - что прочитано из файла
  */
 export function buildMapCatalogEntry(summary: MapFileSummary): MapCatalogEntry {
   const id = mapIdFromFileName(summary.fileName);
-  const path = `/maps/${summary.fileName}`;
-  const preset = KORBOR_PRESETS.find((p) => p.path === path);
   return {
     id,
-    label: preset?.label ?? summary.appName ?? id,
-    path,
-    baseUrl: preset?.baseUrl ?? summary.baseUrl ?? '',
+    label: summary.appName ?? id,
+    path: `/maps/${summary.fileName}`,
+    baseUrl: summary.baseUrl ?? '',
     pageCount: summary.pageCount,
   };
 }
 
 /**
- * Порядок: пресеты Korbor в порядке `KORBOR_PRESETS`, затем остальные по id.
+ * Порядок по id.
  *
  * @param entries - записи в любом порядке
  */
 export function sortMapCatalog(
   entries: readonly MapCatalogEntry[],
 ): readonly MapCatalogEntry[] {
-  const rank = (e: MapCatalogEntry): number => {
-    const i = KORBOR_PRESETS.findIndex((p) => p.path === e.path);
-    return i < 0 ? KORBOR_PRESETS.length : i;
-  };
-  return [...entries].sort(
-    (a, b) => rank(a) - rank(b) || a.id.localeCompare(b.id),
-  );
+  return [...entries].sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function isRecord(v: unknown): v is Readonly<Record<string, unknown>> {

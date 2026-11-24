@@ -1,34 +1,31 @@
 /**
- * Рецепты свежего скана карт каталога: korbor-* — `scripts/scan-korbor.ts` (пишет все
- * поверхности сразу), live-app-map — `cli code` по самому монорепо. Вывод — во
- * временный каталог, карты репозитория не меняются.
+ * Рецепты свежего скана карт каталога: карта проекта — `cli scan --project`,
+ * live-app-map — `cli code` по самому монорепо. Вывод — во временный каталог,
+ * карты на диске не меняются.
  */
 import path from 'node:path';
 import type { ScanRecipes } from './map-versions';
 
-const KORBOR_MAPS = new Set(['korbor-miniapp', 'korbor-admin', 'korbor-site', 'korbor-all']);
+/** Проект для рецепта: id карты (config.name) и корень. */
+export type RecipeProject = { readonly name: string; readonly root: string };
 
 /**
  * Рецепты для монорепо live-app-map.
  *
- * @param monorepo - корень монорепо (там scripts/ и packages/)
- * @param env - окружение dev-сервера (KORBOR_DIR)
+ * @param monorepo - корень монорепо (там packages/)
+ * @param project - открытый проект или null
  * @returns функция рецепта по id карты
  */
-export function monorepoScanRecipes(monorepo: string, env: Readonly<Record<string, string | undefined>>): ScanRecipes {
+export function monorepoScanRecipes(monorepo: string, project: RecipeProject | null): ScanRecipes {
   return (mapId, tmp) => {
-    if (KORBOR_MAPS.has(mapId)) {
-      const korbor = env['KORBOR_DIR'];
+    if (project !== null && mapId === project.name) {
+      const output = path.join(tmp, 'map.json');
       return {
         command: 'bun',
-        args: ['scripts/scan-korbor.ts'],
+        args: ['packages/cli/src/bin.ts', 'scan', '--project', project.root, '-o', output],
         cwd: monorepo,
-        env: {
-          ...(korbor === undefined ? {} : { KORBOR_DIR: korbor }),
-          LAM_MAPS_OUT: path.join(tmp, 'maps'),
-          LAM_PUBLIC_MAPS_OUT: path.join(tmp, 'public'),
-        },
-        output: path.join(tmp, 'public', `${mapId}.liveappmap.json`),
+        env: {},
+        output,
       };
     }
     if (mapId === 'live-app-map') {

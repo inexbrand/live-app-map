@@ -1,5 +1,6 @@
 /**
- * Vite SPA :4310 + TLS dogfood proxy (self-signed miniapp) + dynamic /maps catalog.
+ * Vite SPA :4310 + TLS dogfood proxy (self-signed miniapp) + dynamic /maps catalog +
+ * проект (LAM_PROJECT): его карта в каталоге и GET /__lam_project/states.
  */
 import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
@@ -23,14 +24,22 @@ import { mapsIndexMiddleware } from './src/lib/maps-index-middleware';
 import { tlsCheckMiddleware } from './src/lib/tls-check-middleware';
 import { lamGatewayPlugin } from './src/lib/gateway/vite-plugin';
 import { lamStreamPlugin } from './src/lib/stream/stream-plugin';
+import { openProject, projectCatalogExtra, projectMiddleware, type OpenProject } from './src/lib/project/project-server';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
 /** Корень монорепо: scripts/ и packages/ для свежего скана карт. */
 const monorepoRoot = path.resolve(spaRoot, '../..');
 
+/** Открытый проект (`bun run dev -- --project <каталог>` / LAM_PROJECT) или null. */
+const project: OpenProject | null = await openProject(process.env, process.cwd());
+
+/** Карта проекта для версий и свежего скана: id → файл. */
+const projectMapFiles = new Map(project === null ? [] : [[project.name, project.mapFile]]);
+
 /** REST визуализатора: одинаково у dev-сервера и у прод-сборки (vite preview). */
 function mountApi(server: Pick<PreviewServer, 'middlewares'>): void {
+  server.middlewares.use(projectMiddleware(project));
   server.middlewares.use(httpsPathProxyMiddleware);
   server.middlewares.use(errorReportsMiddleware);
   server.middlewares.use(agentStateMiddleware);
@@ -38,7 +47,7 @@ function mountApi(server: Pick<PreviewServer, 'middlewares'>): void {
   server.middlewares.use(modelsMiddleware);
   server.middlewares.use(mcpAgentMiddleware);
   server.middlewares.use(docsAssetMiddleware);
-  server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
+  server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, project), projectMapFiles));
   server.middlewares.use(docsWriteMiddleware);
   server.middlewares.use(tlsCheckMiddleware);
 }
@@ -65,10 +74,10 @@ function mapsCatalogPlugin(): Plugin {
       writeMapCatalogIndex(publicMapsDir);
     },
     configureServer(server) {
-      server.middlewares.use(mapsIndexMiddleware(publicMapsDir));
+      server.middlewares.use(mapsIndexMiddleware(publicMapsDir, () => projectCatalogExtra(project)));
     },
     configurePreviewServer(server) {
-      server.middlewares.use(mapsIndexMiddleware(publicMapsDir));
+      server.middlewares.use(mapsIndexMiddleware(publicMapsDir, () => projectCatalogExtra(project)));
     },
   };
 }

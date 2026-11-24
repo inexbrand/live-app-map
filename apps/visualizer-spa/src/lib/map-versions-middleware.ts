@@ -5,7 +5,8 @@
  * - GET  /__lam_maps/version?id=<карта>&ref=<хеш> — карта из коммита (JSON);
  * - POST /__lam_maps/scan?id=<карта> — свежий скан во временный каталог (JSON).
  *
- * id — имя файла `<id>.liveappmap.json` в каталоге карт; другие файлы недоступны.
+ * id — имя файла `<id>.liveappmap.json` в каталоге карт или id карты вне папки
+ * (карта проекта — её файл map.json); другие файлы недоступны.
  */
 import { existsSync } from 'node:fs';
 import path from 'node:path';
@@ -27,11 +28,11 @@ function sendMapText(res: Parameters<DevMiddleware>[1], text: string): void {
 }
 
 /** Файл карты каталога по id; нет id или карты — статус и текст ошибки. */
-function mapFileOf(mapsDir: string, id: string | null): { readonly id: string; readonly file: string } | { readonly status: number; readonly error: string } {
+function mapFileOf(mapsDir: string, extraFiles: ReadonlyMap<string, string>, id: string | null): { readonly id: string; readonly file: string } | { readonly status: number; readonly error: string } {
   if (id === null || id === '') {
-    return { status: 400, error: 'не задан id карты — например, korbor-all' };
+    return { status: 400, error: 'не задан id карты — например, live-app-map' };
   }
-  const file = path.join(mapsDir, `${id}.liveappmap.json`);
+  const file = extraFiles.get(id) ?? path.join(mapsDir, `${id}.liveappmap.json`);
   return !MAP_ID.test(id) || !existsSync(file) ? { status: 404, error: `карты ${id} нет в каталоге` } : { id, file };
 }
 
@@ -65,8 +66,9 @@ function startScan(req: Parameters<DevMiddleware>[0], res: Parameters<DevMiddlew
  *
  * @param mapsDir - каталог `*.liveappmap.json` (public/maps)
  * @param recipes - рецепты свежего скана
+ * @param extraFiles - карты вне папки: id → файл (карта проекта)
  */
-export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes): DevMiddleware {
+export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes, extraFiles: ReadonlyMap<string, string> = new Map()): DevMiddleware {
   /** Сканы в полёте по id: второй запрос ждёт тот же скан. */
   const scans = new Map<string, ReturnType<typeof freshScan>>();
   return (req, res, next) => {
@@ -76,7 +78,7 @@ export function mapVersionsMiddleware(mapsDir: string, recipes: ScanRecipes): De
       return;
     }
     const q = new URL(req.url ?? '/', 'http://localhost').searchParams;
-    const map = mapFileOf(mapsDir, q.get('id'));
+    const map = mapFileOf(mapsDir, extraFiles, q.get('id'));
     if ('status' in map) {
       sendError(res, map.status, map.error);
       return;
