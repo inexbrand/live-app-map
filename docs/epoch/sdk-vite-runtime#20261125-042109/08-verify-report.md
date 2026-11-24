@@ -18,3 +18,10 @@
 
 /@lam/component?key=apps/miniapp/src/shared/ui/WebActionButton.tsx#WebActionButton&variant=primary — кнопка «Откликнуться (вариант lam)» в AppProviders со стилями, ошибок страницы нет; `__LAM__.components()` дал дерево AppProviders → … → WebActionButton (src/shared/ui/WebActionButton.tsx).
 Снимки: proof/*.png.
+
+## Вкладка «Компоненты» живьём
+
+Визуализатор из рабочей копии на :4421 с LAM_PROJECT=packages/sdk/test/fixture (временный config.ts: app fx, dir src, baseUrl http://127.0.0.1:5431),
+фикстура SDK на Vite :5431 с lamVite. Headless Helium: вкладка «Компоненты» → 2 узла (Card/red, Remote/empty), у обоих холст трансляции;
+кадры: карточка «Из варианта» в красной рамке (props + styles), Remote — «200 []» (api варианта). Ошибок страницы нет. Снимок: proof/gallery-live.png.
+Тесты: components-view, components-store, components-gallery, stream-sync — 16 pass; tsc visualizer-spa чисто. Серверы 4421/5431 остановлены, временный config.ts удалён.

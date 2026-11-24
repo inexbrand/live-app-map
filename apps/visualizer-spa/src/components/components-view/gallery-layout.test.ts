@@ -2,6 +2,12 @@ import { expect, test } from 'bun:test';
 import { buildGallery } from '../../lib/components-gallery/gallery';
 import { galleryLayout, GALLERY_GAP } from './gallery-layout';
 
+test('компонент в корне приложения — заголовок без папки', () => {
+  const g = buildGallery({ 'apps/m/A.tsx#A': [{ id: 'a', label: 'А' }] }, [{ id: 'm', label: 'Мини', dir: 'apps/m', baseUrl: 'http://h' }]);
+  const t = galleryLayout(g, { width: 100, height: 50 })[0];
+  expect(t?.kind === 'title' ? t.title : '').toBe('Мини');
+});
+
 test('колонка на группу, заголовок сверху, варианты друг под другом', () => {
   const g = buildGallery(
     { 'apps/m/src/ui/A.tsx#A': [{ id: 'a1', label: 'А1' }, { id: 'a2', label: 'А2' }], 'apps/m/src/feed/B.tsx#B': [{ id: 'b', label: 'Б' }] },
