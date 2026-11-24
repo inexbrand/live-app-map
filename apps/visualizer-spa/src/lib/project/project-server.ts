@@ -4,7 +4,8 @@
  * - карта проекта `<проект>/.live-app-map/map.json` — в каталоге карт под id = config.name,
  *   отдаётся по {@link PROJECT_MAP_PATH};
  * - `GET /__lam_project/states` — экспорты `states.ts` как есть: `{ screens, components }`;
- *   файл перечитывается при изменении. Проект не открыт — 404, нет states.ts — пустые объекты.
+ *   файл перечитывается при изменении. Проект не открыт — 404, нет states.ts — пустые объекты;
+ * - `GET /__lam_project/config` — LamProjectConfig из config.ts (проверенный, перечитывается на запрос).
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
@@ -18,6 +19,9 @@ export const PROJECT_MAP_PATH = '/__lam_project/map.json';
 
 /** Адрес состояний проекта. */
 export const PROJECT_STATES_PATH = '/__lam_project/states';
+
+/** Адрес конфига проекта (LamProjectConfig как есть). */
+export const PROJECT_CONFIG_PATH = '/__lam_project/config';
 
 /** Переменная окружения с каталогом проекта. */
 export const PROJECT_ENV = 'LAM_PROJECT';
@@ -127,7 +131,7 @@ function sendMapFile(res: Parameters<DevMiddleware>[1], file: string): void {
 export function projectMiddleware(project: OpenProject | null): DevMiddleware {
   return (req, res, next) => {
     const p = requestPath(req);
-    if (p !== PROJECT_MAP_PATH && p !== PROJECT_STATES_PATH) {
+    if (p !== PROJECT_MAP_PATH && p !== PROJECT_STATES_PATH && p !== PROJECT_CONFIG_PATH) {
       next();
       return;
     }
@@ -141,6 +145,14 @@ export function projectMiddleware(project: OpenProject | null): DevMiddleware {
       } else {
         sendError(res, 404, `нет ${project.mapFile} — запустите bun run scan -- --project ${project.root}`);
       }
+      return;
+    }
+    if (p === PROJECT_CONFIG_PATH) {
+      // Читается заново на каждый запрос: правка config.ts видна без перезапуска.
+      void loadProjectConfig(project.root).then(
+        (config) => sendJson(res, 200, config),
+        (err: unknown) => sendError(res, 500, errorMessage(err)),
+      );
       return;
     }
     void readProjectStates(project.statesFile).then(

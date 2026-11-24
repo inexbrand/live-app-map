@@ -3,9 +3,8 @@
  * Чтение — импортом Bun (TypeScript без сборки), проверка — до скана: пустое или
  * неверное поле останавливает скан с текстом, что вписать.
  */
-import { existsSync } from 'node:fs';
+import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import type { LamApp, LamProjectConfig } from '@live-app-map/sdk';
 
 /** Папка проекта внутри приложения. */
@@ -63,6 +62,34 @@ function appErrors(raw: unknown, where: string, root: string): string[] {
   return errors;
 }
 
+/** Конец связи: `<id приложения>:<путь маршрута>`, путь с «/». */
+const LINK_END = /^([a-z0-9][a-z0-9-]*):(\/.*)$/;
+
+/** Ошибки связей: формат концов и известные id приложений. */
+function linksErrors(raw: unknown, appIds: ReadonlySet<string>): string[] {
+  if (raw === undefined) {
+    return [];
+  }
+  if (!Array.isArray(raw)) {
+    return ["links: список связей, например links: [{ from: 'miniapp:/feed', to: 'miniapp:/wallet', label: 'Таб' }]"];
+  }
+  return raw.flatMap((l, i): string[] => {
+    if (!isRecord(l)) {
+      return [`links[${i}]: ожидается объект { from, to, label? }`];
+    }
+    const ends = (['from', 'to'] as const).flatMap((k): string[] => {
+      const v = l[k];
+      const m = typeof v === 'string' ? LINK_END.exec(v) : null;
+      if (m === null) {
+        return [`links[${i}].${k}: впишите '<id приложения>:<путь маршрута>', например 'miniapp:/feed'`];
+      }
+      return appIds.has(m[1] ?? '') ? [] : [`links[${i}].${k}: приложения ${m[1]} нет в apps`];
+    });
+    const label = l['label'];
+    return label === undefined || filled(label) ? ends : [...ends, `links[${i}].label: непустая строка или без поля`];
+  });
+}
+
 /** Ошибки списка бэкенда. */
 function backendErrors(raw: unknown, root: string): string[] {
   if (raw === undefined) {
@@ -101,6 +128,8 @@ export function checkProjectConfig(raw: unknown, root: string): { readonly ok: t
     }
   }
   errors.push(...backendErrors(raw['backend'], root));
+  const appIds = new Set(Array.isArray(apps) ? apps.flatMap((a) => (isRecord(a) && filled(a['id']) ? [a['id']] : [])) : []);
+  errors.push(...linksErrors(raw['links'], appIds));
   return errors.length > 0 ? { ok: false, errors } : { ok: true, config: toConfig(raw, apps) };
 }
 
@@ -108,6 +137,7 @@ export function checkProjectConfig(raw: unknown, root: string): { readonly ok: t
 function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamProjectConfig {
   const list = Array.isArray(apps) ? apps.filter(isRecord) : [];
   const backend = raw['backend'];
+  const links = Array.isArray(raw['links']) ? raw['links'].filter(isRecord) : null;
   return {
     name: String(raw['name']),
     apps: list.map((a): LamApp => ({
@@ -118,6 +148,9 @@ function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamPro
       ...(Array.isArray(a['roles']) ? { roles: a['roles'].map(String) } : {}),
     })),
     ...(Array.isArray(backend) ? { backend: backend.map(String) } : {}),
+    ...(links === null
+      ? {}
+      : { links: links.map((l) => ({ from: String(l['from']), to: String(l['to']), ...(typeof l['label'] === 'string' ? { label: l['label'] } : {}) })) }),
   };
 }
 
@@ -134,7 +167,8 @@ export async function loadProjectConfig(projectRoot: string): Promise<LamProject
   if (!existsSync(file)) {
     throw new Error(`нет ${file}: создайте его с export const config: LamProjectConfig (name, apps)`);
   }
-  const mod: unknown = await import(pathToFileURL(file).href);
+  // Путь с ?v=<mtime>: Bun перечитывает модуль после правки файла (у file:// URL запрос кэш не сбрасывает).
+  const mod: unknown = await import(`${file}?v=${statSync(file).mtimeMs}`);
   const checked = checkProjectConfig(isRecord(mod) ? mod['config'] : undefined, root);
   if (!checked.ok) {
     throw new Error(`${file}:\n${checked.errors.map((e) => `  - ${e}`).join('\n')}`);

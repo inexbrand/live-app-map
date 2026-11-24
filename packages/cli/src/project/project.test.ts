@@ -81,6 +81,19 @@ describe('checkProjectConfig', () => {
     expect(r.errors[6]).toContain('site повторяется');
   });
 
+  test('links: концы <приложение>:<путь> известных приложений, label — непустая строка', () => {
+    const app = { id: 'web', label: 'Веб', dir: 'apps/web', baseUrl: 'http://localhost:1' };
+    const ok = checkProjectConfig({ name: 'p', apps: [app], links: [{ from: 'web:/a', to: 'web:/b', label: 'Таб' }, { from: 'web:/b', to: 'web:/' }] }, root);
+    expect(ok.ok ? ok.config.links : null).toEqual([{ from: 'web:/a', to: 'web:/b', label: 'Таб' }, { from: 'web:/b', to: 'web:/' }]);
+    const bad = checkProjectConfig({ name: 'p', apps: [app], links: [{ from: 'web/a', to: 'mini:/b', label: '' }, 3] }, root);
+    expect(bad.ok ? [] : bad.errors).toEqual([
+      "links[0].from: впишите '<id приложения>:<путь маршрута>', например 'miniapp:/feed'",
+      'links[0].to: приложения mini нет в apps',
+      'links[0].label: непустая строка или без поля',
+      'links[1]: ожидается объект { from, to, label? }',
+    ]);
+  });
+
   test('нет config, нет приложений, приложение не объект', () => {
     expect(checkProjectConfig(undefined, root)).toEqual({ ok: false, errors: ['нет export const config: LamProjectConfig — добавьте его в config.ts'] });
     const empty = checkProjectConfig({ name: 'p', apps: [] }, root);
@@ -294,11 +307,14 @@ describe('раздел code', () => {
 describe('scanProject и scan --project', () => {
   const cms = Bun.serve({ port: 0, fetch: () => Response.json({ docs: [{ slug: 'pricing', title: { ru: 'Цены' } }] }) });
   afterAll(() => cms.stop(true));
-  const config = (siteUrl: string): string =>
+  const config = (siteUrl: string, extraLink = ''): string =>
     `export const config = { name: 'demo', apps: [
   { id: 'web', label: 'Веб', dir: 'apps/web', baseUrl: 'https://web.localhost:5175', roles: ['user', 'admin'] },
   { id: 'site', label: 'Сайт', dir: 'apps/site', baseUrl: '${siteUrl}' },
-] };\n`;
+], links: [
+  { from: 'site:/', to: 'web:/', label: 'В приложение' },
+  { from: 'site:/users/[id]', to: 'site:/about' },
+${extraLink}] };\n`;
 
   test('одна карта в .live-app-map/map.json: группы приложений, роли, страница CMS, адреса своих приложений', async () => {
     const root = makeProject('scan', config(`http://localhost:${cms.port}`));
@@ -318,10 +334,12 @@ describe('scanProject и scan --project', () => {
     expect(web.every((p) => (p.states ?? []).map((s) => s.name).join() === 'user,admin')).toBe(true);
     expect(doc.pages.find((p) => p.id === 'site:cms:/pricing')?.title).toBe('Цены');
     expect(doc.pages.some((p) => p.id === 'site:route:/users/[id]' && p.url === `http://localhost:${cms.port}/users/demo`)).toBe(true);
+    const links = doc.edges.filter((e) => e.id?.startsWith('config-link:') === true).map((e) => `${e.from}->${e.to} ${e.label ?? ''}`);
+    expect(links).toEqual(['site:route:/->web:route:/ В приложение', 'site:route:/users/[id]->site:route:/about ']);
   }, 120_000);
 
   test('CMS не отвечает — карта пишется, предупреждение; CLI печатает сводку в свой файл -o', async () => {
-    const root = makeProject('cli', config('http://127.0.0.1:1'));
+    const root = makeProject('cli', config('http://127.0.0.1:1', "  { from: 'web:/нет', to: 'web:/' },\n"));
     const out: string[] = [];
     const err: string[] = [];
     const code = await runCli(['scan', '--project', 'cli', '-o', 'out/map.json'], { log: (t) => out.push(t), error: (t) => err.push(t), cwd: tmp, now: () => new Date() });
@@ -329,6 +347,7 @@ describe('scanProject и scan --project', () => {
     const summary: unknown = JSON.parse(out.join('\n'));
     expect(summary).toMatchObject({ ok: true, project: 'demo', byApp: { web: expect.any(Number), site: expect.any(Number) }, out: path.join(tmp, 'out/map.json') });
     expect(err.some((l) => l.includes('site: CMS не отвечает'))).toBe(true);
+    expect(err.some((l) => l.includes('links: нет экрана web:/нет'))).toBe(true);
     expect(readFileSync(path.join(tmp, 'out/map.json'), 'utf8')).toContain('"name": "demo"');
     expect(root).toBe(path.join(tmp, 'cli'));
   }, 120_000);

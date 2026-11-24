@@ -8,7 +8,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { serveMiddleware } from '../dev-http.test-helpers';
 import { mapsIndexMiddleware } from '../maps-index-middleware';
-import { PROJECT_MAP_PATH, PROJECT_STATES_PATH, openProject, projectCatalogExtra, projectMiddleware, readProjectStates } from './project-server';
+import { PROJECT_CONFIG_PATH, PROJECT_MAP_PATH, PROJECT_STATES_PATH, openProject, projectCatalogExtra, projectMiddleware, readProjectStates } from './project-server';
 
 const tmp = mkdtempSync(path.join(tmpdir(), 'lam-project-srv-'));
 afterAll(() => rmSync(tmp, { recursive: true, force: true }));
@@ -133,6 +133,33 @@ describe('GET /__lam_project/*', () => {
       expect(((await res.json()) as { error: string }).error).toContain('states.ts');
     } finally {
       await server.close();
+    }
+  });
+
+  test('config: LamProjectConfig как есть, правка видна без перезапуска; неверный — 500 со списком полей', async () => {
+    const root = makeProject('cfg');
+    const project = await openProject({ LAM_PROJECT: root }, tmp);
+    const server = await serveMiddleware(projectMiddleware(project));
+    try {
+      expect(await (await fetch(`${server.url}${PROJECT_CONFIG_PATH}`)).json()).toEqual({
+        name: 'cfg',
+        apps: [{ id: 'web', label: 'Веб', dir: 'apps/web', baseUrl: 'http://localhost:5173' }],
+      });
+      const file = path.join(root, '.live-app-map/config.ts');
+      writeFileSync(file, "export const config = { name: 'cfg', apps: [{ id: 'web', label: 'Веб', dir: 'apps/web', baseUrl: '' }] };\n");
+      const later = new Date(Date.now() + 5000);
+      utimesSync(file, later, later);
+      const bad = await fetch(`${server.url}${PROJECT_CONFIG_PATH}`);
+      expect(bad.status).toBe(500);
+      expect(((await bad.json()) as { error: string }).error).toContain('apps[0].baseUrl: впишите адрес dev-сервера');
+    } finally {
+      await server.close();
+    }
+    const none = await serveMiddleware(projectMiddleware(null));
+    try {
+      expect((await fetch(`${none.url}${PROJECT_CONFIG_PATH}`)).status).toBe(404);
+    } finally {
+      await none.close();
     }
   });
 

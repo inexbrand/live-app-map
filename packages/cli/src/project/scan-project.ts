@@ -10,7 +10,7 @@ import { runScan } from '../index';
 import { exampleParamsFor, withRoleStates } from './app-enrich';
 import { attachProjectCode, type SurfaceDoc } from './code';
 import { loadProjectConfig, projectFile } from './config';
-import { mergeSurfaces, projectDocument } from './merge';
+import { applyLinks, mergeSurfaces, projectDocument } from './merge';
 import { fetchCmsPages, usesPayload, withPayloadPages, type CmsPage } from './payload';
 
 /** Опции скана проекта. */
@@ -85,6 +85,7 @@ export async function scanProject(opts: ProjectScanOptions): Promise<ProjectScan
       return { id: app.id, title: app.label, baseUrl: app.baseUrl, doc: appMapToLiveAppMap(doc) };
     }),
   );
+  warnings.push(...applyLinks(merged, config.links ?? []));
   const document = projectDocument(config, merged, code.allCode, code.docs, (opts.now ?? (() => new Date()))().toISOString());
   const out = path.resolve(opts.out ?? projectFile(root, 'map'));
   mkdirSync(path.dirname(out), { recursive: true });

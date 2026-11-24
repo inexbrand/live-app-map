@@ -4,7 +4,7 @@
  * одна общая нода на всех.
  */
 import type { CodeModel, DocsModel, LiveAppMapDocument, LiveAppMapEdge, LiveAppMapPage } from '@live-app-map/schema';
-import type { LamProjectConfig } from '@live-app-map/sdk';
+import type { LamLink, LamProjectConfig } from '@live-app-map/sdk';
 
 /** Приложение в общей карте: id (приставка нод), подпись группы, адрес dev-сервера, карта. */
 export type SurfaceMap = {
@@ -78,6 +78,41 @@ export function mergeSurfaces(surfaces: readonly SurfaceMap[]): MergedSurfaces {
     addSurface(out, s);
   }
   return out;
+}
+
+/** Экран общей карты по концу связи `<приложение>:<путь>`: шаблон пути или пример. */
+function pageOfEnd(pages: readonly LiveAppMapPage[], end: string): LiveAppMapPage | undefined {
+  const at = end.indexOf(':');
+  const app = end.slice(0, at);
+  const p = end.slice(at + 1);
+  const own = pages.filter((x) => x.group === app);
+  return own.find((x) => x.metadata?.['pathPattern'] === p) ?? own.find((x) => x.path === p);
+}
+
+/**
+ * Добавляет связи из config.links (которых нет в коде); уже имеющаяся пара не повторяется.
+ *
+ * @param merged - слитые приложения
+ * @param links - связи конфига
+ * @returns рёбра добавлены в merged; неразрешённые концы — предупреждения
+ */
+export function applyLinks(merged: MergedSurfaces, links: readonly LamLink[]): string[] {
+  const warnings: string[] = [];
+  const seen = new Set(merged.edges.map((e) => `${e.from}->${e.to}`));
+  for (const l of links) {
+    const from = pageOfEnd(merged.pages, l.from);
+    const to = pageOfEnd(merged.pages, l.to);
+    if (from === undefined || to === undefined) {
+      warnings.push(`links: нет экрана ${from === undefined ? l.from : l.to} — проверьте путь маршрута в config.links`);
+      continue;
+    }
+    const key = `${from.id}->${to.id}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      merged.edges.push({ id: `config-link:${key}`, from: from.id, to: to.id, kind: 'link', ...(l.label === undefined ? {} : { label: l.label }) });
+    }
+  }
+  return warnings;
 }
 
 /** Версия генератора общей карты. */
