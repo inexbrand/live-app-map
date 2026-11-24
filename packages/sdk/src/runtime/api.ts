@@ -145,6 +145,9 @@ export function lamFakeResponse(o: LamApiOverride, signal: AbortSignal | null): 
   });
 }
 
+/** Сигнатура fetch страницы (без расширений Bun вроде preconnect). */
+export type LamFetch = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
+
 /** Метод и адрес аргументов fetch. */
 export function lamFetchTarget(input: RequestInfo | URL, init: RequestInit | undefined): { readonly method: string; readonly url: string } {
   const isRequest = typeof Request !== 'undefined' && input instanceof Request;
@@ -161,7 +164,7 @@ export function lamFetchTarget(input: RequestInfo | URL, init: RequestInit | und
  * @param state - описание состояния (null — подмен нет)
  * @param original - настоящий fetch
  */
-export function lamPatchFetch(w: Window, state: Promise<LamStatePayload | null>, original: typeof fetch): void {
+export function lamPatchFetch(w: Window, state: Promise<LamStatePayload | null>, original: LamFetch): void {
   w.fetch = function lamFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
     const t = lamFetchTarget(input, init);
     return state.then((s) => {
@@ -216,7 +219,7 @@ export function lamFakeXhr(xhr: XMLHttpRequest, o: { readonly status: number; re
  * @param w - окно страницы
  * @param state - описание состояния
  */
-export function lamPatchXhr(w: Window, state: Promise<LamStatePayload | null>): void {
+export function lamPatchXhr(w: Window & { readonly XMLHttpRequest: typeof XMLHttpRequest }, state: Promise<LamStatePayload | null>): void {
   const proto = w.XMLHttpRequest.prototype;
   const open = proto.open;
   const send = proto.send;
