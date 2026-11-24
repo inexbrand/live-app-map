@@ -24,7 +24,7 @@ export function contentDisplaySize(
   viewport: DeviceViewport,
   displayScale: number,
 ): { readonly width: number; readonly height: number } {
-  const scale = Math.min(1, Math.max(0.2, displayScale));
+  const scale = clampDisplayScale(displayScale);
   return {
     width: Math.max(1, Math.round(viewport.width * scale)),
     height: Math.max(1, Math.round(viewport.height * scale)),
@@ -56,6 +56,15 @@ export type NodeLayoutMetrics = {
 };
 
 /**
+ * Масштаб страницы внутри ноды: от 0,2 до 1.
+ *
+ * @param displayScale - масштаб из настроек
+ */
+export function clampDisplayScale(displayScale: number): number {
+  return Math.min(1, Math.max(0.2, displayScale));
+}
+
+/**
  * Считает согласованные размеры outer / content / iframe scale.
  */
 export function computeNodeLayout(
@@ -64,7 +73,7 @@ export function computeNodeLayout(
   options?: { readonly selected?: boolean },
 ): NodeLayoutMetrics {
   const viewport = clampViewport(viewportInput);
-  const scale = Math.min(1, Math.max(0.2, displayScale));
+  const scale = clampDisplayScale(displayScale);
   const content = contentDisplaySize(viewport, scale);
   const chromeHeight =
     NODE_CHROME_H + (options?.selected === true ? NODE_SELECTED_BAR_H : 0);

@@ -35,6 +35,12 @@ export type ReconcileResult = {
  * Приоритет id: pin > selected > visible > prefetch + recency.
  */
 export function priority(id: string, s: PolicyState): number {
+  const base = basePriority(id, s);
+  return base + Math.min(5, s.recentLiveScore[id] ?? 0);
+}
+
+/** Есть ли у экрана причина жить: закреплён, выбран, виден или сосед выбранного. Недавняя живость — не причина. */
+function basePriority(id: string, s: PolicyState): number {
   let p = 0;
   if (s.pinned.has(id)) {
     p += 1000;
@@ -48,7 +54,6 @@ export function priority(id: string, s: PolicyState): number {
   if (s.prefetch.has(id)) {
     p += 20;
   }
-  p += Math.min(5, s.recentLiveScore[id] ?? 0);
   return p;
 }
 
@@ -78,8 +83,8 @@ export function reconcile(s: PolicyState): ReconcileResult {
   }
 
   const ranked = s.candidates
+    .filter((id) => basePriority(id, s) > 0 && (s.iframeAllowed[id] ?? true))
     .map((id) => ({ id, p: priority(id, s) }))
-    .filter((x) => x.p > 0 && (s.iframeAllowed[x.id] ?? true))
     .sort((a, b) => b.p - a.p || a.id.localeCompare(b.id));
 
   const live = new Set<string>();

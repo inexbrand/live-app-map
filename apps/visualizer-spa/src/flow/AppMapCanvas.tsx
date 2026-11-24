@@ -202,7 +202,8 @@ function useZoomHiding(hostRef: RefObject<HTMLDivElement | null>) {
         hostRef.current?.classList.add('flow-host--zooming');
       }
     },
-    onMoveEnd: () => {
+    onMoveEnd: (_: unknown, vp: { readonly zoom: number }) => {
+      useAppStore.getState().setCameraZoom(vp.zoom);
       window.clearTimeout(zoomIdle.current);
       zoomIdle.current = window.setTimeout(() => hostRef.current?.classList.remove('flow-host--zooming'), ZOOM_SETTLE_MS);
     },
@@ -234,6 +235,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
           const canvas = { width: el?.clientWidth ?? 1280, height: el?.clientHeight ?? 800 };
           const start = startViewport(packed, boxes, canvas, START_ZOOM);
           applyZoomStyle(el, start.zoom);
+          useAppStore.getState().setCameraZoom(start.zoom);
           void instance.setViewport(start);
         }}
         {...zoom}

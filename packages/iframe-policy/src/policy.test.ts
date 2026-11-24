@@ -93,6 +93,18 @@ describe('priority', () => {
 });
 
 describe('reconcile', () => {
+  test('недавняя живость только упорядочивает: ушедший из кадра экран без лимита не остаётся живым', () => {
+    const r = reconcile(
+      state({
+        maxLiveIframes: 9999,
+        candidates: ['seen', 'vis'],
+        visible: new Set(['vis']),
+        recentLiveScore: { seen: 5, vis: 5 },
+      }),
+    );
+    expect([...r.liveIds]).toEqual(['vis']);
+  });
+
   test('map-only → empty live set (placeholder semantics: no iframes)', () => {
     const r = reconcile(
       state({

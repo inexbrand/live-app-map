@@ -132,6 +132,8 @@ function budgetInput(doc: AppMapDocument, over: Partial<LiveBudgetInput> = {}): 
     warmPageIds: new Set(),
     warmLruOrder: [],
     resolveLiveUrl: (id) => `http://x.test/${id}`,
+    cameraZoom: 1,
+    iframeScale: 0.5,
     ...over,
   };
 }
@@ -151,6 +153,23 @@ describe('раскладка iframe', () => {
   test('сосед выбранного прогревается без видимости', () => {
     const { sets } = computeLiveBudget(budgetInput(doc, { selectedPageId: 'a' }));
     expect(sets.livePageIds.has('b')).toBe(true);
+  });
+
+  test('мелкие на экране страницы — снимки; выбранный экран живёт всё равно', () => {
+    const visible = new Set(['a', 'nf']);
+    const small = computeLiveBudget(budgetInput(doc, { visiblePageIds: visible, selectedPageId: 'b', cameraZoom: 0.2 }));
+    expect([...small.sets.livePageIds].sort()).toEqual(['b']);
+    const readable = computeLiveBudget(budgetInput(doc, { visiblePageIds: visible, selectedPageId: 'b', cameraZoom: 1 }));
+    expect([...readable.sets.livePageIds].sort()).toEqual(['a', 'b', 'nf']);
+  });
+
+  test('по умолчанию нет лимита числа: живут все читаемые видимые экраны', () => {
+    const many = docWith(Array.from({ length: 12 }, (_, i) => node({ id: `p${i}` })));
+    const initial = useAppStore.getInitialState();
+    const { sets } = computeLiveBudget(
+      budgetInput(many, { maxLiveIframes: initial.maxLiveIframes, iframeScale: initial.iframeScale, cameraZoom: 1, visiblePageIds: new Set(many.nodes.map((n) => n.id)) }),
+    );
+    expect(sets.livePageIds.size).toBe(12);
   });
 
   test('без карты — пусто', () => {

@@ -3,10 +3,18 @@
  */
 import { neighbors } from '@live-app-map/graph';
 import { DEFAULT_MAX_LIVE, DEFAULT_MAX_PINNED, DEFAULT_MAX_WARM, reconcile, reconcileWarmPool } from '@live-app-map/iframe-policy';
+import { clampDisplayScale } from '../../lib/node-layout';
 import type { LiveSlice, MapSlice, SelectionSlice } from './types';
 
 /** 9999 = «без лимита» в UI и policy. */
-const MAX_LIVE_IFRAMES_CAP = 9999;
+export const MAX_LIVE_IFRAMES_CAP = 9999;
+
+/**
+ * С какого масштаба на мониторе экран живой. Мельче — текст не прочитать и не
+ * нажать, такой экран показывается снимком: иначе обзор всей карты грузит
+ * десятки копий приложения разом.
+ */
+export const LIVE_MIN_SCREEN_SCALE = 0.25;
 
 /** Лимит iframe: не число — по умолчанию; 0 или меньше, 9999 и больше — без лимита (9999); иначе округлённое. */
 function clampIframeBudget(n: number, fallback: number): number {
@@ -33,7 +41,10 @@ export type LiveSets = Pick<LiveSlice, 'livePageIds' | 'warmPageIds' | 'warmLruO
 /** Что нужно для раскладки. */
 export type LiveBudgetInput = Pick<MapSlice, 'document' | 'index'> &
   Pick<SelectionSlice, 'selectedPageId'> &
-  Pick<LiveSlice, 'mode' | 'maxLiveIframes' | 'maxWarmIframes' | 'pinnedPageIds' | 'visiblePageIds' | 'livePageIds' | 'warmPageIds' | 'warmLruOrder' | 'resolveLiveUrl'>;
+  Pick<
+    LiveSlice,
+    'mode' | 'maxLiveIframes' | 'maxWarmIframes' | 'pinnedPageIds' | 'visiblePageIds' | 'livePageIds' | 'warmPageIds' | 'warmLruOrder' | 'resolveLiveUrl' | 'cameraZoom' | 'iframeScale'
+  >;
 
 /** Раскладка и закреплённые экраны, которым не хватило бюджета. */
 export type LiveBudget = { readonly sets: LiveSets; readonly deferredPins: readonly string[] };
@@ -47,6 +58,7 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
   if (!s.document) {
     return { sets: { livePageIds: new Set(), warmPageIds: new Set(), warmLruOrder: [], mountedPageIds: new Set() }, deferredPins: [] };
   }
+  const readable = isReadable(s);
   const candidates = s.document.nodes.filter((n) => n.kind === 'page' || n.kind === 'not-found').map((n) => n.id);
   const iframeAllowed: Record<string, boolean> = Object.fromEntries(
     s.document.nodes.map((n) => [n.id, n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id))]),
@@ -57,9 +69,9 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
     maxPinned: DEFAULT_MAX_PINNED,
     candidates,
     pinned: s.pinnedPageIds,
-    visible: s.visiblePageIds,
+    visible: readable ? s.visiblePageIds : new Set<string>(),
     selected: s.selectedPageId,
-    prefetch: prefetchOf(s),
+    prefetch: readable ? prefetchOf(s) : new Set<string>(),
     iframeAllowed,
     recentLiveScore: recentLiveScoreOf(s),
   });
@@ -80,6 +92,11 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
     },
     deferredPins: result.deferredPins,
   };
+}
+
+/** Страницы на мониторе не мельче LIVE_MIN_SCREEN_SCALE. */
+function isReadable(s: Pick<LiveBudgetInput, 'cameraZoom' | 'iframeScale'>): boolean {
+  return s.cameraZoom * clampDisplayScale(s.iframeScale) >= LIVE_MIN_SCREEN_SCALE;
 }
 
 /** Prefetch 1-hop соседей selected — прогрев без pin. */

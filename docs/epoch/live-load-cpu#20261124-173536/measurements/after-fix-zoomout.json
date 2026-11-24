@@ -1,0 +1,372 @@
+{
+ "map": "korbor-all",
+ "wallSec": 64,
+ "logicalCores": 12,
+ "renderers": 17,
+ "browserCpuSec": 102.7,
+ "osCpuSecByGroup": {
+  "прочее node.exe": 0,
+  "прочее bun.exe": 1.5,
+  "korbor api": 0,
+  "korbor miniapp vite": 0,
+  "korbor admin vite": 0,
+  "визуализатор vite (+шлюз, снимки-сервис)": 12.4,
+  "korbor прочее": 12.6,
+  "korbor site next": 8.5,
+  "браузер пользователя/замера": 117.6,
+  "снимки (headless Helium)": 37.7
+ },
+ "snapshotRequests": 141,
+ "requestsByHost": {
+  "employer--s5175-vite--qcoi3n.localhost:4320": 527,
+  "localhost:4310": 470,
+  "employer--s5175-vite--13hnz0k.localhost:4320": 379,
+  "anon--h16001--lr0e5t.localhost:4320": 362,
+  "admin--h16002--1ghw7c7.localhost:4320": 198,
+  "admin--h16002--19jmfjc.localhost:4320": 198,
+  "admin--h16002--1oqiwxp.localhost:4320": 166,
+  "admin--h16002--icjun3.localhost:4320": 165,
+  "employer--s5175-vite--1q4m5ls.localhost:4320": 159,
+  "employer--s5175-vite--6a34ql.localhost:4320": 159,
+  "employer--s5175-vite--9dbfg6.localhost:4320": 157,
+  "employer--s5175-vite--1uhe8hr.localhost:4320": 153
+ },
+ "timeline": [
+  {
+   "t": 16,
+   "coresBrowser": 2.25,
+   "byType": {
+    "browser": 0.56,
+    "renderer": 2.5,
+    "GPU": 1.16,
+    "network.mojom.NetworkService": 0.31,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 18,
+   "coresBrowser": 0.98,
+   "byType": {
+    "browser": 0.03,
+    "renderer": 1.36,
+    "GPU": 0.59,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 20,
+   "coresBrowser": 0.83,
+   "byType": {
+    "browser": 0.02,
+    "renderer": 1.07,
+    "GPU": 0.58,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 22,
+   "coresBrowser": 0.56,
+   "byType": {
+    "browser": 0.05,
+    "renderer": 0.55,
+    "GPU": 0.52,
+    "network.mojom.NetworkService": 0.01,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 24,
+   "coresBrowser": 0.5,
+   "byType": {
+    "browser": 0.01,
+    "renderer": 0.47,
+    "GPU": 0.52,
+    "network.mojom.NetworkService": 0.01,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 26,
+   "coresBrowser": 0.66,
+   "byType": {
+    "browser": 0.1,
+    "renderer": 0.59,
+    "GPU": 0.64,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 3,
+   "snaps": 88,
+   "nodes": 115
+  },
+  {
+   "t": 28,
+   "coresBrowser": 2.02,
+   "byType": {
+    "browser": 0.58,
+    "renderer": 2.4,
+    "GPU": 0.95,
+    "network.mojom.NetworkService": 0.13,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 11,
+   "snaps": 9,
+   "nodes": 21
+  },
+  {
+   "t": 30,
+   "coresBrowser": 4.68,
+   "byType": {
+    "browser": 2.23,
+    "renderer": 4.96,
+    "GPU": 0.93,
+    "network.mojom.NetworkService": 1.43,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 21,
+   "snaps": 0,
+   "nodes": 22
+  },
+  {
+   "t": 32,
+   "coresBrowser": 3.12,
+   "byType": {
+    "browser": 1.21,
+    "renderer": 2.96,
+    "GPU": 1.65,
+    "network.mojom.NetworkService": 0.48,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 34,
+   "coresBrowser": 0.96,
+   "byType": {
+    "browser": 0.18,
+    "renderer": 0.94,
+    "GPU": 0.82,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 36,
+   "coresBrowser": 0.9,
+   "byType": {
+    "browser": 0.26,
+    "renderer": 0.89,
+    "GPU": 0.66,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 38,
+   "coresBrowser": 0.8,
+   "byType": {
+    "browser": 0.08,
+    "renderer": 0.89,
+    "GPU": 0.64,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 40,
+   "coresBrowser": 0.81,
+   "byType": {
+    "browser": 0.23,
+    "renderer": 0.8,
+    "GPU": 0.58,
+    "network.mojom.NetworkService": 0.01,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 42,
+   "coresBrowser": 0.81,
+   "byType": {
+    "browser": 0.28,
+    "renderer": 0.75,
+    "GPU": 0.58,
+    "network.mojom.NetworkService": 0.01,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 44,
+   "coresBrowser": 0.85,
+   "byType": {
+    "browser": 0.14,
+    "renderer": 0.96,
+    "GPU": 0.6,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 1,
+   "snaps": 20,
+   "nodes": 44
+  },
+  {
+   "t": 46,
+   "coresBrowser": 1.05,
+   "byType": {
+    "browser": 0.35,
+    "renderer": 1.02,
+    "GPU": 0.72,
+    "network.mojom.NetworkService": 0.01,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 48,
+   "coresBrowser": 0.65,
+   "byType": {
+    "browser": 0.33,
+    "renderer": 0.65,
+    "GPU": 0.27,
+    "network.mojom.NetworkService": 0.05,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 5,
+   "snaps": 0,
+   "nodes": 6
+  },
+  {
+   "t": 50,
+   "coresBrowser": 3.55,
+   "byType": {
+    "browser": 2.56,
+    "renderer": 3.33,
+    "GPU": 0.92,
+    "network.mojom.NetworkService": 0.32,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 15,
+   "snaps": 0,
+   "nodes": 17
+  },
+  {
+   "t": 52,
+   "coresBrowser": 3.01,
+   "byType": {
+    "browser": 0.51,
+    "renderer": 3.57,
+    "GPU": 1.8,
+    "network.mojom.NetworkService": 0.18,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 54,
+   "coresBrowser": 2.5,
+   "byType": {
+    "browser": 0.24,
+    "renderer": 3.39,
+    "GPU": 1.25,
+    "network.mojom.NetworkService": 0.14,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 56,
+   "coresBrowser": 1.58,
+   "byType": {
+    "browser": 0.26,
+    "renderer": 1.46,
+    "GPU": 1.44,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 58,
+   "coresBrowser": 1.97,
+   "byType": {
+    "browser": 1.19,
+    "renderer": 1.81,
+    "GPU": 0.9,
+    "network.mojom.NetworkService": 0.05,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 60,
+   "coresBrowser": 1.39,
+   "byType": {
+    "browser": 0.03,
+    "renderer": 1.91,
+    "GPU": 0.86,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  },
+  {
+   "t": 62,
+   "coresBrowser": 3.26,
+   "byType": {
+    "browser": 0.68,
+    "renderer": 5.15,
+    "GPU": 0.77,
+    "network.mojom.NetworkService": 0,
+    "storage.mojom.StorageService": 0
+   },
+   "iframes": 6,
+   "snaps": 0,
+   "nodes": 8
+  }
+ ]
+}

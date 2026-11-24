@@ -30,6 +30,16 @@ function onIntersect(entries: readonly IntersectionObserverEntry[], nodeId: stri
   }
 }
 
+/** Нода ушла с холста (React Flow не рисует невидимые) — она больше не видна. */
+function forgetVisible(nodeId: string): void {
+  const prev = useAppStore.getState().visiblePageIds;
+  if (prev.has(nodeId)) {
+    const next = new Set(prev);
+    next.delete(nodeId);
+    useAppStore.getState().setVisible(next);
+  }
+}
+
 /**
  * Сообщать store, видна ли нода; после новой загрузки карты (loadSeq) — заново.
  *
@@ -45,6 +55,9 @@ export function useNodeVisibility(bodyRef: RefObject<HTMLDivElement | null>, nod
     }
     const io = new IntersectionObserver((entries) => onIntersect(entries, nodeId), { root: null, threshold: [0, 0.02, 0.15, 0.5, 1], rootMargin: '80px' });
     io.observe(el);
-    return () => io.disconnect();
+    return () => {
+      io.disconnect();
+      forgetVisible(nodeId);
+    };
   }, [nodeId, loadSeq]);
 }

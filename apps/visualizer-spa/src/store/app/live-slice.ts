@@ -1,8 +1,8 @@
 /**
  * Срез живых iframe: бюджет, закрепление, видимость, стейты, роль, live URL.
  */
-import { DEFAULT_MAX_LIVE, DEFAULT_MAX_PINNED, DEFAULT_MAX_WARM } from '@live-app-map/iframe-policy';
-import { clampMaxLive, clampMaxWarm, computeLiveBudget } from './iframe-budget';
+import { DEFAULT_MAX_PINNED, DEFAULT_MAX_WARM } from '@live-app-map/iframe-policy';
+import { MAX_LIVE_IFRAMES_CAP, clampMaxLive, clampMaxWarm, computeLiveBudget } from './iframe-budget';
 import { resolveLiveUrl } from './live-url';
 import type { AppSlice, LiveSlice } from './types';
 
@@ -11,7 +11,8 @@ export const createLiveSlice: AppSlice<LiveSlice> = (set, get) => ({
   mode: 'live',
   // 50% — ряд экранов читаем без гигантского world
   iframeScale: 0.5,
-  maxLiveIframes: DEFAULT_MAX_LIVE,
+  // Без лимита числа: живость решает масштаб на мониторе (LIVE_MIN_SCREEN_SCALE).
+  maxLiveIframes: MAX_LIVE_IFRAMES_CAP,
   maxWarmIframes: DEFAULT_MAX_WARM,
   pinnedPageIds: new Set(),
   visiblePageIds: new Set(),
@@ -22,6 +23,7 @@ export const createLiveSlice: AppSlice<LiveSlice> = (set, get) => ({
   interactPageId: null,
   activeStates: new Map(),
   globalRole: '',
+  cameraZoom: 1,
 
   setMode: () => {
     // Dogfood: только live — map-only/compact не нужны (всегда iframe).
@@ -80,6 +82,14 @@ export const createLiveSlice: AppSlice<LiveSlice> = (set, get) => ({
   },
 
   setInteract: (id) => set({ interactPageId: id }),
+
+  setCameraZoom: (cameraZoom) => {
+    if (cameraZoom === get().cameraZoom) {
+      return;
+    }
+    set({ cameraZoom });
+    get().recomputeLive();
+  },
 
   resolveLiveUrl: (id) => resolveLiveUrl(get(), id),
 
