@@ -53,7 +53,8 @@ export type SyncPlan = {
 };
 
 /** Типы сообщений, которые страница шлёт карте (скрипт шлюза и пикер). */
-const PAGE_TO_HOST: ReadonlySet<string> = new Set(['page', 'picked', 'pick-cancel']);
+export const PAGE_TO_HOST_TYPES: readonly string[] = ['page', 'picked', 'pick-cancel'];
+const PAGE_TO_HOST: ReadonlySet<string> = new Set(PAGE_TO_HOST_TYPES);
 
 /**
  * Кадр для отправки: 2 байта длины ключа, ключ UTF-8, JPEG.
