@@ -63,6 +63,11 @@ export const commentStatusSchema = z.enum(['open', 'fixed']);
 /** Статус: открыто или исправлено. */
 export type CommentStatus = z.infer<typeof commentStatusSchema>;
 
+/** Этап ветки для проверки: ждёт агента, агент ответил — проверьте, пользователь принял. */
+export const commentStageSchema = z.enum(['waiting', 'review', 'done']);
+/** Этап: waiting — ждёт агента, review — проверьте, done — исправлено (принял пользователь). */
+export type CommentStage = z.infer<typeof commentStageSchema>;
+
 /** Номер события в ветке: created — 0, дальше по одному. Порядок не зависит от часов. */
 const seqSchema = z.number().int().nonnegative();
 
@@ -116,6 +121,8 @@ export type CommentThread = {
   readonly anchor: CommentAnchor;
   readonly shot: string | null;
   readonly status: CommentStatus;
+  /** Вычисляется из событий, на диске не хранится. */
+  readonly stage: CommentStage;
   readonly createdAt: string;
   readonly updatedAt: string;
   /** Все события по времени, первое — created. */
@@ -131,6 +138,7 @@ export const commentThreadSchema = z.object({
   anchor: commentAnchorSchema,
   shot: z.string().nullable(),
   status: commentStatusSchema,
+  stage: commentStageSchema,
   createdAt: z.string(),
   updatedAt: z.string(),
   events: z.array(commentEventSchema),
@@ -141,6 +149,15 @@ export function compareEvents(a: CommentEvent, b: CommentEvent): number {
   return a.seq - b.seq || a.at.localeCompare(b.at);
 }
 
+
+/** Этап после события: действие агента — на проверку (кроме его «открыть снова»), пользователя — к агенту или закрыто. */
+function stageAfter(e: CommentEvent): CommentStage {
+  const reopened = e.type === 'status' && e.status === 'open';
+  if (e.author === 'agent') {
+    return reopened ? 'waiting' : 'review';
+  }
+  return e.type === 'status' && e.status === 'fixed' ? 'done' : 'waiting';
+}
 
 /**
  * Свёртка событий в ветку; null — нет события created.
@@ -166,6 +183,7 @@ export function foldThread(id: string, events: readonly CommentEvent[]): Comment
     anchor: created.anchor,
     shot: created.shot,
     status,
+    stage: events.reduce<CommentStage>((_, e) => stageAfter(e), 'waiting'),
     createdAt: created.at,
     updatedAt: events[events.length - 1]?.at ?? created.at,
     events,

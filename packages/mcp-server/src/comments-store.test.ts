@@ -97,3 +97,31 @@ describe('comments-store', () => {
     expect(readComment(dir, '../../etc')).toBeNull();
   });
 });
+
+describe('этап ветки: ждёт агента → проверьте → исправлено', () => {
+  const base = { id: 's1', author: 'user' as const, text: 'Кнопка уехала', anchor, shotDataUrl: null };
+
+  test('новое замечание пользователя ждёт агента', () => {
+    expect(createComment(dir, base).stage).toBe('waiting');
+  });
+
+  test('ответ агента и его «исправлено» — на проверку, не закрыто', () => {
+    createComment(dir, base);
+    addCommentEvent(dir, 's1', { type: 'reply', author: 'agent', text: 'Вернул', files: ['a.tsx'], commit: 'abc' });
+    const t = addCommentEvent(dir, 's1', { type: 'status', author: 'agent', status: 'fixed', note: null });
+    expect(t.stage).toBe('review');
+  });
+
+  test('пользователь принял — исправлено; вернул с причиной — снова ждёт агента', () => {
+    createComment(dir, base);
+    addCommentEvent(dir, 's1', { type: 'status', author: 'agent', status: 'fixed', note: null });
+    expect(addCommentEvent(dir, 's1', { type: 'status', author: 'user', status: 'open', note: 'не исправлено' }).stage).toBe('waiting');
+    addCommentEvent(dir, 's1', { type: 'reply', author: 'agent', text: 'Теперь точно', files: [], commit: null });
+    expect(readComment(dir, 's1')?.stage).toBe('review');
+    expect(addCommentEvent(dir, 's1', { type: 'status', author: 'user', status: 'fixed', note: null }).stage).toBe('done');
+  });
+
+  test('заметка самого агента — на проверку пользователю', () => {
+    expect(createComment(dir, { ...base, id: 's2', author: 'agent' }).stage).toBe('review');
+  });
+});

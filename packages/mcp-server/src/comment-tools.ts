@@ -6,6 +6,7 @@ import {
   addCommentEvent,
   commentAuthorSchema,
   commentShotPath,
+  commentStageSchema,
   commentStatusSchema,
   createComment,
   listComments,
@@ -34,11 +35,12 @@ export const COMMENT_TOOLS: readonly Tool[] = [
     name: 'list_comments',
     handler: listCommentsTool,
     description:
-      'Замечания пользователя к экранам и компонентам (визуализатор): текст, экран, компонент, файл:строка, статус. Исправив — add_change_note.',
+      'Замечания пользователя к экранам и компонентам (визуализатор): текст, экран, компонент, файл:строка, статус и этап. Брать в работу stage=waiting. Исправив — add_change_note: замечание уйдёт пользователю на проверку (review), закрывает его только пользователь.',
     inputSchema: {
       type: 'object',
       properties: {
         status: { type: 'string', enum: ['open', 'fixed'], description: 'open — ждут исправления' },
+        stage: { type: 'string', enum: ['waiting', 'review', 'done'], description: 'waiting — ждут агента, review — агент ответил, ждут проверки пользователя, done — пользователь принял' },
         pageId: str_('id экрана'),
         mapName: str_('имя карты'),
         author: { type: 'string', enum: ['user', 'agent'] },
@@ -93,6 +95,7 @@ function summary(t: CommentThread): Record<string, unknown> {
   return {
     id: t.id,
     status: t.status,
+    stage: t.stage,
     author: t.author,
     text: t.text,
     map: t.anchor.mapName,
@@ -106,6 +109,11 @@ function summary(t: CommentThread): Record<string, unknown> {
 function filterOf(args: Args): CommentFilter | string {
   const status = str(args, 'status');
   const author = str(args, 'author');
+  const stage = str(args, 'stage');
+  const sg = commentStageSchema.safeParse(stage);
+  if (stage !== '' && !sg.success) {
+    return 'stage: waiting, review или done';
+  }
   const st = commentStatusSchema.safeParse(status);
   const au = commentAuthorSchema.safeParse(author);
   if (status !== '' && !st.success) {
@@ -117,6 +125,7 @@ function filterOf(args: Args): CommentFilter | string {
   const opt = (k: string): string | undefined => (str(args, k) === '' ? undefined : str(args, k));
   return {
     ...(st.success ? { status: st.data } : {}),
+    ...(sg.success ? { stage: sg.data } : {}),
     ...(au.success ? { author: au.data } : {}),
     pageId: opt('pageId'),
     mapName: opt('mapName'),

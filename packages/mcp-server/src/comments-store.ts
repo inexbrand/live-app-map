@@ -22,6 +22,7 @@ import {
   type CommentThread,
   type NewCommentEvent,
   type CommentAnchor,
+  type CommentStage,
 } from './comments-schema';
 
 export {
@@ -29,10 +30,12 @@ export {
   commentAuthorSchema,
   commentElementSchema,
   commentEventSchema,
+  commentStageSchema,
   commentStatusSchema,
   commentThreadSchema,
   foldThread,
 } from './comments-schema';
+export type { CommentStage } from './comments-schema';
 export type { CommentAnchor, CommentAuthor, CommentEvent, CommentStatus, CommentThread, NewCommentEvent } from './comments-schema';
 
 /** Что нужно для нового замечания. */
@@ -49,6 +52,7 @@ export type NewComment = {
 /** Фильтр списка. */
 export type CommentFilter = {
   readonly status?: CommentStatus;
+  readonly stage?: CommentStage;
   readonly pageId?: string;
   readonly mapName?: string;
   readonly author?: CommentAuthor;
@@ -209,6 +213,7 @@ export function commentShotPath(lamDir: string, thread: CommentThread): string |
 function matches(thread: CommentThread, filter: CommentFilter): boolean {
   const fields: readonly [unknown, unknown][] = [
     [filter.status, thread.status],
+    [filter.stage, thread.stage],
     [filter.pageId, thread.anchor.pageId],
     [filter.mapName, thread.anchor.mapName],
     [filter.author, thread.author],

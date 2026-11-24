@@ -56,7 +56,7 @@ describe('привязка замечания', () => {
     const anchor = buildAnchor({ picked, page: { id: 'feed', title: 'Лента', url: 'https://x/#/feed' }, mapName: 'korbor', role: 'recruiter', code });
     expect(anchor.element?.component?.source?.line).toBe(45);
     const md = commentPrompt({
-      id: 'c1', author: 'user', text: 'Кнопка обрезана', anchor, shot: null, status: 'open', createdAt: '', updatedAt: '',
+      id: 'c1', author: 'user', text: 'Кнопка обрезана', anchor, shot: null, status: 'open', stage: 'waiting', createdAt: '', updatedAt: '',
       events: [],
     });
     expect(md).toContain('Компонент: Button — apps/miniapp/src/features/vacancies/VacancyCard.tsx:45');

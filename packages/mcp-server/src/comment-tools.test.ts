@@ -63,3 +63,16 @@ describe('MCP замечаний', () => {
     expect(call('list_comments', { status: 'done' })['error']).toContain('open или fixed');
   });
 });
+
+describe('MCP замечаний: этап', () => {
+  test('агент ответил — этап review, агент видит в stage=waiting только своё недоделанное', () => {
+    const anchor = { mapName: 'm', pageId: 'feed', pageTitle: 'Лента', pageUrl: null, role: null, element: null };
+    createComment(lamDir, { id: 'w1', author: 'user', text: 'Обрезан заголовок', anchor, shotDataUrl: null });
+    createComment(lamDir, { id: 'w2', author: 'user', text: 'Нет отступа', anchor, shotDataUrl: null });
+    const answered = call('add_change_note', { commentId: 'w1', text: 'Поправил', files: ['a.tsx'] }) as { comment: { stage: string } };
+    expect(answered.comment.stage).toBe('review');
+    const waiting = call('list_comments', { stage: 'waiting' }) as { comments: Array<{ id: string; stage: string }> };
+    expect(waiting.comments.map((c) => c.id)).toEqual(['w2']);
+    expect(call('list_comments', { stage: 'всё' }).error).toContain('stage');
+  });
+});
