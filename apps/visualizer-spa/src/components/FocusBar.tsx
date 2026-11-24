@@ -57,8 +57,11 @@ function Neighbor(props: { readonly from: string; readonly by: -1 | 1 }) {
   );
 }
 
+/** Стабильная пустота: новый [] в селекторе zustand — новый снимок на каждый вызов и бесконечная перерисовка. */
+const NO_STATES: readonly AppMapPageState[] = [];
+
 function Roles(props: { readonly pageId: string }) {
-  const states = useAppStore((s) => s.index?.nodesById.get(props.pageId)?.states ?? []);
+  const states = useAppStore((s) => s.index?.nodesById.get(props.pageId)?.states ?? NO_STATES);
   const active = useAppStore((s) => s.activeStates.get(props.pageId));
   const apply = useAppStore((s) => s.applyPageState);
   if (states.length === 0) {
