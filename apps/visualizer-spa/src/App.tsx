@@ -16,6 +16,7 @@ import { AppMapCanvas } from './flow/AppMapCanvas';
 import { ApiView } from './components/ApiView';
 import { DatabaseView } from './components/DatabaseView';
 import { DocsView } from './components/DocsView';
+import { ComponentsView } from './components/components-view/ComponentsView';
 import { CompareView } from './components/CompareView';
 import { useMapSourceStore } from './store/map-source-store';
 import { useViewStore } from './store/view-store';
@@ -339,6 +340,8 @@ function MainView({ doc }: { readonly doc: AppMapDocument }) {
       return doc.code !== undefined && doc.code.tables.length > 0 ? <DatabaseView /> : <AppMapCanvas />;
     case 'docs':
       return <DocsView />;
+    case 'components':
+      return <ComponentsView />;
     case 'compare':
       return <CompareView key={loadSeq} />;
     default:

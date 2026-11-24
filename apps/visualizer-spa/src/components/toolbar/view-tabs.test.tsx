@@ -8,12 +8,12 @@ import { ToolbarButton } from './ToolbarButton';
 import { VIEW_TABS, visibleViewTabs } from './view-tabs';
 
 describe('visibleViewTabs', () => {
-  test('экраны и сравнение всегда; API, БД, документация — если есть в карте', () => {
+  test('экраны, компоненты и сравнение всегда; API, БД, документация — если есть в карте', () => {
     const none = visibleViewTabs({ hasApi: false, hasDb: false, hasDocs: false }).map((t) => t.view);
-    expect(none).toEqual(['screens', 'compare']);
+    expect(none).toEqual(['screens', 'components', 'compare']);
     const all = visibleViewTabs({ hasApi: true, hasDb: true, hasDocs: true }).map((t) => t.view);
     expect(all).toEqual(VIEW_TABS.map((t) => t.view));
-    expect(visibleViewTabs({ hasApi: false, hasDb: true, hasDocs: false }).map((t) => t.view)).toEqual(['screens', 'database', 'compare']);
+    expect(visibleViewTabs({ hasApi: false, hasDb: true, hasDocs: false }).map((t) => t.view)).toEqual(['screens', 'components', 'database', 'compare']);
   });
 
   test('у вкладок, которые ищут e2e, есть data-testid', () => {

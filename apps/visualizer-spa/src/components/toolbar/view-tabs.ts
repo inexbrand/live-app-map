@@ -1,7 +1,7 @@
 /**
  * Вкладки видов шапки: какие есть, когда показываются, чем подписаны.
  */
-import { BookOpen, Database, GitCompare, LayoutGrid, Network, type LucideIcon } from 'lucide-react';
+import { BookOpen, Component, Database, GitCompare, LayoutGrid, Network, type LucideIcon } from 'lucide-react';
 import type { AppView } from '../../store/view-store';
 
 /** Что есть в открытой карте: от этого зависят вкладки. */
@@ -27,6 +27,7 @@ const always = (): boolean => true;
 /** Вкладки в порядке шапки. */
 export const VIEW_TABS: readonly ViewTab[] = [
   { view: 'screens', icon: LayoutGrid, label: 'Экраны', title: 'Экраны', shown: always },
+  { view: 'components', icon: Component, label: 'Компоненты', title: 'Компоненты: варианты из states.ts', testId: 'view-components', shown: always },
   { view: 'api', icon: Network, label: 'API', title: 'API', testId: 'view-api', shown: (s) => s.hasApi },
   { view: 'database', icon: Database, label: 'База данных', title: 'База данных', shown: (s) => s.hasDb },
   { view: 'docs', icon: BookOpen, label: 'Документация', title: 'Документация', testId: 'view-docs', shown: (s) => s.hasDocs },

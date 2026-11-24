@@ -8,7 +8,7 @@ import type { ApiFilter } from '@live-app-map/graph';
 import type { DocsMode, NavState } from '../lib/nav-location';
 
 /** Вид приложения. */
-export type AppView = 'screens' | 'api' | 'database' | 'docs' | 'compare';
+export type AppView = 'screens' | 'components' | 'api' | 'database' | 'docs' | 'compare';
 
 type ViewState = {
   readonly view: AppView;

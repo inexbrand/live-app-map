@@ -112,7 +112,7 @@ describe('шапка с картой', () => {
     openMap('korbor-miniapp');
     const { ui } = toolbar();
     const tabs = within(ui.getByRole('group', { name: 'Вид' })).getAllByRole('button').map((b) => b.textContent);
-    expect(tabs).toEqual(['Экраны', 'API', 'База данных', 'Документация', 'Сравнение']);
+    expect(tabs).toEqual(['Экраны', 'Компоненты', 'API', 'База данных', 'Документация', 'Сравнение']);
     fireEvent.click(ui.getByTestId('view-api'));
     expect(useViewStore.getState().view).toBe('api');
     expect(ui.getByTestId('view-api').getAttribute('aria-pressed')).toBe('true');

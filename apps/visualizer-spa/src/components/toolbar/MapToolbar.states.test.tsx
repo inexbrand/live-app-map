@@ -57,9 +57,9 @@ function tabs(ui: ReturnType<typeof within>): string[] {
 describe('вкладки видов', () => {
   test('карта без кода и документации: только экраны и сравнение; нажата текущая', () => {
     const ui = toolbar(bareMap());
-    expect(tabs(ui)).toEqual(['Экраны:true:true', 'Сравнение:false:false']);
+    expect(tabs(ui)).toEqual(['Экраны:true:true', 'Компоненты:false:false', 'Сравнение:false:false']);
     fireEvent.click(within(ui.getByRole('group', { name: 'Вид' })).getByRole('button', { name: 'Сравнение' }));
-    expect(tabs(ui)).toEqual(['Экраны:false:false', 'Сравнение:true:true']);
+    expect(tabs(ui)).toEqual(['Экраны:false:false', 'Компоненты:false:false', 'Сравнение:true:true']);
   });
 
   test('код без таблиц и роутов — вкладок API и БД нет; документация есть', () => {
@@ -69,7 +69,7 @@ describe('вкладки видов', () => {
       throw new Error('в карте нет кода');
     }
     const ui = toolbar({ ...doc, code: { ...code, tables: [], routes: code.routes.slice(0, 1) } });
-    expect(tabs(ui).map((t) => t.split(':')[0])).toEqual(['Экраны', 'API', 'Документация', 'Сравнение']);
+    expect(tabs(ui).map((t) => t.split(':')[0])).toEqual(['Экраны', 'Компоненты', 'API', 'Документация', 'Сравнение']);
   });
 });
 
