@@ -8,12 +8,12 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import { useAppStore } from '../store/app-store';
 import { useGatewayStore } from '../store/gateway-store';
-import { useSnapshotStore } from '../store/snapshot-store';
 import { useStreamSync } from '../lib/stream/stream-sync';
 import { startFakeStream } from '../test/fake-stream';
 import { openMap, resetStores } from '../test/fixtures';
 import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
 import { VISIBILITY_SETTLE_MS } from './page-node/use-node-visibility';
+import { focusCamera } from './RevealSelected';
 
 useDom();
 
@@ -185,25 +185,20 @@ describe('холст карты', () => {
     expect(nodeEl(r.container, other).querySelector('.page-node__placeholder')).not.toBeNull();
   });
 
-  test('кнопки ноды: статус и лог экрана (выбор экрана), закрепить и открепить, открыть во вкладке, замечание', async () => {
+  test('кнопки ноды: закрепить и открепить, открыть во вкладке', async () => {
     const { doc, r } = await canvas();
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
     fireEvent.mouseEnter(nodeEl(r.container, id));
     const node = within(nodeEl(r.container, id));
-    fireEvent.click(node.getByLabelText('Лог экрана'));
-    expect(useAppStore.getState().selectedPageId).toBe(id);
     fireEvent.click(node.getByLabelText('Закрепить'));
     expect(useAppStore.getState().pinnedPageIds.has(id)).toBe(true);
     fireEvent.click(within(nodeEl(r.container, id)).getByLabelText('Открепить'));
     expect(useAppStore.getState().pinnedPageIds.has(id)).toBe(false);
     fireEvent.click(node.getByLabelText('Открыть во вкладке'));
     expect(opened).toEqual([useAppStore.getState().resolveLiveUrl(id) ?? '']);
-    fireEvent.click(node.getByLabelText('Замечание к компоненту'));
-    expect(useSnapshotStore.getState().session.phase).toBe('opening');
-    expect(useAppStore.getState().selectedPageId).toBe(id);
   });
 
-  test('карточка в покое — название и путь; кнопки под мышью, размер окна — у выбранной', async () => {
+  test('карточка в покое — название и путь; кнопки под мышью; выбранная — без кнопок (они в плашке фокуса), с размером окна, остальные гаснут', async () => {
     const { doc, r } = await canvas();
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
     const el = (): HTMLElement => nodeEl(r.container, id);
@@ -217,8 +212,13 @@ describe('холст карты', () => {
     expect(el().querySelector('.page-node__actions')).toBeNull();
     act(() => useAppStore.getState().selectPage(id));
     await settle();
-    expect(el().querySelector('.page-node__actions')).not.toBeNull();
+    fireEvent.mouseEnter(el());
+    expect(el().querySelector('.page-node__actions')).toBeNull();
     expect(el().querySelector('.page-node__size')?.textContent).toMatch(/\d+×\d+/);
+    expect(r.container.querySelector('.flow-host')?.classList.contains('flow-host--focus')).toBe(true);
+    const others = doc.nodes.filter((n) => n.kind === 'page' && n.id !== id);
+    expect(others.length).toBeGreaterThan(0);
+    expect(others.every((n) => nodeEl(r.container, n.id).querySelector('.page-node--dim') !== null || nodeEl(r.container, n.id).classList.contains('page-node--dim'))).toBe(true);
     expect(r.container.querySelectorAll('.page-node .ui-badge').length === 0 || ![...r.container.querySelectorAll('.page-node .ui-badge')].some((b) => /^(live|warm)$/.test(b.textContent ?? ''))).toBe(true);
   });
 
@@ -251,25 +251,19 @@ describe('холст карты', () => {
     expect(withLabel.every((e) => e.source === labeled?.from || e.target === labeled?.from)).toBe(true);
   });
 
-  test('выбранная нода под шапкой — холст сдвигается вниз на просвет', async () => {
-    const { doc, r } = await canvas();
-    const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
-    const bar = document.createElement('div');
-    bar.className = 'toolbar';
-    bar.getBoundingClientRect = () => DOMRect.fromRect({ x: 0, y: 0, width: 1440, height: 60 });
-    document.body.append(bar);
-    const el = r.container.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);
-    if (el === null) {
-      throw new Error('нет ноды');
-    }
-    el.getBoundingClientRect = () => DOMRect.fromRect({ x: 100, y: 20, width: 300, height: 400 });
-    const viewport = () => r.container.querySelector<HTMLElement>('.react-flow__viewport')?.style.transform ?? '';
-    const before = viewport();
-    act(() => useAppStore.getState().selectPage(id));
-    // 60 (низ шапки) + 16 (отступ) − 20 (верх ноды) = 56 px вниз
-    await waitFor(() => expect(viewport()).not.toBe(before), { timeout: 1500 });
-    const ty = (s: string): number => Number(/translate\([-\d.]+px, ?([-\d.]+)px\)/.exec(s)?.[1]);
-    await waitFor(() => expect(ty(viewport()) - ty(before)).toBeCloseTo(56, 0), { timeout: 1500 });
+  test('фокус экрана: короткий вписан по высоте под шапкой и над плашкой; длинная страница — 1:1 от верха', () => {
+    const view = { width: 1440, height: 900 };
+    const short = focusCamera({ x: 0, y: 0, w: 390, h: 600 }, view);
+    expect(short.zoom).toBe(1);
+    // Центр ниже середины ноды на половину разницы плашки и шапки
+    expect(short.y).toBeGreaterThan(300);
+    const tall = focusCamera({ x: 0, y: 0, w: 390, h: 4000 }, view);
+    expect(tall.zoom).toBe(1);
+    // Верх страницы — сразу под шапкой: центр окна на (высота/2 − шапка) ниже верха ноды
+    expect(tall.y).toBeLessThan(view.height / 2);
+    const mid = focusCamera({ x: 0, y: 0, w: 390, h: 1000 }, view);
+    expect(mid.zoom).toBeLessThan(1);
+    expect(mid.zoom * 1000).toBeLessThanOrEqual(view.height);
   });
 
   test('выбранной ноды нет в DOM — холст центрируется по её координатам', async () => {
