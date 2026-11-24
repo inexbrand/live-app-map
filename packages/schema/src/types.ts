@@ -51,9 +51,41 @@ export type Confidence = 'high' | 'medium' | 'low';
 
 export type EdgeLayer = 'navigation' | 'structure' | 'composition';
 
-/** Состояние UI страницы (роли, empty, error, …) для инжекта при live-просмотре */
+/** Вид состояния экрана — для группировки и значка на карте. */
+export type AppMapStateKind = 'data' | 'empty' | 'error' | 'loading' | 'ui';
+
+/** Подмена ответа API в состоянии; 'pending' — ответ не приходит никогда (загрузка). */
+export type AppMapApiOverride = { readonly status: number; readonly body?: unknown; readonly delayMs?: number } | 'pending';
+
+/**
+ * Шаг до кадра состояния: выполняет браузер трансляции после загрузки страницы.
+ * Селекторы — Playwright (`text=Фильтры`, `role=button[name="Создать"]`, css). Совпадает с LamStep из sdk.
+ */
+export type AppMapStateStep =
+  | { readonly click: string }
+  | { readonly fill: string; readonly value: string }
+  | { readonly press: string }
+  | { readonly waitFor: string }
+  | { readonly scroll: number };
+
+/**
+ * Состояние UI страницы. Старые карты: name + inject (роль, query) — переключатель на ноде.
+ * Состояния по контракту sdk (LamScreenState: id, label, kind, role, api, steps) — отдельные
+ * узлы рядом с экраном; у них name = id.
+ */
 export type AppMapPageState = {
+  /** Ключ состояния на ноде; у состояния по контракту совпадает с id. */
   readonly name: string;
+  /** id состояния по контракту: строчные латинские, цифры, дефис. */
+  readonly id?: string;
+  /** Подпись: «Пустая лента». */
+  readonly label?: string;
+  readonly kind?: AppMapStateKind;
+  /** Роль входа (профиль шлюза); нет — роль экрана по умолчанию. */
+  readonly role?: string;
+  /** Подмена API: «МЕТОД /путь» → ответ. Выполняет рантайм sdk по ?lam_state. */
+  readonly api?: Readonly<Record<string, AppMapApiOverride>>;
+  readonly steps?: readonly AppMapStateStep[];
   readonly url?: string;
   readonly screenshot?: string | null;
   readonly note?: string;

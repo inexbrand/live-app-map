@@ -16,15 +16,50 @@ export const stateInjectSpecSchema = z
   })
   .strict();
 
-export const appMapPageStateSchema = z
-  .object({
-    name: z.string().min(1),
-    url: z.string().optional(),
-    screenshot: z.string().nullable().optional(),
-    note: z.string().optional(),
-    inject: stateInjectSpecSchema.optional(),
-  })
-  .passthrough();
+/** Шаг состояния: ровно одно действие. */
+export const appMapStateStepSchema = z.union([
+  z.object({ click: z.string().min(1) }).strict(),
+  z.object({ fill: z.string().min(1), value: z.string() }).strict(),
+  z.object({ press: z.string().min(1) }).strict(),
+  z.object({ waitFor: z.string().min(1) }).strict(),
+  z.object({ scroll: z.number().finite() }).strict(),
+]);
+
+/** Подмена ответа API. */
+export const appMapApiOverrideSchema = z.union([
+  z.literal('pending'),
+  z.object({ status: z.number().int().min(100).max(599), body: z.unknown().optional(), delayMs: z.number().nonnegative().optional() }).strict(),
+]);
+
+/** Состояние без name, но с id (контракт sdk): name = id. */
+function nameFromId(v: unknown): unknown {
+  if (typeof v !== 'object' || v === null || Array.isArray(v) || 'name' in v || !('id' in v)) {
+    return v;
+  }
+  return { ...v, name: v.id };
+}
+
+export const appMapPageStateSchema = z.preprocess(
+  nameFromId,
+  z
+    .object({
+      name: z.string({ required_error: 'у состояния нужен name или id (строчные латинские, цифры, дефис)' }).min(1),
+      id: z
+        .string()
+        .regex(/^[a-z0-9][a-z0-9-]*$/, 'id состояния: строчные латинские, цифры, дефис — empty, filters-open')
+        .optional(),
+      label: z.string().min(1).optional(),
+      kind: z.enum(['data', 'empty', 'error', 'loading', 'ui']).optional(),
+      role: z.string().min(1).optional(),
+      api: z.record(appMapApiOverrideSchema).optional(),
+      steps: z.array(appMapStateStepSchema).optional(),
+      url: z.string().optional(),
+      screenshot: z.string().nullable().optional(),
+      note: z.string().optional(),
+      inject: stateInjectSpecSchema.optional(),
+    })
+    .passthrough(),
+);
 
 export const appMapNodeSchema = z
   .object({
