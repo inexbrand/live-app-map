@@ -6,11 +6,11 @@
 
 ## Готово когда
 
-- [ ] `packages/sdk`: `bun run pack` даёт live-app-map-sdk-<версия>.tgz с dist (js + d.ts); монорепо работает от src.
-- [ ] `.github/workflows/release-sdk.yml`: тег sdk-v* → tarball → GitHub Release; синтаксис проверен actionlint.
-- [ ] `live-app-map init` (packages/cli/src/init.ts) с тестами на настоящей ФС, идемпотентен.
-- [ ] `install.sh` — тонкий загрузчик; проверен на временной копии проекта с локальным tarball (LAM_SDK_TARBALL).
-- [ ] `skills/live-app-map/SKILL.md` — скилл заполнения states.ts/components.
+- [x] `packages/sdk`: `bun run pack` даёт live-app-map-sdk-<версия>.tgz с dist (js + d.ts); монорепо работает от src.
+- [x] `.github/workflows/release-sdk.yml`: тег sdk-v* → tarball → GitHub Release; синтаксис проверен actionlint.
+- [x] `live-app-map init` (packages/cli/src/init.ts) с тестами на настоящей ФС, идемпотентен.
+- [x] `install.sh` — тонкий загрузчик; проверен на временной копии проекта с локальным tarball (LAM_SDK_TARBALL).
+- [x] `skills/live-app-map/SKILL.md` — скилл заполнения states.ts/components.
 
 ## Вне scope
 
