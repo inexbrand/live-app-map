@@ -24,4 +24,5 @@
 - [SPA на shadcn: грабли](shadcn-base-ui-spa.md) — @layer base, тесты Select/Toggle, две копии стора в vite
 - [API: домены вместо сервисов](api-domains-audiences.md) — аудитории по данным, доска роута по клику
 - [Браузер Helium и MCP](helium-browser-mcp.md) — helium-agent свой профиль, helium autoConnect к открытому
+- [Экраны карты — трансляция вместо iframe](visualizer-stream-screens.md) — ScreenView, lib/stream, 12 живых, замер FPS на прод-сборке
 - [UX замечаний: выбран вариант Б](screen-feedback-ux-choice.md) — поле у компонента, общий список с «исправлено», хранение файлы+SSE
