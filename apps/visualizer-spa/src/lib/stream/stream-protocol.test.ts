@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'bun:test';
-import { decodeFrame, encodeFrame, isPageToHost, parseClientMessage, planSync, toPagePoint, type StreamScreen } from './stream-protocol';
+import { decodeFrame, encodeFrame, isPageToHost, parseClientMessage, planSync, toPagePoint, type MouseInput, type StreamScreen } from './stream-protocol';
 
 const screen = (key: string, over: Partial<StreamScreen> = {}): StreamScreen => ({ key, url: `http://a.localhost/${key}`, width: 390, height: 844, live: true, ...over });
 
@@ -21,7 +21,7 @@ describe('сообщения карты', () => {
   test('sync, post и input разбираются; мусор — null', () => {
     expect(parseClientMessage(JSON.stringify({ t: 'sync', screens: [screen('a')] }))).toEqual({ t: 'sync', screens: [screen('a')] });
     expect(parseClientMessage(JSON.stringify({ t: 'post', key: 'a', data: { lam: 'pick', on: true } }))).toEqual({ t: 'post', key: 'a', data: { lam: 'pick', on: true } });
-    const input = { kind: 'mouse', type: 'down', x: 1, y: 2, button: 'left', clickCount: 1 };
+    const input: MouseInput = { kind: 'mouse', type: 'down', x: 1, y: 2, button: 'left', clickCount: 1 };
     expect(parseClientMessage(JSON.stringify({ t: 'input', key: 'a', input }))).toEqual({ t: 'input', key: 'a', input });
     for (const bad of ['{', '{"t":"sync"}', '{"t":"sync","screens":[{"key":"a"}]}', '{"t":"input","key":"a","input":{"kind":"mouse","type":"fly","x":1,"y":1,"button":"left","clickCount":1}}', '{"t":"other"}']) {
       expect(parseClientMessage(bad)).toBeNull();
