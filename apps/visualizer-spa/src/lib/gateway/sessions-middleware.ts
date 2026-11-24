@@ -3,7 +3,7 @@
  * Ответы не содержат значений кук и токенов — только имена.
  */
 import { errorMessage, isLocalOrigin, readBody, requestPath, sendError, sendJson, type DevMiddleware } from '../dev-http';
-import { parseSetCookie, type StoredCookie } from './cookie-jar';
+import { cookieHeaderFor, parseSetCookie, type StoredCookie } from './cookie-jar';
 import { isValidProfileId } from './gateway-host';
 import { KORBOR_DOGFOOD_STORAGE, createBearerCache, mintKorbor, type BearerSource, type KorborRenewal } from './korbor-dogfood';
 import { gatewayDevAuthClient, syncDevAuth, type DevAuthSyncReport } from './dev-auth-sync';
@@ -235,6 +235,11 @@ function loginValue(store: SessionStore, profileId: string, origin: string, rene
 
 /** Первые id списков API под профилем: реальные параметры маршрутов экранов. */
 async function sampleIds(ctx: Ctx, profileId: string, origin: string, rawLists: unknown): Promise<void> {
+  const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
+  if (ctx.store.get(profileId)?.devAuth?.[origin] !== undefined) {
+    await devAuthSampleIds(ctx, profileId, origin, lists);
+    return;
+  }
   const renewal = ctx.store.get(profileId)?.renewals?.[origin];
   if (renewal === undefined) {
     sendError(ctx.res, 404, `у профиля «${profileId}» нет dev-входа для ${origin}: войдите через «Профили»`);
@@ -250,8 +255,27 @@ async function sampleIds(ctx: Ctx, profileId: string, origin: string, rawLists: 
     sendError(ctx.res, 502, bearer.error);
     return;
   }
-  const lists = Array.isArray(rawLists) ? rawLists.filter((l): l is string => typeof l === 'string') : [];
-  sendJson(ctx.res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, bearer.token, lists) });
+  const token = bearer.token;
+  sendJson(ctx.res, 200, { ok: true, values: await fetchSampleIds(renewal.apiBase, () => ({ authorization: `Bearer ${token}` }), lists) });
+}
+
+/**
+ * Списки под профилем автовхода: куки сессии роли, запрос через /api самого
+ * фронтенда (протокол dev-входа: фронтенд проксирует /api на бэкенд).
+ */
+async function devAuthSampleIds(ctx: Ctx, profileId: string, origin: string, lists: readonly string[]): Promise<void> {
+  const stale = await ctx.store.ensureFresh(profileId, origin);
+  if (stale !== null) {
+    sendError(ctx.res, 502, stale);
+    return;
+  }
+  const jar = ctx.store.get(profileId)?.cookies[origin] ?? [];
+  const now = Date.now();
+  const headersFor = (list: string): Record<string, string> => {
+    const cookie = cookieHeaderFor('', jar, list, now);
+    return cookie === '' ? {} : { cookie };
+  };
+  sendJson(ctx.res, 200, { ok: true, values: await fetchSampleIds(origin, headersFor, lists) });
 }
 
 /**

@@ -116,6 +116,45 @@ describe('sessions middleware', () => {
 });
 
 describe('автовход /__lam_sessions/auto', () => {
+  test('первые id списков у профиля автовхода: куки приложения через его /api; истёкшая кука — вход выдаётся заново', async () => {
+    let issued = 0;
+    const app = Bun.serve({
+      port: 0,
+      fetch: async (req, srv) => {
+        const handled = await devAuth(req, srv.requestIP(req)?.address ?? '');
+        if (handled !== null) {
+          return handled;
+        }
+        const cookie = req.headers.get('cookie') ?? '';
+        return new URL(req.url).pathname === '/api/v1/vacancies' && cookie.includes(`acc=s${issued}`)
+          ? Response.json({ data: [{ id: `vac-${issued}` }] })
+          : new Response('', { status: 401 });
+      },
+    });
+    const origin = `http://127.0.0.1:${app.port}`;
+    const devAuth = createDevAuthHandler({
+      environment: 'development',
+      roles: () => [
+        {
+          id: 'recruiter',
+          label: 'Рекрутер',
+          origin,
+          // Первая кука живёт секунду: к чтению списков она уже истекла
+          issue: async () => {
+            issued += 1;
+            return { cookies: [`acc=s${issued}; Path=/api/v1; Max-Age=${issued === 1 ? 1 : 900}`], expiresAt: '2099-01-01T00:00:00Z' };
+          },
+        },
+      ],
+    });
+    expect((await call('POST', '/auto', { origins: [origin] })).status).toBe(200);
+    await Bun.sleep(1100);
+    const ids = await call('POST', '/recruiter/sample-ids', { origin, lists: ['/api/v1/vacancies'] });
+    void app.stop(true);
+    expect(ids).toEqual({ status: 200, json: { ok: true, values: { '/api/v1/vacancies': 'vac-2' } } });
+    expect(issued).toBe(2);
+  });
+
   test('без origins — 400 с полем; роли приложения — профили в ответе', async () => {
     expect(await call('POST', '/auto', {})).toMatchObject({ status: 400, json: { field: 'origins' } });
     expect(await call('POST', '/auto', { origins: ['не адрес'] })).toMatchObject({ status: 400 });

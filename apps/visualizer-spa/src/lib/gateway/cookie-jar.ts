@@ -78,6 +78,17 @@ export function mergeSetCookies(jar: readonly StoredCookie[], setCookies: readon
 }
 
 /**
+ * В банке лежит кука с истёкшим сроком: вход приложения уже не действует
+ * (короткая кука доступа), хотя профиль ещё числится живым.
+ *
+ * @param jar - банка профиля для origin
+ * @param now - текущее время, мс
+ */
+export function hasExpiredCookie(jar: readonly StoredCookie[], now: number): boolean {
+  return jar.some((c) => c.expiresAt !== undefined && c.expiresAt <= now);
+}
+
+/**
  * Заголовок Cookie для приложения: куки браузера плюс недостающие из банки.
  *
  * @param browserHeader - Cookie от браузера (может быть пустым)

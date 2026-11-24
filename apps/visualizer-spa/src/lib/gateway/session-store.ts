@@ -6,7 +6,7 @@
  */
 import { chmodSync, existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
-import { mergeSetCookies, type StoredCookie } from './cookie-jar';
+import { hasExpiredCookie, mergeSetCookies, type StoredCookie } from './cookie-jar';
 import { isDogfoodValueStale, KORBOR_DOGFOOD_STORAGE, mintKorbor, type KorborRenewal, type MintResult } from './korbor-dogfood';
 import { isValidProfileId } from './gateway-host';
 import { DEV_AUTH_MARGIN_MS, gatewayDevAuthClient, reissueDevAuth, type DevAuthLink } from './dev-auth-sync';
@@ -231,7 +231,9 @@ export class SessionStore {
   private async renew(id: string, origin: string): Promise<string | null> {
     const link = this.profiles.get(id)?.devAuth?.[origin];
     if (link !== undefined) {
-      return isDevAuthExpired(link.expiresAt, Date.now(), DEV_AUTH_MARGIN_MS)
+      const now = Date.now();
+      // Срок сессии роли и срок её кук разные: кука доступа истекает раньше
+      return isDevAuthExpired(link.expiresAt, now, DEV_AUTH_MARGIN_MS) || hasExpiredCookie(this.profiles.get(id)?.cookies[origin] ?? [], now)
         ? reissueDevAuth(this, id, link, gatewayDevAuthClient()).catch((err: unknown) => (err instanceof Error ? err.message : String(err)))
         : null;
     }

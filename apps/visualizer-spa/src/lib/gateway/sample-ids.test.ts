@@ -23,7 +23,7 @@ const server = Bun.serve({
 afterAll(() => server.stop(true));
 
 test('первый id доступного списка; закрытый и пустой — null; недопустимый путь не запрашивается', async () => {
-  const got = await fetchSampleIds(`http://127.0.0.1:${server.port}/`, 'tok', ['/api/v1/recruiter/vacancies', '/api/v1/employer/vacancies', '/api/v1/recruiter/applications', 'http://evil/x']);
+  const got = await fetchSampleIds(`http://127.0.0.1:${server.port}/`, () => ({ authorization: 'Bearer tok' }), ['/api/v1/recruiter/vacancies', '/api/v1/employer/vacancies', '/api/v1/recruiter/applications', 'http://evil/x']);
   expect(got).toEqual({ '/api/v1/recruiter/vacancies': 'vac-1', '/api/v1/employer/vacancies': null, '/api/v1/recruiter/applications': null });
   expect(seen.every((s) => s.endsWith('Bearer tok'))).toBe(true);
   expect(seen.length).toBe(3);
