@@ -21,14 +21,17 @@ type ComponentsState = {
 
 const EMPTY: Gallery = { groups: [], problems: [] };
 
-/** Адрес состояний проекта на dev-сервере визуализатора. */
+/** Адрес состояний проекта на dev-сервере визуализатора: { screens, components }. */
 export const PROJECT_STATES_URL = '/__lam_project/states';
 
-/** Приложения из ответа: [{id,label,dir,baseUrl}]; иначе ошибка с подсказкой. */
-export function appsOf(body: unknown): GalleryApp[] {
-  const raw = typeof body === 'object' && body !== null ? Reflect.get(body, 'apps') : undefined;
+/** Адрес config.ts проекта: LamProjectConfig как есть. */
+export const PROJECT_CONFIG_URL = '/__lam_project/config';
+
+/** Приложения из config.ts: [{id,label,dir,baseUrl}]; иначе ошибка с подсказкой. */
+export function appsOf(config: unknown): GalleryApp[] {
+  const raw = typeof config === 'object' && config !== null ? Reflect.get(config, 'apps') : undefined;
   if (!Array.isArray(raw)) {
-    throw new Error('в ответе ' + PROJECT_STATES_URL + ' нет apps — приложения из config.ts проекта');
+    throw new Error('в ответе ' + PROJECT_CONFIG_URL + ' нет apps — приложения из .live-app-map/config.ts');
   }
   return raw.map((a: unknown, i) => {
     const get = (k: string): string => {
@@ -54,9 +57,9 @@ export const useComponentsStore = create<ComponentsState>((set, get) => ({
     }
     set({ status: 'loading', error: null });
     try {
-      const body = await fetchJson(PROJECT_STATES_URL);
-      const components = typeof body === 'object' && body !== null ? Reflect.get(body, 'components') : undefined;
-      set({ status: 'ready', gallery: buildGallery(components ?? {}, appsOf(body)) });
+      const [states, config] = await Promise.all([fetchJson(PROJECT_STATES_URL), fetchJson(PROJECT_CONFIG_URL)]);
+      const components = typeof states === 'object' && states !== null ? Reflect.get(states, 'components') : undefined;
+      set({ status: 'ready', gallery: buildGallery(components ?? {}, appsOf(config)) });
     } catch (e) {
       set({ status: 'error', error: e instanceof Error ? e.message : String(e), gallery: EMPTY });
     }

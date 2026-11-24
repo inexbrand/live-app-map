@@ -11,19 +11,22 @@ const components = {
   'packages/x/Y.tsx#Y': [{ id: 'a', label: 'А' }],
 };
 
+/** Проект: /ok — всё есть, /no-apps — config без apps, иначе — проект не открыт. */
 const server = Bun.serve({
   port: 0,
   fetch(req) {
     const p = new URL(req.url).pathname;
-    if (p === '/ok') return Response.json({ screens: {}, components, apps });
-    if (p === '/no-apps') return Response.json({ screens: {}, components });
+    if (p === '/ok/__lam_project/states' || p === '/no-apps/__lam_project/states') return Response.json({ screens: {}, components });
+    if (p === '/ok/__lam_project/config') return Response.json({ name: 'p', apps });
+    if (p === '/no-apps/__lam_project/config') return Response.json({ name: 'p' });
     return new Response('проект не открыт: запустите bun run dev -- --project <каталог>', { status: 404 });
   },
 });
 afterAll(() => server.stop(true));
 
-const realFetchJson = (path: string) => async (): Promise<unknown> => {
-  const res = await fetch('http://127.0.0.1:' + server.port + path);
+/** Настоящий HTTP-запрос к серверу проекта с префиксом сценария. */
+const realFetchJson = (prefix: string) => async (url: string): Promise<unknown> => {
+  const res = await fetch('http://127.0.0.1:' + server.port + prefix + url);
   if (!res.ok) throw new Error(await res.text());
   return res.json();
 };
@@ -40,7 +43,7 @@ describe('стор галереи', () => {
   });
   test('нет apps или проект не открыт — ошибка с подсказкой', async () => {
     await useComponentsStore.getState().load(realFetchJson('/no-apps'));
-    expect(useComponentsStore.getState().error).toBe('в ответе /__lam_project/states нет apps — приложения из config.ts проекта');
+    expect(useComponentsStore.getState().error).toBe('в ответе /__lam_project/config нет apps — приложения из .live-app-map/config.ts');
     useComponentsStore.setState({ status: 'idle' });
     await useComponentsStore.getState().load(realFetchJson('/nope'));
     expect(useComponentsStore.getState().error).toBe('проект не открыт: запустите bun run dev -- --project <каталог>');
