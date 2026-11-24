@@ -10,6 +10,11 @@
       "types": "./src/index.ts",
       "import": "./src/index.ts",
       "default": "./src/index.ts"
+    },
+    "./project-config": {
+      "types": "./src/project/config.ts",
+      "import": "./src/project/config.ts",
+      "default": "./src/project/config.ts"
     }
   },
   "scripts": {
