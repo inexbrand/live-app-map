@@ -30,6 +30,16 @@ export type LamProjectConfig = {
   readonly apps: readonly LamApp[];
   /** Каталоги бэкенда для скана API и БД: ['apps/api', 'packages/db']. */
   readonly backend?: readonly string[];
+  /** Связи экранов, которых нет в коде (табы, перекрёстные ссылки приложений). */
+  readonly links?: readonly LamLink[];
+};
+
+/** Связь экранов: `<id приложения>:<путь маршрута>` → то же; `miniapp:/feed` → `miniapp:/applications`. */
+export type LamLink = {
+  readonly from: string;
+  readonly to: string;
+  /** Подпись ребра: «Таб». */
+  readonly label?: string;
 };
 
 /** Подмена ответа API в состоянии экрана; 'pending' — ответ не приходит никогда (загрузка). */
