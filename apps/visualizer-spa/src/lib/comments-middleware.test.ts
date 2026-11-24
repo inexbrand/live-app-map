@@ -33,6 +33,21 @@ function post(p: string, body: unknown, origin?: string): Promise<Response> {
   });
 }
 
+/** Читает поток, пока не встретит строку (или 3 с). */
+async function readUntil(reader: ReadableStreamDefaultReader<Uint8Array>, needle: string): Promise<string> {
+  const decoder = new TextDecoder();
+  let text = '';
+  const deadline = Date.now() + 3000;
+  while (!text.includes(needle) && Date.now() < deadline) {
+    const chunk = await Promise.race([reader.read(), new Promise<null>((r) => setTimeout(() => r(null), 3000))]);
+    if (chunk === null || chunk.done) {
+      break;
+    }
+    text += decoder.decode(chunk.value);
+  }
+  return text;
+}
+
 describe('comments middleware', () => {
   test('создание со снимком → агент видит по MCP → ответ виден по GET; снимок отдаётся', async () => {
     const res = await post('/api/comments', { id: 'c1', text: 'Обрезан заголовок', anchor, shotDataUrl: PNG_1PX });
@@ -53,6 +68,21 @@ describe('comments middleware', () => {
 
     const reopened = await post('/api/comments/c1/events', { type: 'status', status: 'open', note: 'не исправлено' });
     expect(((await reopened.json()) as { comment: { status: string } }).comment.status).toBe('open');
+  });
+
+  test('поток: запись агента по MCP приходит событием changed', async () => {
+    const abort = new AbortController();
+    const res = await fetch(`${server.url}/api/comments/stream`, { signal: abort.signal });
+    expect(res.headers.get('content-type')).toContain('text/event-stream');
+    const reader = res.body?.getReader();
+    if (reader === undefined) {
+      throw new Error('у потока нет тела');
+    }
+    const seen = readUntil(reader, 'event: changed');
+    await post('/api/comments', { id: 'c9', text: 'Кнопка уехала', anchor, shotDataUrl: null });
+    callTool('add_change_note', { commentId: 'c9', text: 'Вернул кнопку', files: ['b.tsx'] }, { lamDir });
+    expect(await seen).toContain('event: changed');
+    abort.abort();
   });
 
   test('пустой текст → 400 с подсказкой; чужой origin → 403; неизвестная ветка → 400', async () => {

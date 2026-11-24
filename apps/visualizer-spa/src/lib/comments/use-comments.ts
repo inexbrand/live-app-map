@@ -11,10 +11,10 @@ import { isLamPickCancelMessage, isLamPickedMessage, type LamPickedMessage } fro
 import { buildAnchor, frameToView, padRect, type AnchorPage } from './build-anchor';
 import { anchorContext, anchorPage } from './page-anchor';
 
-/** Как часто перечитывать ветки (ответы агента приходят через файлы). */
-const POLL_MS = 3000;
+/** Поток изменений веток на dev-сервере (запись визуализатора или агента). */
+const STREAM_URL = '/api/comments/stream';
 
-/** Держит ветки текущей карты свежими. */
+/** Держит ветки текущей карты свежими: перечитывает по событию потока, без опроса. */
 export function useCommentsSync(): void {
   const mapName = useAppStore((s) => s.document?.project.name ?? null);
   useEffect(() => {
@@ -22,12 +22,12 @@ export function useCommentsSync(): void {
     if (mapName === null) {
       return;
     }
-    const t = window.setInterval(() => {
-      if (document.visibilityState === 'visible') {
-        void useCommentsStore.getState().refresh();
-      }
-    }, POLL_MS);
-    return () => window.clearInterval(t);
+    // EventSource сам переподключается; ready после подключения догоняет пропущенное
+    const source = new EventSource(STREAM_URL);
+    const refresh = (): void => void useCommentsStore.getState().refresh();
+    source.addEventListener('ready', refresh);
+    source.addEventListener('changed', refresh);
+    return () => source.close();
   }, [mapName]);
 }
 

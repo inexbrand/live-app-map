@@ -3,7 +3,8 @@
  * - `GET  /api/comments?status=&pageId=&mapName=&author=&q=` — ветки, свежие сверху;
  * - `POST /api/comments` — новое замечание пользователя (текст, привязка, снимок);
  * - `POST /api/comments/<id>/events` — ответ или смена статуса от пользователя;
- * - `GET  /api/comments/<id>/shot.png` — снимок компонента.
+ * - `GET  /api/comments/<id>/shot.png` — снимок компонента;
+ * - `GET  /api/comments/stream` — поток SSE: `changed`, когда ветки поменялись на диске (визуализатор или агент).
  */
 import { readFileSync } from 'node:fs';
 import {
@@ -20,6 +21,7 @@ import {
 } from '@live-app-map/mcp-server';
 import type { NewCommentEvent } from '@live-app-map/mcp-server/comments-schema';
 import { z } from 'zod';
+import { streamCommentChanges } from './comments-stream';
 import {
   localEndpointMiddleware,
   readValidJson,
@@ -66,9 +68,9 @@ function filterOf(url: URL): CommentFilter {
 async function handle(req: Req, res: Res, lamDir: string): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://local');
   const rest = url.pathname.slice(COMMENTS_PATH.length).split('/').filter((p) => p !== '');
-  const [id = '', tail = ''] = rest;
+  const [id = ''] = rest;
   const method = req.method ?? '';
-  switch (routeKey(method, rest.length, tail)) {
+  switch (routeKey(method, rest)) {
     case 'GET ':
       sendJson(res, 200, { ok: true, comments: listComments(lamDir, filterOf(url)) });
       return;
@@ -78,6 +80,9 @@ async function handle(req: Req, res: Res, lamDir: string): Promise<void> {
     case 'POST events':
       await addEventFromBody(req, res, lamDir, id);
       return;
+    case 'GET stream':
+      streamCommentChanges(res, lamDir);
+      return;
     case 'GET shot.png':
       sendShot(res, lamDir, id);
       return;
@@ -86,12 +91,15 @@ async function handle(req: Req, res: Res, lamDir: string): Promise<void> {
   }
 }
 
-/** «МЕТОД действие»: корень — пустое действие, `<id>/<действие>` — его имя; иначе пусто. */
-function routeKey(method: string, depth: number, tail: string): string {
-  if (depth === 0) {
+/** «МЕТОД действие»: корень — пустое действие, `stream` — поток, `<id>/<действие>` — его имя; иначе пусто. */
+function routeKey(method: string, rest: readonly string[]): string {
+  if (rest.length === 0) {
     return `${method} `;
   }
-  return depth === 2 ? `${method} ${tail}` : '';
+  if (rest.length === 1 && rest[0] === 'stream') {
+    return `${method} stream`;
+  }
+  return rest.length === 2 ? `${method} ${rest[1]}` : '';
 }
 
 async function createFromBody(req: Req, res: Res, lamDir: string): Promise<void> {

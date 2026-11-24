@@ -17,9 +17,20 @@ export type Ui = BoundFunctions<typeof queries>;
 /** Адрес страницы в тестах: как у dev-сервера визуализатора. */
 export const TEST_PAGE_URL = 'http://localhost:4310/';
 
+/** EventSource в тестах без сервера: соединение не открывается и событий не шлёт (в happy-dom его нет). */
+class SilentEventSource extends EventTarget {
+  constructor(readonly url: string) {
+    super();
+  }
+  close(): void {}
+}
+
 function register(): void {
   if (!GlobalRegistrator.isRegistered) {
     GlobalRegistrator.register({ url: TEST_PAGE_URL, width: 1440, height: 900 });
+  }
+  if (Reflect.get(globalThis, 'EventSource') === undefined) {
+    Reflect.set(globalThis, 'EventSource', SilentEventSource);
   }
   Reflect.set(globalThis, 'IS_REACT_ACT_ENVIRONMENT', true);
 }

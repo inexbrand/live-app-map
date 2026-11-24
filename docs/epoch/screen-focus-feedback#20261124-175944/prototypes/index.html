@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Фокус экрана и замечания — варианты</title>
+<style>
+@font-face{font-family:'Medeo Sans';src:url('../../../../apps/visualizer-spa/public/fonts/medeo-cyr.woff2') format('woff2');font-weight:100 900;unicode-range:U+0301,U+0400-045F,U+0490-0491,U+04B0-04B1,U+2116,U+20BD}
+@font-face{font-family:'Medeo Sans';src:url('../../../../apps/visualizer-spa/public/fonts/medeo-lat.woff2') format('woff2');font-weight:100 900}
+body{margin:0;background:#0a0a0a;color:#f5f5f5;font:15px/24px 'Medeo Sans',system-ui,sans-serif}
+main{max-width:1120px;margin:0 auto;padding:48px 32px 96px;display:flex;flex-direction:column;gap:56px}
+h1{margin:0;font-size:32px;line-height:40px;font-weight:700}
+h2{margin:0;font-size:22px;line-height:28px;font-weight:600}
+p{margin:0;color:#c4c4c4}
+a{color:#f5f5f5}
+.lead{display:flex;flex-direction:column;gap:12px;max-width:760px}
+.v{display:grid;grid-template-columns:1fr 360px;gap:32px;align-items:start}
+.v img{width:100%;border-radius:8px;border:1px solid #262626;display:block}
+.v__t{display:flex;flex-direction:column;gap:16px}
+.v__t h2 a{text-decoration:none}.v__t h2 a:hover{text-decoration:underline}
+dl{margin:0;display:grid;grid-template-columns:72px 1fr;gap:8px 12px;font-size:14px;line-height:20px}
+dt{color:#8f8f8f}dd{margin:0;color:#d4d4d4}
+.rec{padding:20px 24px;border:1px solid #3a3a3a;border-radius:8px;display:flex;flex-direction:column;gap:8px;max-width:760px}
+.rec b{font-weight:600}
+.now{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.now img{width:100%;border-radius:8px;border:1px solid #262626}
+.small{font-size:13px;color:#8f8f8f}
+</style></head><body><main>
+<div class="lead"><h1>Фокус экрана и замечания агенту</h1>
+<p>Нажатие на экран ставит его в центр холста, остальные гаснут, справа — панель замечаний. Компонент выбирается сразу, без отдельной кнопки: наведите и нажмите. Ниже три варианта панели. В каждом прототипе внизу слева есть переключатель состояний: пусто, черновик, голос, отправка, ответ агента, исправлено, ошибка.</p>
+<p class="small">Клавиши в прототипах: C — выбор компонента, I — работа с приложением, [ и ] — соседний экран, Enter — отправить, удерживать ⌥ в поле — голос, Esc — снять выбор, потом выйти из фокуса, T — тема.</p></div>
+
+<div class="rec"><b>Рекомендую вариант В — инспектор компонента.</b>
+<p>Нажали на компонент — в панели его имя, цепочка компонентов, файл со строкой и уже оставленные к нему замечания, поле ввода тут же. Так меньше дублей («я уже писал про эту карточку»), а замечание с первого взгляда привязано к коду, как его читает агент. Из варианта А стоит взять поле, прижатое к низу панели на уровне экрана.</p></div>
+
+<section class="v"><a href="c-inspector.html"><img src="shots/c-component.png" alt="Вариант В: карточка компонента в панели"></a>
+<div class="v__t"><h2><a href="c-inspector.html">В — инспектор компонента</a></h2>
+<p>У панели два уровня: экран (замечания сгруппированы по компонентам, сводка «проверить / ждут / исправлено») и компонент (карточка, его замечания, поле).</p>
+<dl><dt>Плюсы</dt><dd>Видна история компонента до того, как пишешь. Файл и цепочка на виду: понятно, что получит агент. Группы по компонентам читаются быстрее ленты, когда замечаний больше пяти.</dd>
+<dt>Минусы</dt><dd>Два уровня — лишний переход «назад» к экрану. Замечание к экрану целиком прячется за кнопкой. Сложнее сделать.</dd></dl></div></section>
+
+<section class="v"><a href="a-feed.html"><img src="shots/a-busy.png" alt="Вариант А: лента и поле внизу"></a>
+<div class="v__t"><h2><a href="a-feed.html">А — лента и поле внизу</a></h2>
+<p>Один уровень: сверху вниз «проверьте» → «ждут агента» → свёрнутое «исправлено», поле прижато к низу панели, как в чате.</p>
+<dl><dt>Плюсы</dt><dd>Проще всех: одна лента, поле всегда на месте, писать можно сразу после нажатия на экран. Ближе всего к нынешнему коду.</dd>
+<dt>Минусы</dt><dd>Старые замечания к выбранному компоненту не видны рядом с полем. На длинной ленте глаз ходит между экраном и низом панели.</dd></dl></div></section>
+
+<section class="v"><a href="b-inline.html"><img src="shots/b-draft.png" alt="Вариант Б: поле рядом с компонентом"></a>
+<div class="v__t"><h2><a href="b-inline.html">Б — поле у компонента</a></h2>
+<p>Поле всплывает справа от экрана напротив выбранного компонента, как комментарии в Figma. Панель — только список и сведения об экране.</p>
+<dl><dt>Плюсы</dt><dd>Взгляд не уходит с экрана. Связь «компонент — текст» видна стрелкой.</dd>
+<dt>Минусы</dt><dd>Поле перекрывает соседний экран и уезжает при перемещении холста. Ввод и история в двух местах — то, что плохо сейчас. Так устроено сегодня, и путь от этого не короче.</dd></dl></div></section>
+
+<section class="lead"><h2>Как сейчас</h2>
+<p>Панель справа начинается с адреса в три строки и белой кнопки «В новой вкладке», дальше лог и 18 карточек API. Замечаний в ней нет: они в отдельной левой панели, которая появляется только после первого замечания.</p>
+<div class="now"><img src="shots/current-panel-top.png" alt="Сейчас: верх панели"><img src="shots/current-panel-api.png" alt="Сейчас: низ панели, вызовы API"></div>
+<p class="small">Разбор, сценарий, состояния и вопросы — в 02-design.md рядом с папкой прототипов.</p></section>
+</main></body></html>

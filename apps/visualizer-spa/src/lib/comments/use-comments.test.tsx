@@ -52,14 +52,42 @@ const PICKED = {
   component: { name: 'BuyButton', chain: ['BuyButton'], stack: null },
 };
 
+/** EventSource браузера (в happy-dom его нет): запоминает адрес, события шлёт тест. */
+class FakeEventSource {
+  static readonly opened: FakeEventSource[] = [];
+  closed = false;
+  private readonly listeners = new Map<string, Array<() => void>>();
+  constructor(readonly url: string) {
+    FakeEventSource.opened.push(this);
+  }
+  addEventListener(type: string, fn: () => void): void {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), fn]);
+  }
+  /** Событие сервера. */
+  emit(type: string): void {
+    for (const fn of this.listeners.get(type) ?? []) {
+      fn();
+    }
+  }
+  close(): void {
+    this.closed = true;
+  }
+}
+
 let net: ReturnType<typeof stubFetch>;
+const realEventSource: unknown = Reflect.get(globalThis, 'EventSource');
 
 beforeEach(() => {
   resetStores();
+  FakeEventSource.opened.length = 0;
+  Object.defineProperty(globalThis, 'EventSource', { value: FakeEventSource, configurable: true, writable: true });
   net = stubFetch((url) => (url.startsWith('/api/comments?') ? jsonResponse({ comments: [] }) : undefined));
 });
 
-afterEach(() => net.restore());
+afterEach(() => {
+  net.restore();
+  Object.defineProperty(globalThis, 'EventSource', { value: realEventSource, configurable: true, writable: true });
+});
 
 function pageId(): string {
   const p = useAppStore.getState().document?.nodes.find((n) => n.kind === 'page');
@@ -79,6 +107,25 @@ describe('хуки замечаний', () => {
     });
     expect(useCommentsStore.getState().mapName).toBe(name);
     expect(net.calls.map((c) => c.url)).toEqual([`/api/comments?mapName=${encodeURIComponent(name)}`]);
+  });
+
+  test('событие потока changed — ветки перечитываются; размонтирование закрывает поток', async () => {
+    const view = render(<Shell />);
+    const name = openMap('korbor-miniapp').project.name ?? 'без имени';
+    const settle = (): Promise<void> => act(async () => {
+      await new Promise((r) => setTimeout(r, 10));
+    });
+    await settle();
+    const source = FakeEventSource.opened.at(-1);
+    expect(source?.url).toBe('/api/comments/stream');
+    const before = net.calls.length;
+    act(() => {
+      source?.emit('changed');
+    });
+    await settle();
+    expect(net.calls.slice(before).map((c) => c.url)).toEqual([`/api/comments?mapName=${encodeURIComponent(name)}`]);
+    view.unmount();
+    expect(source?.closed).toBe(true);
   });
 
   test('выбор компонента: пикер включается, выбор открывает черновик и захват; без выбора — сообщения не в счёт', () => {
