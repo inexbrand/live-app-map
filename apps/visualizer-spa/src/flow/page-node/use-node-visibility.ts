@@ -12,6 +12,8 @@ export const VISIBILITY_SETTLE_MS = 150;
 
 /** Доля ноды в кадре по последнему замеру; null — нода ушла с холста. */
 const pending = new Map<string, number | null>();
+/** Карта, на которой сделаны замеры: после смены карты они не в счёт. */
+let pendingDoc: unknown = null;
 let timer: ReturnType<typeof setTimeout> | null = null;
 
 /** Видимые экраны после замеров: вошла (≥ 15 %) — добавить, вышла (≤ 2 %) или ушла — убрать. */
@@ -34,6 +36,10 @@ function sameSet(a: ReadonlySet<string>, b: ReadonlySet<string>): boolean {
 /** Применить накопленные замеры; store узнаёт новый набор, только если он изменился. */
 function flush(): void {
   timer = null;
+  if (pendingDoc !== useAppStore.getState().document) {
+    pending.clear();
+    return;
+  }
   const prev = useAppStore.getState().visiblePageIds;
   const next = visibleAfter(prev, pending);
   pending.clear();
@@ -44,6 +50,11 @@ function flush(): void {
 
 /** Запомнить замер и отложить применение до паузы. */
 function note(nodeId: string, ratio: number | null): void {
+  const doc = useAppStore.getState().document;
+  if (doc !== pendingDoc) {
+    pending.clear();
+    pendingDoc = doc;
+  }
   pending.set(nodeId, ratio);
   if (timer !== null) {
     clearTimeout(timer);
