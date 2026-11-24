@@ -5,8 +5,33 @@
  * Холст рисует только видимые ноды (onlyRenderVisibleElements), поэтому число
  * экранов карты считаем по мини-карте — она рисует все.
  */
-import { expect, test } from '@playwright/test';
+import { expect, test, type Locator, type Page } from '@playwright/test';
 import { minimapPages } from './minimap-pages';
+
+/**
+ * Подписи карт каталога в списке выбора карты (shadcn Select): открыть, прочитать, закрыть Esc.
+ *
+ * @param page - вкладка визуализатора
+ * @param trigger - кнопка списка
+ */
+async function catalogLabels(page: Page, trigger: Locator): Promise<string[]> {
+  await trigger.click();
+  const texts = await page.getByRole('option').allTextContents();
+  await page.keyboard.press('Escape');
+  return texts.map((t) => t.trim()).filter((t) => /экр\./.test(t));
+}
+
+/**
+ * Выбрать карту по началу подписи.
+ *
+ * @param page - вкладка визуализатора
+ * @param trigger - кнопка списка
+ * @param label - начало подписи пункта
+ */
+async function chooseMap(page: Page, trigger: Locator, label: string): Promise<void> {
+  await trigger.click();
+  await page.getByRole('option', { name: new RegExp(`^${label}`) }).click();
+}
 
 test.describe('visualizer smoke', () => {
   test('toolbar: no brand/live, map select works, FHD viewport', async ({
@@ -35,24 +60,9 @@ test.describe('visualizer smoke', () => {
       page.getByRole('heading', { name: 'Выберите карту' }),
     ).toBeVisible();
 
-    // Ждём каталог (реальные id карт, не только placeholder)
-    await expect
-      .poll(async () => {
-        const values = await mapSelect.locator('option').evaluateAll((opts) =>
-          opts.map((o) => (o as HTMLOptionElement).value),
-        );
-        return values.filter((v) => v.length > 0 && !v.startsWith('__')).length;
-      })
-      .toBeGreaterThan(0);
-
-    const optionValues = await mapSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => (o as HTMLOptionElement).value),
-    );
-    const mini =
-      optionValues.find((v) => v.includes('miniapp')) ??
-      optionValues.find((v) => v.length > 0 && !v.startsWith('__'));
-    expect(mini, `catalog options: ${optionValues.join(',')}`).toBeTruthy();
-    await mapSelect.selectOption(mini!);
+    // Ждём каталог: в списке есть карты с числом экранов
+    await expect.poll(async () => (await catalogLabels(page, mapSelect)).length, { timeout: 15_000 }).toBeGreaterThan(0);
+    await chooseMap(page, mapSelect, 'Мини-приложение');
 
     // Холст React Flow + ноды
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 30_000 });
@@ -92,25 +102,17 @@ test.describe('visualizer smoke', () => {
   test('load site map has many pages (>10)', async ({ page }) => {
     await page.goto('/');
     const mapSelect = page.getByTestId('map-select');
+    let site: string | undefined;
     await expect
       .poll(async () => {
-        const values = await mapSelect.locator('option').evaluateAll((opts) =>
-          opts.map((o) => (o as HTMLOptionElement).value),
-        );
-        return values.some((v) => v.includes('site')) ? 1 : 0;
-      })
-      .toBe(1);
-
-    const optionValues = await mapSelect.locator('option').evaluateAll((opts) =>
-      opts.map((o) => (o as HTMLOptionElement).value),
-    );
-    const site = optionValues.find((v) => v.includes('site'));
-    expect(site).toBeTruthy();
-    // Каталог пишет число экранов в подписи: «Сайт · 33 экр.»
-    const label = await mapSelect.locator(`option[value="${site!}"]`).textContent();
-    const catalogPages = Number(/(\d+)\s*экр/.exec(label ?? '')?.[1]);
-    expect(catalogPages, `подпись: ${label}`).toBeGreaterThan(10);
-    await mapSelect.selectOption(site!);
+        site = (await catalogLabels(page, mapSelect)).find((t) => t.startsWith('Сайт'));
+        return site ?? '';
+      }, { timeout: 15_000 })
+      .not.toBe('');
+    // Каталог пишет число экранов в подписи: «Сайт · 13 экр.»
+    const catalogPages = Number(/(\d+)\s*экр/.exec(site ?? '')?.[1]);
+    expect(catalogPages, `подпись: ${site}`).toBeGreaterThan(10);
+    await chooseMap(page, mapSelect, 'Сайт');
     await expect
       .poll(async () => minimapPages(page), { timeout: 45_000 })
       .toBe(catalogPages);
