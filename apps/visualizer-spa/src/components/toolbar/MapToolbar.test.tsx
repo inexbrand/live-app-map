@@ -190,6 +190,24 @@ describe('шапка с картой', () => {
     expect(document.documentElement.dataset['theme']).toBe('light');
     await waitFor(() => expect(sheet.getByTestId('theme-light').getAttribute('aria-pressed')).toBe('true'));
   });
+
+  test('переключатель «Состояния»: включён по умолчанию, выключение убирает узлы-состояния с холста', async () => {
+    openMap('korbor-miniapp');
+    const screenId = useAppStore.getState().document?.nodes.find((n) => n.kind === 'page')?.id ?? '';
+    act(() => useAppStore.getState().setProjectStates(new Map([[screenId, [{ name: 'empty', id: 'empty', label: 'Пусто', kind: 'empty' as const }]]])));
+    const stateId = `${screenId}@state:empty`;
+    expect(useAppStore.getState().index?.nodesById.has(stateId)).toBe(true);
+    const { ui } = toolbar();
+    fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
+    const sheet = within(ui.getByRole('dialog', { name: 'Настройки просмотра' }));
+    const sw = sheet.getByRole('switch', { name: 'Состояния' });
+    expect(sw.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(sw);
+    await waitFor(() => expect(useAppStore.getState().showStates).toBe(false));
+    expect(useAppStore.getState().index?.nodesById.has(stateId)).toBe(false);
+    fireEvent.click(sw);
+    await waitFor(() => expect(useAppStore.getState().index?.nodesById.has(stateId)).toBe(true));
+  });
 });
 
 describe('лист настроек', () => {
@@ -249,7 +267,7 @@ describe('лист настроек', () => {
     fireEvent.click(ui.getByRole('button', { name: 'Настройки' }));
     const sheet = within(ui.getByRole('dialog', { name: 'Настройки просмотра' }));
     fireEvent.click(sheet.getByRole('button', { name: 'Для разработчика' }));
-    fireEvent.click(sheet.getByRole('switch'));
+    fireEvent.click(sheet.getByRole('switch', { name: 'Прокси для экранов' }));
     expect(useAppStore.getState().useTlsProxy).toBe(!useAppStore.getInitialState().useTlsProxy);
     fireEvent.click(sheet.getByRole('button', { name: 'Проверить TLS origin' }));
     await waitFor(() => expect(useAppStore.getState().toast).toBe('TLS OK · HTTP 200 · cert ok'));

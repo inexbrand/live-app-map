@@ -22,9 +22,9 @@ describe('состояния проекта', () => {
   });
 
   test('dev-сервер без эндпоинта отдаёт index.html — «проекта нет»', async () => {
-    const html = (async () => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } })) as unknown as typeof fetch;
+    const html = async (): Promise<Response> => new Response('<!doctype html>', { status: 200, headers: { 'content-type': 'text/html' } });
     expect((await fetchProjectStates(html)).kind).toBe('none');
-    const json = (async () => Response.json({ screens: { [FEED]: [] } })) as unknown as typeof fetch;
+    const json = async (): Promise<Response> => Response.json({ screens: { [FEED]: [] } });
     expect((await fetchProjectStates(json)).kind).toBe('ok');
   });
 });

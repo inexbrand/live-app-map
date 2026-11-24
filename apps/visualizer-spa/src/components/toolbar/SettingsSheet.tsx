@@ -11,6 +11,7 @@ import { Button } from '@/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '@/components/ui/collapsible';
 import { Field, FieldDescription, FieldLabel } from '@/components/ui/field';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group';
 import { applyTheme, currentTheme, type Theme } from '../../lib/theme';
 import { OptionSelect } from '../option-select';
@@ -141,6 +142,19 @@ function ScaleField() {
   );
 }
 
+/** Состояния экранов узлами рядом с экраном (по умолчанию включено). */
+function StatesField() {
+  const show = useAppStore((s) => s.showStates);
+  const setShow = useAppStore((s) => s.setShowStates);
+  return (
+    <Field orientation="horizontal">
+      <Switch id="set-states" checked={show} onCheckedChange={(v) => setShow(v)} data-testid="show-states" />
+      <FieldLabel htmlFor="set-states">Состояния</FieldLabel>
+      <FieldDescription>Пустой список, ошибка, открытая модалка — отдельными экранами рядом со своим экраном.</FieldDescription>
+    </Field>
+  );
+}
+
 /** Техника: сколько экранов живут, адрес приложения, прокси. */
 function DeveloperBlock() {
   const maxLive = useAppStore((s) => s.maxLiveIframes);
@@ -198,6 +212,7 @@ export function SettingsSheet(props: SettingsSheetProps) {
       <ThemeField />
       <IframeBudgetLine />
       <ScaleField />
+      <StatesField />
       <MapAdaptiveField />
       <DeveloperBlock />
     </EdgeSheet>

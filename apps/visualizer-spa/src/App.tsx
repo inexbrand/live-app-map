@@ -21,6 +21,7 @@ import { useMapSourceStore } from './store/map-source-store';
 import { useViewStore } from './store/view-store';
 import { useGatewayFrames } from './lib/gateway/use-gateway-frames';
 import { useStreamSync } from './lib/stream/stream-sync';
+import { useProjectStates } from './lib/project-states';
 import { useRouteSamples } from './lib/use-route-samples';
 import { useNavHistory } from './lib/use-nav-history';
 import { useHotkeys } from './lib/use-hotkeys';
@@ -378,6 +379,7 @@ export function App() {
   const mapDocument = useAppStore((s) => s.document);
   useGatewayFrames();
   useStreamSync();
+  useProjectStates();
   useRouteSamples();
   useNavHistory();
   useHotkeys(mapDocument !== null);
