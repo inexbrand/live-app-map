@@ -1,11 +1,11 @@
 /**
  * Правки аудита интерфейса (эпоха ui-audit-fixes) в настоящем браузере:
- * панель экрана, карточка в покое, подписи рёбер, обзор при отдалении, шапка на 768 px.
+ * фокус экрана, карточка в покое, подписи рёбер, обзор при отдалении, шапка на 768 px.
  * Скриншоты — в LAM_SHOTS_DIR, если задана.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { pinKorborDocs } from './docs-fixture';
-import { collectPageErrors, openMiniappAndSelectNode, shot } from './helpers';
+import { collectPageErrors, openAndSelectNode, shot } from './helpers';
 
 /** Шапка не шире окна: ничего не вылезает и не обрезается прокруткой. */
 async function headerFits(page: Page): Promise<{ readonly scroll: number; readonly client: number }> {
@@ -13,31 +13,31 @@ async function headerFits(page: Page): Promise<{ readonly scroll: number; readon
 }
 
 test.describe('экраны', () => {
-  test('панель экрана закрывается крестиком, Esc и не висит на других видах', async ({ page }) => {
+  test('фокус экрана: остальные гаснут, плашка под экраном, правой панели нет; Esc снимает фокус; на других видах плашки нет', async ({ page }) => {
     const errors = collectPageErrors(page);
-    await openMiniappAndSelectNode(page);
-    const drawer = page.getByTestId('page-drawer');
-    await expect(drawer).toBeVisible();
-    await drawer.getByRole('button', { name: 'Закрыть панель' }).click();
-    await expect(drawer).toBeHidden();
-    await expect(page.locator('.page-node--selected')).toHaveCount(0);
+    await openAndSelectNode(page);
+    const bar = page.getByTestId('focus-bar');
+    await expect(page.locator('.flow-host--focus')).toHaveCount(1);
+    expect(await page.locator('.page-node--dim').count()).toBeGreaterThan(0);
+    await expect(page.locator('.drawer')).toHaveCount(0);
+    await shot(page, 'after-focus.png');
 
-    await page.locator('.page-node').first().click();
-    await expect(drawer).toBeVisible();
     await page.keyboard.press('Escape');
-    await expect(drawer).toBeHidden();
+    await expect(bar).toHaveCount(0);
+    await expect(page.locator('.page-node--selected')).toHaveCount(0);
+    await expect(page.locator('.page-node--dim')).toHaveCount(0);
 
     await page.locator('.page-node').first().click();
-    await expect(drawer).toBeVisible();
+    await expect(bar).toBeVisible();
     await page.locator('[role=group][aria-label="Вид"]').getByRole('button', { name: 'Сравнение' }).click();
-    await expect(drawer).toBeHidden();
+    await expect(bar).toHaveCount(0);
     await page.locator('[role=group][aria-label="Вид"]').getByRole('button', { name: 'Экраны' }).click();
-    await expect(drawer).toBeVisible();
+    await expect(bar).toBeVisible();
     expect(errors).toEqual([]);
   });
 
   test('карточка в покое — название и путь; кнопки под мышью; подписи рёбер — у выбранного', async ({ page }) => {
-    await openMiniappAndSelectNode(page);
+    await openAndSelectNode(page);
     await page.keyboard.press('Escape');
     await page.mouse.move(4, 4);
     await expect(page.locator('.page-node--selected')).toHaveCount(0);
@@ -56,7 +56,7 @@ test.describe('экраны', () => {
   });
 
   test('обзор при отдалении: подписи разделов и экранов читаются', async ({ page }) => {
-    await openMiniappAndSelectNode(page);
+    await openAndSelectNode(page);
     await page.keyboard.press('Escape');
     await page.getByRole('button', { name: 'fit view' }).click();
     const host = page.locator('.flow-host');

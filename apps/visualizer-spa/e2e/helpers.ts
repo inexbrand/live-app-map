@@ -59,24 +59,30 @@ async function viewSwitchShown(page: Page): Promise<void> {
   await expect(page.locator('[role=group][aria-label="Вид"]')).toBeVisible({ timeout: 30_000 });
 }
 
-/** Открывает карту korbor-miniapp и выбирает первую целиком видимую ноду. */
-export async function openMiniappAndSelectNode(page: Page): Promise<string> {
-  await page.goto('/');
-  await page.getByTestId('map-select').selectOption('korbor-miniapp');
-  await expect.poll(async () => page.locator('.react-flow__node').count()).toBeGreaterThan(5);
-  const box = await page.locator('.react-flow__node').evaluateAll(firstNodeInView);
+/**
+ * Открывает карту и выбирает первый экран, видимый целиком: экран в фокусе, плашка под ним.
+ * По умолчанию — сайт korbor (:16001): его экраны открываются без входа.
+ *
+ * @param page - страница
+ * @param map - файл карты в public/maps
+ * @returns id выбранной ноды
+ */
+export async function openAndSelectNode(page: Page, map = 'korbor-site.liveappmap.json'): Promise<string> {
+  await openMap(page, map);
+  const pages = page.locator('.react-flow__node:has(.page-node)');
+  await expect.poll(async () => pages.count(), { timeout: 30_000 }).toBeGreaterThan(3);
+  const box = await pages.evaluateAll(firstNodeInView);
   if (box === null) {
-    throw new Error('на холсте нет ноды, видимой целиком под шапкой');
+    throw new Error('на холсте нет экрана, видимого целиком под шапкой');
   }
   await page.mouse.click(box.x, box.y);
-  await expect(page.locator('.page-node--selected [data-testid=node-comment]')).toBeVisible();
+  await expect(page.getByTestId('focus-bar')).toBeVisible();
   return box.id;
 }
 
-/** Замечание к области выбранного экрана: кнопка в шапке ноды → «Область» в подсказке. */
+/** Замечание к области выбранного экрана: ⌥⇧S. */
 export async function startRegion(page: Page): Promise<void> {
-  await page.locator('.page-node--selected [data-testid=node-comment]').click();
-  await page.getByTestId('pick-hint').getByRole('button', { name: 'Область' }).click();
+  await page.keyboard.press('Alt+Shift+KeyS');
 }
 
 /** Выделяет мышью область 400×300 в слое снимка. */

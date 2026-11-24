@@ -91,6 +91,8 @@ function useEscapeCancels(active: boolean, cancel: () => void): void {
     }
     const onKey = (e: KeyboardEvent): void => {
       if (e.key === 'Escape') {
+        // Esc отменил снимок — шаг назад карты (фокус экрана) он не делает
+        e.preventDefault();
         cancel();
       }
     };

@@ -14,6 +14,7 @@ import { useAgentBridge } from '../lib/use-agent-bridge';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
 import { isTypingTarget } from '../lib/typing-target';
+import { useSnapshotStore } from '../store/snapshot-store';
 import { commentOnScreen, goNeighbor, setFocusMode, startRegionComment } from './comments/start-comment';
 
 /** Действия по коду клавиши (раскладка не важна); ⇧ — только у ⇧C. */
@@ -25,9 +26,31 @@ const FOCUS_KEYS: ReadonlyMap<string, () => void> = new Map([
   ['BracketRight', () => goNeighbor(1)],
 ]);
 
+/**
+ * Esc у карты — шаг назад: окно замечания, затем лист, затем фокус экрана.
+ * Esc, который уже обработало поле, лист или слой снимка, сюда не доходит (defaultPrevented).
+ */
+function stepBack(): void {
+  if (useSnapshotStore.getState().session.phase !== 'idle') {
+    return;
+  }
+  const c = useCommentsStore.getState();
+  if (c.target !== null) {
+    c.closeTarget();
+  } else if (c.sheetOpen) {
+    c.closeSheet();
+  } else {
+    useAppStore.getState().selectPage(null);
+  }
+}
+
 /** ⇧C — лист замечаний; остальные — у выбранного экрана. */
 function commentKey(e: KeyboardEvent): void {
   if (e.altKey || isTypingTarget(e.target)) {
+    return;
+  }
+  if (e.key === 'Escape' && !e.shiftKey && !e.defaultPrevented) {
+    stepBack();
     return;
   }
   if (e.shiftKey && e.code === 'KeyC') {

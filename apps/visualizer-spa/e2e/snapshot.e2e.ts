@@ -4,42 +4,36 @@
  * диалог выбора вкладки принимается сам.
  */
 import { expect, test } from '@playwright/test';
-import { dragRegion, mcpCall, openMiniappAndSelectNode, startRegion } from './helpers';
+import { dragRegion, mcpCall, openAndSelectNode, startRegion } from './helpers';
 
 test.describe('snapshot', () => {
-  test('замечание к области: выделение → PNG в поле → сохранено в ветке экрана', async ({ page }) => {
-    await openMiniappAndSelectNode(page);
-    const panel = page.getByTestId('screen-comments');
+  test('замечание к области: ⌥⇧S → выделение → окно к экрану → отправлено со снимком', async ({ page }) => {
+    await openAndSelectNode(page);
     await startRegion(page);
     await dragRegion(page);
 
-    const composer = page.getByTestId('comment-composer');
-    const shot = composer.getByTestId('comment-shot');
-    await expect(shot).toBeVisible();
-    const size = await shot.evaluate((img) => {
-      const el = img as HTMLImageElement;
-      return { w: el.naturalWidth, h: el.naturalHeight, png: el.src.startsWith('data:image/png;base64,') };
-    });
-    const dpr = await page.evaluate(() => window.devicePixelRatio);
-    expect(size).toEqual({ w: 400 * dpr, h: 300 * dpr, png: true });
-
+    const pop = page.getByTestId('comment-popover');
+    await expect(pop).toBeVisible();
     const text = `e2e область ${Date.now()}`;
-    await composer.getByRole('textbox', { name: 'Что не так' }).fill(text);
+    await pop.getByRole('textbox', { name: 'Что не так' }).fill(text);
     await page.keyboard.press('Enter');
-    await expect(page.locator('.toast')).toContainText('Замечание сохранено');
-    const thread = panel.getByTestId('comment-thread').filter({ hasText: text });
-    await expect(thread).toBeVisible();
-    await expect(thread.locator('img')).toBeVisible();
+    await expect(page.locator('.toast')).toContainText('Замечание отправлено агенту');
+    const listed = await mcpCall(page, 'list_comments', { query: text });
+    const id = (listed['comments'] as Array<{ id: string }>)[0]?.id ?? '';
+    const full = await mcpCall(page, 'get_comment', { id });
+    expect(String((full['comment'] as { shotPath: string | null }).shotPath)).toMatch(/shot\.png$/);
 
-    // Esc отменяет новую сессию до захвата
+    // Esc отменяет новую сессию до захвата, фокус экрана остаётся
+    await page.keyboard.press('Escape');
     await startRegion(page);
     await expect(page.getByTestId('snapshot-overlay')).toBeVisible();
     await page.keyboard.press('Escape');
     await expect(page.getByTestId('snapshot-overlay')).toHaveCount(0);
+    await expect(page.getByTestId('focus-bar')).toBeVisible();
   });
 
   test('агент: request_snapshot по MCP → согласие → get_snapshot ready', async ({ page }) => {
-    await openMiniappAndSelectNode(page);
+    await openAndSelectNode(page);
 
     // Визуализатор публикует состояние для get_visualizer_state
     await expect

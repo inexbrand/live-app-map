@@ -169,6 +169,26 @@ describe('снимок экрана', () => {
     expect(useCommentsStore.getState().target?.anchor).toMatchObject({ pageId: page?.id, element: null });
     expect(phase()).toBe('idle');
   });
+  test('Esc у карты: закрывает окно замечания, потом лист, потом снимает фокус экрана', () => {
+    const doc = openMap('korbor-miniapp');
+    app();
+    const page = doc.nodes.find((n) => n.kind === 'page');
+    act(() => useAppStore.getState().selectPage(page?.id ?? null));
+    key('KeyW');
+    act(() => useCommentsStore.getState().openSheet(null));
+    act(() => {
+      useCommentsStore.getState().openTarget({ anchor: { mapName: null, pageId: page?.id ?? '', pageTitle: '', pageUrl: null, role: null, element: null }, frame: null, shot: null });
+    });
+    key('Escape', { key: 'Escape' });
+    expect(useCommentsStore.getState().target).toBeNull();
+    expect(useCommentsStore.getState().sheetOpen).toBe(true);
+    key('Escape', { key: 'Escape' });
+    expect(useCommentsStore.getState().sheetOpen).toBe(false);
+    expect(useAppStore.getState().selectedPageId).toBe(page?.id ?? null);
+    key('Escape', { key: 'Escape' });
+    expect(useAppStore.getState().selectedPageId).toBeNull();
+  });
+
   test('браузер без захвата экрана — понятная причина в toast', async () => {
     openMap('korbor-miniapp');
     Object.defineProperty(navigator, 'mediaDevices', { configurable: true, value: undefined });

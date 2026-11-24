@@ -9,7 +9,7 @@
  * Звук никуда не уходит: распознаёт браузер.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { dragRegion, openMiniappAndSelectNode, startRegion } from './helpers';
+import { dragRegion, mcpCall, openAndSelectNode, startRegion } from './helpers';
 
 /** Загрузка в чистом checkout (80 МБ с Hugging Face). */
 const DOWNLOAD_MS = 240_000;
@@ -22,10 +22,10 @@ const DOWNLOAD_MS = 240_000;
 const HOLD_MS = 10_500;
 
 async function openComposer(page: Page): Promise<void> {
-  await openMiniappAndSelectNode(page);
+  await openAndSelectNode(page);
   await startRegion(page);
   await dragRegion(page);
-  await expect(page.getByTestId('comment-composer')).toBeVisible();
+  await expect(page.getByTestId('comment-popover')).toBeVisible();
 }
 
 /** Узнаём сказанное по ключевым словам: точность base на синтезированной речи не дословная. */
@@ -97,8 +97,9 @@ test.describe('голос', () => {
     await area.press('End');
     await area.pressSequentially(' (голос)');
     await page.keyboard.press('Enter');
-    await expect(page.locator('.toast')).toContainText('Замечание сохранено');
-    await expect(page.getByTestId('screen-comments').getByTestId('comment-thread').first()).toContainText('(голос)');
+    await expect(page.locator('.toast')).toContainText('Замечание отправлено агенту');
+    const saved = await mcpCall(page, 'list_comments', { query: '(голос)' });
+    expect((saved['comments'] as unknown[]).length).toBeGreaterThan(0);
   });
 
   test('модель с диска: кнопка — держать и говорить, офлайн', async ({ page, context }) => {
