@@ -7,6 +7,8 @@ import { resolveNodeViewport } from '../viewport';
 import { stateNodeInfo } from '../state-nodes';
 import { useAppStore } from '../../store/app-store';
 import type { AppStore } from '../../store/app/types';
+import { useComponentsStore } from '../../store/components-store';
+import { componentStreamScreens } from '../components-gallery/stream-screens';
 import { useGatewayStore } from '../../store/gateway-store';
 import { streamClient } from './stream-client';
 import type { StreamScreen } from './stream-protocol';
@@ -45,17 +47,23 @@ export function screensOf(s: StreamSyncInput): StreamScreen[] {
 /** Хук корня приложения: набор экранов уходит серверу при каждом изменении карты или шлюза. */
 export function useStreamSync(): void {
   useEffect(() => {
-    const push = (): void => streamClient.sync(screensOf(useAppStore.getState()));
+    // Экраны карты и видимые варианты галереи «Компоненты» — одним набором
+    const push = (): void => {
+      const c = useComponentsStore.getState();
+      streamClient.sync([...screensOf(useAppStore.getState()), ...componentStreamScreens(c.gallery, c.visible)]);
+    };
     push();
     const offApp = useAppStore.subscribe(push);
     // Порт и профили шлюза входят в адреса экранов
     const offGateway = useGatewayStore.subscribe(push);
+    const offComponents = useComponentsStore.subscribe(push);
     // Итог шагов узла-состояния — подпись на узле
     const offSteps = streamClient.onSteps((key, error) => useAppStore.getState().setStepError(key, error));
     return () => {
       offSteps();
       offApp();
       offGateway();
+      offComponents();
     };
   }, []);
 }
