@@ -10,7 +10,7 @@
 - [Визуализатор: реальные параметры маршрутов](visualizer-route-samples.md) — id из API под профилем, metadata.pathPattern, свой порт для e2e
 - [Worktree: git, scan:korbor, e2e](worktree-git-and-korbor-scan.md) — /usr/bin/git, KORBOR_DIR, LAM_SESSIONS_DIR для e2e, занятый 4311, commit -F
 - [Визуализатор: грабли UX-переделки](visualizer-ux-overhaul-lessons.md) — перезапуск dev после rebase схемы, rAF/StrictMode, merge вместо force-push, LAM_SHOTS_DIR
-- [scan:korbor и живая CMS](scan-korbor-needs-live-cms.md) — без :16001 теряются 9 страниц сайта, сверять 33
+- [Скан korbor и живая CMS](scan-korbor-needs-live-cms.md) — без :16001 теряются 9 страниц сайта, сверять byApp.site = 13
 - [Грабли REPL и vite (sauger)](agent-tooling-pitfalls-sauger.md) — не cat > f < /dev/stdin, перезапуск vite после middleware, карта без нод
 - [Визуализатор: замечания и голос — грабли](visualizer-comments-voice-lessons.md) — rVFC у неподвижной вкладки, _debugStack+sourcemap, res close, зеркало моделей, 1024×700
 - [DOM-тесты SPA: грабли](spa-dom-tests-happy-dom.md) — userEvent.setup({document}), WheelEvent, React 19 form reset, crapper 0% при падении
@@ -31,3 +31,4 @@
 - [Тиммейты параллельно](parallel-teammates-speed.md) — дробить большие задачи по агентам, контракт до старта
 - [install.sh и tarball sdk](install-sh-and-sdk-tarball.md) — загрузчик + init, pack из exports, проверка в %TEMP%, sdk/package.json затирают
 - [Узлы-состояния экранов](visualizer-state-nodes.md) — только в index.document, шаги state-steps, перезагрузки vite в общем checkout
+- [Карта проекта в .live-app-map](project-folder-map.md) — korbor/.live-app-map/map.json, срезы test-fixtures/maps, импорт states.ts с ?v=
