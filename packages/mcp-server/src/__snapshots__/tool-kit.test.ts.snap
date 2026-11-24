@@ -244,7 +244,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
       },
@@ -260,7 +260,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
         "query": {
@@ -284,7 +284,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
         "route": {
@@ -305,7 +305,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
         "method": {
@@ -341,7 +341,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
         "query": {
@@ -361,7 +361,7 @@ exports[`каталог и вызов tools каталог tools/list не ме�
     "inputSchema": {
       "properties": {
         "mapPath": {
-          "description": "Путь к карте с разделом code, например maps/korbor-all.liveappmap.json",
+          "description": "Путь к карте с разделом code, например ../korbor/.live-app-map/map.json",
           "type": "string",
         },
         "table": {

@@ -1,6 +1,7 @@
 /**
  * Общие данные и сброс состояния для тестов компонентов: настоящие карты (срезы карт korbor
- * в test/maps и карта live-app-map из public/maps), store в начальном состоянии, ответы сети по адресу.
+ * в test-fixtures/maps корня и карта live-app-map из public/maps), store в начальном состоянии,
+ * ответы сети по адресу.
  */
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
@@ -16,7 +17,7 @@ import { useViewStore } from '../store/view-store';
 import { useVoiceStore } from '../store/voice-store';
 
 /**
- * Карта для тестов: срезы настоящих карт korbor (test/maps — все экраны и рёбра, часть
+ * Карта для тестов: срезы настоящих карт korbor (test-fixtures/maps — все экраны и рёбра, часть
  * роутов, таблиц, символов и документов) и карта самого live-app-map (public/maps).
  */
 export type MapName = 'korbor-miniapp' | 'korbor-site' | 'korbor-admin' | 'korbor-all' | 'live-app-map';
@@ -28,7 +29,7 @@ export type MapName = 'korbor-miniapp' | 'korbor-site' | 'korbor-admin' | 'korbo
  * @returns абсолютный путь
  */
 export function testMapPath(name: MapName): string {
-  const rel = name === 'live-app-map' ? '../../public/maps/live-app-map.liveappmap.json' : `./maps/${name}.liveappmap.json`;
+  const rel = name === 'live-app-map' ? '../../public/maps/live-app-map.liveappmap.json' : `../../../../test-fixtures/maps/${name}.liveappmap.json`;
   return fileURLToPath(new URL(rel, import.meta.url));
 }
 

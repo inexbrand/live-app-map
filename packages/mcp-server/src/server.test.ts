@@ -7,8 +7,8 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 
 const serverPath = path.join(import.meta.dir, 'server.ts');
-const miniappMap = path.resolve(import.meta.dir, '../../../maps/korbor-miniapp.liveappmap.json');
-const allMap = path.resolve(import.meta.dir, '../../../maps/korbor-all.liveappmap.json');
+const miniappMap = path.resolve(import.meta.dir, '../../../test-fixtures/maps/korbor-miniapp.liveappmap.json');
+const allMap = path.resolve(import.meta.dir, '../../../test-fixtures/maps/korbor-all.liveappmap.json');
 
 async function rpc(lines: readonly unknown[], lamDir: string): Promise<unknown[]> {
   const proc = Bun.spawn(['bun', 'run', serverPath], {

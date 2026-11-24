@@ -41,7 +41,7 @@ Examples:
   live-app-map doctor --dir ../korbor/apps/site
   live-app-map code --dir ../korbor -o maps/korbor-code.json
   live-app-map scan --dir ../korbor/apps/miniapp --code-dir ../korbor -o maps/miniapp-with-code.json
-  live-app-map export maps/korbor-miniapp.json -o maps/korbor-miniapp.appmap
+  live-app-map export maps/miniapp.json -o maps/miniapp.appmap
   live-app-map feedback --file lam-feedback-route_feed.json --print-prompt
 `;
 

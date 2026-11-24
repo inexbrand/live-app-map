@@ -2,18 +2,30 @@
  * JSON-RPC и tools в процессе: протокол, база знаний по коду, документация, карта, stdio.
  */
 import { describe, expect, test } from 'bun:test';
-import { mkdtempSync, readFileSync, readdirSync } from 'node:fs';
+import { mkdtempSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { liveAppMapToAppMap, parseLiveAppMapJson } from '@live-app-map/schema';
 import { handleRpcText, type RpcResponse } from './rpc';
 import { saveFeedback } from './feedback-store';
 import { serveLines, splitLines } from './stdio';
 
 const MAPS = path.resolve(import.meta.dir, '../../../maps');
-const ALL = path.join(MAPS, 'korbor-all.liveappmap.json');
-const ADMIN = path.join(MAPS, 'korbor-admin.json');
+const TEST_MAPS = path.resolve(import.meta.dir, '../../../test-fixtures/maps');
+const ALL = path.join(TEST_MAPS, 'korbor-all.liveappmap.json');
 const SELF = path.join(MAPS, 'live-app-map.liveappmap.json');
 const ctx = { lamDir: mkdtempSync(path.join(tmpdir(), 'lam-rpc-')) };
+
+/** Карта админки во внутреннем (enterprise) формате — из среза liveappmap. */
+const ADMIN = ((): string => {
+  const live = parseLiveAppMapJson(readFileSync(path.join(TEST_MAPS, 'korbor-admin.liveappmap.json'), 'utf8'));
+  if (!live.ok) {
+    throw new Error('срез korbor-admin не разобрался');
+  }
+  const file = path.join(ctx.lamDir, 'korbor-admin.json');
+  writeFileSync(file, JSON.stringify(liveAppMapToAppMap(live.document)));
+  return file;
+})();
 
 type Content = { content: { text: string }[]; isError?: boolean };
 

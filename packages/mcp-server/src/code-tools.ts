@@ -23,7 +23,7 @@ import type { ApiRoute, DbTable, HttpMethod } from '@live-app-map/schema';
 import { loadCodeIndex } from './map-tools';
 import { defined, fail, mapPathParam, ok, requiredStr, str, type Tool, type ToolArgs as Args, type ToolResult } from './tool-kit';
 
-const mapPath = mapPathParam('Путь к карте с разделом code, например maps/korbor-all.liveappmap.json');
+const mapPath = mapPathParam('Путь к карте с разделом code, например ../korbor/.live-app-map/map.json');
 const mapPathProp = mapPath.prop;
 
 /** Каталог tools базы знаний. */

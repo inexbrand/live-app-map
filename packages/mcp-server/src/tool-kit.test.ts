@@ -61,7 +61,7 @@ describe('каталог и вызов tools', () => {
   test('пустой mapPath у инструментов кода и документации — ошибка с подсказкой, какую карту дать', () => {
     const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-kit-'));
     expect(callTool('list_routes', {}, { lamDir }).content[0]?.text).toBe(
-      'mapPath обязателен: путь к карте с разделом code, например maps/korbor-all.liveappmap.json',
+      'mapPath обязателен: путь к карте с разделом code, например ../korbor/.live-app-map/map.json',
     );
     expect(callTool('search_docs', { mapPath: '' }, { lamDir }).content[0]?.text).toBe(
       'mapPath обязателен: путь к карте с разделом docs, например maps/live-app-map.liveappmap.json',
