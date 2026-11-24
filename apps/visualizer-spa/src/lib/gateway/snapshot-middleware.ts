@@ -4,6 +4,8 @@
  * ходит по произвольным URL.
  */
 import { readFileSync } from 'node:fs';
+import { appMapStateStepSchema, type AppMapStateStep } from '@live-app-map/schema';
+import { z } from 'zod';
 import { isLocalOrigin, requestPath, sendError, type DevMiddleware } from '../dev-http';
 import { parseGatewayHost } from './gateway-host';
 import { isValidSnapshotSize, type SnapshotService } from './snapshot-service';
@@ -19,7 +21,9 @@ import { SNAPSHOT_PATH } from './snapshot-url';
 export function parseSnapshotQuery(
   query: URLSearchParams,
   gatewayPort: number,
-): { readonly ok: true; readonly url: string; readonly width: number; readonly height: number; readonly refresh: boolean } | { readonly ok: false; readonly error: string } {
+):
+  | { readonly ok: true; readonly url: string; readonly width: number; readonly height: number; readonly refresh: boolean; readonly steps: readonly AppMapStateStep[] }
+  | { readonly ok: false; readonly error: string } {
   const raw = query.get('url') ?? '';
   let u: URL;
   try {
@@ -35,7 +39,28 @@ export function parseSnapshotQuery(
   if (!isValidSnapshotSize(width, height)) {
     return { ok: false, error: 'w и h — целые, от 200×120 до 4000×4000' };
   }
-  return { ok: true, url: u.href, width, height, refresh: query.get('refresh') === '1' };
+  const steps = parseSteps(query.get('steps'));
+  if (steps === null) {
+    return { ok: false, error: 'steps — JSON-массив шагов: [{"click":"text=Фильтры"}], {fill,value}, {press}, {waitFor}, {scroll}' };
+  }
+  return { ok: true, url: u.href, width, height, refresh: query.get('refresh') === '1', steps };
+}
+
+const stepsSchema = z.array(appMapStateStepSchema);
+
+/** Шаги из query: нет — пусто; не разобрались — null. */
+function parseSteps(raw: string | null): readonly AppMapStateStep[] | null {
+  if (raw === null || raw === '') {
+    return [];
+  }
+  let v: unknown;
+  try {
+    v = JSON.parse(raw);
+  } catch {
+    return null;
+  }
+  const r = stepsSchema.safeParse(v);
+  return r.success ? r.data : null;
 }
 
 /**

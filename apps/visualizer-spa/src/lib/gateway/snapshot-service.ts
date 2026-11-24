@@ -6,7 +6,9 @@
  * отдаются сразу, устаревшие — тоже сразу, а в фоне переснимаются.
  */
 import { createHash } from 'node:crypto';
+import type { AppMapStateStep } from '@live-app-map/schema';
 import { LOAD_TIMEOUT_MS, settleLoaded, type SettlingPage } from './page-settle';
+import { runStateSteps, type StepsPage } from '../stream/state-steps';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
@@ -21,13 +23,19 @@ export type SnapshotContext = {
   close(): Promise<void>;
 };
 /** Страница. */
-export type SnapshotPage = SettlingPage & {
+export type SnapshotPage = SettlingPage & StepsPage & {
   goto(url: string, opts: { waitUntil: 'load'; timeout: number }): Promise<unknown>;
   screenshot(opts: { type: 'jpeg'; quality: number }): Promise<Uint8Array>;
 };
 
 /** Запрос снимка. */
-export type SnapshotRequest = { readonly url: string; readonly width: number; readonly height: number };
+export type SnapshotRequest = {
+  readonly url: string;
+  readonly width: number;
+  readonly height: number;
+  /** Шаги состояния после загрузки, до снимка. */
+  readonly steps?: readonly AppMapStateStep[];
+};
 
 /** Опции сервиса. */
 export type SnapshotServiceOptions = {
@@ -79,7 +87,8 @@ export class SnapshotService {
 
   /** Файл снимка для запроса. */
   fileFor(req: SnapshotRequest): string {
-    const key = createHash('sha1').update(`${req.url}|${req.width}|${req.height}`).digest('hex').slice(0, 24);
+    const steps = req.steps === undefined || req.steps.length === 0 ? '' : `|${JSON.stringify(req.steps)}`;
+    const key = createHash('sha1').update(`${req.url}|${req.width}|${req.height}${steps}`).digest('hex').slice(0, 24);
     return path.join(this.opts.dir, `${key}.jpg`);
   }
 
@@ -165,6 +174,8 @@ export class SnapshotService {
       const page = await ctx.newPage();
       await page.goto(req.url, { waitUntil: 'load', timeout: LOAD_TIMEOUT_MS });
       await settleLoaded(page);
+      // Сбой шага снимок не отменяет: подпись об ошибке шага даёт трансляция
+      await runStateSteps(page, req.steps ?? []);
       const jpeg = await page.screenshot({ type: 'jpeg', quality: 72 });
       mkdirSync(this.opts.dir, { recursive: true });
       writeFileSync(file, jpeg);

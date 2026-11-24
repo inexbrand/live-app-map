@@ -93,6 +93,7 @@ export {
   appMapGroupSchema,
   appMapNodeSchema,
   appMapPageStateSchema,
+  appMapStateStepSchema,
   liveAppMapDocumentSchema,
   liveAppMapPageSchema,
   stateInjectSpecSchema,

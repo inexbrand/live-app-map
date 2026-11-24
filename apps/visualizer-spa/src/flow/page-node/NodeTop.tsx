@@ -6,6 +6,8 @@ import type { AppMapNode, DeviceViewport } from '@live-app-map/schema';
 import type { PageStatus } from '../../lib/gateway/page-status';
 import { NodeActions } from './NodeActions';
 import { NodePath } from './NodePath';
+import { StateKindIcon } from './StateMark';
+import { stateNodeInfo } from '../../lib/state-nodes';
 
 /** Props верха карточки. */
 export type NodeTopProps = {
@@ -27,9 +29,11 @@ export type NodeTopProps = {
  */
 export function NodeTop(props: NodeTopProps) {
   const { node } = props;
+  const state = stateNodeInfo(node);
   return (
     <>
       <div className="page-node__header">
+        {state === null ? null : <StateKindIcon kind={state.kind} />}
         <div className="page-node__title" title={node.title}>{node.title}</div>
         {props.chrome && !props.selected ? <NodeActions nodeId={node.id} isPinned={props.isPinned} /> : null}
       </div>

@@ -2,7 +2,7 @@
  * Нода карты: экран из трансляции, размер окна (адаптив).
  * Части — в flow/page-node: шапка, строка пути, экран, панель окна, стейты, хуки.
  */
-import type { AppMapNode, AppMapPageState, DeviceViewport } from '@live-app-map/schema';
+import type { AppMapNode, AppMapPageState, AppMapStateStep, DeviceViewport } from '@live-app-map/schema';
 import { Handle, Position, type Node, type NodeProps } from '@xyflow/react';
 import { memo, useEffect, useRef, useState } from 'react';
 import { CommentMarkers } from '../components/comments/CommentMarkers';
@@ -17,6 +17,8 @@ import { useGatewayStore } from '../store/gateway-store';
 import { NodeTop } from './page-node/NodeTop';
 import { ScreenView } from './page-node/ScreenView';
 import { StateChips } from './page-node/StateChips';
+import { StepError } from './page-node/StateMark';
+import { stateNodeInfo } from '../lib/state-nodes';
 import { useNodeResize } from './page-node/use-node-resize';
 import { useNodeVisibility } from './page-node/use-node-visibility';
 import { useWheelToPage } from './page-node/use-wheel-to-page';
@@ -70,9 +72,11 @@ function useLiveUrl(id: string): { readonly url: string | null; readonly gateway
 }
 
 /** Снимок есть только у адресов шлюза: его снимает сервер под тем же профилем. */
-function gatewaySnapshotOf(url: string | null, gatewayPort: number | null, viewport: ResolvedViewport): string | null {
-  return url !== null && gatewayPort !== null && url.includes(`.localhost:${gatewayPort}/`) ? snapshotSrc(url, viewport.width, viewport.height) : null;
+function gatewaySnapshotOf(url: string | null, gatewayPort: number | null, viewport: ResolvedViewport, steps: readonly AppMapStateStep[]): string | null {
+  return url !== null && gatewayPort !== null && url.includes(`.localhost:${gatewayPort}/`) ? snapshotSrc(url, viewport.width, viewport.height, steps) : null;
 }
+
+const NO_STEPS: readonly AppMapStateStep[] = [];
 
 /** Подпись вместо экрана, когда показывать нечего. */
 function placeholderOf(mode: PageFlags['mode']): string {
@@ -136,11 +140,13 @@ function NodeFooter({ node, isSelected, viewport, actions }: { readonly node: Ap
   if (isSelected) {
     return <ViewportBar viewport={viewport} presets={resolveViewportPresets(mapLayout)} applyPreset={actions.applyPreset} toggleFullHeight={actions.toggleFullHeight} />;
   }
-  if (!node.states || node.states.length === 0) {
+  // Состояния по контракту (с id) — отдельные узлы, чипы — только у старых (name/inject)
+  const chips = stateNodeInfo(node) === null ? (node.states ?? []).filter((st) => st.id === undefined) : [];
+  if (chips.length === 0) {
     return null;
   }
   const onState = (st: AppMapPageState): void => applyPageState(node.id, activeStateName === st.name ? null : st);
-  return <StateChips states={node.states} activeStateName={activeStateName} onState={onState} />;
+  return <StateChips states={chips} activeStateName={activeStateName} onState={onState} />;
 }
 
 /** data-атрибуты состояния ноды для e2e и стилей. */
@@ -156,6 +162,8 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   const setInteract = useAppStore((s) => s.setInteract);
   const report = useGatewayStore((s) => s.reports.get(node.id));
   const { url, gatewayPort } = useLiveUrl(node.id);
+  const steps = stateNodeInfo(node)?.steps ?? NO_STEPS;
+  const stepError = useAppStore((s) => s.stepErrors.get(node.id));
 
   const bodyRef = useRef<HTMLDivElement>(null);
   const [snapshotFailed, setSnapshotFailed] = useState(false);
@@ -173,7 +181,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
   useWheelToPage(bodyRef, node.id, status.cropped !== null, viewport.width);
   useReportedHeight(node.id, status.contentHeight, viewport.heightMode);
 
-  const snapshot = f.mode === 'live' ? gatewaySnapshotOf(url, snapshotFailed ? null : gatewayPort, viewport) : null;
+  const snapshot = f.mode === 'live' ? gatewaySnapshotOf(url, snapshotFailed ? null : gatewayPort, viewport, steps) : null;
   const showScreen = f.mode === 'live' && url !== null;
 
   return (
@@ -223,6 +231,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
           </div>
         )}
         {showScreen ? <CommentMarkers nodeId={node.id} scaleX={layout.iframeScaleX} scaleY={layout.iframeScaleY} /> : null}
+        {stepError === undefined ? null : <StepError error={stepError} />}
         <div
           className="page-node__resize"
           title="Ширина (Shift — free height / fixed)"
