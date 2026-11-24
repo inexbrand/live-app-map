@@ -3,7 +3,8 @@
  * - ведёт сессию снимка экрана (поток вкладки → кадр → результат);
  * - публикует агенту состояние визуализатора, принимает его просьбы снимка;
  * - замечания: синхронизация веток и выбор компонента в живых экранах;
- * - клавиши: C — замечание к компоненту, ⇧C — все замечания,
+ * - клавиши фокуса экрана: C — выбор компонента, I — работа с приложением,
+ *   W — замечание к экрану, [ и ] — соседний экран, ⇧C — все замечания,
  *   ⌥⇧S — замечание по выделенной области выбранного экрана.
  */
 import { useEffect } from 'react';
@@ -13,20 +14,37 @@ import { useAgentBridge } from '../lib/use-agent-bridge';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
 import { isTypingTarget } from '../lib/typing-target';
-import { startComment } from './comments/start-comment';
+import { commentOnScreen, goNeighbor, setFocusMode, startRegionComment } from './comments/start-comment';
 
-/** ⇧C — список замечаний, C — замечание к компоненту. */
+/** Действия по коду клавиши (раскладка не важна); ⇧ — только у ⇧C. */
+const FOCUS_KEYS: ReadonlyMap<string, () => void> = new Map([
+  ['KeyC', () => setFocusMode('pick')],
+  ['KeyI', () => setFocusMode('interact')],
+  ['KeyW', () => commentOnScreen()],
+  ['BracketLeft', () => goNeighbor(-1)],
+  ['BracketRight', () => goNeighbor(1)],
+]);
+
+/** ⇧C — лист замечаний; остальные — у выбранного экрана. */
 function commentKey(e: KeyboardEvent): void {
-  if (e.altKey || e.code !== 'KeyC' || isTypingTarget(e.target)) {
+  if (e.altKey || isTypingTarget(e.target)) {
     return;
   }
-  e.preventDefault();
-  if (e.shiftKey) {
+  if (e.shiftKey && e.code === 'KeyC') {
+    e.preventDefault();
     const c = useCommentsStore.getState();
-    c.setListOpen(!c.listOpen);
+    if (c.sheetOpen) {
+      c.closeSheet();
+    } else {
+      c.openSheet(null);
+    }
     return;
   }
-  startComment('element');
+  const act = e.shiftKey ? undefined : FOCUS_KEYS.get(e.code);
+  if (act !== undefined && useAppStore.getState().selectedPageId !== null) {
+    e.preventDefault();
+    act();
+  }
 }
 
 /** Клавиши замечаний; без карты и с ⌘/Ctrl не работают. */
@@ -36,7 +54,7 @@ function onGrabKey(e: KeyboardEvent): void {
   }
   if (e.altKey && e.shiftKey && e.code === 'KeyS') {
     e.preventDefault();
-    startComment('region');
+    startRegionComment();
     return;
   }
   commentKey(e);

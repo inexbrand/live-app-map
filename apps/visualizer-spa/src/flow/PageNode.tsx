@@ -14,7 +14,6 @@ import { resolveViewportPresets } from '../lib/viewport-presets';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
 import { useGatewayStore } from '../store/gateway-store';
-import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
 import { NodeTop } from './page-node/NodeTop';
 import { ScreenView } from './page-node/ScreenView';
 import { StateChips } from './page-node/StateChips';
@@ -39,16 +38,15 @@ function usePageFlags(id: string) {
   return {
     mode,
     isSelected: useAppStore((s) => s.selectedPageId === id),
-    isDim: useAppStore((s) => s.highlightedPageIds.size > 0 && !s.highlightedPageIds.has(id) && s.selectedPageId !== id),
+    // Фокус экрана: остальные гаснут
+    isDim: useAppStore((s) => s.selectedPageId !== null && s.selectedPageId !== id),
     isPinned: useAppStore((s) => s.pinnedPageIds.has(id)),
     isLive: useAppStore((s) => s.livePageIds.has(id)) && live,
     isWarm: useAppStore((s) => s.warmPageIds.has(id)) && live,
     isMounted: useAppStore((s) => s.mountedPageIds.has(id)) && live,
     inViewport: useAppStore((s) => s.visiblePageIds.has(id)),
     isInteract: useAppStore((s) => s.interactPageId === id),
-    // Выбор компонента для замечания: страница должна получать мышь
-    picking: useSnapshotStore((s) => isElementPick(s.session)),
-    openComments: useCommentsStore((s) => s.threads.reduce((n, t) => (t.anchor.pageId === id && t.status === 'open' ? n + 1 : n), 0)),
+    openComments: useCommentsStore((s) => s.threads.reduce((n, t) => (t.anchor.pageId === id && t.stage !== 'done' ? n + 1 : n), 0)),
   };
 }
 
@@ -214,7 +212,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
             viewport={viewport}
             layout={layout}
             mounted={f.isMounted}
-            interactive={f.isInteract || f.picking}
+            interactive={f.isSelected || f.isInteract}
             snapshot={snapshot}
             onSnapshotError={() => setSnapshotFailed(true)}
           />

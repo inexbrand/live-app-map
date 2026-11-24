@@ -10,11 +10,11 @@ import { create } from 'zustand';
 import type { Rect } from '../lib/snapshot/region';
 
 /**
- * Для чего снимаем. Замечание: выбор компонента курсором в живом экране
- * (element) или выделение области мышью (region).
+ * Для чего снимаем: замечание по выделенной мышью области экрана или просьба агента.
+ * Компонент выбирается в самом экране и снимается с кадра трансляции — без сессии.
  */
 export type SnapshotPurpose =
-  | { readonly kind: 'comment'; readonly pick: 'element' | 'region'; readonly pageId: string | null }
+  | { readonly kind: 'comment'; readonly pageId: string | null }
   | { readonly kind: 'agent'; readonly requestId: string; readonly note: string | null };
 
 /** Фаза сессии; у каждой фазы ровно свои поля. */
@@ -81,12 +81,3 @@ export const useSnapshotStore = create<SnapshotStore>((set, get) => ({
   },
   finish: () => set({ session: { phase: 'idle' } }),
 }));
-
-/**
- * Идёт выбор компонента курсором (iframe живых экранов принимают мышь).
- *
- * @param s - сессия
- */
-export function isElementPick(s: SnapshotSession): boolean {
-  return s.phase === 'selecting' && s.purpose.kind === 'comment' && s.purpose.pick === 'element';
-}

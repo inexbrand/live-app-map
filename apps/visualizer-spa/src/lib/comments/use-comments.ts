@@ -1,16 +1,20 @@
 /**
  * Хуки замечаний для оболочки: синхронизация веток с диском и выбор
- * компонента в живых экранах (сообщения пикера страницы).
+ * компонента в выбранном экране (сообщения пикера страницы через трансляцию).
  */
 import { useEffect } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
-import { isElementPick, useSnapshotStore } from '../../store/snapshot-store';
+import { useViewStore } from '../../store/view-store';
 import { SCREEN_ATTR } from '../../flow/page-node/ScreenView';
 import { streamClient } from '../stream/stream-client';
 import { isLamPickCancelMessage, isLamPickedMessage, type LamPickedMessage } from '../gateway/pick-script';
-import { buildAnchor, frameToView, padRect, type AnchorPage } from './build-anchor';
+import { buildAnchor, type AnchorPage } from './build-anchor';
+import { canvasShot } from './place';
 import { anchorContext, anchorPage } from './page-anchor';
+
+/** Как часто повторять «включить выбор» выбранному экрану. */
+const REPICK_MS = 2000;
 
 /** Поток изменений веток на dev-сервере (запись визуализатора или агента). */
 const STREAM_URL = '/api/comments/stream';
@@ -30,13 +34,6 @@ export function useCommentsSync(): void {
     source.addEventListener('changed', refresh);
     return () => source.close();
   }, [mapName]);
-}
-
-/** Включить или выключить пикер во всех открытых страницах. */
-function broadcast(on: boolean): void {
-  for (const id of useAppStore.getState().mountedPageIds) {
-    streamClient.post(id, { lam: 'pick', on });
-  }
 }
 
 /** Холст экрана ноды на карте. */
@@ -59,54 +56,86 @@ export function flashElement(pageId: string, selector: string): boolean {
   return true;
 }
 
-/** Экран, приславший сообщение, и его нода в карте. */
-function senderPage(pageId: string): { readonly frame: HTMLCanvasElement; readonly page: AnchorPage } | null {
-  const frame = screenOf(pageId);
-  const page = anchorPage(pageId);
-  return frame === null || page === null ? null : { frame, page };
+type AppState = ReturnType<typeof useAppStore.getState>;
+
+/**
+ * Экран в режиме выбора компонента: выбранный живой экран на холсте экранов,
+ * пока не включена работа с приложением (I).
+ *
+ * @param s - состояние карты
+ * @param onScreens - открыт вид экранов
+ */
+export function pickPageOf(s: Pick<AppState, 'selectedPageId' | 'interactPageId' | 'mountedPageIds' | 'mode'>, onScreens: boolean): string | null {
+  const id = s.selectedPageId;
+  return id !== null && onScreens && s.mode === 'live' && s.interactPageId !== id && s.mountedPageIds.has(id) ? id : null;
 }
 
-/** Элемент выбран: черновик замечания у элемента и захват снимка вокруг него. */
-function startPickedDraft(picked: LamPickedMessage, frame: HTMLCanvasElement, page: AnchorPage): void {
-  const viewRect = frameToView(frame.getBoundingClientRect(), frame.width, picked.client);
+/** Элемент выбран: окно замечания у него, снимок — вырезка из кадра трансляции. */
+function openPicked(pageId: string, picked: LamPickedMessage, page: AnchorPage): void {
   const app = useAppStore.getState();
   const anchor = buildAnchor({ picked, page, ...anchorContext(), code: app.document?.code, projectRoot: app.document?.project.root });
-  useCommentsStore.getState().startDraft({ anchor, viewRect, shot: 'pending' });
-  useSnapshotStore.getState().beginCapture(padRect(viewRect, 8, { width: window.innerWidth, height: window.innerHeight }));
+  const canvas = screenOf(pageId);
+  useCommentsStore.getState().openTarget({
+    anchor,
+    frame: { rect: picked.client, pageWidth: picked.viewport.width },
+    shot: canvas === null ? null : canvasShot(canvas, picked.client),
+  });
 }
 
-/** Сообщение страницы во время выбора компонента: отмена или выбранный элемент. */
-function onPickerMessage(pageId: string, data: unknown): void {
-  const snap = useSnapshotStore.getState();
-  if (!isElementPick(snap.session)) {
+/** Esc в странице: закрыть окно замечания, а без него — выйти из фокуса экрана. */
+function cancelPick(): void {
+  const comments = useCommentsStore.getState();
+  if (comments.target !== null) {
+    comments.closeTarget();
+    return;
+  }
+  useAppStore.getState().selectPage(null);
+}
+
+/**
+ * Ответ страницы, которая сейчас в режиме выбора; после ответа выбор включается
+ * снова — следующий компонент того же экрана одним кликом.
+ *
+ * @param pickPage - экран в режиме выбора
+ * @param pageId - кто прислал
+ * @param data - сообщение
+ */
+export function onPickerMessage(pickPage: string | null, pageId: string, data: unknown): void {
+  if (pickPage === null || pageId !== pickPage) {
     return;
   }
   if (isLamPickCancelMessage(data)) {
-    snap.cancel();
+    cancelPick();
+  } else if (isLamPickedMessage(data)) {
+    const page = anchorPage(pageId);
+    if (page !== null) {
+      openPicked(pageId, data, page);
+    }
+  } else {
     return;
   }
-  const from = isLamPickedMessage(data) ? senderPage(pageId) : null;
-  if (from !== null && isLamPickedMessage(data)) {
-    startPickedDraft(data, from.frame, from.page);
-  }
+  streamClient.post(pageId, { lam: 'pick', on: true });
 }
 
-/** Выбор компонента: включает пикер в страницах и принимает выбор. */
+/** Выбор компонента в выбранном экране: включает пикер страницы и принимает выбор. */
 export function useCommentPicker(): void {
-  const picking = useSnapshotStore((s) => isElementPick(s.session));
+  const onScreens = useViewStore((s) => s.view === 'screens');
+  const pickPage = useAppStore((s) => pickPageOf(s, onScreens));
 
   useEffect(() => {
-    if (!picking) {
+    if (pickPage === null) {
       return;
     }
-    broadcast(true);
-    // Ноды, смонтированные во время выбора, тоже должны включиться
-    const t = window.setInterval(() => broadcast(true), 700);
+    const on = (): void => streamClient.post(pickPage, { lam: 'pick', on: true });
+    on();
+    // Сообщение до подключения сокета теряется, а после переподключения страница открыта заново —
+    // повтор держит режим выбора (дёшево: одна строка JSON)
+    const again = window.setInterval(on, REPICK_MS);
+    const off = streamClient.onPageMessage((pageId, data) => onPickerMessage(pickPage, pageId, data));
     return () => {
-      window.clearInterval(t);
-      broadcast(false);
+      window.clearInterval(again);
+      off();
+      streamClient.post(pickPage, { lam: 'pick', on: false });
     };
-  }, [picking]);
-
-  useEffect(() => streamClient.onPageMessage(onPickerMessage), []);
+  }, [pickPage]);
 }

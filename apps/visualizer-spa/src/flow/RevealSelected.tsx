@@ -1,15 +1,38 @@
 /**
- * Выбранная нода не остаётся под панелями: после выбора холст сдвигается
- * так, чтобы она легла в просвет между ними (масштаб не меняется). Нода вне экрана
- * (холст рисует только видимые) — сначала в центр, по её координатам на сцене.
+ * Фокус выбранной ноды. Экран — камера ставит его в центр целиком по высоте
+ * окна (не крупнее 1:1); длинная страница, которая по высоте стала бы мелкой, —
+ * 1:1 по ширине от верха. Сервис — холст сдвигается из-под панелей (масштаб тот же).
  */
 import { useEffect } from 'react';
 import { useReactFlow } from '@xyflow/react';
 import { useAppStore } from '../store/app-store';
-import { useCommentsStore } from '../store/comments-store';
 import { revealShift, type DockedPanel, type ScreenRect } from './reveal';
 
 const GAP = 16;
+/** Место сверху (шапка) и снизу (плашка фокуса) при подгонке экрана. */
+const TOP_RESERVE = 72;
+const BOTTOM_RESERVE = 88;
+/** Мельче этого масштаба длинная страница не ужимается — показывается 1:1 от верха. */
+const MIN_READABLE_ZOOM = 0.55;
+
+/**
+ * Камера фокуса экрана: масштаб и центр на сцене.
+ *
+ * @param node - позиция и размер ноды на сцене
+ * @param view - размер холста
+ */
+export function focusCamera(node: { readonly x: number; readonly y: number; readonly w: number; readonly h: number }, view: { readonly width: number; readonly height: number }): { readonly x: number; readonly y: number; readonly zoom: number } {
+  const availH = Math.max(120, view.height - TOP_RESERVE - BOTTOM_RESERVE);
+  const availW = Math.max(120, view.width - 2 * GAP);
+  const fit = Math.min(1, availH / node.h, availW / node.w);
+  const cx = node.x + node.w / 2;
+  if (fit >= MIN_READABLE_ZOOM) {
+    // Центр чуть ниже середины окна: сверху шапка меньше плашки снизу — сдвиг на половину разницы
+    return { x: cx, y: node.y + node.h / 2 + (BOTTOM_RESERVE - TOP_RESERVE) / 2 / fit, zoom: fit };
+  }
+  const zoom = Math.min(1, availW / node.w);
+  return { x: cx, y: node.y + (view.height / 2 - TOP_RESERVE) / zoom, zoom };
+}
 
 function rectOf(el: Element): ScreenRect {
   const r = el.getBoundingClientRect();
@@ -55,11 +78,23 @@ function revealNode(flow: Flow, id: string): void {
   }
 }
 
-/** Сдвигает холст к выбранной ноде (компонент внутри ReactFlow). */
+/** Экран в фокус: камера по focusCamera. */
+function focusNode(flow: Flow, id: string): void {
+  const node = flow.getNode(id);
+  const pane = document.querySelector('.react-flow');
+  if (node === undefined || pane === null) {
+    return;
+  }
+  const { w, h } = sizeOf(node);
+  const r = pane.getBoundingClientRect();
+  const cam = focusCamera({ x: node.position.x, y: node.position.y, w, h }, { width: r.width, height: r.height });
+  void flow.setCenter(cam.x, cam.y, { zoom: cam.zoom, duration: 320 });
+}
+
+/** Ставит выбранную ноду в фокус (компонент внутри ReactFlow). */
 export function RevealSelected() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
-  // Левая панель веток экрана появляется после выбора (ветки грузятся) — сдвинуть ещё раз
-  const leftPanel = useCommentsStore((s) => !s.listOpen && s.threads.some((t) => t.anchor.pageId === selectedPageId));
+  const isPage = useAppStore((s) => (s.selectedPageId === null ? false : s.index?.nodesById.get(s.selectedPageId)?.kind === 'page'));
   const flow = useReactFlow();
   useEffect(() => {
     if (selectedPageId === null) {
@@ -67,9 +102,9 @@ export function RevealSelected() {
     }
     // Два кадра: панели выбора и полоса размеров успевают смонтироваться.
     let raf = requestAnimationFrame(() => {
-      raf = requestAnimationFrame(() => revealNode(flow, selectedPageId));
+      raf = requestAnimationFrame(() => (isPage ? focusNode(flow, selectedPageId) : revealNode(flow, selectedPageId)));
     });
     return () => cancelAnimationFrame(raf);
-  }, [selectedPageId, leftPanel, flow]);
+  }, [selectedPageId, isPage, flow]);
   return null;
 }

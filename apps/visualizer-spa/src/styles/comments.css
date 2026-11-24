@@ -4,26 +4,6 @@
  * цвет внимания один: --attention (открыто), исправлено — нейтральное.
  */
 
-/* Статус */
-.comment-status {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 12px;
-  line-height: 16px;
-  font-weight: 600;
-  white-space: nowrap;
-}
-.comment-status::before {
-  content: '';
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: currentColor;
-}
-.comment-status--open { color: var(--attention); }
-.comment-status--fixed { color: var(--muted-foreground); }
-
 /* Бейдж числа на ноде и счётчик в шапке */
 .ui-badge--comments { color: var(--attention); border-color: color-mix(in srgb, var(--attention) 45%, transparent); white-space: nowrap; flex: 0 0 auto; }
 .toolbar__count {
@@ -60,57 +40,63 @@
   cursor: pointer;
   transition: transform 0.12s ease-out;
 }
-.comment-marker--fixed { background: var(--muted-foreground); }
+.comment-marker--waiting { background: var(--background); box-shadow: inset 0 0 0 2px var(--attention), 0 1px 4px rgb(0 0 0 / 0.4); }
+.comment-marker--done { background: var(--muted-foreground); }
+.comment-marker--draft { background: var(--draft, #3b82f6); }
 .comment-marker:hover,
 .comment-marker--focus { transform: scale(1.35); }
 
-/* Панель экрана */
-.comments-panel { width: min(400px, calc(100% - 24px)); }
-.comments-panel__list { display: flex; flex-direction: column; gap: 24px; }
-
+/* Замечание (в окне у компонента и в листе) */
 .comment-thread { display: flex; flex-direction: column; gap: 8px; }
-.comment-thread { padding-left: 12px; margin-left: -12px; }
-.comment-thread--focus { box-shadow: inset 2px 0 0 var(--attention); }
-.comment-thread__head { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); }
-.comment-thread__who { color: var(--foreground); font-weight: 600; }
-.comment-thread__time { margin-left: auto; font-variant-numeric: tabular-nums; }
+.comment-thread--focus { box-shadow: inset 2px 0 0 var(--attention); padding-left: 10px; }
+.comment-thread__head { display: flex; align-items: center; gap: 8px; font-size: 12px; line-height: 16px; color: var(--muted-foreground); min-width: 0; }
+.comment-thread__where { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--foreground); font-weight: 600; }
+.comment-thread__time { margin-left: auto; white-space: nowrap; font-variant-numeric: tabular-nums; }
 .comment-thread__text { margin: 0; font-size: 14px; line-height: 20px; color: var(--foreground) !important; white-space: pre-wrap; }
-.comment-thread__where { margin: 0; font-size: 12px; line-height: 16px; display: flex; flex-wrap: wrap; gap: 0 4px; }
-.comment-thread__where strong { color: var(--foreground); font-weight: 600; }
-.comment-thread__src { flex-basis: 100%; color: var(--text-faint); font-variant-numeric: tabular-nums; word-break: break-all; }
-.comment-thread__shot { max-width: 100%; max-height: 160px; align-self: flex-start; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-.comment-thread__actions { display: flex; flex-wrap: wrap; gap: 4px; margin-left: -8px; }
+.comment-thread__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.comment-thread__reject { display: flex; gap: 8px; }
+
+.comment-stage { display: inline-flex; align-items: center; gap: 6px; font-weight: 600; white-space: nowrap; }
+.comment-stage::before { content: ''; width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.comment-stage--review { color: var(--attention); }
+.comment-stage--waiting { color: var(--muted-foreground); }
+.comment-stage--waiting::before { background: transparent; box-shadow: inset 0 0 0 1.5px currentColor; }
+.comment-stage--done { color: var(--text-faint); }
 
 .comment-reply { display: flex; flex-direction: column; gap: 4px; padding-left: 12px; border-left: 2px solid var(--border-strong); }
 .comment-reply__head { display: flex; gap: 8px; font-size: 12px; color: var(--muted-foreground); }
 .comment-reply__head strong { color: var(--foreground); }
 .comment-reply__text { margin: 0; font-size: 13px; line-height: 20px; color: var(--foreground) !important; white-space: pre-wrap; }
-.comment-reply__files { margin: 0; padding: 0; list-style: none; font-size: 12px; line-height: 16px; color: var(--muted-foreground); word-break: break-all; }
-.comment-reply__commit { align-self: flex-start; font-size: 12px; color: var(--muted-foreground); }
+.comment-reply__files { margin: 0; font-size: 12px; line-height: 16px; color: var(--muted-foreground); word-break: break-all; }
 .comment-event { margin: 0; font-size: 12px; color: var(--text-faint) !important; }
 
-/* Поле нового замечания */
-.comment-composer {
+/* Окно у компонента */
+.comment-pop {
   position: fixed;
+  left: 0;
+  top: 0;
   z-index: 70;
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  padding: 12px;
-  animation: comment-in 0.14s ease-out;
+  gap: 16px;
+  max-height: calc(100vh - 24px);
+  padding: 16px;
+  overflow-y: auto;
+  will-change: transform;
 }
-@keyframes comment-in { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: none; } }
-@media (prefers-reduced-motion: reduce) { .comment-composer { animation: none; } }
-.comment-composer__head { display: flex; align-items: flex-start; gap: 8px; }
-.comment-composer__what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; min-width: 0; flex: 1; font-size: 13px; line-height: 20px; }
-.comment-composer__what span { color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; }
-.comment-composer__src { flex-basis: 100%; font-size: 12px; line-height: 16px; color: var(--text-faint) !important; word-break: break-all; }
-.comment-composer__shot { max-width: 100%; max-height: 96px; align-self: flex-start; border-radius: var(--radius-sm); border: 1px solid var(--border); }
-.comment-composer__text { min-height: 72px; }
-.comment-composer__draft { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
-.comment-composer__error { margin: 0; font-size: 12px; color: var(--attention); }
-.comment-composer__bar { display: flex; align-items: center; gap: 8px; }
-.comment-composer__hint { flex: 1; font-size: 12px; color: var(--text-faint); }
+.comment-pop__head { display: flex; align-items: flex-start; gap: 8px; }
+.comment-pop__what { display: flex; flex-wrap: wrap; align-items: baseline; gap: 0 8px; min-width: 0; flex: 1; font-size: 14px; line-height: 20px; }
+.comment-pop__what strong { font-weight: 700; }
+.comment-pop__what span { font-size: 12px; color: var(--muted-foreground); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 100%; }
+.comment-pop__history { display: flex; flex-direction: column; gap: 16px; padding-bottom: 16px; border-bottom: 1px solid var(--border); }
+.comment-pop__more { align-self: flex-start; padding: 0; border: 0; background: none; color: var(--foreground); font: inherit; font-size: 13px; text-decoration: underline; text-underline-offset: 3px; cursor: pointer; }
+
+.comment-field { display: flex; flex-direction: column; gap: 8px; }
+.comment-field__text { min-height: 72px; }
+.comment-field__draft { margin: 0; display: flex; align-items: center; gap: 8px; font-size: 13px; line-height: 20px; color: var(--muted-foreground); }
+.comment-field__error { margin: 0; font-size: 12px; color: var(--attention); }
+.comment-field__bar { display: flex; align-items: center; gap: 8px; }
+.comment-field__hint { flex: 1; font-size: 12px; color: var(--text-faint); }
 
 .voice-level { width: 8px; height: 8px; border-radius: 50%; background: var(--attention); transition: transform 0.1s linear; flex: 0 0 auto; }
 .voice-button { display: flex; align-items: center; gap: 4px; }
@@ -137,31 +123,52 @@
 .voice-progress__bar { height: 4px; border-radius: 999px; background: var(--secondary); overflow: hidden; }
 .voice-progress__bar > div { height: 100%; background: var(--foreground); transition: width 0.2s ease-out; }
 
-/* Общий список */
-.comments-list { width: min(420px, calc(100% - 24px)); display: flex; flex-direction: column; }
-.comments-list__filters { display: flex; flex-direction: column; gap: 8px; padding: 12px 14px 0; }
-.comments-list__row { display: grid; grid-template-columns: 140px 1fr; gap: 8px; }
-.comments-list__items { display: flex; flex-direction: column; padding: 8px 6px 12px; }
-.comments-list__empty { padding: 8px; }
-.comments-list__item {
+/* Лист всех замечаний */
+.comments-sheet {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 60;
+  width: min(440px, calc(100% - 24px));
   display: flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 8px;
-  border: 0;
-  border-radius: var(--radius);
-  background: transparent;
-  color: inherit;
-  text-align: left;
-  font: inherit;
-  cursor: pointer;
+  outline: none;
+  animation: sheet-in 0.16s ease-out;
 }
-.comments-list__item:hover { background: var(--muted); }
-.comments-list__top { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); }
-.comments-list__meta { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.comments-list__top time { margin-left: auto; white-space: nowrap; }
-.comments-list__text { font-size: 14px; line-height: 20px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
-.comments-list__reply { font-size: 12px; line-height: 16px; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 1; -webkit-box-orient: vertical; overflow: hidden; }
+@keyframes sheet-in { from { opacity: 0; transform: translateX(12px); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .comments-sheet { animation: none; } }
+.comments-sheet__head { display: flex; align-items: flex-start; justify-content: space-between; gap: 8px; padding: 16px 16px 12px; }
+.comments-sheet__h { margin: 0; font-size: 16px; line-height: 24px; font-weight: 700; }
+.comments-sheet__sum { margin: 0; font-size: 12px; line-height: 16px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+.comments-sheet__filters { display: flex; gap: 8px; padding: 0 16px 12px; border-bottom: 1px solid var(--border); }
+.comments-sheet__list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 24px; padding: 16px; }
+.comments-sheet__group { display: flex; flex-direction: column; gap: 8px; }
+.comments-sheet__title { margin: 0; font-size: 13px; line-height: 20px; font-weight: 600; color: var(--muted-foreground); }
+.comments-sheet__item { padding: 12px; margin: 0 -12px; border-radius: var(--radius); cursor: pointer; }
+.comments-sheet__item:hover { background: var(--muted); }
+.comments-sheet__item--active { background: var(--muted); box-shadow: inset 2px 0 0 var(--foreground); }
+.comments-sheet__draft { display: flex; flex-direction: column; gap: 4px; padding: 12px; margin: 0 -12px; border: 0; border-radius: var(--radius); background: transparent; color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.comments-sheet__draft:hover { background: var(--muted); }
+.comments-sheet__draft-text { font-size: 14px; line-height: 20px; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.comments-sheet__empty { margin: 0; font-size: 13px; color: var(--muted-foreground); }
+.comments-sheet__keys { margin: 0; padding: 8px 16px; border-top: 1px solid var(--border); font-size: 12px; color: var(--text-faint); }
 
-/* Подсказка выбора компонента: кнопка перехода к области */
-.snapshot-overlay__hint--pick { display: flex; align-items: center; gap: 12px; pointer-events: auto; }
+/* Плашка под выбранным экраном */
+.focus-bar {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px;
+  white-space: nowrap;
+  will-change: transform;
+}
+.focus-bar__neighbor { max-width: 140px; overflow: hidden; text-overflow: ellipsis; }
+.focus-bar__open { color: var(--attention); }
+
+/* Фокус экрана: связи между экранами не тянутся через выбранный */
+.flow-host--focus .react-flow__edges { display: none; }

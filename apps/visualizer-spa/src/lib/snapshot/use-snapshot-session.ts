@@ -6,7 +6,6 @@
 import { useEffect, useRef } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useSnapshotStore, type SnapshotPurpose } from '../../store/snapshot-store';
-import type { Rect } from './region';
 import { uploadSnapshot } from '../agent-bridge';
 import { useCommentsStore } from '../../store/comments-store';
 import { anchorPage, screenAnchor } from '../comments/page-anchor';
@@ -22,29 +21,20 @@ function afterPaint(): Promise<void> {
   });
 }
 
-/** Снимок для замечания: элемент — в черновик, область — новый черновик экрана. */
-function deliverComment(purpose: Extract<SnapshotPurpose, { kind: 'comment' }>, shot: GrabResult, rect: Rect): string | null {
-  const comments = useCommentsStore.getState();
-  const dataUrl = shot.ok ? shot.dataUrl : null;
-  if (purpose.pick === 'element') {
-    comments.setDraftShot(dataUrl);
-    const pageId = comments.draft?.anchor.pageId ?? null;
-    if (pageId !== null) {
-      useAppStore.getState().selectPage(pageId);
-    }
-    return null;
-  }
+/** Снимок области для замечания: окно замечания к экрану целиком со снимком. */
+function deliverComment(purpose: Extract<SnapshotPurpose, { kind: 'comment' }>, shot: GrabResult): string | null {
   const page = purpose.pageId === null ? null : anchorPage(purpose.pageId);
   if (page === null) {
     return 'Выберите экран, к которому относится область';
   }
-  comments.startDraft({ anchor: screenAnchor(page), viewRect: rect, shot: dataUrl });
+  useAppStore.getState().selectPage(page.id);
+  useCommentsStore.getState().openTarget({ anchor: screenAnchor(page), frame: null, shot: shot.ok ? shot.dataUrl : null });
   return shot.ok ? null : `Снимок не удался: ${shot.error}`;
 }
 
-async function deliver(purpose: SnapshotPurpose, shot: GrabResult, rect: Rect): Promise<string | null> {
+async function deliver(purpose: SnapshotPurpose, shot: GrabResult): Promise<string | null> {
   if (purpose.kind === 'comment') {
-    return deliverComment(purpose, shot, rect);
+    return deliverComment(purpose, shot);
   }
   if (!shot.ok) {
     return `Снимок не удался: ${shot.error}`;
@@ -72,15 +62,11 @@ function idlePhase(grabber: TabGrabber, keepUntil: KeepRef): (() => void) | unde
 }
 
 /** Доступ к вкладке получен или нет: выделение, замечание без снимка или отмена. */
-function onOpened(res: OpenResult, purpose: SnapshotPurpose): void {
+function onOpened(res: OpenResult): void {
   const store = useSnapshotStore.getState();
   const toast = useAppStore.getState().setToast;
   if (res.ok) {
     store.opened();
-  } else if (purpose.kind === 'comment' && purpose.pick === 'element') {
-    // Замечание важнее снимка: выбираем компонент и без него
-    store.opened();
-    toast(`Снимок недоступен (${res.error}) — замечание сохранится без него`);
   } else {
     store.cancel();
     toast(`Снимок: ${res.error}`);
@@ -95,7 +81,7 @@ function openingPhase(grabber: TabGrabber, session: Extract<Session, { phase: 'o
       grabber.close();
       return;
     }
-    onOpened(res, session.purpose);
+    onOpened(res);
   });
 }
 
@@ -109,7 +95,7 @@ function capturingPhase(grabber: TabGrabber, session: Extract<Session, { phase: 
       } else {
         grabber.close();
       }
-      return deliver(session.purpose, shot, session.rect);
+      return deliver(session.purpose, shot);
     })
     .then((message) => {
       if (message !== null) {

@@ -7,11 +7,10 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, render } from '@testing-library/react';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
-import { useSnapshotStore } from '../../store/snapshot-store';
 import { jsonResponse, openMap, resetStores, stubFetch } from '../../test/fixtures';
 import { SCREEN_ATTR } from '../../flow/page-node/ScreenView';
 import { startFakeStream, type FakeStream } from '../../test/fake-stream';
-import { useCommentPicker, useCommentsSync } from './use-comments';
+import { pickPageOf, useCommentPicker, useCommentsSync } from './use-comments';
 
 useDom();
 
@@ -131,44 +130,59 @@ describe('хуки замечаний', () => {
     expect(source?.closed).toBe(true);
   });
 
-  test('выбор компонента: пикер включается, выбор открывает черновик и захват; без выбора — сообщения не в счёт', async () => {
+  test('выбранный экран сразу в выборе: клик по компоненту — окно у него, выбор включается снова; чужие сообщения не в счёт', async () => {
     openMap('korbor-miniapp');
+    useAppStore.getState().setMode('live');
     const id = pageId();
     liveScreen(id);
-    liveScreen('нет-такой-ноды');
     render(<Shell />);
-    await stream.ready();
     await fromPage(id, PICKED);
-    expect(useCommentsStore.getState().draft).toBeNull();
-    act(() => {
-      useSnapshotStore.getState().request({ kind: 'comment', pick: 'element', pageId: id });
-      useSnapshotStore.getState().opened();
-    });
+    expect(useCommentsStore.getState().target).toBeNull();
+    act(() => useAppStore.getState().selectPage(id));
+    await stream.ready();
     await fromPage(id, { lam: 'что-то другое' });
     expect(stream.postsTo(id)).toContainEqual({ lam: 'pick', on: true });
-    await fromPage('нет-такой-ноды', PICKED);
     await fromPage('чужой-экран', PICKED);
-    expect(useCommentsStore.getState().draft).toBeNull();
+    expect(useCommentsStore.getState().target).toBeNull();
     await fromPage(id, PICKED);
-    const draft = useCommentsStore.getState().draft;
-    expect(draft?.anchor).toMatchObject({ pageId: id, element: { selector: '#buy', component: { name: 'BuyButton' } } });
-    expect(draft?.shot).toBe('pending');
-    expect(useSnapshotStore.getState().session.phase).toBe('capturing');
-    await fromPage(id, { lam: 'ничего' });
-    expect(stream.postsTo(id).at(-1)).toEqual({ lam: 'pick', on: false });
+    const target = useCommentsStore.getState().target;
+    expect(target?.anchor).toMatchObject({ pageId: id, element: { selector: '#buy', component: { name: 'BuyButton' } } });
+    expect(target?.frame).toEqual({ rect: PICKED.client, pageWidth: 390 });
+    // Страница выключает выбор после клика — карта сразу включает его снова: следующий компонент одним кликом
+    const before = stream.postsTo(id).length;
+    await fromPage(id, PICKED);
+    expect(stream.postsTo(id).slice(before)).toEqual([{ lam: 'pick', on: true }]);
   });
 
-  test('Esc в странице отменяет выбор', async () => {
+  test('режим «Приложение» (I) выключает выбор; снятие фокуса — тоже', async () => {
     openMap('korbor-miniapp');
+    useAppStore.getState().setMode('live');
     const id = pageId();
     liveScreen(id);
     render(<Shell />);
+    act(() => useAppStore.getState().selectPage(id));
     await stream.ready();
-    act(() => {
-      useSnapshotStore.getState().request({ kind: 'comment', pick: 'element', pageId: null });
-      useSnapshotStore.getState().opened();
-    });
+    act(() => useAppStore.getState().setInteract(id));
+    await fromPage(id, PICKED);
+    expect(stream.postsTo(id).at(-1)).toEqual({ lam: 'pick', on: false });
+    expect(useCommentsStore.getState().target).toBeNull();
+    expect(pickPageOf({ selectedPageId: id, interactPageId: null, mountedPageIds: new Set([id]), mode: 'live' }, false)).toBeNull();
+    expect(pickPageOf({ selectedPageId: id, interactPageId: null, mountedPageIds: new Set(), mode: 'live' }, true)).toBeNull();
+  });
+
+  test('Esc в странице: сначала закрывает окно замечания, потом снимает фокус экрана', async () => {
+    openMap('korbor-miniapp');
+    useAppStore.getState().setMode('live');
+    const id = pageId();
+    liveScreen(id);
+    render(<Shell />);
+    act(() => useAppStore.getState().selectPage(id));
+    await fromPage(id, PICKED);
+    expect(useCommentsStore.getState().target).not.toBeNull();
     await fromPage(id, { lam: 'pick-cancel' });
-    expect(useSnapshotStore.getState().session.phase).toBe('idle');
+    expect(useCommentsStore.getState().target).toBeNull();
+    expect(useAppStore.getState().selectedPageId).toBe(id);
+    await fromPage(id, { lam: 'pick-cancel' });
+    expect(useAppStore.getState().selectedPageId).toBeNull();
   });
 });

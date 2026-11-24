@@ -1,6 +1,6 @@
 /**
- * Панель выбранного экрана (или сервиса) справа: живой URL, роль, состояния, действия,
- * статус и лог экрана, код.
+ * Панель выбранного сервиса справа: его код. У экрана панели нет — фокус экрана
+ * управляется плашкой под ним (FocusBar).
  */
 import { Copy, MousePointer2, ExternalLink, X } from 'lucide-react';
 import { useMemo } from 'react';
@@ -86,77 +86,8 @@ function ServiceDrawer(props: { readonly node: MapNode; readonly codeView: CodeV
   );
 }
 
-/** Стейты экрана чипами: щелчок включает, повторный — снимает. */
-function StateChips(props: { readonly node: MapNode }) {
-  const { node } = props;
-  const applyPageState = useAppStore((s) => s.applyPageState);
-  const activeStateName = useAppStore((s) => s.activeStates.get(node.id));
-  const states = node.states ?? [];
-  if (states.length === 0) {
-    return <p className="text-sm text-muted-foreground">Отдельных состояний нет — задайте глобальную роль.</p>;
-  }
-  return (
-    <Field>
-      <FieldLabel>Состояния экрана</FieldLabel>
-      <div className="flex flex-wrap gap-1.5">
-        {states.map((st) => (
-          <Toggle key={st.name} variant="outline" size="sm" pressed={activeStateName === st.name} title={st.note} onPressedChange={() => applyPageState(node.id, activeStateName === st.name ? null : st)}>
-            {stateLabel(st.name)}
-          </Toggle>
-        ))}
-      </div>
-    </Field>
-  );
-}
-
-/** Кнопки экрана: новая вкладка, копировать URL, мышь и клавиши в экран. */
-function PageActions(props: { readonly node: MapNode; readonly liveUrl: string | null }) {
-  const { node } = props;
-  const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
-  const setInteract = useAppStore((s) => s.setInteract);
-  const interactPageId = useAppStore((s) => s.interactPageId);
-  const setToast = useAppStore((s) => s.setToast);
-  const interacting = interactPageId === node.id;
-  return (
-    <div className="flex flex-wrap gap-2">
-      <Button size="sm" onClick={() => openPageInNewTab(node.id)}>
-        <ExternalLink strokeWidth={1.75} />
-        В новой вкладке
-      </Button>
-      <Button variant="outline" size="sm" onClick={() => void copyLiveUrl(props.liveUrl, setToast)}>
-        <Copy strokeWidth={1.75} />
-        Копировать URL
-      </Button>
-      <Button variant={interacting ? 'default' : 'outline'} size="sm" aria-pressed={interacting} onClick={() => setInteract(interacting ? null : node.id)}>
-        <MousePointer2 strokeWidth={1.75} />
-        Клики в экран
-      </Button>
-    </div>
-  );
-}
-
-/** Drawer экрана: живой URL, роль, стейты, действия, код. */
-function PageDrawer(props: { readonly node: MapNode; readonly codeView: CodeView }) {
-  const { node, codeView } = props;
-  const liveUrl = useAppStore((s) => s.resolveLiveUrl(node.id));
-  return (
-    <SidePanel title={node.title} description={node.pathExample ?? node.pathPattern} testId="page-drawer">
-      <Field>
-        <FieldLabel htmlFor="live-url-view">Живой URL</FieldLabel>
-        <Textarea id="live-url-view" className="font-mono text-xs" readOnly rows={3} value={liveUrl ?? '—'} />
-      </Field>
-
-      <StateChips node={node} />
-      <PageActions node={node} liveUrl={liveUrl} />
-      <ScreenStatusLog pageId={node.id} />
-
-      {hasPageCode(codeView) ? <CodePanel view={codeView} /> : null}
-    </SidePanel>
-  );
-}
-
 /**
- * Правый drawer: роль, стейты, live URL.
+ * Правый drawer сервиса; у экранов — ничего.
  */
 export function StateInjectPanel() {
   const selectedPageId = useAppStore((s) => s.selectedPageId);
@@ -169,5 +100,5 @@ export function StateInjectPanel() {
   if (!selectedPageId || !node) {
     return null;
   }
-  return node.kind === 'service' ? <ServiceDrawer node={node} codeView={codeView} /> : <PageDrawer node={node} codeView={codeView} />;
+  return node.kind === 'service' ? <ServiceDrawer node={node} codeView={codeView} /> : null;
 }

@@ -5,8 +5,7 @@
 import { Camera, X } from 'lucide-react';
 import { useEffect, useState, type PointerEvent as ReactPointerEvent } from 'react';
 import { isUsableSelection, rectFromPoints, type Point, type Rect } from '../lib/snapshot/region';
-import { isElementPick, useSnapshotStore } from '../store/snapshot-store';
-import { startComment } from './comments/start-comment';
+import { useSnapshotStore } from '../store/snapshot-store';
 import { Button } from '@/components/ui/button';
 
 function SelectionLayer() {
@@ -84,18 +83,6 @@ function AgentRequestCard(props: { readonly note: string | null }) {
   );
 }
 
-/** Подсказка выбора компонента и переход к выделению области. */
-function PickHint() {
-  return (
-    <div className="snapshot-overlay__hint snapshot-overlay__hint--pick" role="status" data-testid="pick-hint">
-      <span>Наведите на компонент живого экрана и кликните · Esc — отмена</span>
-      <Button type="button" variant="outline" size="sm" onClick={() => startComment('region')} title="Выделить область мышью (⌥⇧S)">
-        Область
-      </Button>
-    </div>
-  );
-}
-
 /** Esc отменяет сессию, пока она ждёт пользователя. */
 function useEscapeCancels(active: boolean, cancel: () => void): void {
   useEffect(() => {
@@ -135,8 +122,7 @@ export function SnapshotOverlay() {
     );
   }
   if (session.phase === 'selecting') {
-    // Выбор компонента идёт в самих страницах (пикер шлюза): слой поверх холста не нужен
-    return isElementPick(session) ? <PickHint /> : <SelectionLayer />;
+    return <SelectionLayer />;
   }
   return null;
 }

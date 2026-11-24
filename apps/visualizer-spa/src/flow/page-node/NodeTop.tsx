@@ -31,7 +31,7 @@ export function NodeTop(props: NodeTopProps) {
     <>
       <div className="page-node__header">
         <div className="page-node__title" title={node.title}>{node.title}</div>
-        {props.chrome ? <NodeActions nodeId={node.id} isPinned={props.isPinned} /> : null}
+        {props.chrome && !props.selected ? <NodeActions nodeId={node.id} isPinned={props.isPinned} /> : null}
       </div>
       {/* Состояние — строкой пути: в шапке узкой ноды значки выдавливали заголовок. */}
       <NodePath node={node} url={props.url} status={props.status} openComments={props.openComments} viewport={props.selected ? props.viewport : null} />

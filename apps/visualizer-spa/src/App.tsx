@@ -4,9 +4,9 @@
 import { AlertTriangle, X } from 'lucide-react';
 import { useCallback, useEffect, useState, type DragEvent } from 'react';
 import type { AppMapDocument } from '@live-app-map/schema';
-import { CommentComposer } from './components/comments/CommentComposer';
-import { CommentsListPanel } from './components/comments/CommentsListPanel';
-import { ScreenCommentsPanel } from './components/comments/ScreenCommentsPanel';
+import { CommentPopover } from './components/comments/CommentPopover';
+import { CommentsSheet } from './components/comments/CommentsSheet';
+import { FocusBar } from './components/FocusBar';
 import { VoiceModelDialog } from './components/comments/VoiceModelDialog';
 import { LamGrabHost } from './components/LamGrabHost';
 import { MapToolbar } from './components/MapToolbar';
@@ -353,9 +353,9 @@ function MapArea({ doc }: { readonly doc: AppMapDocument }) {
       {/* Виды «API», «База данных», «Документация» снимают холст целиком: живые iframe не держат память. */}
       <CanvasFilterBar />
       <MainView doc={doc} />
-      {appView === 'screens' ? <ScreenCommentsPanel /> : null}
-      <CommentsListPanel />
+      {appView === 'screens' ? <FocusBar /> : null}
       {appView === 'screens' ? <StateInjectPanel /> : null}
+      <CommentsSheet />
       <SnapshotOverlay />
     </div>
   );
@@ -395,7 +395,7 @@ export function App() {
         <ParseIssuesBanner />
         {mapDocument ? <MapArea doc={mapDocument} /> : <EmptyState catalog={catalog} catalogError={catalogError} catalogLoading={catalogLoading} />}
       </div>
-      <CommentComposer />
+      <CommentPopover />
       <VoiceModelDialog />
       <CommandPalette />
       <ShortcutsHelp />
