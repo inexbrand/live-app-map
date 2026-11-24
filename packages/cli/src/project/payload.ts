@@ -151,6 +151,6 @@ export function withPayloadPages(doc: AppMapDocument, baseUrl: string, cms: read
     ...pages.map((n) => link(home.id, n.id, n.title, 'medium')),
   ];
   const ids = new Set(nodes.map((n) => n.id));
-  const edges = doc.edges.filter((e) => ids.has(e.from) && ids.has(e.to));
+  const edges = doc.edges.filter((e) => ids.has(e.from) && e.to !== null && ids.has(e.to));
   return { ...doc, nodes: [...nodes, ...admin.nodes, ...pages], edges: [...edges, ...admin.edges, ...fromHome] };
 }

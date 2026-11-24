@@ -215,9 +215,7 @@ async function main(): Promise<void> {
   console.log('--- spa optional (:4310) ---');
   const spa = await probeAll([
     `${SPA_BASE}/`,
-    `${SPA_BASE}/maps/korbor-miniapp.liveappmap.json`,
-    `${SPA_BASE}/maps/korbor-admin.liveappmap.json`,
-    `${SPA_BASE}/maps/korbor-site.liveappmap.json`,
+    `${SPA_BASE}/maps/index.json`,
   ]);
   logSpaSkip(spaKindOf(spa));
 
