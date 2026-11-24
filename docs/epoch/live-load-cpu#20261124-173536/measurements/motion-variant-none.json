@@ -1,0 +1,11 @@
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.addStyleTag: Provide an object with a `url`, `path` or `content` property
+    at C:\work\live-app-map\docs\epoch\live-load-cpu#20261124-173536\measurements\motion.mjs:11:12 {
+  log: [],
+  name: 'Error'
+}
+
+Node.js v26.3.0

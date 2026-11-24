@@ -1,0 +1,50 @@
+{
+ "label": "no-hide",
+ "liveIframes": 12,
+ "runs": [
+  {
+   "name": "зум колесом",
+   "ms": 2093,
+   "fps": 100,
+   "p95": 38.9,
+   "p99": 83.3,
+   "max": 88.9,
+   "longTasks": 2,
+   "longTaskMs": 161,
+   "cores": 3.98
+  },
+  {
+   "name": "панорама",
+   "ms": 10273,
+   "fps": 139,
+   "p95": 16.7,
+   "p99": 33.4,
+   "max": 127.7,
+   "longTasks": 4,
+   "longTaskMs": 228,
+   "cores": 4.53
+  },
+  {
+   "name": "зум колесом",
+   "ms": 2242,
+   "fps": 110,
+   "p95": 33.3,
+   "p99": 66.6,
+   "max": 72.1,
+   "longTasks": 3,
+   "longTaskMs": 216,
+   "cores": 3.63
+  },
+  {
+   "name": "панорама",
+   "ms": 8133,
+   "fps": 175,
+   "p95": 5.7,
+   "p99": 11.1,
+   "max": 33.4,
+   "longTasks": 0,
+   "longTaskMs": 0,
+   "cores": 3.67
+  }
+ ]
+}
