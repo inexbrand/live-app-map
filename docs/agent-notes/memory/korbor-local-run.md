@@ -1,15 +1,20 @@
 ---
 name: korbor-local-run
-description: "Как поднять korbor локально для живой карты: без бота, MinIO другим образом, site требует apps/site/.env и seed"
+description: "Как поднять korbor локально (Windows, C:/work/korbor): Docker Desktop, chainguard MinIO с --user 0, миграции с DATABASE_URL, dev без бота"
 metadata:
   node_type: memory
   type: project
-  originSessionId: 0f2bc961-54cb-441d-9cd1-5e4f7900c9a6
-  modified: 2026-11-21T12:59:19.117Z
+  modified: 2026-11-24T12:17:21.966Z
+  originSessionId: f757e4b2-22ea-4772-bc19-f10da4e0a6de
 ---
 
-На 2026-11-21 korbor (/Users/macbook/orca/korbor) поднимается так: Postgres/Redis уже в docker (korbor-postgres-1 :16432, korbor-redis-1 :16379), миграции 61/61. `docker compose up minio` падает — образов minio/minio и minio/mc нет в Docker Hub; поднят `cgr.dev/chainguard/minio` контейнером korbor-minio-local на 16900/16901 с томом korbor_minio. `scripts/dev.ts` запускает и бота — с боевым BOT_TOKEN long-polling перехватит апдейты, поэтому apps запускаются по одному через лаунчер с той же подготовкой env (без bot). Site (Next+Payload) падает 500 без `apps/site/.env` (PAYLOAD_SECRET, gitignored) и отдаёт 404 на / до `bun run db:migrate && bun run seed` в apps/site (SQLite CMS).
+С 2026-11-24 машина — Windows, korbor в `C:/work/korbor`. Порядок:
+1. Docker Desktop сам не стартует — `Start-Process 'C:\Program Files\Docker\Docker\Docker Desktop.exe'`, ждать `docker info`.
+2. `docker start korbor-postgres-1 korbor-redis-1` (:16432, :16379).
+3. MinIO: `minio/minio` и `minio/mc` удалены из Docker Hub. Контейнер `korbor-minio-local` на `cgr.dev/chainguard/minio`, порты 16900/16901, том `korbor_minio`, ключи = S3_ACCESS_KEY/S3_SECRET_KEY из `dev.local.env`, `--user 0` (иначе «file access denied» на новом томе), `--restart unless-stopped`. Бакет `korbor` — образом `cgr.dev/chainguard/minio-client` с `MC_HOST_local`.
+4. Миграции: корневого `.env` нет, `bun run db:migrate` падает «DATABASE_URL is required» — передать DATABASE_URL из `dev.local.env`.
+5. `bun run dev --without=bot` — бот не запускаем: long-polling того же токена с другой машины даст конфликт.
+Проверка: 16000/health, 16001/, 16002/, https://vite.localhost:5175/, 16003/ — все 200. Известные ошибки лога: site «не задан SITE_API_BASE_URL» (юр. документы), api «settings.invalid_rows_using_default OFD_PACKAGE_CODE».
 
-**Why:** без этого живые iframe site пустые, а бот мог бы мешать продовому.
-
-**How to apply:** перед живой проверкой карты korbor — curl 16000/health, 16001/, 16002/, https://vite.localhost:5175/. На :4310 может висеть визуализатор другого worktree (elephantfish) — свой тогда встаёт на 4311. См. [[korbor-frontend-api-clients]].
+**Why:** каждый шаг выше стоил отдельной ошибки при подъёме.
+**How to apply:** перед живой проверкой карты korbor пройти список; site без `apps/site/.env` и seed — см. историю в git этого файла. См. [[lam-dev-auth-autologin]], [[helium-browser-mcp]].

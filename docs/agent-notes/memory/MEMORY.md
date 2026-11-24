@@ -5,7 +5,7 @@
 - [Visualizer dev runtime](visualizer-dev-runtime.md) — vite под Bun, эндпоинты dev, .lam-feedback в корне
 - [Large file edit tooling](large-file-edit-tooling.md) — context-mode блокирует Read >25KB: cat + write
 - [Фронтенды korbor/vpn: клиенты API](korbor-frontend-api-clients.md) — DI-fetch, сторы, switch админки, правила сканера, цифры 200/314
-- [Запуск korbor локально](korbor-local-run.md) — без бота, chainguard MinIO, site/.env + seed
+- [Запуск korbor локально](korbor-local-run.md) — Windows: Docker Desktop, chainguard MinIO --user 0, DATABASE_URL для миграций, без бота
 - [vpn-saas: переходы TanStack во вложенных импортах](vpn-saas-tanstack-links.md) — обход импортов до 3, общие файлы отсекать
 - [Визуализатор: реальные параметры маршрутов](visualizer-route-samples.md) — id из API под профилем, metadata.pathPattern, свой порт для e2e
 - [Worktree: git, scan:korbor, e2e](worktree-git-and-korbor-scan.md) — /usr/bin/git, KORBOR_DIR, LAM_SESSIONS_DIR для e2e, занятый 4311, commit -F
@@ -23,3 +23,4 @@
 - [Автовход через dev-auth](lam-dev-auth-autologin.md) — /__lam_sessions/auto, копия обработчика в korbor, сид админа и ролей
 - [SPA на shadcn: грабли](shadcn-base-ui-spa.md) — @layer base, тесты Select/Toggle, две копии стора в vite
 - [API: домены вместо сервисов](api-domains-audiences.md) — аудитории по данным, доска роута по клику
+- [Браузер Helium и MCP](helium-browser-mcp.md) — helium-agent свой профиль, helium autoConnect к открытому
