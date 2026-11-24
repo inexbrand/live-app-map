@@ -1,0 +1,16 @@
+{
+  "name": "@live-app-map/sdk",
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "test": "bun test"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.2",
+    "@types/bun": "latest"
+  }
+}
