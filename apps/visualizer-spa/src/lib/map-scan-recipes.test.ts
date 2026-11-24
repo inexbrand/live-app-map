@@ -8,20 +8,20 @@ import { monorepoScanRecipes } from './map-scan-recipes';
 describe('monorepoScanRecipes', () => {
   const tmp = '/tmp/scan';
 
-  test('korbor-*: scan-korbor.ts в монорепо, вывод во временный каталог, KORBOR_DIR из окружения', () => {
-    const recipe = monorepoScanRecipes('/repo', { KORBOR_DIR: '/k' })('korbor-admin', tmp);
-    expect(recipe).toEqual({
+  test('карта проекта: cli scan --project в монорепо, вывод во временный каталог', () => {
+    const output = path.join(tmp, 'map.json');
+    expect(monorepoScanRecipes('/repo', { name: 'korbor', root: '/k' })('korbor', tmp)).toEqual({
       command: 'bun',
-      args: ['scripts/scan-korbor.ts'],
+      args: ['packages/cli/src/bin.ts', 'scan', '--project', '/k', '-o', output],
       cwd: '/repo',
-      env: { KORBOR_DIR: '/k', LAM_MAPS_OUT: path.join(tmp, 'maps'), LAM_PUBLIC_MAPS_OUT: path.join(tmp, 'public') },
-      output: path.join(tmp, 'public', 'korbor-admin.liveappmap.json'),
+      env: {},
+      output,
     });
-    expect(monorepoScanRecipes('/repo', {})('korbor-all', tmp)?.env).toEqual({ LAM_MAPS_OUT: path.join(tmp, 'maps'), LAM_PUBLIC_MAPS_OUT: path.join(tmp, 'public') });
+    expect(monorepoScanRecipes('/repo', null)('korbor', tmp)).toBeNull();
   });
 
   test('live-app-map — cli code по монорепо; чужая карта — рецепта нет', () => {
-    const recipes = monorepoScanRecipes('/repo', {});
+    const recipes = monorepoScanRecipes('/repo', null);
     const output = path.join(tmp, 'live-app-map.liveappmap.json');
     expect(recipes('live-app-map', tmp)).toEqual({
       command: 'bun',

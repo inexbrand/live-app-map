@@ -8,7 +8,6 @@
  */
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
-import { pathToFileURL } from 'node:url';
 import { loadProjectConfig, projectFile } from '@live-app-map/cli/project-config';
 import { buildMapCatalogEntryFor, summarizeMapFile, type ExtraCatalogItems } from '../build-map-catalog-fs';
 import { errorMessage, requestPath, sendError, sendJson, type DevMiddleware } from '../dev-http';
@@ -95,7 +94,8 @@ function exportOf(mod: unknown, name: string): unknown {
 
 /**
  * Читает экспорты states.ts. Модуль импортируется заново при новом mtime файла
- * (адрес с ?v=<mtime>), так что правка файла видна без перезапуска.
+ * (путь с ?v=<mtime>: Bun кэширует модуль по пути с запросом; у file:// URL запрос
+ * кэш не сбрасывает), так что правка файла видна без перезапуска.
  *
  * @param statesFile - путь states.ts
  * @returns `{ screens, components }`; нет файла или экспорта — пустой объект
@@ -105,7 +105,7 @@ export async function readProjectStates(statesFile: string): Promise<ProjectStat
     return { screens: {}, components: {} };
   }
   const version = statSync(statesFile).mtimeMs;
-  const mod: unknown = await import(`${pathToFileURL(statesFile).href}?v=${version}`);
+  const mod: unknown = await import(`${statesFile}?v=${version}`);
   return { screens: exportOf(mod, 'screens') ?? {}, components: exportOf(mod, 'components') ?? {} };
 }
 

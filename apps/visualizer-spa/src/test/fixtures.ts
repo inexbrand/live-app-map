@@ -1,8 +1,9 @@
 /**
- * Общие данные и сброс состояния для тестов компонентов: настоящие карты из public/maps,
- * store в начальном состоянии, ответы сети по адресу.
+ * Общие данные и сброс состояния для тестов компонентов: настоящие карты (срезы карт korbor
+ * в test/maps и карта live-app-map из public/maps), store в начальном состоянии, ответы сети по адресу.
  */
 import { readFileSync } from 'node:fs';
+import { fileURLToPath } from 'node:url';
 import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument, type DocEpoch } from '@live-app-map/schema';
 import { useAppStore } from '../store/app-store';
 import { useCommentsStore } from '../store/comments-store';
@@ -14,8 +15,22 @@ import { useUiStore } from '../store/ui-store';
 import { useViewStore } from '../store/view-store';
 import { useVoiceStore } from '../store/voice-store';
 
-/** Карта из public/maps. */
-export type MapName = 'korbor-miniapp' | 'korbor-site' | 'korbor-admin' | 'live-app-map';
+/**
+ * Карта для тестов: срезы настоящих карт korbor (test/maps — все экраны и рёбра, часть
+ * роутов, таблиц, символов и документов) и карта самого live-app-map (public/maps).
+ */
+export type MapName = 'korbor-miniapp' | 'korbor-site' | 'korbor-admin' | 'korbor-all' | 'live-app-map';
+
+/**
+ * Файл карты для тестов.
+ *
+ * @param name - карта
+ * @returns абсолютный путь
+ */
+export function testMapPath(name: MapName): string {
+  const rel = name === 'live-app-map' ? '../../public/maps/live-app-map.liveappmap.json' : `./maps/${name}.liveappmap.json`;
+  return fileURLToPath(new URL(rel, import.meta.url));
+}
 
 const rawCache = new Map<MapName, string>();
 
@@ -25,7 +40,7 @@ export function mapText(name: MapName): string {
   if (hit !== undefined) {
     return hit;
   }
-  const text = readFileSync(new URL(`../../public/maps/${name}.liveappmap.json`, import.meta.url), 'utf8');
+  const text = readFileSync(testMapPath(name), 'utf8');
   rawCache.set(name, text);
   return text;
 }

@@ -88,6 +88,6 @@ describe('StreamService: шаги состояния', () => {
     await until(() => stepResults.some((r) => r.key === 'bad') && firstFrame.has('bad'));
     const err = stepResults.find((r) => r.key === 'bad')?.error ?? '';
     expect(err.startsWith('шаг 2 не выполнен: ')).toBe(true);
-    expect(err).toContain('#нет-такого');
+    expect(err).toBe('шаг 2 не выполнен: клик #нет-такого — элемент не найден за 5 с');
   }, 40_000);
 });

@@ -40,7 +40,12 @@ beforeAll(async () => {
   writeFileSync(file, JSON.stringify({ revision: 'v2' }));
   git('commit', '-q', '-am', 'вторая версия');
   writeFileSync(path.join(repo, 'maps/other.liveappmap.json'), '{}');
-  server = await serveMiddleware(mapVersionsMiddleware(path.join(repo, 'maps'), recipes));
+  // Карта проекта лежит вне папки карт: доступна по id через extraFiles.
+  mkdirSync(path.join(repo, 'proj'));
+  writeFileSync(path.join(repo, 'proj/map.json'), JSON.stringify({ revision: 'p1' }));
+  git('add', '.');
+  git('commit', '-q', '-m', 'карта проекта');
+  server = await serveMiddleware(mapVersionsMiddleware(path.join(repo, 'maps'), recipes, new Map([['proj', path.join(repo, 'proj/map.json')]])));
 });
 afterAll(() => server.close());
 
@@ -48,7 +53,7 @@ describe('версии карты', () => {
   test('без id — 400 с подсказкой, что вписать', async () => {
     const res = await fetch(`${server.url}/__lam_maps/versions`);
     expect(res.status).toBe(400);
-    expect(((await res.json()) as { error: string }).error).toContain('korbor-all');
+    expect(((await res.json()) as { error: string }).error).toContain('live-app-map');
   });
 
   test('коммиты файла новые первыми, версия по хешу — содержимое того коммита', async () => {
@@ -59,6 +64,11 @@ describe('версии карты', () => {
     const first = body.versions[1]?.ref ?? '';
     const res = await fetch(`${server.url}/__lam_maps/version?id=demo&ref=${first.slice(0, 10)}`);
     expect(await res.json()).toEqual({ revision: 'v1' });
+  });
+
+  test('карта вне папки (проект) — по id из extraFiles', async () => {
+    const body = (await (await fetch(`${server.url}/__lam_maps/versions?id=proj`)).json()) as { versions: { subject: string }[] };
+    expect(body.versions.map((v) => v.subject)).toEqual(['карта проекта']);
   });
 
   test('неизвестная карта и путь вне каталога — 404; кривой ref — 400', async () => {

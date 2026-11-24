@@ -119,8 +119,9 @@ export const createMapSlice: AppSlice<MapSlice> = (set, get) => ({
     );
     set({
       document: normalized,
+      // stepErrors не сбрасываются: сервер трансляции присылает итог шагов при подключении,
+      // часто раньше, чем загрузится карта; ключ — id узла, новый итог заменяет старый
       index: indexFor(normalized, get().projectStates, get().showStates),
-      stepErrors: new Map(),
       parseIssues,
       // Сброс resize-override + measure — дефолты из layout JSON
       nodeViewports: new Map(),

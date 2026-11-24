@@ -40,9 +40,12 @@ async function runStep(page: StepsPage, step: AppMapStateStep): Promise<void> {
   }
 }
 
-/** Первая строка сообщения Playwright без служебного хвоста. */
+/** Первая строка сообщения Playwright без служебного хвоста; таймаут — по-русски. */
 function shortError(err: unknown): string {
   const raw = err instanceof Error ? err.message : String(err);
+  if (/Timeout \d+ms exceeded/.test(raw)) {
+    return `элемент не найден за ${STEP_TIMEOUT_MS / 1000} с`;
+  }
   const line = raw.split('\n').find((l) => l.trim() !== '') ?? raw;
   return line.trim().slice(0, ERROR_MAX);
 }
