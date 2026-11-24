@@ -9,8 +9,7 @@ await p.waitForTimeout(4000);
 const tab = await p.$('[data-testid="view-components"]');
 if (tab === null) {
   // карта не открыта — откроем первую из каталога
-  const first = await p.$('.drawer button, [data-testid^="preset-"]');
-  await first?.click();
+  await p.getByRole('button', { name: /live-app-map/ }).first().click();
   await p.waitForTimeout(3000);
   await p.click('[data-testid="view-components"]');
 } else {
