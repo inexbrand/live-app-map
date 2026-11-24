@@ -10,6 +10,7 @@ import { diffChangeCount } from '@live-app-map/graph';
 import { parseAppMapDocument, type CodeModel, type Diagnostic } from '@live-app-map/schema';
 import { runCodeScan, runDiff, runDoctor, runScan } from './index';
 import { initSummary, runInit } from './init';
+import { scanProject, type ProjectScanResult } from './project/scan-project';
 
 /** Вывод команды: stdout, stderr, рабочий каталог и часы (для имени файла замечания). */
 export type CliIo = {
@@ -24,6 +25,7 @@ type Command = (argv: readonly string[], io: CliIo) => Promise<number>;
 const USAGE = `live-app-map — scanner & tools
 
 Usage:
+  live-app-map scan --project <path> [-o map.json]
   live-app-map scan --dir <path> [-o out.json] [--base-url url] [--framework next|react-router|auto] [--code-dir <path>] [--format enterprise|liveappmap]
   live-app-map code --dir <path> [-o out.json] [--format enterprise|liveappmap]
   live-app-map diff <left.json> <right.json>
@@ -34,6 +36,7 @@ Usage:
   live-app-map dev --target-url <url> [--port 4310] [--map <file.json>]
 
 Examples:
+  live-app-map scan --project ../korbor
   live-app-map scan --dir ../korbor/apps/miniapp --base-url https://vite.localhost:5175 -o maps/miniapp.json
   live-app-map doctor --dir ../korbor/apps/site
   live-app-map code --dir ../korbor -o maps/korbor-code.json
@@ -105,7 +108,50 @@ function printDiagnostics(io: CliIo, diagnostics: readonly Diagnostic[], withHin
   }
 }
 
+/**
+ * Сводка скана проекта для вывода: экраны по приложениям, рёбра, файл карты.
+ *
+ * @param r - итог скана проекта
+ * @returns объект для JSON-вывода
+ */
+export function projectScanSummary(r: ProjectScanResult): Record<string, unknown> {
+  const screens = r.document.pages.filter((p) => p.metadata?.['kind'] !== 'service');
+  const byApp = Object.fromEntries(r.config.apps.map((a) => [a.id, screens.filter((p) => p.group === a.id).length]));
+  return {
+    ok: true,
+    project: r.config.name,
+    screens: screens.length,
+    byApp,
+    edges: r.document.edges.length,
+    apiEdges: r.document.edges.filter((e) => e.kind === 'api').length,
+    routes: r.document.code?.routes.length ?? 0,
+    tables: r.document.code?.tables.length ?? 0,
+    warnings: r.warnings,
+    out: r.out,
+  };
+}
+
+/** scan --project: карта всего проекта по его .live-app-map/config.ts. */
+async function scanProjectCommand(project: string, argv: readonly string[], io: CliIo): Promise<number> {
+  const out = outFlag(argv);
+  const result = await scanProject({
+    project: path.resolve(io.cwd, project),
+    ...(out === null ? {} : { out: path.resolve(io.cwd, out) }),
+    now: io.now,
+  });
+  printDiagnostics(io, sortDiagnostics(result.diagnostics).filter((d) => d.severity === 'error'), true);
+  for (const w of result.warnings) {
+    io.error(`[warning] ${w}`);
+  }
+  io.log(json(projectScanSummary(result)));
+  return 0;
+}
+
 const scan: Command = async (argv, io) => {
+  const project = flag(argv, '--project');
+  if (project !== null) {
+    return scanProjectCommand(project, argv, io);
+  }
   const out = outFlag(argv) ?? undefined;
   const result = await runScan({
     dir: flag(argv, '--dir') ?? '.',
