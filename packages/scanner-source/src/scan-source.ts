@@ -320,21 +320,29 @@ class ScreenRoots {
     entries: readonly ScreenEntry[],
     private readonly services: ServiceIndex,
   ) {
-    this.byFile = new Map(files.map((sf) => [sf.fileName, sf]));
+    // Ключ — путь в виде ОС (path.resolve): у TypeScript в fileName прямые слеши, у path.join в Windows — обратные.
+    this.byFile = new Map(files.map((sf) => [path.resolve(sf.fileName), sf]));
     this.perFile = countBy(entries, (e) => e.file);
-    this.screenFiles = new Set(entries.filter((e) => this.perFile.get(e.file) === 1).map((e) => path.join(ctx.root, e.file)));
+    this.screenFiles = new Set(
+      entries.filter((e) => this.perFile.get(e.file) === 1).flatMap((e) => this.sourceOf(e.file)?.fileName ?? []),
+    );
     this.sections = sectionsByFile(entries);
   }
 
   /** Обход экрана; файла нет среди исходников — undefined. */
   walkOf(e: ScreenEntry): ScreenWalk | undefined {
-    const sf = this.byFile.get(path.join(this.ctx.root, e.file));
+    const sf = this.sourceOf(e.file);
     if (sf === undefined) {
       return undefined;
     }
     const roots = [...this.ownRoots(e, sf), ...this.routeFileRoots(e)];
     const skipFiles = new Set([...this.screenFiles].filter((f) => f !== sf.fileName));
     return { roots, skipFiles, serviceId: this.serviceOfAbs(sf.fileName) };
+  }
+
+  /** Исходник по пути от корня. */
+  private sourceOf(rel: string): ts.SourceFile | undefined {
+    return this.byFile.get(path.resolve(this.ctx.root, rel));
   }
 
   private serviceOfAbs(f: string): string {
@@ -367,7 +375,7 @@ class ScreenRoots {
 
   /** `loader`/`beforeLoad` из объекта маршрута в отдельном файле конфига (TanStack). */
   private routeFileRoots(e: ScreenEntry): ts.Node[] {
-    const routeSf = e.routeFile === undefined || e.routeFile === e.file ? undefined : this.byFile.get(path.join(this.ctx.root, e.routeFile));
+    const routeSf = e.routeFile === undefined || e.routeFile === e.file ? undefined : this.sourceOf(e.routeFile);
     return routeSf === undefined || e.routePath === undefined ? [] : rrScreenRoots(this.ctx, routeSf, e.routePath);
   }
 }
