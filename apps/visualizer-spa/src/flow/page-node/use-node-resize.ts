@@ -1,5 +1,5 @@
 /**
- * Ручка размера ноды: ширина тянется, высота auto переизмеряется; Shift — свободная высота (fixed).
+ * Ручка размера ноды: ширина тянется, высоту auto присылает отчёт страницы; Shift — свободная высота (fixed).
  */
 import type { DeviceViewport } from '@live-app-map/schema';
 import type { PointerEvent as ReactPointerEvent } from 'react';
@@ -11,16 +11,13 @@ import { useAppStore } from '../../store/app-store';
  * @param nodeId - id ноды
  * @param viewport - текущее окно
  * @param scale - масштаб холста
- * @param remeasure - переизмерить высоту после отпускания
  */
 export function useNodeResize(
   nodeId: string,
   viewport: DeviceViewport,
   scale: number,
-  remeasure: () => void,
 ): (e: ReactPointerEvent<HTMLDivElement>) => void {
   const setNodeViewport = useAppStore((s) => s.setNodeViewport);
-  const applyMeasuredHeight = remeasure;
   /** Resize по ширине; высота auto переизмеряется. Shift — free height (fixed). */
   return (e: ReactPointerEvent<HTMLDivElement>) => {
     e.stopPropagation();
@@ -58,7 +55,6 @@ export function useNodeResize(
       target.releasePointerCapture(pointerId);
       window.removeEventListener('pointermove', onMove);
       window.removeEventListener('pointerup', onUp);
-      window.setTimeout(() => applyMeasuredHeight(), 200);
     };
     window.addEventListener('pointermove', onMove);
     window.addEventListener('pointerup', onUp);

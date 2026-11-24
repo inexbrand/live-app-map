@@ -45,7 +45,7 @@ export function goToComment(t: CommentThread): void {
   if (el === null || el.rect.width === 0) {
     return;
   }
-  // Живой iframe появляется после перехода камеры — несколько попыток
+  // Страница экрана открывается после перехода камеры — несколько попыток
   let tries = 0;
   const tick = (): void => {
     tries++;

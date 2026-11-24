@@ -58,9 +58,9 @@ describe('панель ноды', () => {
     expect(useAppStore.getState().activeStates.get(id)).toBe(first.name);
     fireEvent.click(ui.getByRole('button', { name: label }));
     expect(useAppStore.getState().activeStates.get(id)).toBeUndefined();
-    fireEvent.click(ui.getByRole('button', { name: 'Клики в iframe' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Клики в экран' }));
     expect(useAppStore.getState().interactPageId).toBe(id);
-    fireEvent.click(ui.getByRole('button', { name: 'Клики в iframe' }));
+    fireEvent.click(ui.getByRole('button', { name: 'Клики в экран' }));
     expect(useAppStore.getState().interactPageId).toBeNull();
   });
 

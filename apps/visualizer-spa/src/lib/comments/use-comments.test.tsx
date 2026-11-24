@@ -9,7 +9,8 @@ import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
 import { useSnapshotStore } from '../../store/snapshot-store';
 import { jsonResponse, openMap, resetStores, stubFetch } from '../../test/fixtures';
-import { NODE_IFRAME_ATTR } from '../gateway/use-gateway-frames';
+import { SCREEN_ATTR } from '../../flow/page-node/ScreenView';
+import { startFakeStream, type FakeStream } from '../../test/fake-stream';
 import { useCommentPicker, useCommentsSync } from './use-comments';
 
 useDom();
@@ -20,23 +21,22 @@ function Shell() {
   return null;
 }
 
-/** Живой экран: iframe ноды, чьё окно записывает сообщения визуализатора. */
-function liveFrame(pageId: string): { readonly win: object; readonly sent: unknown[] } {
-  const sent: unknown[] = [];
-  const win = { postMessage: (data: unknown) => sent.push(data) };
-  const frame = document.createElement('iframe');
-  frame.setAttribute(NODE_IFRAME_ATTR, pageId);
-  frame.setAttribute('width', '390');
-  Object.defineProperty(frame, 'contentWindow', { value: win });
-  document.body.append(frame);
-  return { win, sent };
+let stream: FakeStream;
+
+/** Живой экран: страница открыта на сервере, холст ноды на карте. */
+function liveScreen(pageId: string): void {
+  useAppStore.setState((s) => ({ mountedPageIds: new Set([...s.mountedPageIds, pageId]) }));
+  const canvas = document.createElement('canvas');
+  canvas.setAttribute(SCREEN_ATTR, pageId);
+  canvas.width = 390;
+  document.body.append(canvas);
 }
 
-function fromPage(data: unknown, source: object | null): void {
-  const e = new MessageEvent('message', { data });
-  Object.defineProperty(e, 'source', { value: source });
-  act(() => {
-    window.dispatchEvent(e);
+/** Сообщение страницы экрана дошло до карты. */
+async function fromPage(pageId: string, data: unknown): Promise<void> {
+  await stream.page(pageId, data);
+  await act(async () => {
+    await new Promise((r) => setTimeout(r, 40));
   });
 }
 
@@ -79,12 +79,15 @@ const realEventSource: unknown = Reflect.get(globalThis, 'EventSource');
 
 beforeEach(() => {
   resetStores();
+  stream = startFakeStream();
   FakeEventSource.opened.length = 0;
   Object.defineProperty(globalThis, 'EventSource', { value: FakeEventSource, configurable: true, writable: true });
   net = stubFetch((url) => (url.startsWith('/api/comments?') ? jsonResponse({ comments: [] }) : undefined));
 });
 
 afterEach(() => {
+  stream.stop();
+  document.body.querySelectorAll('canvas').forEach((c) => c.remove());
   net.restore();
   Object.defineProperty(globalThis, 'EventSource', { value: realEventSource, configurable: true, writable: true });
 });
@@ -128,40 +131,44 @@ describe('хуки замечаний', () => {
     expect(source?.closed).toBe(true);
   });
 
-  test('выбор компонента: пикер включается, выбор открывает черновик и захват; без выбора — сообщения не в счёт', () => {
+  test('выбор компонента: пикер включается, выбор открывает черновик и захват; без выбора — сообщения не в счёт', async () => {
     openMap('korbor-miniapp');
     const id = pageId();
-    const page = liveFrame(id);
-    const other = liveFrame('нет-такой-ноды');
+    liveScreen(id);
+    liveScreen('нет-такой-ноды');
     render(<Shell />);
-    fromPage(PICKED, page.win);
+    await stream.ready();
+    await fromPage(id, PICKED);
     expect(useCommentsStore.getState().draft).toBeNull();
     act(() => {
       useSnapshotStore.getState().request({ kind: 'comment', pick: 'element', pageId: id });
       useSnapshotStore.getState().opened();
     });
-    expect(page.sent).toContainEqual({ lam: 'pick', on: true });
-    fromPage({ lam: 'что-то другое' }, page.win);
-    fromPage(PICKED, {});
-    fromPage(PICKED, other.win);
+    await fromPage(id, { lam: 'что-то другое' });
+    expect(stream.postsTo(id)).toContainEqual({ lam: 'pick', on: true });
+    await fromPage('нет-такой-ноды', PICKED);
+    await fromPage('чужой-экран', PICKED);
     expect(useCommentsStore.getState().draft).toBeNull();
-    fromPage(PICKED, page.win);
+    await fromPage(id, PICKED);
     const draft = useCommentsStore.getState().draft;
     expect(draft?.anchor).toMatchObject({ pageId: id, element: { selector: '#buy', component: { name: 'BuyButton' } } });
     expect(draft?.shot).toBe('pending');
     expect(useSnapshotStore.getState().session.phase).toBe('capturing');
-    expect(page.sent.at(-1)).toEqual({ lam: 'pick', on: false });
+    await fromPage(id, { lam: 'ничего' });
+    expect(stream.postsTo(id).at(-1)).toEqual({ lam: 'pick', on: false });
   });
 
-  test('Esc в странице отменяет выбор', () => {
+  test('Esc в странице отменяет выбор', async () => {
     openMap('korbor-miniapp');
-    const page = liveFrame(pageId());
+    const id = pageId();
+    liveScreen(id);
     render(<Shell />);
+    await stream.ready();
     act(() => {
       useSnapshotStore.getState().request({ kind: 'comment', pick: 'element', pageId: null });
       useSnapshotStore.getState().opened();
     });
-    fromPage({ lam: 'pick-cancel' }, page.win);
+    await fromPage(id, { lam: 'pick-cancel' });
     expect(useSnapshotStore.getState().session.phase).toBe('idle');
   });
 });

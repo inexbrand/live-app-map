@@ -109,7 +109,7 @@ function StateChips(props: { readonly node: MapNode }) {
   );
 }
 
-/** Кнопки экрана: новая вкладка, копировать URL, клики в iframe. */
+/** Кнопки экрана: новая вкладка, копировать URL, мышь и клавиши в экран. */
 function PageActions(props: { readonly node: MapNode; readonly liveUrl: string | null }) {
   const { node } = props;
   const openPageInNewTab = useAppStore((s) => s.openPageInNewTab);
@@ -129,7 +129,7 @@ function PageActions(props: { readonly node: MapNode; readonly liveUrl: string |
       </Button>
       <Button variant={interacting ? 'default' : 'outline'} size="sm" aria-pressed={interacting} onClick={() => setInteract(interacting ? null : node.id)}>
         <MousePointer2 strokeWidth={1.75} />
-        Клики в iframe
+        Клики в экран
       </Button>
     </div>
   );

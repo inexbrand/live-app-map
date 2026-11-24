@@ -6,7 +6,8 @@ import { useEffect } from 'react';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
 import { isElementPick, useSnapshotStore } from '../../store/snapshot-store';
-import { NODE_IFRAME_ATTR } from '../gateway/use-gateway-frames';
+import { SCREEN_ATTR } from '../../flow/page-node/ScreenView';
+import { streamClient } from '../stream/stream-client';
 import { isLamPickCancelMessage, isLamPickedMessage, type LamPickedMessage } from '../gateway/pick-script';
 import { buildAnchor, frameToView, padRect, type AnchorPage } from './build-anchor';
 import { anchorContext, anchorPage } from './page-anchor';
@@ -31,14 +32,16 @@ export function useCommentsSync(): void {
   }, [mapName]);
 }
 
-function frames(): HTMLIFrameElement[] {
-  return [...document.querySelectorAll<HTMLIFrameElement>(`iframe[${NODE_IFRAME_ATTR}]`)];
+/** Включить или выключить пикер во всех открытых страницах. */
+function broadcast(on: boolean): void {
+  for (const id of useAppStore.getState().mountedPageIds) {
+    streamClient.post(id, { lam: 'pick', on });
+  }
 }
 
-function broadcast(on: boolean): void {
-  for (const f of frames()) {
-    f.contentWindow?.postMessage({ lam: 'pick', on }, '*');
-  }
+/** Холст экрана ноды на карте. */
+function screenOf(pageId: string): HTMLCanvasElement | null {
+  return [...document.querySelectorAll<HTMLCanvasElement>(`canvas[${SCREEN_ATTR}]`)].find((el) => el.getAttribute(SCREEN_ATTR) === pageId) ?? null;
 }
 
 /**
@@ -46,24 +49,26 @@ function broadcast(on: boolean): void {
  *
  * @param pageId - нода
  * @param selector - CSS-селектор элемента
+ * @returns страница открыта и получила команду
  */
 export function flashElement(pageId: string, selector: string): boolean {
-  const frame = frames().find((f) => f.getAttribute(NODE_IFRAME_ATTR) === pageId);
-  frame?.contentWindow?.postMessage({ lam: 'flash', selector }, '*');
-  return frame !== undefined;
+  if (!useAppStore.getState().mountedPageIds.has(pageId)) {
+    return false;
+  }
+  streamClient.post(pageId, { lam: 'flash', selector });
+  return true;
 }
 
-/** Живой экран, приславший сообщение, и его нода в карте. */
-function senderPage(source: MessageEventSource | null): { readonly frame: HTMLIFrameElement; readonly page: AnchorPage } | null {
-  const frame = frames().find((f) => f.contentWindow === source);
-  const pageId = frame?.getAttribute(NODE_IFRAME_ATTR) ?? null;
-  const page = pageId === null ? null : anchorPage(pageId);
-  return frame === undefined || page === null ? null : { frame, page };
+/** Экран, приславший сообщение, и его нода в карте. */
+function senderPage(pageId: string): { readonly frame: HTMLCanvasElement; readonly page: AnchorPage } | null {
+  const frame = screenOf(pageId);
+  const page = anchorPage(pageId);
+  return frame === null || page === null ? null : { frame, page };
 }
 
 /** Элемент выбран: черновик замечания у элемента и захват снимка вокруг него. */
-function startPickedDraft(picked: LamPickedMessage, frame: HTMLIFrameElement, page: AnchorPage): void {
-  const viewRect = frameToView(frame.getBoundingClientRect(), Number(frame.getAttribute('width')), picked.client);
+function startPickedDraft(picked: LamPickedMessage, frame: HTMLCanvasElement, page: AnchorPage): void {
+  const viewRect = frameToView(frame.getBoundingClientRect(), frame.width, picked.client);
   const app = useAppStore.getState();
   const anchor = buildAnchor({ picked, page, ...anchorContext(), code: app.document?.code, projectRoot: app.document?.project.root });
   useCommentsStore.getState().startDraft({ anchor, viewRect, shot: 'pending' });
@@ -71,18 +76,18 @@ function startPickedDraft(picked: LamPickedMessage, frame: HTMLIFrameElement, pa
 }
 
 /** Сообщение страницы во время выбора компонента: отмена или выбранный элемент. */
-function onPickerMessage(e: MessageEvent): void {
+function onPickerMessage(pageId: string, data: unknown): void {
   const snap = useSnapshotStore.getState();
   if (!isElementPick(snap.session)) {
     return;
   }
-  if (isLamPickCancelMessage(e.data)) {
+  if (isLamPickCancelMessage(data)) {
     snap.cancel();
     return;
   }
-  const from = isLamPickedMessage(e.data) ? senderPage(e.source) : null;
-  if (from !== null && isLamPickedMessage(e.data)) {
-    startPickedDraft(e.data, from.frame, from.page);
+  const from = isLamPickedMessage(data) ? senderPage(pageId) : null;
+  if (from !== null && isLamPickedMessage(data)) {
+    startPickedDraft(data, from.frame, from.page);
   }
 }
 
@@ -103,8 +108,5 @@ export function useCommentPicker(): void {
     };
   }, [picking]);
 
-  useEffect(() => {
-    window.addEventListener('message', onPickerMessage);
-    return () => window.removeEventListener('message', onPickerMessage);
-  }, []);
+  useEffect(() => streamClient.onPageMessage(onPickerMessage), []);
 }

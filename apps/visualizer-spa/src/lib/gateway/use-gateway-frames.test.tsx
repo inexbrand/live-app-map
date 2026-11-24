@@ -1,49 +1,47 @@
 /**
- * Отчёты страниц шлюза: сообщение iframe ноды о высоте попадает в store шлюза
- * этой ноды; чужие сообщения и окна без ноды — мимо; смена порта шлюза
- * пересчитывает живые ноды.
+ * Отчёты страниц шлюза: сообщение страницы экрана о высоте приходит через
+ * трансляцию и попадает в store шлюза этой ноды; чужие сообщения — мимо;
+ * смена порта шлюза пересчитывает живые ноды.
  */
 import { useDom } from '../../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, render } from '@testing-library/react';
 import { useAppStore } from '../../store/app-store';
 import { useGatewayStore } from '../../store/gateway-store';
+import { startFakeStream, type FakeStream } from '../../test/fake-stream';
 import { resetStores } from '../../test/fixtures';
-import { NODE_IFRAME_ATTR, useGatewayFrames } from './use-gateway-frames';
+import { useGatewayFrames } from './use-gateway-frames';
 
 useDom();
 
 const realFetch = globalThis.fetch;
+let stream: FakeStream;
 beforeEach(() => {
   resetStores();
+  stream = startFakeStream();
   // Порт и профили шлюза: dev-сервера нет — ответ как у /__lam_sessions
   globalThis.fetch = Object.assign(async () => Response.json({ ok: true, gatewayPort: 4320, profiles: [] }), { preconnect: realFetch.preconnect });
 });
 afterEach(() => {
+  stream.stop();
   globalThis.fetch = realFetch;
 });
 
 function Host() {
   useGatewayFrames();
-  return <iframe title="экран" {...{ [NODE_IFRAME_ATTR]: 'page:/feed' }} />;
+  return null;
 }
 
 const page = { lam: 'page', href: 'http://x/', contentHeight: 1200, viewportHeight: 700 };
 
 describe('useGatewayFrames', () => {
-  test('отчёт iframe ноды — в store шлюза под id ноды', async () => {
-    const r = render(<Host />);
-    // Окно страницы в iframe: happy-dom страницы не грузит — источник сообщения задаётся явно
-    const pageWindow = new MessageChannel().port1;
-    const frame = r.container.querySelector('iframe');
-    if (frame !== null) {
-      Object.defineProperty(frame, 'contentWindow', { value: pageWindow });
-    }
+  test('отчёт страницы экрана — в store шлюза под id ноды; не отчёт — мимо', async () => {
+    render(<Host />);
+    await stream.page('page:/feed', page);
+    await stream.page('page:/feed', { lam: 'ping' });
+    await stream.page('page:/other', { lam: 'чужое', contentHeight: 1 });
     await act(async () => {
-      window.dispatchEvent(new MessageEvent('message', { data: page, source: pageWindow }));
-      window.dispatchEvent(new MessageEvent('message', { data: { ...page, contentHeight: 1 }, source: window }));
-      window.dispatchEvent(new MessageEvent('message', { data: { ...page, contentHeight: 2 }, source: null }));
-      window.dispatchEvent(new MessageEvent('message', { data: { lam: 'ping' }, source: pageWindow }));
+      await Bun.sleep(50);
     });
     expect(useGatewayStore.getState().reports.get('page:/feed')).toMatchObject({ contentHeight: 1200 });
     expect(useGatewayStore.getState().reports.size).toBe(1);

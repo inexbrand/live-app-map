@@ -83,8 +83,6 @@ export type LiveSlice = {
   activeStates: ReadonlyMap<string, string>;
   /** Глобальная роль (Korbor): employer | recruiter | '' */
   globalRole: string;
-  /** Зум камеры после остановки движения: от него зависит, читаем ли экран и живой ли он. */
-  cameraZoom: number;
   setMode: (mode: ViewMode) => void;
   setIframeScale: (s: IframeScale) => void;
   setMaxLiveIframes: (n: number) => void;
@@ -94,7 +92,6 @@ export type LiveSlice = {
   setGlobalRole: (role: string) => void;
   applyPageState: (pageId: string, state: AppMapPageState | null) => void;
   setInteract: (id: string | null) => void;
-  setCameraZoom: (zoom: number) => void;
   openPageInNewTab: (id: string) => void;
   /**
    * Собирает live URL с учётом globalRole и per-page state inject.

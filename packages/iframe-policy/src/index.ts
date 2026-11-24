@@ -153,7 +153,7 @@ export function liveDiff(
  * Бюджет live iframe (enterprise TDD §7): multi-iframe, не «все сразу».
  * 9999 в UI = opt-in unlimited.
  */
-export const DEFAULT_MAX_LIVE = 6;
+export const DEFAULT_MAX_LIVE = 12;
 /** Pin soft-cap; excess pins → deferred toast, live режет maxLive. */
 export const DEFAULT_MAX_PINNED = 6;
 /**

@@ -833,17 +833,18 @@ code,
   background: var(--secondary);
 }
 
-.page-node__iframe-shell {
+.page-node__screen-shell {
   position: absolute;
   inset: 0;
   overflow: hidden;
   background: #ffffff;
 }
 
-.page-node__iframe-shell iframe {
-  border: 0;
+/* Холст трансляции: окно страницы в её пикселях, масштаб и место — inline */
+.page-node__screen {
   display: block;
-  /* position+transform задаются inline: fill shell without layout blowout */
+  background: #ffffff;
+  outline: none;
 }
 
 .page-node__states {
@@ -1412,12 +1413,7 @@ kbd,
 .page-node__viewport-bar { flex-wrap: nowrap; overflow-x: auto; scrollbar-width: none; flex: 0 0 auto; }
 .page-node__vp-btn { flex: none; }
 .db-view__list-title { font-size: 15px; line-height: 24px; margin: 0; padding: 0 8px; }
-/* Снимок под живым iframe; во время зума iframe скрыт — виден снимок. display:none, а не visibility:
-   межпроцессный iframe под visibility всё равно перерисовывается на каждом новом масштабе. Окно и
-   состояние страницы при этом сохраняются (проверено: innerWidth/innerHeight те же). */
-.page-node__snapshot--under { position: absolute; top: 0; left: 0; z-index: 0; }
-.page-node__iframe { background: #fff; }
-.flow-host--zooming .page-node__iframe { display: none; }
+
 
 
 /* Подписи рёбер холста: тихие, как вторичный текст, а не белые плашки. */

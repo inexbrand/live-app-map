@@ -31,7 +31,24 @@ export class StreamClient {
   /**
    * @param resolveUrl - адрес WebSocket сервера; null — сервера нет
    */
-  constructor(private readonly resolveUrl: () => Promise<string | null>) {}
+  constructor(private resolveUrl: () => Promise<string | null>) {}
+
+  /**
+   * Переключиться на другой сервер: текущее соединение закрывается, набор
+   * экранов уходит новому серверу.
+   *
+   * @param resolveUrl - адрес нового сервера
+   */
+  retarget(resolveUrl: () => Promise<string | null>): void {
+    this.resolveUrl = resolveUrl;
+    const old = this.ws;
+    this.ws = null;
+    if (old !== null) {
+      old.onclose = null;
+      old.close();
+    }
+    this.connect();
+  }
 
   /**
    * Набор экранов карты; тот же набор повторно не отправляется.
@@ -158,6 +175,8 @@ export class StreamClient {
       this.flushSync();
     };
     ws.onmessage = (e: MessageEvent) => this.receive(e.data);
+    // Сбой соединения закроет его, а onclose переподключит
+    ws.onerror = () => undefined;
     ws.onclose = () => {
       this.ws = null;
       if (!this.closed) {

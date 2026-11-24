@@ -24,8 +24,6 @@ import { layoutBounds, minimapSize } from './minimap';
 import { PageNode, type PageNodeData } from './PageNode';
 import { SERVICE_NODE_SIZE, ServiceNode, type ServiceNodeData } from './ServiceNode';
 
-/** Пауза после зума, после которой живые iframe возвращаются, мс. */
-const ZOOM_SETTLE_MS = 250;
 const nodeTypes = { page: PageNode, service: ServiceNode, groupFrame: GroupFrameNode };
 
 /** Стартовый масштаб: не мельче — иначе подписи нод не читаются. */
@@ -184,29 +182,10 @@ export function applyZoomStyle(el: HTMLElement | null, zoom: number): void {
   el.classList.toggle('flow-host--overview', zoom < OVERVIEW_ZOOM);
 }
 
-/**
- * Зум: живые iframe прячутся под свой снимок — пересборка их слоёв на каждом кадре
- * стоила ~10 кадров/с. Показ iframe дорогой: между шагами колеса не возвращаем, ждём паузу.
- */
-function useZoomHiding(hostRef: RefObject<HTMLDivElement | null>) {
-  const zoomAtStart = useRef(1);
-  const zoomIdle = useRef(0);
+/** Движение камеры: масштаб в стиль хоста (подписи, обзор); экраны — холсты, прятать нечего. */
+function zoomHandlers(hostRef: RefObject<HTMLDivElement | null>) {
   return {
-    onMoveStart: (_: unknown, vp: { readonly zoom: number }) => {
-      zoomAtStart.current = vp.zoom;
-    },
-    onMove: (_: unknown, vp: { readonly zoom: number }) => {
-      applyZoomStyle(hostRef.current, vp.zoom);
-      if (vp.zoom !== zoomAtStart.current) {
-        window.clearTimeout(zoomIdle.current);
-        hostRef.current?.classList.add('flow-host--zooming');
-      }
-    },
-    onMoveEnd: (_: unknown, vp: { readonly zoom: number }) => {
-      useAppStore.getState().setCameraZoom(vp.zoom);
-      window.clearTimeout(zoomIdle.current);
-      zoomIdle.current = window.setTimeout(() => hostRef.current?.classList.remove('flow-host--zooming'), ZOOM_SETTLE_MS);
-    },
+    onMove: (_: unknown, vp: { readonly zoom: number }) => applyZoomStyle(hostRef.current, vp.zoom),
   };
 }
 
@@ -215,7 +194,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
   const selectPage = useAppStore((s) => s.selectPage);
   const selectedPageId = useAppStore((s) => s.selectedPageId);
   const hostRef = useRef<HTMLDivElement>(null);
-  const zoom = useZoomHiding(hostRef);
+  const zoom = zoomHandlers(hostRef);
   const { nodes, edges, packed, boxes } = graph;
   const miniSize = useMemo(
     () => minimapSize(layoutBounds(nodes.map((n) => ({ x: n.position.x, y: n.position.y, width: n.width ?? 0, height: n.height ?? 0 })))),
@@ -235,7 +214,6 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
           const canvas = { width: el?.clientWidth ?? 1280, height: el?.clientHeight ?? 800 };
           const start = startViewport(packed, boxes, canvas, START_ZOOM);
           applyZoomStyle(el, start.zoom);
-          useAppStore.getState().setCameraZoom(start.zoom);
           void instance.setViewport(start);
         }}
         {...zoom}

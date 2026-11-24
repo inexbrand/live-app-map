@@ -145,7 +145,11 @@ export function ScreenView(props: ScreenViewProps) {
         <Picture src={lastUrl} title={title} style={style} />
       ) : snapshot !== null ? (
         <Picture src={snapshot} title={title} style={style} onError={onSnapshotError} />
-      ) : null}
+      ) : (
+        <div className="page-node__placeholder" role="status">
+          Экран оживёт, когда попадёт в кадр
+        </div>
+      )}
     </div>
   );
 }

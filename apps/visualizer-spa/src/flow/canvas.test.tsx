@@ -1,7 +1,7 @@
 /**
  * Холст карты как у пользователя: рамки групп, экраны и сервисы, рёбра, поиск без
- * совпадений и сброс, выбор ноды и клик по пустому месту, живой экран (iframe, загрузка,
- * ошибка), снимок шлюза у замороженной ноды, стейты, размеры окна, кнопки шапки ноды.
+ * совпадений и сброс, выбор ноды и клик по пустому месту, живой экран (холст трансляции
+ * и набор экранов серверу), снимок шлюза до первого кадра, стейты, размеры окна, кнопки шапки ноды.
  */
 import { useDom } from '../test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -9,27 +9,20 @@ import { act, fireEvent, render, waitFor, within } from '@testing-library/react'
 import { useAppStore } from '../store/app-store';
 import { useGatewayStore } from '../store/gateway-store';
 import { useSnapshotStore } from '../store/snapshot-store';
+import { useStreamSync } from '../lib/stream/stream-sync';
+import { startFakeStream } from '../test/fake-stream';
 import { openMap, resetStores } from '../test/fixtures';
 import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
 
 useDom();
 
 const opened: string[] = [];
-/** happy-dom не грузит iframe и шлёт им error; браузер у чужого адреса error не шлёт — глушим, пока тест не разрешит. */
-let frameErrors = false;
-const muteFrameErrors = (e: Event): void => {
-  if (!frameErrors && e.target instanceof HTMLIFrameElement) {
-    e.stopPropagation();
-  }
-};
 let realOpen: typeof window.open | null = null;
 
 beforeEach(() => {
   resetStores();
   realOpen = window.open;
   opened.length = 0;
-  frameErrors = false;
-  window.addEventListener('error', muteFrameErrors, true);
   window.open = (url?: string | URL) => {
     opened.push(String(url));
     return null;
@@ -40,7 +33,6 @@ afterEach(() => {
   if (realOpen !== null) {
     window.open = realOpen;
   }
-  window.removeEventListener('error', muteFrameErrors, true);
 });
 
 async function settle(): Promise<void> {
@@ -147,45 +139,49 @@ describe('холст карты', () => {
     expect(useAppStore.getState().activeStates.has(id)).toBe(false);
   });
 
-  test('видимая нода — живой iframe, загрузка в логе; невидимая — заглушка', async () => {
-    const { doc, r } = await canvas();
+  test('видимая нода — холст трансляции и живой экран в наборе сервера; невидимая — подсказка', async () => {
+    const stream = startFakeStream();
+    const Synced = () => {
+      useStreamSync();
+      return <AppMapCanvas />;
+    };
+    const doc = openMap('korbor-miniapp');
+    const r = render(<Synced />);
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
     act(() => useAppStore.getState().setVisible(new Set([id])));
     await settle();
-    const frame = nodeEl(r.container, id).querySelector('iframe');
-    expect(frame?.getAttribute('src')).toBe(useAppStore.getState().resolveLiveUrl(id));
+    expect(r.container.querySelector('iframe')).toBeNull();
+    expect(nodeEl(r.container, id).querySelector('canvas')?.getAttribute('data-lam-screen')).toBe(id);
     expect(nodeEl(r.container, id).dataset['lamLive']).toBe('1');
-    if (frame !== null) {
-      fireEvent.load(frame);
-    }
-    await settle();
-    const logs = useAppStore.getState().logs.filter((l) => l.source === id).map((l) => l.message);
-    expect(logs).toEqual([`iframe load 390×844 · ${useAppStore.getState().resolveLiveUrl(id)}`]);
+    await waitFor(() => {
+      const sync = stream.received.filter((m) => m.t === 'sync').at(-1);
+      expect(sync?.t === 'sync' ? sync.screens.find((s) => s.key === id) : undefined).toMatchObject({ url: useAppStore.getState().resolveLiveUrl(id), live: true });
+    });
     const hidden = doc.nodes.filter((n) => n.kind === 'page')[1]?.id ?? '';
-    expect(nodeEl(r.container, hidden).querySelector('.page-node__placeholder')?.textContent).toBeTruthy();
-    // React не вешает onError на iframe: ошибка загрузки iframe не доходит до ноды
-    frameErrors = true;
-    fireEvent.error(nodeEl(r.container, id).querySelector('iframe') ?? document.body);
-    expect(nodeEl(r.container, id).querySelector('iframe')).not.toBeNull();
+    expect(nodeEl(r.container, hidden).querySelector('.page-node__placeholder')?.textContent).toBe('Экран оживёт, когда попадёт в кадр');
+    r.unmount();
+    stream.stop();
   });
 
-  test('шлюз: живой iframe со снимком под ним; вне кадра — снимок вместо iframe, сбой снимка — заглушка', async () => {
+  test('шлюз: до первого кадра под холстом снимок; вне кадра — снимок вместо холста, сбой снимка — подсказка', async () => {
     const { doc, r } = await canvas();
     const id = doc.nodes.find((n) => n.kind === 'page')?.id ?? '';
     act(() => useGatewayStore.setState({ port: 4320 }));
     act(() => useAppStore.getState().setVisible(new Set([id])));
     await settle();
-    const under = nodeEl(r.container, id).querySelector('.page-node__snapshot--under');
+    const under = nodeEl(r.container, id).querySelector('img[data-lam-snapshot]');
     expect(under?.getAttribute('src')).toContain('/__lam_snapshot');
+    expect(nodeEl(r.container, id).querySelector('canvas')).not.toBeNull();
     act(() => useAppStore.getState().setVisible(new Set()));
     await settle();
     const other = doc.nodes.filter((n) => n.kind === 'page')[1]?.id ?? '';
     const shot = nodeEl(r.container, other).querySelector('img[data-lam-snapshot]');
-    expect(shot?.getAttribute('alt')).toStartWith('Снимок: ');
+    expect(shot?.getAttribute('alt')).toStartWith('Экран: ');
     if (shot !== null) {
       fireEvent.error(shot);
     }
     expect(nodeEl(r.container, other).querySelector('img[data-lam-snapshot]')).toBeNull();
+    expect(nodeEl(r.container, other).querySelector('.page-node__placeholder')).not.toBeNull();
   });
 
   test('кнопки ноды: статус и лог экрана (выбор экрана), закрепить и открепить, открыть во вкладке, замечание', async () => {

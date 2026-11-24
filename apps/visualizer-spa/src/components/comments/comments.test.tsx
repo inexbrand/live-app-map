@@ -9,7 +9,6 @@ import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { foldThread, type CommentAnchor, type CommentEvent, type CommentThread } from '@live-app-map/mcp-server/comments-schema';
-import { NODE_IFRAME_ATTR } from '../../lib/gateway/use-gateway-frames';
 import { useAppStore } from '../../store/app-store';
 import { useCommentsStore } from '../../store/comments-store';
 import { useSnapshotStore } from '../../store/snapshot-store';
@@ -22,6 +21,7 @@ import { CommentsToolbarButton } from './CommentsToolbarButton';
 import { ScreenCommentsPanel } from './ScreenCommentsPanel';
 import { startComment } from './start-comment';
 import { pickOption } from '../../test/select';
+import { startFakeStream } from '../../test/fake-stream';
 
 useDom();
 
@@ -179,18 +179,17 @@ describe('кнопка и общий список', () => {
     act(() => useViewStore.getState().setView('api'));
     act(() => useCommentsStore.getState().setListOpen(true));
     const [p1] = pageIds();
-    const frame = document.createElement('iframe');
-    frame.setAttribute(NODE_IFRAME_ATTR, p1);
-    document.body.append(frame);
-    const sent: unknown[] = [];
-    // Живой экран в тесте — окно, которое записывает сообщения визуализатора.
-    Object.defineProperty(frame, 'contentWindow', { value: { postMessage: (data: unknown) => sent.push(data) } });
+    // Живой экран: страница открыта на сервере трансляции теста
+    const stream = startFakeStream();
+    await stream.ready();
+    act(() => useAppStore.setState((s) => ({ mountedPageIds: new Set([...s.mountedPageIds, p1]) })));
     fireEvent.click(within(ui.getByTestId('comments-list')).getAllByTestId('comments-list-item')[0] ?? document.body);
     expect(useViewStore.getState().view).toBe('screens');
     expect(useAppStore.getState().selectedPageId).toBe(p1);
     expect(useCommentsStore.getState().focusId).toBe('c1');
     expect(ui.queryByTestId('comments-list')).toBeNull();
-    await waitFor(() => expect(sent).toContainEqual({ lam: 'flash', selector: '#buy' }), { timeout: 2000 });
+    await waitFor(() => expect(stream.postsTo(p1)).toContainEqual({ lam: 'flash', selector: '#buy' }), { timeout: 2000 });
+    stream.stop();
   });
 });
 
