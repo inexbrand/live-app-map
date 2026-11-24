@@ -17,26 +17,27 @@ Canon: `docs/live-app-map-enterprise-tdd.md` (product), `docs/live-app-map-desig
 ```bash
 bun install
 bun test packages apps/visualizer-spa
-bun run scan:korbor
-bun run dev:visualizer
+bun run scan -- --project ../korbor
+bun run dev -- --project ../korbor
 ```
 
 ## Korbor dogfood
 
-| Surface | Scan target | Live baseUrl |
-|---------|-------------|--------------|
-| Miniapp | `../korbor/apps/miniapp` | http://localhost:5175 |
-| Admin | `../korbor/apps/admin` | http://localhost:16002 |
-| Site | `../korbor/apps/site` | http://localhost:16001 |
+Проект korbor: `../korbor/.live-app-map/config.ts` (приложения ниже, бэкенд `apps/api` + `packages/db`),
+карта — `../korbor/.live-app-map/map.json` (не в git, пишет `bun run scan -- --project ../korbor`).
 
-Maps: `maps/korbor-*.json` + `apps/visualizer-spa/public/maps/*.liveappmap.json`.
+| App | Dir | Live baseUrl | Roles |
+|-----|-----|--------------|-------|
+| miniapp | `apps/miniapp` | https://vite.localhost:5175 | recruiter, employer |
+| admin | `apps/admin` | http://localhost:16002 | admin |
+| site | `apps/site` | http://localhost:16001 | — |
+
+Срезы карт korbor для тестов — `test-fixtures/maps/`.
 
 ### State inject (roles)
 
-Miniapp roles in map states + toolbar:
-
-- `recruiter` → `?lam_role=recruiter`
-- `employer` (client creating vacancies) → `?lam_role=employer`
+Роли — из `config.apps[].roles`: у каждого экрана приложения состояние на каждую роль, адрес `?lam_role=<роль>`
+(miniapp: `recruiter`, `employer` — клиент, создаёт вакансии; admin: `admin`).
 
 ## Packages
 

@@ -32,7 +32,7 @@ curl -fsSL https://raw.githubusercontent.com/inexbrand/live-app-map/master/insta
 | `@live-app-map/iframe-policy` | pure reconcile budget |
 | `@live-app-map/export-appmap` | экспорт `.appmap` zip (bridge из liveappmap) |
 | `@live-app-map/plugin-api` | контракты плагинов + `applyPlugins` |
-| `@live-app-map/cli` | `scan` (+ `--code-dir`) / `code` / `diff` / `doctor` / `export` / `feedback` / `dev` |
+| `@live-app-map/cli` | `scan --project` (карта проекта) / `scan` (+ `--code-dir`) / `code` / `diff` / `doctor` / `export` / `feedback` / `init` / `dev` |
 | `@live-app-map/mcp-server` | stdio MCP: map pages + feedback |
 | `@live-app-map/react` | embed + Devtools shell |
 | `@live-app-map/next` | Next.js `withLiveAppMap` + rewrites/env |
@@ -45,11 +45,18 @@ curl -fsSL https://raw.githubusercontent.com/inexbrand/live-app-map/master/insta
 bun install
 bun run typecheck
 bun test
-bun run scan:korbor
-bun run dev          # visualizer :4310
+bun run scan -- --project ../korbor   # → ../korbor/.live-app-map/map.json
+bun run dev -- --project ../korbor    # visualizer :4310 с картой проекта
 ```
 
-Откройте http://localhost:4310 → пресеты **Korbor Miniapp / Admin / Site**.
+Откройте http://localhost:4310 → в списке карт **korbor** (все приложения одной картой).
+
+Проект — папка `.live-app-map/` в репозитории приложения: `config.ts` (приложения, роли, бэкенд —
+тип `LamProjectConfig` из `@live-app-map/sdk`), `states.ts` (состояния экранов и варианты компонентов),
+`map.json` (результат скана, в .gitignore). `--project` у `dev` — то же, что `LAM_PROJECT=<каталог>`;
+визуализатор отдаёт `GET /__lam_project/states` (экспорты `states.ts`, перечитываются при правке).
+`bun run scan:korbor` — короткая запись `scan --project` для соседнего `../korbor` (`KORBOR_DIR`).
+Срезы старых карт korbor для тестов — `test-fixtures/maps/`.
 
 ### UI kit (канон)
 
@@ -176,8 +183,8 @@ bun run test:e2e
 bun run smoke
 bun run doctor -- --dir ../korbor/apps/site
 bun run build
-bun run scan:korbor
-bun run dev:visualizer
+bun run scan -- --project ../korbor
+bun run dev -- --project ../korbor
 ```
 
 | Команда | Что проверяет |
@@ -188,5 +195,5 @@ bun run dev:visualizer
 | `bun run smoke` | runtime smoke (`scripts/runtime-smoke.ts`) |
 | `bun run doctor` | CLI doctor по каталогу приложения |
 | `bun run build` | build всех workspaces |
-| `bun run scan:korbor` | dogfood-скан Korbor → maps |
-| `bun run dev:visualizer` | dev SPA на порту **4310** |
+| `bun run scan -- --project <каталог>` | скан проекта по `.live-app-map/config.ts` → `.live-app-map/map.json` |
+| `bun run dev -- --project <каталог> [--port N]` | dev SPA (порт **4310** по умолчанию) с картой и состояниями проекта |
