@@ -212,9 +212,13 @@ export class StreamService {
     if (e.stepsPending) {
       e.stepsPending = false;
       const error = await runStateSteps(e.page, e.screen.steps ?? []);
+      // Страницу закрыли во время шагов — их итог не про экран (ошибка «page closed» ложная)
+      if (this.entries.get(e.screen.key) !== e) {
+        return;
+      }
       this.opts.onSteps?.(e.screen.key, error);
       // Шаг увёл на другой документ — готовность отметит его загрузка
-      if (e.load !== load || this.entries.get(e.screen.key) !== e) {
+      if (e.load !== load) {
         return;
       }
     }
