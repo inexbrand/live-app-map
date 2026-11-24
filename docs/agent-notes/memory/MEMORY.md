@@ -27,3 +27,4 @@
 - [Экраны карты — трансляция вместо iframe](visualizer-stream-screens.md) — ScreenView, lib/stream, 12 живых, замер FPS на прод-сборке
 - [UX замечаний: выбран вариант Б](screen-feedback-ux-choice.md) — поле у компонента, общий список с «исправлено», хранение файлы+SSE
 - [Фокус экрана Б3: грабли](visualizer-focus-lessons.md) — zustand ?? [], up после выбора, stream.ready в тестах, Base UI роли
+- [Headless Helium в тестах](helium-headless-test-pitfalls.md) — /slow блокируется, canvas белый, обрыв первого перехода
