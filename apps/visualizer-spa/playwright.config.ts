@@ -10,7 +10,12 @@
  * (сервер уже поднят вручную). Без сервера и без webServer — fail, не skip.
  */
 import { defineConfig, devices } from '@playwright/test';
+import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
+import { resolveSnapshotBrowserPath } from './src/lib/gateway/snapshot-browser';
+
+/** Браузер e2e: LAM_BROWSER_PATH или Helium; браузеры Playwright на машине не ставятся. */
+const executablePath = resolveSnapshotBrowserPath(process.env, existsSync);
 
 /** Речь для voice.e2e: микрофон Chromium читает этот файл по кругу (macOS say, 16 кГц, по 2 с тишины по краям). */
 const VOICE_WAV = fileURLToPath(new URL('./e2e/fixtures/voice-ru.wav', import.meta.url));
@@ -48,6 +53,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         // snapshot.e2e: диалог выбора вкладки getDisplayMedia принимается сам
         launchOptions: {
+          executablePath,
           args: ['--auto-accept-this-tab-capture', '--use-fake-ui-for-media-stream'],
         },
       },
@@ -60,6 +66,7 @@ export default defineConfig({
         ...devices['Desktop Chrome'],
         permissions: ['microphone'],
         launchOptions: {
+          executablePath,
           args: [
             '--auto-accept-this-tab-capture',
             '--use-fake-ui-for-media-stream',
@@ -78,6 +85,8 @@ export default defineConfig({
     ? undefined
     : {
         command: 'bun run dev',
+        // e2e читают DOM страниц экранов через CDP браузера трансляции (e2e/stream-page.ts)
+        env: { LAM_STREAM_CDP_PORT: process.env['LAM_STREAM_CDP_PORT'] ?? '9333' },
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,

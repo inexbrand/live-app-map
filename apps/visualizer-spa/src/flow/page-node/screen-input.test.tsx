@@ -25,7 +25,7 @@ afterEach(() => {
 const viewport = { width: 390, height: 844 };
 
 function screen() {
-  const r = render(<ScreenView nodeId="s" title="Главная" viewport={viewport} layout={computeNodeLayout(viewport, 0.5)} mounted={true} interactive={true} snapshot={null} onSnapshotError={() => undefined} />);
+  const r = render(<ScreenView nodeId="s" title="Главная" url="http://x.localhost/" viewport={viewport} layout={computeNodeLayout(viewport, 0.5)} mounted={true} interactive={true} snapshot={null} onSnapshotError={() => undefined} />);
   const canvas = r.container.querySelector<HTMLCanvasElement>(`canvas[${SCREEN_ATTR}]`);
   if (canvas === null) {
     throw new Error('нет холста');

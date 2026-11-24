@@ -209,6 +209,7 @@ function PageNodeInner(props: NodeProps<PageFlowNode>) {
           <ScreenView
             nodeId={node.id}
             title={node.title}
+            url={url}
             viewport={viewport}
             layout={layout}
             mounted={f.isMounted}

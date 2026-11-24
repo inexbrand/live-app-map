@@ -69,16 +69,15 @@ test.describe('visualizer smoke', () => {
     await firstNode.click();
     await expect(firstNode).toContainText(/390\s*[×x]\s*844/);
 
-    // iframe attribute width/height = logical viewport из JSON layout
-    const iframe = firstNode.locator('iframe').first();
-    // iframe может быть frozen (budget) — pin or wait live
-    if ((await iframe.count()) > 0) {
-      await expect(iframe).toHaveAttribute('width', '390');
-      await expect(iframe).toHaveAttribute('height', '844');
+    // Холст экрана в пикселях окна страницы из layout карты (390×844); без живого слота — снимок или подсказка
+    const screen = firstNode.locator('canvas[data-lam-screen]').first();
+    if ((await screen.count()) > 0) {
+      await expect(screen).toHaveAttribute('width', '390');
+      await expect(screen).toHaveAttribute('height', '844');
     } else {
-      // budget: нет iframe → нода всё равно показывает 390×844 в chrome
       await expect(firstNode).toContainText('390');
     }
+    await expect(page.locator('iframe')).toHaveCount(0);
 
     // Нет fatal pageerror (null-byte babel и т.п.)
     const fatal = consoleErrors.filter(

@@ -5,6 +5,7 @@
  */
 import { expect, test } from '@playwright/test';
 import { WIDE_VIEWPORT } from './helpers';
+import { screenPage } from './stream-page';
 
 test('vacancies/:id — реальная вакансия вместо «Не найдено»', async ({ page }) => {
   test.setTimeout(90_000);
@@ -17,13 +18,10 @@ test('vacancies/:id — реальная вакансия вместо «Не н
   await page.locator('[data-testid=palette-row][data-kind=screen]', { hasText: /^vacancies \/ id/ }).first().click();
   const node = page.locator('[data-lam-node="route:/vacancies/[id]"]');
   await expect(node).toHaveClass(/page-node--selected/);
-  const iframe = node.locator('iframe');
-  await expect.poll(async () => (await iframe.getAttribute('src')) ?? '', { timeout: 30_000 }).toMatch(/#\/vacancies\/[0-9a-f-]{36}$/);
-  const frame = await (await iframe.elementHandle())?.contentFrame();
-  if (!frame) {
-    throw new Error('iframe без документа');
-  }
+  const canvas = node.locator('canvas[data-lam-screen]');
+  await expect.poll(async () => (await canvas.getAttribute('data-lam-url')) ?? '', { timeout: 30_000 }).toMatch(/#\/vacancies\/[0-9a-f-]{36}$/);
+  const screen = await screenPage(node);
   // Экран показал вакансию: есть заголовок h1 и нет экрана ошибки.
-  await expect.poll(() => frame.evaluate(() => document.querySelector('h1')?.textContent?.trim() ?? ''), { timeout: 30_000 }).not.toBe('');
-  expect(await frame.evaluate(() => document.body.innerText)).not.toContain('Не найдено');
+  await expect.poll(() => screen.evaluate(() => document.querySelector('h1')?.textContent?.trim() ?? ''), { timeout: 30_000 }).not.toBe('');
+  expect(await screen.evaluate(() => document.body.innerText)).not.toContain('Не найдено');
 });

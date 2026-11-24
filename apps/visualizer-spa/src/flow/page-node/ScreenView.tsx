@@ -17,6 +17,8 @@ export const SCREEN_ATTR = 'data-lam-screen';
 export type ScreenViewProps = {
   readonly nodeId: string;
   readonly title: string;
+  /** Адрес страницы экрана: на холсте как data-lam-url (e2e, отладка). */
+  readonly url: string;
   readonly viewport: DeviceViewport;
   readonly layout: NodeLayoutMetrics;
   /** Страница открыта на сервере (живой или тёплый экран). */
@@ -124,7 +126,7 @@ function Picture({ src, title, style, onError }: { readonly src: string; readonl
  * @param props - нода, окно, масштаб, смонтирован ли, ввод, снимок
  */
 export function ScreenView(props: ScreenViewProps) {
-  const { nodeId, title, viewport, layout, mounted, interactive, snapshot, onSnapshotError } = props;
+  const { nodeId, title, url, viewport, layout, mounted, interactive, snapshot, onSnapshotError } = props;
   const [canvas, setCanvas] = useState<HTMLCanvasElement | null>(null);
   const [drawn, setDrawn] = useState(() => streamClient.lastFrame(nodeId) !== null);
   const onFirst = useRef(() => setDrawn(true)).current;
@@ -140,6 +142,7 @@ export function ScreenView(props: ScreenViewProps) {
           <canvas
             ref={setCanvas}
             {...{ [SCREEN_ATTR]: nodeId }}
+            data-lam-url={url}
             width={viewport.width}
             height={viewport.height}
             tabIndex={interactive ? 0 : -1}
