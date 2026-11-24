@@ -118,7 +118,8 @@ export function canvasView(doc: AppMapDocument, searchQuery: string, sizing: Can
 
 /** Холст по store: карта, фильтр, масштаб, окна и высоты нод, выбор. */
 function useCanvasView(): CanvasView | null {
-  const document = useAppStore((s) => s.document);
+  // Карта холста — из индекса: в ней узлы-состояния, если вид «Состояния» включён
+  const document = useAppStore((s) => s.index?.document ?? null);
   const searchQuery = useAppStore((s) => s.searchQuery);
   const iframeScale = useAppStore((s) => s.iframeScale);
   const nodeViewports = useAppStore((s) => s.nodeViewports);
@@ -272,7 +273,7 @@ function FlowCanvas({ doc, graph }: { readonly doc: AppMapDocument; readonly gra
  * Холст React Flow: layout страниц, поиск, empty state при нуле совпадений.
  */
 export function AppMapCanvas() {
-  const document = useAppStore((s) => s.document);
+  const document = useAppStore((s) => s.index?.document ?? null);
   const view = useCanvasView();
   if (!document || view === null) {
     return null;

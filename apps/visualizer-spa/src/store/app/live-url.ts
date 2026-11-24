@@ -31,10 +31,9 @@ function stateRole(pageState: PageState | undefined, globalRole: string): string
 
 /** URL с выбранным стейтом: его адрес (или base), роль, query и hash стейта. */
 function urlWithState(base: string, pageState: PageState | undefined, globalRole: string): string {
-  const role = stateRole(pageState, globalRole);
-  const roleQuery: Record<string, string> = role !== undefined ? { lam_role: role } : {};
+  const roleQuery: Record<string, string> = globalRole !== '' ? { lam_role: globalRole } : {};
   return applyStateToUrl(pageState?.url || base, {
-    role,
+    role: stateRole(pageState, globalRole),
     query: { ...roleQuery, ...pageState?.inject?.query },
     hash: pageState?.inject?.hash,
   });

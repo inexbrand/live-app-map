@@ -12,6 +12,8 @@ export type LayoutBox = {
   readonly width: number;
   readonly height: number;
   readonly group: string;
+  /** Нода, рядом с которой стоять: узел-состояние — в том же ряду справа от своего экрана. */
+  readonly anchor?: string;
 };
 
 /** Ребро между нодами. */
@@ -167,6 +169,65 @@ function groupRowWidth(members: readonly LayoutBox[], maxRowWidth: number): numb
  * @returns позиции нод и рамки групп
  */
 export function packLayout(boxes: readonly LayoutBox[], links: readonly LayoutLink[], opts: PackOptions): PackedLayout {
+  const { rows, followers } = foldAnchored(boxes);
+  const packed = packRows(rows, links, opts);
+  return { positions: unfoldAnchored(packed.positions, followers), groups: packed.groups };
+}
+
+/** Спутники якоря: ширина самого якоря и спутники по порядку. */
+type Followers = ReadonlyMap<string, { readonly width: number; readonly tail: readonly LayoutBox[] }>;
+
+/** Спутник ли это ноды из набора. */
+function isFollower(b: LayoutBox, ids: ReadonlySet<string>): b is LayoutBox & { readonly anchor: string } {
+  return b.anchor !== undefined && b.anchor !== b.id && ids.has(b.anchor);
+}
+
+/**
+ * Спутники (узлы-состояния) вливаются в коробку своего экрана: одна широкая коробка
+ * «экран + состояния» раскладывается как одна нода, и ряд не рвётся.
+ */
+function foldAnchored(boxes: readonly LayoutBox[]): { readonly rows: LayoutBox[]; readonly followers: Followers } {
+  const ids = new Set(boxes.map((b) => b.id));
+  const tails = new Map<string, LayoutBox[]>();
+  for (const b of boxes) {
+    if (isFollower(b, ids)) {
+      tails.set(b.anchor, [...(tails.get(b.anchor) ?? []), b]);
+    }
+  }
+  const followers = new Map<string, { width: number; tail: readonly LayoutBox[] }>();
+  const rows = boxes.flatMap((b): LayoutBox[] => {
+    if (isFollower(b, ids)) {
+      return [];
+    }
+    const tail = tails.get(b.id) ?? [];
+    if (tail.length === 0) {
+      return [b];
+    }
+    followers.set(b.id, { width: b.width, tail });
+    return [{ id: b.id, group: b.group, width: tail.reduce((w, f) => w + NODE_GAP + f.width, b.width), height: Math.max(b.height, ...tail.map((f) => f.height)) }];
+  });
+  return { rows, followers };
+}
+
+/** Позиции спутников: справа от якоря подряд, верх по верху якоря. */
+function unfoldAnchored(positions: ReadonlyMap<string, { readonly x: number; readonly y: number }>, followers: Followers): Map<string, { x: number; y: number }> {
+  const out = new Map([...positions].map(([id, p]) => [id, { x: p.x, y: p.y }]));
+  for (const [anchor, f] of followers) {
+    const p = positions.get(anchor);
+    if (p === undefined) {
+      continue;
+    }
+    let x = p.x + f.width + NODE_GAP;
+    for (const b of f.tail) {
+      out.set(b.id, { x, y: p.y });
+      x += b.width + NODE_GAP;
+    }
+  }
+  return out;
+}
+
+/** Раскладка коробок (уже со спутниками внутри) по группам. */
+function packRows(boxes: readonly LayoutBox[], links: readonly LayoutLink[], opts: PackOptions): PackedLayout {
   const byGroup = new Map<string, LayoutBox[]>();
   for (const b of boxes) {
     byGroup.set(b.group, [...(byGroup.get(b.group) ?? []), b]);

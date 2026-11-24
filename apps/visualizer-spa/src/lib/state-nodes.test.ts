@@ -6,7 +6,7 @@ const FEED = 'miniapp:route:/feed';
 
 function doc(states: readonly AppMapPageState[] | undefined): AppMapDocument {
   return {
-    formatVersion: 1,
+    formatVersion: 2,
     kind: 'live-app-map',
     generatedAt: '2026-01-01T00:00:00.000Z',
     generator: { name: 'test', version: '0' },

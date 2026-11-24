@@ -9,6 +9,7 @@ import { liveAppMapToAppMap, parseLiveAppMapJson, type AppMapDocument } from '@l
 import { filterCanvasGraph } from './canvas-graph';
 import { canvasNodeSize, layoutCanvas } from './canvas-layout';
 import { findOverlaps } from './pack-layout';
+import { expandStateNodes, stateNodeInfo } from '../lib/state-nodes';
 
 const mapsDir = path.resolve(import.meta.dir, '../../public/maps');
 const maps: Array<[string, AppMapDocument]> = readdirSync(mapsDir)
@@ -61,4 +62,35 @@ describe('layoutCanvas без наложений', () => {
       });
     }
   }
+});
+
+describe('layoutCanvas с узлами-состояниями', () => {
+  test('korbor-all: у каждого второго экрана 2 состояния — без наложений, состояние в ряду своего экрана', () => {
+    const entry = maps.find(([f]) => f === 'korbor-all.liveappmap.json') ?? maps[0];
+    if (entry === undefined) {
+      throw new Error('нет карт');
+    }
+    const base = entry[1];
+    const withStates: AppMapDocument = {
+      ...base,
+      nodes: base.nodes.map((n, i) =>
+        n.kind !== 'page' || i % 2 !== 0
+          ? n
+          : { ...n, states: [{ name: 'empty', id: 'empty', label: 'Пусто', kind: 'empty' as const }, { name: 'err', id: 'err', label: 'Ошибка', kind: 'error' as const }] },
+      ),
+    };
+    const doc = expandStateNodes(withStates, true);
+    const { filtered, navEdges } = filterCanvasGraph(doc, '');
+    const sizing = { iframeScale: 0.35, nodeViewports: new Map(), contentHeights: new Map() };
+    const { boxes, packed } = layoutCanvas(doc, filtered, navEdges, sizing);
+    const rects = boxes.map((b) => ({ id: b.id, x: packed.positions.get(b.id)?.x ?? NaN, y: packed.positions.get(b.id)?.y ?? NaN, width: b.width, height: b.height }));
+    expect(rects.length).toBeGreaterThan(base.nodes.filter((n) => n.kind === 'page').length);
+    expect(findOverlaps(rects)).toEqual([]);
+    for (const n of filtered) {
+      const info = stateNodeInfo(n);
+      if (info !== null) {
+        expect(packed.positions.get(n.id)?.y).toBe(packed.positions.get(info.screenId)?.y ?? NaN);
+      }
+    }
+  });
 });

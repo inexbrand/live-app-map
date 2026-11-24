@@ -50,9 +50,11 @@ export function computeLiveBudget(s: LiveBudgetInput): LiveBudget {
   if (!s.document) {
     return { sets: { livePageIds: new Set(), warmPageIds: new Set(), warmLruOrder: [], mountedPageIds: new Set() }, deferredPins: [] };
   }
-  const candidates = s.document.nodes.filter((n) => n.kind === 'page' || n.kind === 'not-found').map((n) => n.id);
+  // Узлы холста: с узлами-состояниями, если вид включён
+  const nodes = (s.index?.document ?? s.document).nodes;
+  const candidates = nodes.filter((n) => n.kind === 'page' || n.kind === 'not-found').map((n) => n.id);
   const iframeAllowed: Record<string, boolean> = Object.fromEntries(
-    s.document.nodes.map((n) => [n.id, n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id))]),
+    nodes.map((n) => [n.id, n.iframePolicy?.enabled !== false && Boolean(s.resolveLiveUrl(n.id))]),
   );
   const result = reconcile({
     mode: s.mode,

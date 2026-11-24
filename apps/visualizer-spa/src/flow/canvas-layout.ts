@@ -7,6 +7,7 @@ import { resolveNodeViewport } from '../lib/viewport';
 import { computeNodeLayout } from '../lib/node-layout';
 import { packLayout, type LayoutBox, type PackedLayout } from './pack-layout';
 import { SERVICE_NODE_SIZE } from './service-node-size';
+import { stateNodeInfo } from '../lib/state-nodes';
 
 /** Группа нод сервисов бэкенда. */
 export const SERVICES_GROUP = 'services';
@@ -60,7 +61,8 @@ export function layoutCanvas(
 ): { readonly boxes: LayoutBox[]; readonly packed: PackedLayout } {
   const boxes: LayoutBox[] = nodes.map((n) => {
     const s = canvasNodeSize(doc, n, sizing, true);
-    return { id: n.id, width: s.outerWidth, height: s.outerHeight, group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? OTHER_GROUP };
+    const anchor = stateNodeInfo(n)?.screenId;
+    return { id: n.id, width: s.outerWidth, height: s.outerHeight, group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? OTHER_GROUP, ...(anchor === undefined ? {} : { anchor }) };
   });
   const groupTitles = new Map<string, string>([[OTHER_GROUP, 'Экраны'], ...(doc.groups ?? []).map((g): [string, string] => [g.id, g.title]), [SERVICES_GROUP, 'Сервисы бэкенда']]);
   // Экраны раньше сервисов: группы карты по order, затем экраны без группы, сервисы — последними.

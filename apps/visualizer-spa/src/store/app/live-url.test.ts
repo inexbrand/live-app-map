@@ -7,6 +7,7 @@ import { cellOf } from '../../lib/gateway/gateway-host';
 import { useAppStore } from '../app-store';
 import { useGatewayStore } from '../gateway-store';
 import { openMap, resetStores } from '../../test/fixtures';
+import { stateNodeId } from '../../lib/state-nodes';
 
 beforeEach(() => resetStores());
 
@@ -47,6 +48,24 @@ describe('live URL через шлюз', () => {
     expect(useAppStore.getState().resolveLiveUrl(id)).toContain('lam_init_data=init-1');
     useAppStore.getState().setDogfoodMiniappInitData('init-2');
     expect(useAppStore.getState().resolveLiveUrl(id)).toContain('lam_init_data=init-2');
+  });
+
+  test('узел-состояние: роль состояния, lam_state=<экран>/<состояние>; без вида «Состояния» узла нет', () => {
+    openMap('korbor-miniapp');
+    const id = screen(/^\/$/);
+    useAppStore.getState().setShowStates(true);
+    useAppStore.getState().setProjectStates(new Map([[id, [{ name: 'empty', id: 'empty', label: 'Пусто', kind: 'empty', role: 'employer' }]]]));
+    const nodeId = stateNodeId(id, 'empty');
+    const url = new URL(useAppStore.getState().resolveLiveUrl(nodeId) ?? 'http://нет/');
+    expect(url.searchParams.get('lam_state')).toBe(`${id}/empty`);
+    expect(url.searchParams.get('lam_role')).toBe('employer');
+    // сам экран — без lam_state
+    expect(useAppStore.getState().resolveLiveUrl(id)).not.toContain('lam_state');
+    // через шлюз параметр сохраняется
+    useGatewayStore.setState({ port: 4320, profiles: [] });
+    expect(useAppStore.getState().resolveLiveUrl(nodeId)).toContain('lam_state=');
+    useAppStore.getState().setShowStates(false);
+    expect(useAppStore.getState().resolveLiveUrl(nodeId)).toBeNull();
   });
 
   test('сервис и неизвестный id — без URL', () => {
