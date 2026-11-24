@@ -39,7 +39,8 @@ function stepBack(): void {
     c.closeTarget();
   } else if (c.sheetOpen) {
     c.closeSheet();
-  } else {
+  } else if (document.querySelector('[role="dialog"]') === null) {
+    // Окно поверх (справка, лист «Настройки») закрывается своим Esc — фокус экрана остаётся, как в use-hotkeys
     useAppStore.getState().selectPage(null);
   }
 }

@@ -1,6 +1,7 @@
 /**
- * Панель выбранного экрана как у пользователя: закрывается крестиком и Esc,
- * не висит поверх других видов; Esc не трогает её, пока открыто окно поверх.
+ * Фокус выбранного экрана как у пользователя (с Б3 — плашка FocusBar под экраном,
+ * правой панели и её крестика у экрана нет): Esc снимает фокус, плашки нет на других
+ * видах; Esc не трогает фокус, пока открыто окно поверх.
  */
 import { useDom } from './test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
@@ -38,33 +39,33 @@ function esc(): void {
 }
 
 describe('панель экрана', () => {
-  test('крестик закрывает панель и снимает выбор', async () => {
+  test('у выбранного экрана — плашка фокуса, правой панели с крестиком нет', async () => {
     const { box } = await openWithSelection();
-    fireEvent.click(box.getByRole('button', { name: 'Закрыть панель' }));
-    expect(useAppStore.getState().selectedPageId).toBeNull();
+    await waitFor(() => expect(box.getByTestId('focus-bar')).toBeTruthy());
     expect(box.queryByRole('button', { name: 'Закрыть панель' })).toBeNull();
   });
 
-  test('Esc закрывает панель', async () => {
+  test('Esc снимает фокус: плашки нет', async () => {
     const { box } = await openWithSelection();
+    await waitFor(() => expect(box.getByTestId('focus-bar')).toBeTruthy());
     esc();
     expect(useAppStore.getState().selectedPageId).toBeNull();
-    expect(box.queryByRole('button', { name: 'Закрыть панель' })).toBeNull();
+    await waitFor(() => expect(box.queryByTestId('focus-bar')).toBeNull());
   });
 
-  test('на других видах панели нет; вернулись к экранам — она снова там', async () => {
+  test('на других видах плашки фокуса нет; вернулись к экранам — она снова там', async () => {
     const { box, id } = await openWithSelection();
     const views: readonly AppView[] = ['api', 'database', 'docs', 'compare'];
     for (const view of views) {
       act(() => useViewStore.getState().setView(view));
-      expect(box.queryByRole('button', { name: 'Закрыть панель' })).toBeNull();
+      expect(box.queryByTestId('focus-bar')).toBeNull();
     }
     act(() => useViewStore.getState().setView('screens'));
     expect(useAppStore.getState().selectedPageId).toBe(id);
-    expect(box.getByRole('button', { name: 'Закрыть панель' })).toBeTruthy();
+    await waitFor(() => expect(box.getByTestId('focus-bar')).toBeTruthy());
   });
 
-  test('Esc при открытом окне поверх (справка, лист) панель не закрывает', async () => {
+  test('Esc при открытом окне поверх (справка, лист) фокус не снимает', async () => {
     const { r, id } = await openWithSelection();
     const dialog = document.createElement('div');
     dialog.setAttribute('role', 'dialog');
