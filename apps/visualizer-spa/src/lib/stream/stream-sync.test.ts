@@ -1,23 +1,30 @@
 import { describe, expect, test } from 'bun:test';
+import { readFileSync } from 'node:fs';
 import { indexDocument } from '@live-app-map/graph';
-import type { AppMapDocument } from '@live-app-map/schema';
+import { liveAppMapToAppMap, parseLiveAppMapDocument, type AppMapDocument } from '@live-app-map/schema';
 import { useAppStore } from '../../store/app-store';
 import { screensOf, type StreamSyncInput } from './stream-sync';
 
 const base = useAppStore.getInitialState();
 
+/** Настоящая карта мини-аппа с подменёнными экранами. */
 function doc(): AppMapDocument {
+  const parsed = parseLiveAppMapDocument(JSON.parse(readFileSync(new URL('../../../public/maps/korbor-miniapp.liveappmap.json', import.meta.url), 'utf8')));
+  if (!parsed.ok) {
+    throw new Error('карта korbor-miniapp не разобралась');
+  }
+  const real = liveAppMapToAppMap(parsed.document);
   return {
-    version: 1,
-    project: { name: 't', root: '.' },
+    ...real,
     baseUrl: null,
+    layout: { ...real.layout, defaultDeviceViewport: undefined },
     nodes: [
       { id: 'a', kind: 'page', title: 'a', pathPattern: '/a', viewport: { width: 1920, height: 1080, heightMode: 'fixed' } },
       { id: 'b', kind: 'page', title: 'b', pathPattern: '/b' },
       { id: 'c', kind: 'page', title: 'c', pathPattern: '/c' },
     ],
     edges: [],
-  } as unknown as AppMapDocument;
+  };
 }
 
 function input(over: Partial<StreamSyncInput>): StreamSyncInput {
