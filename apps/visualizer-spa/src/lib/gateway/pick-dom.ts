@@ -4,8 +4,13 @@
  * Функции встраиваются в скрипт страницы как текст (toString, pick-script.ts): без
  * замыканий, друг друга зовут по имени; импорты здесь — только для проверки типов.
  */
-import type { PickElement, RawComponent, StackFrame, StackSource } from './pick-messages';
-import { componentNameOf, frameFromStack, mapFrame } from './pick-source';
+import type { DebugPlace, Fiber } from '@live-app-map/sdk/runtime';
+import { componentNameOf, debugPlaceOf, fiberOf } from '@live-app-map/sdk/runtime';
+import type { PickElement, RawComponent, StackSource } from './pick-messages';
+import { mapFrame } from './pick-source';
+
+// fiber и место JSX — общие с рантаймом SDK
+export { debugPlaceOf, fiberOf } from '@live-app-map/sdk/runtime';
 
 /**
  * Селектор элемента: id, если он уникален, иначе цепочка «тег.класс:nth-of-type»
@@ -87,36 +92,6 @@ export function domPathOf(el: PickElement): string {
     parts.unshift(e.tagName.toLowerCase() + (e.id !== '' ? '#' + e.id : cls));
   }
   return parts.join(' > ');
-}
-
-/** Узел fiber React: только поля, которые читает пикер. */
-type Fiber = {
-  type?: unknown;
-  return?: Fiber | null;
-  _debugOwner?: Fiber | null;
-  _debugStack?: { stack?: unknown } | null;
-  _debugSource?: { fileName?: unknown; lineNumber?: unknown } | null;
-};
-
-/** Место JSX: исходник (React 18) или кадр стека (React 19). */
-type DebugPlace = { readonly source: StackSource | null; readonly frame: StackFrame | null };
-
-/** Fiber React DOM-элемента (свойство `__reactFiber$…`); не React — null. */
-export function fiberOf(el: Element): Fiber | null {
-  const rec = el as unknown as Record<string, unknown>;
-  const key = Object.keys(rec).find((k) => k.indexOf('__reactFiber$') === 0);
-  const fiber = key === undefined ? null : rec[key];
-  return typeof fiber === 'object' && fiber !== null ? (fiber as Fiber) : null;
-}
-
-/** Место JSX одного fiber: _debugSource вне node_modules или стек _debugStack. */
-export function debugPlaceOf(f: Fiber): DebugPlace {
-  const ds = f._debugSource;
-  if (ds !== undefined && ds !== null && typeof ds.fileName === 'string' && typeof ds.lineNumber === 'number') {
-    return { source: ds.fileName.indexOf('/node_modules/') === -1 ? { file: ds.fileName, line: ds.lineNumber } : null, frame: null };
-  }
-  const stack = f._debugStack;
-  return { source: null, frame: stack !== undefined && stack !== null && typeof stack.stack === 'string' ? frameFromStack(stack.stack) : null };
 }
 
 /**

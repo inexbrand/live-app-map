@@ -6,69 +6,8 @@
  */
 import type { OriginalPosition, StackFrame, StackSource } from './pick-messages';
 
-/**
- * Имя компонента по типу fiber: функция, класс, memo, forwardRef.
- *
- * @param type - fiber.type
- * @returns имя или null (DOM-тег, анонимный)
- */
-export function componentNameOf(type: unknown): string | null {
-  if (typeof type === 'function') {
-    return functionComponentName(type);
-  }
-  if (typeof type === 'object' && type !== null) {
-    const o = type as { displayName?: unknown; render?: unknown; type?: unknown };
-    if (typeof o.displayName === 'string' && o.displayName !== '') {
-      return o.displayName;
-    }
-    return componentNameOf(o.render === undefined ? o.type : o.render);
-  }
-  return null;
-}
-
-/** Имя функции-компонента: displayName, иначе name; с заглавной — компонент, иначе null. */
-export function functionComponentName(fn: object): string | null {
-  const named = fn as { displayName?: unknown; name?: unknown };
-  const n = typeof named.displayName === 'string' ? named.displayName : typeof named.name === 'string' ? named.name : '';
-  return /^[A-Z]/.test(n) ? n : null;
-}
-
-/**
- * Место создания JSX из стека React 19 (\`fiber._debugStack.stack\`):
- * первый кадр из исходников приложения, не из node_modules. Позиция — в
- * коде, который отдал dev-сервер (Vite); исходную даёт sourcemap.
- *
- * @param stack - текст стека
- * @returns кадр или null
- */
-export function frameFromStack(stack: string): StackFrame | null {
-  const lines = stack.split('\n');
-  for (let i = 0; i < lines.length; i++) {
-    const f = appFrameOf(lines[i] ?? '');
-    if (f !== null) {
-      return f;
-    }
-  }
-  return null;
-}
-
-/** Кадр строки стека, если это модуль приложения (не node_modules, не /@vite, ts/js). */
-export function appFrameOf(line: string): StackFrame | null {
-  const m = /(?:\(|@|at )((?:https?|file):\/\/[^\s)]+?):(\d+):(\d+)\)?\s*$/.exec(line);
-  if (m === null) {
-    return null;
-  }
-  let p = '';
-  try {
-    p = new URL(m[1] ?? '').pathname;
-  } catch (e) {
-    return null;
-  }
-  if (p.indexOf('/node_modules/') !== -1 || p.indexOf('/@') === 0 || !/\.(t|j)sx?$/.test(p)) {
-    return null;
-  }
-  return { url: m[1] ?? '', file: decodeURIComponent(p.replace(/^\/+/, '')), line: Number(m[2]), column: Number(m[3]) };
-}
+// Имя компонента и кадр стека — общие с рантаймом SDK (window.__LAM__.components)
+export { appFrameOf, componentNameOf, frameFromStack, functionComponentName } from '@live-app-map/sdk/runtime';
 
 /**
  * Исходная позиция по sourcemap v3 (VLQ): последний сегмент строки, чей

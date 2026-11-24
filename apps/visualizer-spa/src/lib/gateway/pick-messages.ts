@@ -3,11 +3,10 @@
  */
 
 
-/** Место в исходнике из стека React (dev); line — исходная строка, null — не удалось перевести. */
-export type StackSource = { readonly file: string; readonly line: number | null };
+import type { StackFrame, StackSource } from '@live-app-map/sdk/runtime';
 
-/** Кадр стека: модуль, как его отдал dev-сервер, и позиция в отданном коде. */
-export type StackFrame = { readonly url: string; readonly file: string; readonly line: number; readonly column: number };
+/** Место в исходнике из стека React (dev) и кадр стека — общие с рантаймом SDK. */
+export type { StackFrame, StackSource };
 
 /** Исходная позиция по sourcemap. */
 export type OriginalPosition = { readonly source: string; readonly line: number; readonly column: number };

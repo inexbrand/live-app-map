@@ -26,6 +26,7 @@
     "@live-app-map/mcp-server": "workspace:*",
     "@live-app-map/scanner-docs": "workspace:*",
     "@live-app-map/schema": "workspace:*",
+    "@live-app-map/sdk": "workspace:*",
     "@tailwindcss/vite": "^4.3.5",
     "@xyflow/react": "^12.6.0",
     "class-variance-authority": "^0.7.1",
