@@ -2,7 +2,7 @@
  * Vite-плагин шлюза: поднимает шлюз живых экранов рядом с dev-сервером
  * визуализатора и отдаёт REST профилей `/__lam_sessions`.
  */
-import type { Plugin } from 'vite';
+import type { Plugin, PreviewServer } from 'vite';
 import { resolveLamDir } from '@live-app-map/mcp-server';
 import path from 'node:path';
 import { launchSnapshotBrowser } from './snapshot-browser';
@@ -34,7 +34,10 @@ function previousGateway(): Stoppable | undefined {
   return typeof stop === 'function' ? { stop: (f) => Reflect.apply(stop, v, [f]) } : undefined;
 }
 
-type ViteServer = Parameters<NonNullable<Extract<Plugin['configureServer'], (...args: never[]) => unknown>>>[0];
+/** Общее у dev-сервера и сервера прод-сборки (vite preview). */
+export type HostServer = Pick<PreviewServer, 'middlewares' | 'config'> & {
+  readonly httpServer: { on(event: 'close', cb: () => void): unknown } | null;
+};
 
 /** Шлюз на первом свободном порту из PORT_TRIES подряд; все заняты — undefined. */
 function startOnFreePort(wanted: number, store: SessionStore, log: (line: string) => void): ReturnType<typeof startGateway> | undefined {
@@ -49,12 +52,15 @@ function startOnFreePort(wanted: number, store: SessionStore, log: (line: string
 }
 
 /** REST профилей и снимков рядом с шлюзом; закрытие dev-сервера закрывает и их. */
-function mountGateway(server: ViteServer, gateway: ReturnType<typeof startGateway>, store: SessionStore, sessionsDir: string, wanted: number): void {
+function mountGateway(server: HostServer, gateway: ReturnType<typeof startGateway>, store: SessionStore, sessionsDir: string, wanted: number): void {
   Reflect.set(globalThis, GLOBAL_KEY, gateway);
   server.config.logger.info(`  ➜  Шлюз живых экранов: http://<профиль>--<цель>.localhost:${gateway.port}/`);
   const port = gateway.port ?? wanted;
   // Снимки рядом с профилями, тоже вне git: на них могут быть данные под входом.
-  const snapshots = new SnapshotService({ dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'), launch: launchSnapshotBrowser });
+  const snapshots = new SnapshotService({
+    dir: path.join(path.dirname(sessionsDir), '.lam-snapshots'),
+    launch: launchSnapshotBrowser,
+  });
   server.middlewares.use(createSessionsMiddleware(store, port));
   server.middlewares.use(createSnapshotMiddleware(snapshots, port));
   server.httpServer?.on('close', () => {
@@ -69,17 +75,21 @@ function mountGateway(server: ViteServer, gateway: ReturnType<typeof startGatewa
 export function lamGatewayPlugin(): Plugin {
   return {
     name: 'lam-gateway',
-    configureServer(server) {
-      previousGateway()?.stop(true);
-      const sessionsDir = resolveSessionsDir(resolveLamDir(process.cwd()));
-      const store = new SessionStore(sessionsDir);
-      const wanted = Number(process.env['LAM_GATEWAY_PORT'] ?? DEFAULT_GATEWAY_PORT);
-      const gateway = startOnFreePort(wanted, store, (l) => server.config.logger.warn(l));
-      if (gateway === undefined) {
-        server.config.logger.error(`[lam-gateway] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: живые экраны пойдут напрямую`);
-        return;
-      }
-      mountGateway(server, gateway, store, sessionsDir, wanted);
-    },
+    configureServer: startGatewayOn,
+    configurePreviewServer: startGatewayOn,
   };
+}
+
+/** Шлюз и его REST рядом с сервером визуализатора (dev или прод-сборка). */
+function startGatewayOn(server: HostServer): void {
+  previousGateway()?.stop(true);
+  const sessionsDir = resolveSessionsDir(resolveLamDir(process.cwd()));
+  const store = new SessionStore(sessionsDir);
+  const wanted = Number(process.env['LAM_GATEWAY_PORT'] ?? DEFAULT_GATEWAY_PORT);
+  const gateway = startOnFreePort(wanted, store, (l) => server.config.logger.warn(l));
+  if (gateway === undefined) {
+    server.config.logger.error(`[lam-gateway] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: живые экраны пойдут напрямую`);
+    return;
+  }
+  mountGateway(server, gateway, store, sessionsDir, wanted);
 }

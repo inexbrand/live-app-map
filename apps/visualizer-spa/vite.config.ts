@@ -5,7 +5,7 @@ import tailwindcss from '@tailwindcss/vite';
 import react from '@vitejs/plugin-react';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
-import type { Plugin, ProxyOptions } from 'vite';
+import type { Plugin, PreviewServer, ProxyOptions } from 'vite';
 import { defineConfig } from 'vite';
 import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
@@ -29,31 +29,28 @@ const publicMapsDir = path.join(spaRoot, 'public', 'maps');
 /** Корень монорепо: scripts/ и packages/ для свежего скана карт. */
 const monorepoRoot = path.resolve(spaRoot, '../..');
 
+/** REST визуализатора: одинаково у dev-сервера и у прод-сборки (vite preview). */
+function mountApi(server: Pick<PreviewServer, 'middlewares'>): void {
+  server.middlewares.use(httpsPathProxyMiddleware);
+  server.middlewares.use(errorReportsMiddleware);
+  server.middlewares.use(agentStateMiddleware);
+  server.middlewares.use(commentsMiddleware);
+  server.middlewares.use(modelsMiddleware);
+  server.middlewares.use(mcpAgentMiddleware);
+  server.middlewares.use(docsAssetMiddleware);
+  server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
+  server.middlewares.use(docsWriteMiddleware);
+  server.middlewares.use(tlsCheckMiddleware);
+}
+
 /**
- * POST /api/error-reports — client ErrorBoundary → SMTP (если env).
+ * REST визуализатора: отчёты об ошибках, замечания, модели голоса, агент, документы, версии карт.
  */
 function errorReportsPlugin(): Plugin {
   return {
     name: 'lam-error-reports',
-    configureServer(server) {
-      server.middlewares.use(httpsPathProxyMiddleware);
-      server.middlewares.use(errorReportsMiddleware);
-      server.middlewares.use(agentStateMiddleware);
-      server.middlewares.use(commentsMiddleware);
-      server.middlewares.use(modelsMiddleware);
-      server.middlewares.use(mcpAgentMiddleware);
-      server.middlewares.use(docsAssetMiddleware);
-      server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, process.env)));
-      server.middlewares.use(docsWriteMiddleware);
-    },
-    configurePreviewServer(server) {
-      server.middlewares.use(errorReportsMiddleware);
-      server.middlewares.use(agentStateMiddleware);
-      server.middlewares.use(commentsMiddleware);
-      server.middlewares.use(modelsMiddleware);
-      server.middlewares.use(mcpAgentMiddleware);
-      server.middlewares.use(docsAssetMiddleware);
-    },
+    configureServer: mountApi,
+    configurePreviewServer: mountApi,
   };
 }
 
@@ -76,18 +73,6 @@ function mapsCatalogPlugin(): Plugin {
   };
 }
 
-/**
- * Middleware: GET /__lam_tls_check?url=https://… — probe TLS (accept self-signed).
- */
-function tlsCheckPlugin(): Plugin {
-  return {
-    name: 'lam-tls-check',
-    configureServer(server) {
-      server.middlewares.use(tlsCheckMiddleware);
-    },
-  };
-}
-
 /** Path-proxy поверхности: префикс снимается, ответ переписывается под iframe. */
 function surfaceProxy(name: string, target: string, secure?: boolean): ProxyOptions {
   const prefix = `/__lam_proxy/${name}`;
@@ -104,6 +89,17 @@ function surfaceProxy(name: string, target: string, secure?: boolean): ProxyOpti
   };
 }
 
+/** Miniapp/site path-proxy + asset rewrite. Admin — direct (no path proxy). */
+function surfaceProxies(): Record<string, ProxyOptions> {
+  return {
+    '/__lam_proxy/miniapp': surfaceProxy('miniapp', 'https://vite.localhost:5175', false),
+    // legacy bookmark / stale maps: still proxy admin but WITH asset rewrite
+    '/__lam_proxy/admin': surfaceProxy('admin', 'http://localhost:16002'),
+    '/__lam_proxy/site': surfaceProxy('site', 'http://localhost:16001'),
+    // '/__lam_proxy/https/<host:port>' — httpsPathProxyMiddleware (цель по запросу)
+  };
+}
+
 export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(spaRoot, 'src') },
@@ -112,23 +108,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
     mapsCatalogPlugin(),
-    tlsCheckPlugin(),
     errorReportsPlugin(),
     lamGatewayPlugin(),
     lamStreamPlugin(),
   ],
-  server: {
-    port: 4310,
-    host: true,
-    // Miniapp/site path-proxy + asset rewrite. Admin — direct (no path proxy).
-    proxy: {
-      '/__lam_proxy/miniapp': surfaceProxy('miniapp', 'https://vite.localhost:5175', false),
-      // legacy bookmark / stale maps: still proxy admin but WITH asset rewrite
-      '/__lam_proxy/admin': surfaceProxy('admin', 'http://localhost:16002'),
-      '/__lam_proxy/site': surfaceProxy('site', 'http://localhost:16001'),
-      // '/__lam_proxy/https/<host:port>' — httpsPathProxyMiddleware (цель по запросу)
-    },
-  },
+  server: { port: 4310, host: true, proxy: surfaceProxies() },
+  // Прод-сборка (bun run start): тот же порт и прокси, что у dev
+  preview: { port: 4310, host: true, proxy: surfaceProxies() },
   optimizeDeps: {
     // transformers импортирует только воркер голоса: без include Vite находит его при первой
     // записи голоса и перезагружает страницу посреди работы (и e2e)

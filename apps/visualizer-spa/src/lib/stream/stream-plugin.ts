@@ -3,6 +3,7 @@
  * и отдаёт его порт карте по `GET /__lam_stream`.
  */
 import type { Plugin } from 'vite';
+import type { HostServer } from '../gateway/vite-plugin';
 import { launchStreamBrowser } from '../gateway/snapshot-browser';
 import { startStreamServer, type StreamServer } from './stream-server';
 
@@ -29,7 +30,10 @@ async function stopPrevious(): Promise<void> {
 function startOnFreePort(wanted: number): StreamServer | undefined {
   for (let i = 0; i < PORT_TRIES; i++) {
     try {
-      return startStreamServer({ port: wanted + i, launch: launchStreamBrowser });
+      return startStreamServer({
+        port: wanted + i,
+        launch: launchStreamBrowser,
+      });
     } catch {
       // порт занят — следующий
     }
@@ -41,25 +45,29 @@ function startOnFreePort(wanted: number): StreamServer | undefined {
 export function lamStreamPlugin(): Plugin {
   return {
     name: 'lam-stream',
-    async configureServer(server) {
-      await stopPrevious();
-      const wanted = Number(process.env['LAM_STREAM_PORT'] ?? DEFAULT_STREAM_PORT);
-      const stream = startOnFreePort(wanted);
-      if (stream === undefined) {
-        server.config.logger.error(`[lam-stream] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: экраны не покажутся`);
-        return;
-      }
-      Reflect.set(globalThis, GLOBAL_KEY, stream);
-      server.config.logger.info(`  ➜  Трансляция экранов: ws://127.0.0.1:${stream.port}/`);
-      server.middlewares.use((req, res, next) => {
-        if (req.url !== STREAM_INFO_PATH) {
-          next();
-          return;
-        }
-        res.setHeader('content-type', 'application/json');
-        res.end(JSON.stringify({ port: stream.port }));
-      });
-      server.httpServer?.on('close', () => void stream.stop());
-    },
+    configureServer: startStreamOn,
+    configurePreviewServer: startStreamOn,
   };
+}
+
+/** Сервер трансляции рядом с сервером визуализатора (dev или прод-сборка). */
+async function startStreamOn(server: HostServer): Promise<void> {
+  await stopPrevious();
+  const wanted = Number(process.env['LAM_STREAM_PORT'] ?? DEFAULT_STREAM_PORT);
+  const stream = startOnFreePort(wanted);
+  if (stream === undefined) {
+    server.config.logger.error(`[lam-stream] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: экраны не покажутся`);
+    return;
+  }
+  Reflect.set(globalThis, GLOBAL_KEY, stream);
+  server.config.logger.info(`  ➜  Трансляция экранов: ws://127.0.0.1:${stream.port}/`);
+  server.middlewares.use((req, res, next) => {
+    if (req.url !== STREAM_INFO_PATH) {
+      next();
+      return;
+    }
+    res.setHeader('content-type', 'application/json');
+    res.end(JSON.stringify({ port: stream.port }));
+  });
+  server.httpServer?.on('close', () => void stream.stop());
 }
