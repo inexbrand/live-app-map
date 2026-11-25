@@ -4,13 +4,19 @@
  * с компьютера против открытой карты — с переходом к роуту.
  * Скриншоты пишутся в LAM_SHOTS_DIR, если задана.
  */
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
 import path from 'node:path';
-import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
 import { openMap, pickOption, shot, PROJECT_MAP, PROJECT_MAP_ID, projectMapFile } from './helpers';
 
-const dir = path.dirname(fileURLToPath(import.meta.url));
+/**
+ * Свой временный каталог для копии карты. Не test-results: параллельный запуск playwright
+ * в том же пакете очищает test-results в начале и стирал бы файл до выбора.
+ */
+function scratchFile(name: string): string {
+  return path.join(mkdtempSync(path.join(tmpdir(), 'lam-compare-')), name);
+}
 async function openCompare(page: Page): Promise<void> {
   await openMap(page, PROJECT_MAP, {
     ready: (p) => expect(p.getByTestId('map-select')).toHaveAttribute('data-value', PROJECT_MAP_ID, { timeout: 30_000 }),
@@ -35,7 +41,7 @@ async function pickFile(page: Page, side: string, file: string): Promise<void> {
 type LiveMap = { pages: Array<{ id: string; title: string; type?: string }>; code: { routes: Array<{ id: string; method: string; path: string }> } };
 
 test.describe('сравнение карт', () => {
-  test('копия без роута против свежего скана проекта: роут появился', async ({ page }, info) => {
+  test('копия без роута против свежего скана проекта: роут появился', async ({ page }) => {
     test.setTimeout(180_000);
     // Карта проекта не в git (map.json в .gitignore) — «было» берётся файлом.
     const map = JSON.parse(readFileSync(projectMapFile(), 'utf8')) as LiveMap;
@@ -43,8 +49,7 @@ test.describe('сравнение карт', () => {
     if (route === undefined) {
       throw new Error('в карте проекта нет роутов');
     }
-    mkdirSync(info.outputDir, { recursive: true });
-    const file = path.join(info.outputDir, 'project-no-route.liveappmap.json');
+    const file = scratchFile('project-no-route.liveappmap.json');
     writeFileSync(file, JSON.stringify({ ...map, code: { ...map.code, routes: map.code.routes.slice(1) } }));
     await openCompare(page);
     await pickFile(page, 'compare-left', file);
@@ -56,7 +61,7 @@ test.describe('сравнение карт', () => {
     await shot(page, 'compare-file-vs-scan.png');
   });
 
-  test('изменённая копия с компьютера против открытой карты: экран, роут, переход к роуту', async ({ page }, info) => {
+  test('изменённая копия с компьютера против открытой карты: экран, роут, переход к роуту', async ({ page }) => {
     const raw = readFileSync(projectMapFile(), 'utf8');
     const map = JSON.parse(raw) as LiveMap;
     const route = map.code.routes[0];
@@ -70,8 +75,7 @@ test.describe('сравнение карт', () => {
       pages: map.pages.map((p) => (p.id === screen.id ? { ...p, title: 'Старое имя' } : p)),
       code: { ...map.code, routes: map.code.routes.slice(1) },
     };
-    mkdirSync(info.outputDir, { recursive: true });
-    const file = path.join(info.outputDir, 'project-old.liveappmap.json');
+    const file = scratchFile('project-old.liveappmap.json');
     writeFileSync(file, JSON.stringify(old));
 
     await openCompare(page);

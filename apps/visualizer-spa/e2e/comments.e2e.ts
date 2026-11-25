@@ -12,10 +12,11 @@ import { screenPage } from './stream-page';
 /** Центр первой видимой кнопки или ссылки страницы экрана в координатах окна карты. */
 async function componentPoint(page: Page, nodeId: string): Promise<{ x: number; y: number }> {
   const node = page.locator(`.react-flow__node[data-id="${nodeId}"]`);
-  const screen = await screenPage(node);
   const canvas = node.locator('canvas[data-lam-screen]');
   let point: { x: number; y: number } | undefined;
   await expect(async () => {
+    // Страницу ищем на каждой попытке: трансляция может переоткрыть вкладку экрана
+    const screen = await screenPage(node);
     const inPage = await screen.evaluate(() => {
       const el = [...document.querySelectorAll('button, a[href]')].find((e) => {
         const r = e.getBoundingClientRect();
