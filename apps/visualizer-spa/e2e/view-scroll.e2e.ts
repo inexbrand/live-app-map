@@ -3,7 +3,19 @@
  * каждая панель помещается в окно, а если содержимое выше панели — листается колесом мыши.
  */
 import { expect, test, type Page } from '@playwright/test';
-import { openMap, PROJECT_MAP } from './helpers';
+import { readFileSync } from 'node:fs';
+import { openMap, PROJECT_MAP, projectMapFile } from './helpers';
+
+/** Сколько роутов API в карте проекта на диске: список показывает все, без обрезки. */
+function routesInMap(): number {
+  const map: unknown = JSON.parse(readFileSync(projectMapFile(), 'utf8'));
+  const code: unknown = typeof map === 'object' && map !== null && 'code' in map ? map.code : null;
+  const routes: unknown = typeof code === 'object' && code !== null && 'routes' in code ? code.routes : null;
+  if (!Array.isArray(routes) || routes.length === 0) {
+    throw new Error(`в карте ${projectMapFile()} нет code.routes — пересканируйте проект`);
+  }
+  return routes.length;
+}
 
 /** Окна, в которых владелец видел, что вид «API» не листается. */
 const VIEWPORTS = [
@@ -46,11 +58,12 @@ for (const viewport of VIEWPORTS) {
       await page.setViewportSize(viewport);
     });
 
-    test('API: список роутов, покрытие в дереве и описание роута листаются колесом', async ({ page }) => {
+    test('API: список роутов, домены и описание роута листаются колесом', async ({ page }) => {
       await page.getByTestId('view-api').click();
-      await expect(page.getByTestId('api-route-row')).toHaveCount(314);
-      await expectWheelScrolls(page, '.api-list__scroll');
-      await expectWheelScrolls(page, '.api-tree', '[data-testid=api-coverage-box]');
+      await expect(page.getByTestId('api-route-row')).toHaveCount(routesInMap());
+      await expectWheelScrolls(page, '[data-testid=api-route-list]');
+      // Домены под покрытием — своя прокрутка в левой колонке
+      await expectWheelScrolls(page, 'nav[aria-label="Домены API"]');
 
       await page.locator('#api-search').fill('/api/v1/recruiter/vacancies/:vacancyId/applications');
       await page.getByTestId('api-route-row').filter({ hasText: 'POST' }).first().click();

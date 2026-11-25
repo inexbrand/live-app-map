@@ -8,6 +8,8 @@ import { decodeFrame, type ClientMessage } from './stream-protocol';
 import { startStreamServer, type StreamServer } from './stream-server';
 
 let app: Server<undefined>;
+/** Страница, которая меняется каждые 100 мс: кадры идут, пока она открыта. */
+const TICK_PAGE = '<body><script>let n=0;setInterval(()=>{document.body.style.background=(n++%2)?"#fff":"#eee"},100)</script>';
 let stream: StreamServer;
 
 type Inbox = { readonly ws: WebSocket; readonly frames: string[]; readonly texts: unknown[] };
@@ -42,7 +44,7 @@ async function until(cond: () => boolean): Promise<void> {
 const send = (box: Inbox, m: ClientMessage): void => box.ws.send(JSON.stringify(m));
 
 beforeAll(() => {
-  app = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: () => new Response('<body style="background:#fff"><script>parent.postMessage({lam:"page",href:location.href},"*")</script>', { headers: { 'content-type': 'text/html' } }) });
+  app = Bun.serve({ port: 0, hostname: '127.0.0.1', fetch: (req) => new URL(req.url).pathname === '/tick' ? new Response(TICK_PAGE, { headers: { 'content-type': 'text/html' } }) : new Response('<body style="background:#fff"><script>parent.postMessage({lam:"page",href:location.href},"*")</script>', { headers: { 'content-type': 'text/html' } }) });
   stream = startStreamServer({ port: 0, launch: launchStreamBrowser, idleCloseMs: 100 });
 });
 
@@ -59,6 +61,24 @@ describe('сервер трансляции', () => {
     const b = await connect();
     await until(() => b.frames.includes('n1'));
     a.ws.close();
+    b.ws.close();
+  }, 30_000);
+
+  test('две карты: набор второй не закрывает экраны первой', async () => {
+    const a = await connect();
+    const b = await connect();
+    send(a, { t: 'sync', screens: [{ key: 'a1', url: `http://127.0.0.1:${app.port}/tick`, width: 320, height: 200, live: true }] });
+    await until(() => a.frames.includes('a1'));
+    send(b, { t: 'sync', screens: [{ key: 'b1', url: `http://127.0.0.1:${app.port}/tick?b`, width: 320, height: 200, live: true }] });
+    await until(() => b.frames.includes('b1'));
+    // Страница первой карты жива: её кадры продолжают приходить
+    const before = a.frames.filter((k) => k === 'a1').length;
+    await until(() => a.frames.filter((k) => k === 'a1').length > before + 3);
+    // Первая карта ушла — её экран закрывается, экран второй остаётся
+    a.ws.close();
+    await Bun.sleep(500);
+    const bBefore = b.frames.filter((k) => k === 'b1').length;
+    await until(() => b.frames.filter((k) => k === 'b1').length > bBefore + 3);
     b.ws.close();
   }, 30_000);
 

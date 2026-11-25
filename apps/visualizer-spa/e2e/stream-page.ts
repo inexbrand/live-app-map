@@ -37,7 +37,10 @@ export async function screenPage(node: Locator): Promise<Page> {
   const b = await streamBrowser();
   let found: Page | undefined;
   await expect(async () => {
-    found = b.contexts().flatMap((c) => c.pages()).find((p) => p.url() === url || p.url().startsWith(url.split('#')[0] ?? url));
+    const pages = b.contexts().flatMap((c) => c.pages());
+    // Сначала точный адрес: у мини-аппа с hash-роутером (/#/feed) до # адрес общий у всех
+    // экранов приложения, и по префиксу находилась чужая страница, которую трансляция потом закрывала.
+    found = pages.find((p) => p.url() === url) ?? pages.find((p) => p.url().startsWith(url.split('#')[0] ?? url));
     expect(found, `страница ${url} не открыта в браузере трансляции`).toBeDefined();
   }).toPass({ timeout: 30_000 });
   if (found === undefined) {

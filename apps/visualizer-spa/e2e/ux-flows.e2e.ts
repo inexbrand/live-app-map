@@ -21,7 +21,8 @@ async function palettePick(page: Page, query: string, kind: string): Promise<voi
 }
 
 test.describe('понять проект', () => {
-  test('поиск → роут → таблица → назад; адрес хранит место, крошки ведут обратно', async ({ page }) => {
+  // Крошки убраны по просьбе владельца (эпоха toolbar-shadcn-routes): место держит адрес, «назад» браузера и F5.
+  test('поиск → роут → таблица → назад; адрес хранит место', async ({ page }) => {
     const errors = collectPageErrors(page);
     await openKorbor(page);
 
@@ -30,7 +31,8 @@ test.describe('понять проект', () => {
     await expect(card).toContainText('/api/v1/auth/web/telegram-login');
     await expect(page).toHaveURL(/view=api/);
     await expect(page).toHaveURL(/route=/);
-    await expect(page.getByTestId('breadcrumbs')).toContainText('/api/v1/auth/web/telegram-login');
+    // Выбранный роут подсвечен в списке
+    await expect(page.locator('[data-testid=api-route-row][aria-current=true]')).toContainText('/api/v1/auth/web/telegram-login');
     await shot(page, 'flow-route.png');
 
     await palettePick(page, 'vacancies', 'table');
@@ -42,20 +44,17 @@ test.describe('понять проект', () => {
     await expect(card).toContainText('/api/v1/auth/web/telegram-login');
     await page.reload();
     await expect(page.getByTestId('api-route-card')).toContainText('/api/v1/auth/web/telegram-login', { timeout: 30_000 });
-
-    // Крошка вида снимает выбор.
-    await page.getByTestId('breadcrumbs').getByRole('button', { name: 'API', exact: true }).click();
-    await expect(page.getByTestId('api-route-card')).toHaveCount(0);
     expect(errors).toEqual([]);
   });
 
-  test('экран из поиска: холст выбирает его, в адресе screen, крошки с группой', async ({ page }) => {
+  test('экран из поиска: холст выбирает его, в адресе screen, плашка экрана под ним', async ({ page }) => {
     await openKorbor(page);
     await palettePick(page, 'applications', 'screen');
     await expect(page).toHaveURL(/screen=/);
-    const crumbs = page.getByTestId('breadcrumbs');
-    await expect(crumbs).toContainText('applications');
-    await expect(page.locator('.react-flow__node.selected, .page-node--selected').first()).toBeVisible();
+    const selected = page.locator('.page-node--selected');
+    await expect(selected).toHaveCount(1);
+    await expect(selected).toContainText('applications');
+    await expect(page.getByTestId('focus-bar')).toBeVisible();
     await shot(page, 'flow-screen.png');
   });
 
@@ -165,7 +164,8 @@ test.describe('граф документации', () => {
 });
 
 test.describe('тема', () => {
-  test('T переключает светлую тему, выбор переживает перезагрузку', async ({ page }) => {
+  // Переключатель темы переехал из шапки в «Настройки» (эпоха toolbar-shadcn-routes).
+  test('T переключает светлую тему, выбор переживает перезагрузку, «Настройки» возвращают тёмную', async ({ page }) => {
     await openKorbor(page, '&view=docs');
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
     await page.keyboard.press('t');
@@ -173,7 +173,8 @@ test.describe('тема', () => {
     await shot(page, 'theme-light-docs.png');
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await page.getByTestId('theme-toggle').click();
+    await page.getByRole('button', { name: 'Настройки' }).click();
+    await page.getByTestId('theme-dark').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
 });

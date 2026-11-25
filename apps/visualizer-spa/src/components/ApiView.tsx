@@ -313,7 +313,7 @@ function ApiLayout(props: { readonly index: CodeIndex; readonly state: ApiViewSt
 
       <section className="flex min-h-0 flex-col border-r border-border">
         <ApiFilters index={index} state={state} filter={filter} set={set} reset={() => setFilter(EMPTY)} />
-        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2" ref={props.listRef}>
+        <div className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto p-2" ref={props.listRef} data-testid="api-route-list">
           <RouteList index={index} domains={domains} selected={selected} openRoute={openRoute} query={filter.query} resetAll={resetAll} />
         </div>
       </section>

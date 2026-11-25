@@ -69,9 +69,10 @@ test('колесо: над экраном в «окне» — страница, 
   await page.mouse.wheel(0, -200);
   await expect.poll(() => transform(page), { timeout: 3_000 }).not.toBe(zoomed);
 
-  // «Целиком»: окно страницы = её высота.
+  // «Целиком»: окно страницы = её высота — холст выше «окна» (высота ленты зависит от данных korbor, числа не зашиваем).
+  const windowHeight = Number(await node.locator('canvas[data-lam-screen]').getAttribute('height'));
   await node.locator('[data-lam-full-height]').click();
-  await expect.poll(async () => Number(await node.locator('canvas[data-lam-screen]').getAttribute('height')), { timeout: 20_000 }).toBeGreaterThan(1500);
+  await expect.poll(async () => Number(await node.locator('canvas[data-lam-screen]').getAttribute('height')), { timeout: 20_000 }).toBeGreaterThan(windowHeight);
   const full = await liveFrame(node);
   await expect
     .poll(() => full.evaluate((s) => { const el = document.querySelector(s); return el === null ? -1 : el.scrollHeight - el.clientHeight; }, SCROLLER), { timeout: 20_000 })
