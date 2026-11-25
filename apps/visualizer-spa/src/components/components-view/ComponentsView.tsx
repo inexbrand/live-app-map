@@ -67,7 +67,14 @@ export function ComponentsView() {
       </Empty>
     );
   }
-  if (status === 'ready' && nodes.length === 0) {
+  if (status === 'idle' || status === 'loading') {
+    return (
+      <Empty data-testid="components-loading">
+        <EmptyDescription>Загружаю варианты компонентов проекта…</EmptyDescription>
+      </Empty>
+    );
+  }
+  if (nodes.length === 0) {
     return (
       <Empty data-testid="components-empty">
         <EmptyDescription>

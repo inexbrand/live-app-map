@@ -1,5 +1,6 @@
 /**
- * Раскладка галереи на холсте: колонка на группу (приложение · папка), варианты — сверху вниз.
+ * Раскладка галереи на холсте, как Storybook: группа (приложение · папка) — заголовок,
+ * под ним строка на компонент, варианты компонента — слева направо.
  */
 import type { Gallery, GalleryItem } from '../../lib/components-gallery/gallery';
 
@@ -9,22 +10,30 @@ export type GalleryNodePlace =
   | { readonly kind: 'item'; readonly id: string; readonly x: number; readonly y: number; readonly item: GalleryItem };
 
 /** Зазоры раскладки, px мира. */
-export const GALLERY_GAP = { column: 48, row: 24, title: 40 };
+export const GALLERY_GAP = { column: 32, row: 32, title: 40, group: 96 };
 
 /**
- * Узлы галереи: заголовок колонки «Приложение · папка» и варианты под ним.
+ * Узлы галереи: заголовок группы, под ним строки компонентов.
  *
  * @param gallery - галерея
  * @param size - внешний размер узла варианта
  */
 export function galleryLayout(gallery: Gallery, size: { readonly width: number; readonly height: number }): GalleryNodePlace[] {
   const out: GalleryNodePlace[] = [];
-  gallery.groups.forEach((g, gi) => {
-    const x = gi * (size.width + GALLERY_GAP.column);
-    out.push({ kind: 'title', id: 'title:' + g.appId + '/' + g.folder, x, y: 0, title: g.folder === '.' ? g.appLabel : g.appLabel + ' · ' + g.folder, width: size.width });
-    g.items.forEach((item, i) => {
-      out.push({ kind: 'item', id: item.id, x, y: GALLERY_GAP.title + i * (size.height + GALLERY_GAP.row), item });
-    });
-  });
+  let y = 0;
+  for (const g of gallery.groups) {
+    const rows = new Map<string, GalleryItem[]>();
+    for (const item of g.items) {
+      rows.set(item.key, [...(rows.get(item.key) ?? []), item]);
+    }
+    const widest = Math.max(...[...rows.values()].map((r) => r.length));
+    out.push({ kind: 'title', id: 'title:' + g.appId + '/' + g.folder, x: 0, y, title: g.folder === '.' ? g.appLabel : g.appLabel + ' · ' + g.folder, width: widest * (size.width + GALLERY_GAP.column) - GALLERY_GAP.column });
+    y += GALLERY_GAP.title;
+    for (const row of rows.values()) {
+      row.forEach((item, i) => out.push({ kind: 'item', id: item.id, x: i * (size.width + GALLERY_GAP.column), y, item }));
+      y += size.height + GALLERY_GAP.row;
+    }
+    y += GALLERY_GAP.group - GALLERY_GAP.row;
+  }
   return out;
 }

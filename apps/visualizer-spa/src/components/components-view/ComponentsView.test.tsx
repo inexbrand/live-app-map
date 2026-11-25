@@ -33,6 +33,12 @@ describe('вид', () => {
     expect(ui.getByTestId('components-problems').textContent).toContain('packages/x/Y.tsx#Y');
     ui.unmount();
   });
+  test('пока грузится — подпись, не пустой холст', () => {
+    useComponentsStore.setState({ status: 'loading' });
+    const ui = render(<ComponentsView />);
+    expect(ui.getByTestId('components-loading').textContent).toBe('Загружаю варианты компонентов проекта…');
+    ui.unmount();
+  });
   test('ошибка загрузки — текст ошибки', () => {
     useComponentsStore.setState({ status: 'error', error: 'проект не открыт' });
     const ui = render(<ComponentsView />);
