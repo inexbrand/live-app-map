@@ -34,10 +34,12 @@ const skipWebServer = process.env.PLAYWRIGHT_SKIP_WEBSERVER === '1';
 export default defineConfig({
   testDir: './e2e',
   testMatch: '**/*.e2e.ts',
-  fullyParallel: true,
+  // Один воркер: сервер трансляции и состояние агента у dev-сервера общие на все вкладки —
+  // параллельные тесты закрывают экраны друг друга и ловят чужие просьбы снимка.
+  fullyParallel: false,
   forbidOnly: Boolean(process.env.CI),
   retries: process.env.CI ? 1 : 0,
-  workers: process.env.CI ? 1 : undefined,
+  workers: 1,
   reporter: [['list']],
   timeout: 60_000,
   expect: {
