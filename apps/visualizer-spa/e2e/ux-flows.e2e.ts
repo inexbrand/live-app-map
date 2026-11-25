@@ -173,7 +173,7 @@ test.describe('тема', () => {
     await shot(page, 'theme-light-docs.png');
     await page.reload();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'light');
-    await page.getByRole('button', { name: 'Настройки' }).click();
+    await page.getByTestId('toolbar').getByRole('button', { name: 'Настройки' }).click();
     await page.getByTestId('theme-dark').click();
     await expect(page.locator('html')).toHaveAttribute('data-theme', 'dark');
   });
