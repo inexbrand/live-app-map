@@ -5,6 +5,7 @@
  * Функции встраиваются в страницу текстом (toString): без импортов значений и
  * замыканий, друг друга зовут по имени. Их же встраивает пикер визуализатора.
  */
+import { lamBundleFrameInLibrary, lamIsBundleFile } from './sourcemap';
 
 /** Кадр стека в модуле приложения: адрес модуля, путь, позиция в отданном коде. */
 export type StackFrame = { readonly url: string; readonly file: string; readonly line: number; readonly column: number };
@@ -68,7 +69,8 @@ export function frameFromStack(stack: string): StackFrame | null {
   const lines = stack.split('\n');
   for (let i = 0; i < lines.length; i++) {
     const f = appFrameOf(lines[i] ?? '');
-    if (f !== null) {
+    // В бандле сборки для карты React и библиотеки лежат в тех же файлах, что код приложения — отличает карта
+    if (f !== null && !(lamIsBundleFile(f.file) && lamBundleFrameInLibrary(f.url, f.line, f.column))) {
       return f;
     }
   }

@@ -39,3 +39,5 @@ apps/visualizer-spa/public/maps/*.generated.liveappmap.json
 target/
 .metrics/
 codedb.snapshot
+# Копия фикстуры теста сборки для карты (packages/sdk/test/map-serve.test.ts)
+packages/sdk/test/.map-serve-fixture/

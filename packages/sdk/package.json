@@ -5,7 +5,8 @@
   "exports": {
     ".": "./src/index.ts",
     "./vite": "./src/vite.ts",
-    "./runtime": "./src/runtime/index.ts"
+    "./runtime": "./src/runtime/index.ts",
+    "./map-serve": "./src/map-serve.ts"
   },
   "scripts": {
     "typecheck": "tsc --noEmit -p tsconfig.json",

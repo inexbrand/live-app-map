@@ -14,23 +14,27 @@ export const FIXTURE = path.join(import.meta.dir, 'fixture');
 
 /** Настоящий API фикстуры: то, что видно без подмены. */
 export function fixtureApi(): Plugin {
+  const api = (req: IncomingMessage, res: ServerResponse, next: () => void): void => {
+    const p = (req.url ?? '').split('?')[0];
+    if (p === '/api/items') {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify([{ id: 1, title: 'настоящая' }]));
+      return;
+    }
+    if (p === '/api/items/7') {
+      res.setHeader('content-type', 'application/json');
+      res.end(JSON.stringify({ id: 7 }));
+      return;
+    }
+    next();
+  };
   return {
     name: 'fixture-api',
     configureServer(s) {
-      s.middlewares.use((req: IncomingMessage, res: ServerResponse, next: () => void) => {
-        const p = (req.url ?? '').split('?')[0];
-        if (p === '/api/items') {
-          res.setHeader('content-type', 'application/json');
-          res.end(JSON.stringify([{ id: 1, title: 'настоящая' }]));
-          return;
-        }
-        if (p === '/api/items/7') {
-          res.setHeader('content-type', 'application/json');
-          res.end(JSON.stringify({ id: 7 }));
-          return;
-        }
-        next();
-      });
+      s.middlewares.use(api);
+    },
+    configurePreviewServer(s) {
+      s.middlewares.use(api);
     },
   };
 }

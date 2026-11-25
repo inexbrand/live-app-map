@@ -6,6 +6,7 @@
  */
 import type { Fiber, StackSource } from './fiber';
 import { componentNameOf, debugPlaceOf } from './fiber';
+import { lamBundleSource, lamIndexedPosition, lamIsBundleFile, lamMapFor } from './sourcemap';
 
 /** Рамка на экране, px от левого верхнего угла окна. */
 export type LamRect = { readonly x: number; readonly y: number; readonly width: number; readonly height: number };
@@ -26,13 +27,21 @@ export type LamComponentInfo = {
   readonly rect: LamRect | null;
 };
 
-/** Место JSX одного fiber как StackSource: _debugSource или кадр стека (строка в коде Vite неизвестна). */
+/**
+ * Место JSX одного fiber как StackSource: _debugSource или кадр стека (строка в коде Vite неизвестна).
+ * Кадр из бандла сборки для карты переводится картой в исходник со строкой.
+ */
 export function lamPlaceSource(f: Fiber): StackSource | null {
   const p = debugPlaceOf(f);
   if (p.source !== null) {
     return p.source;
   }
-  return p.frame === null ? null : { file: p.frame.file, line: null };
+  if (p.frame === null) {
+    return null;
+  }
+  const ix = lamIsBundleFile(p.frame.file) ? lamMapFor(p.frame.url) : null;
+  const pos = ix === null ? null : lamIndexedPosition(ix, p.frame.line, p.frame.column);
+  return pos === null || pos.source === '' ? { file: p.frame.file, line: null } : { file: lamBundleSource(pos.source, p.frame.url + '.map'), line: pos.line };
 }
 
 /**

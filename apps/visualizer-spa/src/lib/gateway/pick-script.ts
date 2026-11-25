@@ -1,5 +1,5 @@
 import { appPlaceOf, componentChainOf, cssEscape, cssSelectorFor, debugPlaceOf, domPathOf, fiberOf, installPicker, nthOfType, pickedMessage, pickerBox, pickerClick, pickerCommand, pickerFlash, pickerHide, pickerKey, pickerMessage, pickerMove, pickerShow, pickerSourceOf, pickerSwallow, pickerTitle, qualifierOf, reactComponentOf, selectorPart } from './pick-dom';
-import { advanceMapping, appFrameOf, componentNameOf, decodeVlq, frameFromStack, functionComponentName, mapFrame, originalPosition, scanMappingRow } from './pick-source';
+import { advanceMapping, appFrameOf, componentNameOf, decodeVlq, frameFromStack, functionComponentName, lamBundleFrameInLibrary, lamBundleSource, lamIndexedPosition, lamIndexMap, lamIsBundleFile, lamMapFor, mapFrame, originalPosition, scanMappingRow } from './pick-source';
 export { cssSelectorFor, domPathOf, installPicker, reactComponentOf } from './pick-dom';
 export { isLamPickCancelMessage, isLamPickedMessage } from './pick-messages';
 export type { LamPickCancelMessage, LamPickedMessage, OriginalPosition, PickedComponent, PickElement, PickRect, RawComponent, StackFrame, StackSource } from './pick-messages';
@@ -19,7 +19,7 @@ export { componentNameOf, frameFromStack, mapFrame, originalPosition } from './p
  * Текст пикера для скрипта страницы: объявления функций и вызов установки.
  */
 export function pickerScriptText(): string {
-  const decls = [functionComponentName, componentNameOf, appFrameOf, frameFromStack, decodeVlq, advanceMapping, scanMappingRow, originalPosition, mapFrame, cssEscape, qualifierOf, nthOfType, selectorPart, cssSelectorFor, domPathOf, fiberOf, debugPlaceOf, appPlaceOf, componentChainOf, reactComponentOf, pickerBox, pickerHide, pickerShow, pickerTitle, pickerMove, pickerSwallow, pickedMessage, pickerClick, pickerSourceOf, pickerFlash, pickerKey, pickerCommand, pickerMessage, installPicker]
+  const decls = [functionComponentName, componentNameOf, appFrameOf, frameFromStack, decodeVlq, advanceMapping, scanMappingRow, originalPosition, lamIndexMap, lamIndexedPosition, lamIsBundleFile, lamBundleSource, lamMapFor, lamBundleFrameInLibrary, mapFrame, cssEscape, qualifierOf, nthOfType, selectorPart, cssSelectorFor, domPathOf, fiberOf, debugPlaceOf, appPlaceOf, componentChainOf, reactComponentOf, pickerBox, pickerHide, pickerShow, pickerTitle, pickerMove, pickerSwallow, pickedMessage, pickerClick, pickerSourceOf, pickerFlash, pickerKey, pickerCommand, pickerMessage, installPicker]
     .map((f) => f.toString())
     .join('\n');
   return `${decls}\n${renamedImportAliases(decls)}\ntry{installPicker();}catch(e){}`;

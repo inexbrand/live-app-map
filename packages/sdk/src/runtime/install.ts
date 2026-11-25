@@ -5,6 +5,7 @@ import type { LamStatePayload } from './api';
 import { lamBodyOf, lamFakeResponse, lamFakeXhr, lamFetchTarget, lamFindOverride, lamMatchApiKey, lamParseStateId, lamPatchFetch, lamPatchXhr, lamStateIdFromPage } from './api';
 import type { LamComponentInfo } from './components';
 import { lamComponents, lamOwnFileOf, lamPlaceSource, lamRectOf, lamRootFibers } from './components';
+import { advanceMapping, decodeVlq, lamBundleFrameInLibrary, lamBundleSource, lamIndexedPosition, lamIndexMap, lamIsBundleFile, lamMapFor, scanMappingRow } from './sourcemap';
 import { appFrameOf, componentNameOf, debugPlaceOf, fiberOf, frameFromStack, functionComponentName } from './fiber';
 
 /** `window.__LAM__` — что рантайм даёт визуализатору и тестам. */
@@ -50,6 +51,16 @@ export function lamRuntimeInstall(param: string): void {
             return null;
           });
   w.__LAM__ = { stateId: id, state, components: () => lamComponents(w.document) };
+  // Сборка для карты: карты бандлов читаем заранее — components() синхронный
+  w.addEventListener('DOMContentLoaded', () => {
+    const scripts = w.document.querySelectorAll('script[type="module"][src]');
+    for (let i = 0; i < scripts.length; i++) {
+      const src = (scripts[i] as HTMLScriptElement).src;
+      if (lamIsBundleFile(new URL(src).pathname)) {
+        lamMapFor(src);
+      }
+    }
+  });
   if (id !== null) {
     lamPatchFetch(w, state, original);
     lamPatchXhr(w, state);
@@ -66,6 +77,7 @@ export function lamRuntimeScript(param: string): string {
   const fns: readonly ((...args: never[]) => unknown)[] = [
     functionComponentName, componentNameOf, appFrameOf, frameFromStack, fiberOf, debugPlaceOf,
     lamParseStateId, lamStateIdFromPage, lamMatchApiKey, lamFindOverride, lamBodyOf, lamFakeResponse, lamFetchTarget, lamPatchFetch, lamFakeXhr, lamPatchXhr,
+    decodeVlq, advanceMapping, scanMappingRow, lamIndexMap, lamIndexedPosition, lamIsBundleFile, lamBundleSource, lamMapFor, lamBundleFrameInLibrary,
     lamPlaceSource, lamOwnFileOf, lamRectOf, lamRootFibers, lamComponents, lamRuntimeInstall,
   ];
   // __name: сборщик с keepNames вставляет его вызовы в тела функций
