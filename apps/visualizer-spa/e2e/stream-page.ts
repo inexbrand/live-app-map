@@ -38,9 +38,10 @@ export async function screenPage(node: Locator): Promise<Page> {
   let found: Page | undefined;
   await expect(async () => {
     const pages = b.contexts().flatMap((c) => c.pages());
-    // Сначала точный адрес: у мини-аппа с hash-роутером (/#/feed) до # адрес общий у всех
-    // экранов приложения, и по префиксу находилась чужая страница, которую трансляция потом закрывала.
-    found = pages.find((p) => p.url() === url) ?? pages.find((p) => p.url().startsWith(url.split('#')[0] ?? url));
+    // У мини-аппа с hash-роутером (/#/feed) адрес до # общий у всех экранов приложения: по префиксу
+    // находилась чужая страница, которую трансляция потом закрывала. Такой адрес — только точно;
+    // префикс — для адресов без #, где страница могла дописать путь после редиректа.
+    found = pages.find((p) => p.url() === url) ?? (url.includes('#') ? undefined : pages.find((p) => p.url().startsWith(url)));
     expect(found, `страница ${url} не открыта в браузере трансляции`).toBeDefined();
   }).toPass({ timeout: 30_000 });
   if (found === undefined) {
