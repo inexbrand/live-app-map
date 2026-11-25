@@ -35,6 +35,9 @@ bun run browser:stop   # погасить постоянный браузер т
 
 Срезы карт korbor для тестов — `test-fixtures/maps/`.
 
+Для карты korbor запускать `bun run dev -- --map` (в korbor): miniapp/admin/site — собранные сборки с пересборкой при правке
+(SDK `@live-app-map/sdk/map-serve`), экраны грузятся вдвое дешевле dev-серверов. Эпоха `docs/epoch/map-prod-screens#…`.
+
 ### State inject (roles)
 
 Роли — из `config.apps[].roles`: у каждого экрана приложения состояние на каждую роль, адрес `?lam_role=<роль>`
