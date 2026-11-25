@@ -45,6 +45,11 @@ function isViewport(v: unknown): v is LamViewport {
   return Number.isInteger(w) && Number.isInteger(h) && Number(w) >= 200 && Number(w) <= 2560 && Number(h) >= 120;
 }
 
+/** Параметры адреса: объект строк с непустыми именами. */
+function isQuery(v: unknown): v is Readonly<Record<string, string>> {
+  return isRecord(v) && Object.entries(v).every(([k, s]) => k !== '' && typeof s === 'string');
+}
+
 /** Ошибки одного приложения; where — «apps[0]». */
 function appErrors(raw: unknown, where: string, root: string): string[] {
   if (!isRecord(raw)) {
@@ -72,6 +77,10 @@ function appErrors(raw: unknown, where: string, root: string): string[] {
   const vp = raw['viewport'];
   if (vp !== undefined && !isViewport(vp)) {
     errors.push(`${where}.viewport: размер окна экранов в пикселях, например viewport: { width: 1440, height: 900 } (ширина 200–2560, высота от 120)`);
+  }
+  const query = raw['query'];
+  if (query !== undefined && !isQuery(query)) {
+    errors.push(`${where}.query: параметры адреса экранов строками, например query: { surface: 'web' }`);
   }
   return errors;
 }
@@ -161,6 +170,7 @@ function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamPro
       baseUrl: String(a['baseUrl']),
       ...(Array.isArray(a['roles']) ? { roles: a['roles'].map(String) } : {}),
       ...(isViewport(a['viewport']) ? { viewport: { width: a['viewport'].width, height: a['viewport'].height } } : {}),
+      ...(isQuery(a['query']) ? { query: { ...a['query'] } } : {}),
     })),
     ...(Array.isArray(backend) ? { backend: backend.map(String) } : {}),
     ...(links === null

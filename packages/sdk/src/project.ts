@@ -23,6 +23,11 @@ export type LamApp = {
   readonly roles?: readonly string[];
   /** Размер окна экранов на карте; без поля — телефон 390×844. Кабинет в браузере: { width: 1440, height: 900 }. */
   readonly viewport?: LamViewport;
+  /**
+   * Параметры адреса каждого экрана. Приложение с двумя видами по признаку в адресе:
+   * korbor кабинет в браузере — { surface: 'web' } (без него вход через Telegram даёт вид мини-приложения).
+   */
+  readonly query?: Readonly<Record<string, string>>;
 };
 
 /** Размер окна экрана в пикселях. */

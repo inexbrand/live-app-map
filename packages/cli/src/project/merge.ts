@@ -13,6 +13,8 @@ export type SurfaceMap = {
   readonly baseUrl: string;
   /** Размер окна экранов приложения; свой размер экрана в карте главнее. */
   readonly viewport?: LamViewport;
+  /** Параметры адреса каждого экрана приложения. */
+  readonly query?: Readonly<Record<string, string>>;
   readonly doc: LiveAppMapDocument;
 };
 
@@ -34,13 +36,25 @@ function surfaceUrl(p: LiveAppMapPage, baseUrl: string): string | undefined {
   return `${base.protocol}//${base.host}${pathPart.startsWith('/') ? pathPart : `/${pathPart}`}`;
 }
 
+/** Адрес с параметрами приложения; hash маршрута остаётся. */
+function withQuery(url: string | undefined, query: Readonly<Record<string, string>> | undefined): string | undefined {
+  const u = url === undefined || query === undefined ? null : URL.parse(url);
+  if (u === null || query === undefined) {
+    return url;
+  }
+  for (const [k, v] of Object.entries(query)) {
+    u.searchParams.set(k, v);
+  }
+  return u.href;
+}
+
 /** Экран приложения в общей карте: id с приставкой, группа, исходный id в metadata. */
 function surfacePage(s: SurfaceMap, p: LiveAppMapPage): LiveAppMapPage {
   return {
     ...p,
     id: `${s.id}:${p.id}`,
     group: s.id,
-    url: surfaceUrl(p, s.baseUrl),
+    url: withQuery(surfaceUrl(p, s.baseUrl), s.query),
     ...(p.viewport === undefined && s.viewport !== undefined ? { viewport: s.viewport } : {}),
     metadata: { ...p.metadata, surface: s.id, originalId: p.id, baseUrl: s.doc.baseUrl },
   };
