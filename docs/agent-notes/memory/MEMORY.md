@@ -40,3 +40,4 @@
 - [Сборка для карты вместо dev](map-build-screens.md) — korbor --map, NODE_ENV=development без сжатия, sourcemap, опрос build-id
 - [WebAssembly не ускорит загрузку](wasm-not-a-fix.md) — JS ~5 % потока, тяжесть в vite/браузере
 - [Живая проверка UI скриптом](live-ui-check-playwright-core.md) — playwright-core из .bun, кнопка korbor, вид кнопкой в шапке
+- [Постоянный браузер трансляции](stream-browser-persistent.md) — Helium вне vite на :9341, вкладки по targetId, sync([]) в тестах, browser:stop
