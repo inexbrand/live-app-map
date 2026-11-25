@@ -51,16 +51,19 @@ export function lamRuntimeInstall(param: string): void {
             return null;
           });
   w.__LAM__ = { stateId: id, state, components: () => lamComponents(w.document) };
-  // Сборка для карты: карты бандлов читаем заранее — components() синхронный
-  w.addEventListener('DOMContentLoaded', () => {
-    const scripts = w.document.querySelectorAll('script[type="module"][src]');
-    for (let i = 0; i < scripts.length; i++) {
-      const src = (scripts[i] as HTMLScriptElement).src;
-      if (lamIsBundleFile(new URL(src).pathname)) {
-        lamMapFor(src);
+  // Сборка для карты: карты всех загруженных скриптов (и чанков, подгруженных импортом) читаем сразу —
+  // components() синхронный, а React лежит в тех же бандлах, что код приложения
+  if (typeof PerformanceObserver !== 'undefined') {
+    new PerformanceObserver((list) => {
+      const entries = list.getEntries();
+      for (let i = 0; i < entries.length; i++) {
+        const name = entries[i]?.name ?? '';
+        if (name.indexOf(w.location.origin + '/') === 0 && lamIsBundleFile(new URL(name).pathname)) {
+          lamMapFor(name);
+        }
       }
-    }
-  });
+    }).observe({ type: 'resource', buffered: true });
+  }
   if (id !== null) {
     lamPatchFetch(w, state, original);
     lamPatchXhr(w, state);

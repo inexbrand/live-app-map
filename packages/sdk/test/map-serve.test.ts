@@ -66,12 +66,18 @@ describe('сборка для карты', () => {
     const page = await browser.newPage();
     await page.goto(base + '/');
     await settled(page, 'list');
-    // Карта бандла читается при загрузке страницы — ждём, пока файл станет исходником
-    const card = await page.waitForFunction(() => {
-      const list = (window as unknown as { __LAM__: { components: () => LamComponentInfo[] } }).__LAM__.components();
-      const c = list.find((x) => x.name === 'Card');
-      return c !== undefined && c.file === 'src/Card.tsx' ? c : null;
-    }, undefined, { timeout: 10_000 }).then((h) => h.jsonValue() as Promise<LamComponentInfo>);
+    // Карты всех скриптов страница читает сама при загрузке; первый же вызов components() — с исходниками
+    await page.waitForFunction(() => {
+      const maps = (window as unknown as { __LAM_MAPS__?: Record<string, unknown> }).__LAM_MAPS__ ?? {};
+      const values = Object.values(maps);
+      return values.length >= 2 && values.every((v) => v !== 'loading');
+    }, undefined, { timeout: 10_000 });
+    const list = await page.evaluate(() => (window as unknown as { __LAM__: { components: () => LamComponentInfo[] } }).__LAM__.components());
+    const card = list.find((x) => x.name === 'Card');
+    if (card === undefined) {
+      throw new Error('нет Card в ' + JSON.stringify(list));
+    }
+    expect(card.file).toBe('src/Card.tsx');
     expect(card.parent).toBe('App');
     expect(card.usedAt?.file).toBe('src/App.tsx');
     expect(card.usedAt?.line).toBeGreaterThan(0);
