@@ -28,3 +28,16 @@
 - Составной ключ, вставка из одних DEFAULT (identity).
 - Отказы: без PK — 400, неизвестная колонка — 400, тело не по схеме — 400, нелокальный хост — 403, метод — 405, чужой origin — 403, проект не открыт — 404, нет database — off.
 - Живой dev на korbor: status ready, rows users — да (см. 07).
+
+## lead — сведение (2026-11-25)
+
+- Тесты затронутого (bun test, apps/visualizer-spa): components/database/*, DatabaseView(.states), lib/erd-model, lib/project/source-*, lib/comments/comment-prompt, lib/comments-middleware, lib/db-view-model — см. итог прогона в 07; typecheck visualizer-spa — 0 ошибок; mcp-server comment-tools — 4 pass.
+- Живой dev на korbor (`LAM_PROJECT=C:/work/korbor bun --bun vite --port 4395`, Helium helium-agent 1600×950):
+  - вид «База данных»: список 75 таблиц, ER-схема всех таблиц (после перехода на BT — широкая), выбранная таблица подсвечена, камера подводится;
+  - данные users из БД: 2 строки, 18 колонок с типами;
+  - правка users.display_name строки telegram_id=900000001 через интерфейс → «Сохранить изменения (1)» → /__lam_db/rows отдаёт «Dogfood 900000001 LAM» → возвращено тем же путём, сервер отдаёт исходное значение;
+  - вставка в accounts («Добавить строку», все колонки DEFAULT) → 3 строки, новая 2c269178…; выбор, «Удалить выбранные (1)» (строка зачёркнута) → сохранено → снова 2 строки, новой нет;
+  - вкладка «Схема в коде»: accounts.ts:18–39 с номерами строк, поле «Предложить комментарий» не забирает фокус;
+  - консоль страницы: ошибок нет (404 была только от неверного ?map=korbor в адресе при первом заходе).
+- Замечание к таблице живьём не отправлял (попало бы в общую .lam-feedback, которую читают агенты); привязка `code` проверена через настоящий HTTP /api/comments + MCP get_comment (comments-middleware.test) и DOM-тестом формы.
+- Dev остановлен, :4395 не отвечает.

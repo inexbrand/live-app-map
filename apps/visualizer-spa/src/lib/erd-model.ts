@@ -1,6 +1,9 @@
 /**
  * ER-схема вида «База данных»: карточка на таблицу, связь от колонки внешнего
- * ключа к колонке цели, раскладка dagre слева направо.
+ * ключа к колонке цели. Связанные таблицы — dagre снизу вверх (на кого ссылаются —
+ * выше): схема выходит широкой, под горизонтальную панель; слева направо на 75
+ * таблицах korbor было 3300×12758, снизу вверх — 12636×5436. Таблицы без связей —
+ * рядами под схемой.
  */
 import dagre from '@dagrejs/dagre';
 import type { DbTable } from '@live-app-map/schema';
@@ -32,6 +35,9 @@ export type ErdEdge = {
   /** on delete, если задан. */
   readonly label?: string;
 };
+
+/** Зазор между карточками, px. */
+const GAP = 32;
 
 /** Схема: карточки и связи. */
 export type ErdGraph = { readonly nodes: readonly ErdNode[]; readonly edges: readonly ErdEdge[] };
@@ -76,21 +82,61 @@ function edgesOf(tables: readonly DbTable[]): ErdEdge[] {
  */
 export function erdGraph(tables: readonly DbTable[]): ErdGraph {
   const edges = edgesOf(tables);
+  const between = edges.filter((e) => e.source !== e.target);
+  const linked = new Set(between.flatMap((e) => [e.source, e.target]));
+  const placed = layoutLinked(
+    tables.filter((t) => linked.has(t.exportName)),
+    between,
+  );
+  const bottom = placed.reduce((m, n) => Math.max(m, n.y + n.height), 0);
+  const width = placed.reduce((m, n) => Math.max(m, n.x + n.width), 0);
+  const alone = packRows(
+    tables.filter((t) => !linked.has(t.exportName)),
+    placed.length === 0 ? 0 : bottom + GAP * 3,
+    Math.max(width, ERD_NODE_WIDTH * 6),
+  );
+  const byId = new Map([...placed, ...alone].map((n) => [n.id, n]));
+  return { nodes: tables.flatMap((t) => byId.get(t.exportName) ?? []), edges };
+}
+
+function heightOf(t: DbTable): number {
+  return ERD_HEADER_HEIGHT + t.columns.length * ERD_ROW_HEIGHT;
+}
+
+/** Связанные таблицы: dagre снизу вверх, левый верхний угол от (0, 0). */
+function layoutLinked(tables: readonly DbTable[], edges: readonly ErdEdge[]): ErdNode[] {
   const g = new dagre.graphlib.Graph({ multigraph: true });
-  g.setGraph({ rankdir: 'LR', nodesep: 32, ranksep: 120, marginx: 24, marginy: 24 });
+  g.setGraph({ rankdir: 'BT', nodesep: GAP, ranksep: 120 });
   g.setDefaultEdgeLabel(() => ({}));
   for (const t of tables) {
-    g.setNode(t.exportName, { width: ERD_NODE_WIDTH, height: ERD_HEADER_HEIGHT + t.columns.length * ERD_ROW_HEIGHT });
+    g.setNode(t.exportName, { width: ERD_NODE_WIDTH, height: heightOf(t) });
   }
   for (const e of edges) {
-    if (e.source !== e.target) {
-      g.setEdge(e.source, e.target, {}, e.id);
-    }
+    g.setEdge(e.source, e.target, {}, e.id);
   }
   dagre.layout(g);
-  const nodes = tables.map((t): ErdNode => {
+  return tables.map((t): ErdNode => {
     const p = g.node(t.exportName);
     return { id: t.exportName, table: t, x: p.x - p.width / 2, y: p.y - p.height / 2, width: p.width, height: p.height };
   });
-  return { nodes, edges };
+}
+
+/** Таблицы без связей рядами шириной до maxWidth, начиная с top. */
+function packRows(tables: readonly DbTable[], top: number, maxWidth: number): ErdNode[] {
+  const out: ErdNode[] = [];
+  let x = 0;
+  let y = top;
+  let rowHeight = 0;
+  for (const t of tables) {
+    if (x > 0 && x + ERD_NODE_WIDTH > maxWidth) {
+      x = 0;
+      y += rowHeight + GAP;
+      rowHeight = 0;
+    }
+    const height = heightOf(t);
+    out.push({ id: t.exportName, table: t, x, y, width: ERD_NODE_WIDTH, height });
+    x += ERD_NODE_WIDTH + GAP;
+    rowHeight = Math.max(rowHeight, height);
+  }
+  return out;
 }

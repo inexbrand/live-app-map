@@ -118,9 +118,9 @@ function RouteList(props: { readonly title: string; readonly empty: string; read
 }
 
 /** Строка колонки: имя, тип, признаки, ссылка на другую таблицу. */
-function ColumnRow(props: { readonly column: DbColumn }) {
+function ColumnRow(props: { readonly column: DbColumn; readonly onOpenTable: (exportName: string) => void }) {
   const c = props.column;
-  const openTable = useViewStore((s) => s.openTable);
+  const openTable = props.onOpenTable;
   const ref = c.references;
   return (
     <tr>
@@ -142,8 +142,8 @@ function ColumnRow(props: { readonly column: DbColumn }) {
 }
 
 /** Кто ссылается на таблицу. */
-function ReferencedBy(props: { readonly refs: TableView['referencedBy'] }) {
-  const openTable = useViewStore((s) => s.openTable);
+function ReferencedBy(props: { readonly refs: TableView['referencedBy']; readonly onOpenTable: (exportName: string) => void }) {
+  const openTable = props.onOpenTable;
   return (
     <section className="db-view__section">
       <h3>
@@ -186,8 +186,12 @@ function MentionedIn(props: { readonly exportName: string }) {
   );
 }
 
-/** Вкладка «Документация». */
-export function TableDocsTab(props: { readonly view: TableView }) {
+/**
+ * Вкладка «Документация».
+ *
+ * @param props - таблица и переход к другой таблице (родитель спрашивает про несохранённые правки)
+ */
+export function TableDocsTab(props: { readonly view: TableView; readonly onOpenTable: (exportName: string) => void }) {
   const { view } = props;
   return (
     <div className="db-view__detail" data-testid="db-table">
@@ -212,12 +216,12 @@ export function TableDocsTab(props: { readonly view: TableView }) {
           </thead>
           <tbody>
             {view.table.columns.map((c) => (
-              <ColumnRow key={c.name} column={c} />
+              <ColumnRow key={c.name} column={c} onOpenTable={props.onOpenTable} />
             ))}
           </tbody>
         </table>
       </section>
-      <ReferencedBy refs={view.referencedBy} />
+      <ReferencedBy refs={view.referencedBy} onOpenTable={props.onOpenTable} />
       <RouteList title="Читают" empty="Ни один роут не читает эту таблицу." uses={view.readRoutes} />
       <RouteList title="Пишут" empty="Ни один роут не пишет эту таблицу." uses={view.writeRoutes} />
       <MentionedIn exportName={view.table.exportName} />

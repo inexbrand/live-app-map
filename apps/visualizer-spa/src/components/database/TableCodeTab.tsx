@@ -90,6 +90,7 @@ function ProposeComment(props: { readonly table: DbTable; readonly snippet: Sour
         placeholder="Что поменять в схеме: индекс, тип, связь, описание колонки"
         busy={busy}
         error={error}
+        autoFocus={false}
       />
     </section>
   );

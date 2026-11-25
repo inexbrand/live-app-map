@@ -51,6 +51,9 @@
 { "type": "status", "seq": 2, "at": "…", "author": "agent", "status": "fixed", "note": null }
 ```
 
+Замечание к таблице (вид «База данных», вкладка «Схема в коде») — `pageId: "db:<exportName>"`, `element: null` и
+`anchor.code = { kind: "table", name, file, line, endLine }` — объявление таблицы в файле от корня проекта.
+
 Статус ветки — последний `status`; без него — `open` (замечание, созданное агентом, — `fixed`: это запись о сделанном).
 
 ## MCP-инструменты

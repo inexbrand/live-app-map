@@ -40,6 +40,23 @@ describe('erdGraph', () => {
     expect(apart).toBe(true);
   });
 
+  test('таблица со многими зависимыми — схема шире, чем выше (панель схемы горизонтальная)', () => {
+    const deps = ['a', 'b', 'c', 'd', 'e', 'f'].map((n) => table(n, [{ name: 'id', type: 'int' }, { name: 'userId', type: 'uuid', references: { table: 'users', column: 'id' } }]));
+    const g2 = erdGraph([users, ...deps]);
+    const right = Math.max(...g2.nodes.map((n) => n.x + n.width)) - Math.min(...g2.nodes.map((n) => n.x));
+    const bottom = Math.max(...g2.nodes.map((n) => n.y + n.height)) - Math.min(...g2.nodes.map((n) => n.y));
+    expect(right).toBeGreaterThan(bottom);
+  });
+
+  test('таблицы без связей — под связанными, рядами', () => {
+    const lonely = ['l1', 'l2', 'l3'].map((n) => table(n, [{ name: 'id', type: 'int' }]));
+    const g2 = erdGraph([users, posts, ...lonely]);
+    const linkedBottom = Math.max(...g2.nodes.filter((n) => n.id === 'users' || n.id === 'posts').map((n) => n.y + n.height));
+    const alone = g2.nodes.filter((n) => n.id.startsWith('l'));
+    expect(alone.every((n) => n.y > linkedBottom)).toBe(true);
+    expect(new Set(alone.map((n) => n.y)).size).toBe(1);
+  });
+
   test('таблица без связей тоже на схеме', () => {
     const lonely = table('logs', [{ name: 'id', type: 'int' }]);
     const g2 = erdGraph([users, posts, lonely]);

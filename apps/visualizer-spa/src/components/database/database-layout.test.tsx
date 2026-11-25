@@ -19,7 +19,7 @@ const SOURCE = "/** Пользователи. */\nexport const users = pgTable('
 let net: ReturnType<typeof stubFetch>;
 beforeEach(() => {
   resetStores();
-  net = stubFetch(async (url, init) => {
+  net = stubFetch((url, init) => {
     const u = new URL(url, 'http://localhost:4310');
     if (u.pathname === PROJECT_SOURCE_PATH) {
       const file = u.searchParams.get('file') ?? '';
@@ -31,10 +31,24 @@ beforeEach(() => {
     if (u.pathname === '/api/comments') {
       return Response.json({ comments: [] });
     }
-    if (u.pathname.startsWith('/__lam_db/status')) {
-      return Response.json({ state: 'off', reason: 'нет database в config.ts', hint: "database: { urlEnv: 'DATABASE_URL' }" });
+    if (u.pathname === '/__lam_db/status') {
+      return Response.json({ state: 'ready', host: 'localhost', database: 'korbor', writable: true });
     }
-    return null;
+    if (u.pathname === '/__lam_db/rows') {
+      return Response.json({
+        table: u.searchParams.get('table'),
+        columns: [
+          { name: 'id', type: 'int4', nullable: false, hasDefault: true },
+          { name: 'name', type: 'text', nullable: true, hasDefault: false },
+        ],
+        primaryKey: ['id'],
+        rows: [{ id: '1', name: 'Аня' }],
+        total: 1,
+        page: 0,
+        size: 50,
+      });
+    }
+    return undefined;
   });
 });
 afterEach(() => net.restore());
@@ -80,6 +94,8 @@ describe('раскладка «База данных»', () => {
     const code = await waitFor(() => ui.getByTestId('db-code'));
     expect(code.textContent).toContain("export const users = pgTable('users', {");
     expect(code.querySelector('.db-code__no')?.textContent).toBe('7');
+    // Поле замечания внизу панели не забирает фокус: иначе панель прокручивается мимо кода
+    expect(document.activeElement?.tagName).not.toBe('TEXTAREA');
     expect(net.calls.some((c) => c.url.includes(`file=${encodeURIComponent(table.location.file)}`) && c.url.includes(`line=${table.location.line}`))).toBe(true);
 
     await user.type(within(ui.getByTestId('db-code-comment')).getByRole('textbox'), 'Добавь индекс на email');
@@ -98,5 +114,50 @@ describe('раскладка «База данных»', () => {
     });
     // Ошибка сервера видна под полем, текст не теряется
     await waitFor(() => expect(ui.getByTestId('db-code-comment').textContent).toContain('проверка отправки'));
+  });
+
+  test('несохранённые правки: смена таблицы спрашивает подтверждение, отказ оставляет таблицу', async () => {
+    const doc = openMap('korbor-miniapp');
+    const [first, second] = doc.code?.tables ?? [];
+    if (first === undefined || second === undefined) {
+      throw new Error('мало таблиц');
+    }
+    act(() => useViewStore.getState().openTable(first.exportName));
+    const r = render(<DatabaseView />);
+    const ui = within(r.container);
+    const user = userEvent.setup({ document });
+    const td = await waitFor(() => {
+      const el = r.container.querySelector('td[data-column="name"]');
+      if (!(el instanceof HTMLElement)) {
+        throw new Error('нет ячейки');
+      }
+      return el;
+    });
+    fireEvent.doubleClick(td);
+    const input = ui.getByLabelText('Значение name');
+    await user.clear(input);
+    await user.type(input, 'Боря{Enter}');
+    const asked: string[] = [];
+    const original = window.confirm;
+    let answer = false;
+    window.confirm = (text?: string): boolean => {
+      asked.push(text ?? '');
+      return answer;
+    };
+    try {
+      const rowOf = (name: string) => [...r.container.querySelectorAll('.db-view__row')].find((b) => b.querySelector('.db-view__name')?.textContent === name);
+      const target = rowOf(second.name);
+      if (!(target instanceof HTMLElement)) {
+        throw new Error('нет строки второй таблицы');
+      }
+      await user.click(target);
+      expect(asked).toEqual(['Несохранённых правок: 1. Отбросить их?']);
+      expect(useViewStore.getState().table).toBe(first.exportName);
+      answer = true;
+      await user.click(target);
+      expect(useViewStore.getState().table).toBe(second.exportName);
+    } finally {
+      window.confirm = original;
+    }
   });
 });

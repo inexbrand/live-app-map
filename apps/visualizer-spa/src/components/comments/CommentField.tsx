@@ -87,6 +87,8 @@ export type CommentFieldProps = {
   readonly placeholder: string;
   readonly busy: boolean;
   readonly error: string | null;
+  /** Ставить курсор в поле при появлении; false — поле внизу длинной панели, фокус прокрутил бы её. */
+  readonly autoFocus?: boolean;
 };
 
 /**
@@ -104,9 +106,12 @@ export function CommentField(props: CommentFieldProps) {
     onChange(appendSpoken(latest.current, spoken));
     area.current?.focus();
   });
+  const autoFocus = props.autoFocus !== false;
   useEffect(() => {
-    area.current?.focus();
-  }, []);
+    if (autoFocus) {
+      area.current?.focus();
+    }
+  }, [autoFocus]);
   const submit = (): void => {
     if (!voice.recording && !voice.finishing) {
       onSubmit(value);

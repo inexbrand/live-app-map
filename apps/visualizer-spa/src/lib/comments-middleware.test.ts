@@ -93,3 +93,13 @@ describe('comments middleware', () => {
     expect((await post('/api/comments/nope/events', { type: 'reply', text: 'x' })).status).toBe(400);
   });
 });
+
+describe('замечание к таблице', () => {
+  test('привязка к объявлению сохраняется и видна агенту по MCP', async () => {
+    const code = { kind: 'table', name: 'users', file: 'packages/db/src/schema/users.ts', line: 10, endLine: 30 };
+    const res = await post('/api/comments', { id: 't1', text: 'Добавь индекс на email', anchor: { ...anchor, pageId: 'db:users', pageTitle: 'users', code }, shotDataUrl: null });
+    expect(res.status).toBe(201);
+    const got = JSON.parse(callTool('get_comment', { id: 't1' }, { lamDir }).content[0]?.text ?? '{}') as { comment?: { anchor?: { code?: unknown } } };
+    expect(got.comment?.anchor?.code).toEqual(code);
+  });
+});
