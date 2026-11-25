@@ -21,6 +21,12 @@ export type StreamServiceOptions = {
    * подхватывает вкладки прошлого — без него вкладки только свои.
    */
   readonly tabsFile?: string;
+  /**
+   * Сколько ждать, пока карта запросит вкладки прошлого сервиса, мс: первый
+   * набор карты бывает неполным (экраны монтируются по очереди) — закрыть
+   * невостребованные сразу значило бы открыть их заново через секунду.
+   */
+  readonly orphanGraceMs?: number;
   readonly onFrame: (key: string, jpeg: Uint8Array) => void;
   readonly onPageMessage: (key: string, data: unknown) => void;
   /** Итог шагов состояния экрана: null — выполнены, иначе «шаг N не выполнен: …». */
@@ -51,6 +57,7 @@ type Entry = {
 
 
 const DEFAULT_QUALITY = 70;
+const DEFAULT_ORPHAN_GRACE_MS = 20_000;
 /** Сколько раз повторить оборванный переход и через сколько, мс. */
 const NAV_RETRIES = 2;
 const NAV_RETRY_MS = 300;
@@ -76,6 +83,7 @@ export class StreamService {
   private readonly last = new Map<string, Uint8Array>();
   /** Вкладки прошлого сервиса по ключу экрана; null — уже разобраны (или списка нет). */
   private orphans: Map<string, OwnTab> | null = null;
+  private orphanTimer: ReturnType<typeof setTimeout> | null = null;
   private queue: Promise<void> = Promise.resolve();
   private readonly quality: number;
 
@@ -138,6 +146,10 @@ export class StreamService {
     await this.queue;
     this.entries.clear();
     this.orphans = null;
+    if (this.orphanTimer !== null) {
+      clearTimeout(this.orphanTimer);
+      this.orphanTimer = null;
+    }
     const b = this.browser;
     this.browser = null;
     this.ctx = null;
@@ -167,14 +179,14 @@ export class StreamService {
     for (const s of plan.open) {
       await this.open(s);
     }
-    await this.dropOrphans();
     await this.saveTabs();
   }
 
-  /** Вкладки прошлого сервиса, которых нет в первом наборе, — закрыть. */
+  /** Вкладки прошлого сервиса, которые карта так и не запросила, — закрыть. */
   private async dropOrphans(): Promise<void> {
     const rest = this.orphans;
-    if (rest === null || this.ctx === null) {
+    this.orphanTimer = null;
+    if (rest === null) {
       return;
     }
     this.orphans = null;
@@ -213,6 +225,11 @@ export class StreamService {
         b.on('disconnected', () => this.lost(launching));
         const ctx = b.contexts()[0] ?? (await b.newContext({ ignoreHTTPSErrors: true }));
         this.orphans = this.opts.tabsFile === undefined ? new Map() : await findOwnTabs(ctx, this.opts.tabsFile);
+        if (this.orphans.size > 0) {
+          this.orphanTimer = setTimeout(() => {
+            this.queue = this.queue.then(() => this.dropOrphans());
+          }, this.opts.orphanGraceMs ?? DEFAULT_ORPHAN_GRACE_MS);
+        }
         return ctx;
       });
       this.ctx.catch(() => {

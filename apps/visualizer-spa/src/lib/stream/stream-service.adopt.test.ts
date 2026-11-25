@@ -24,10 +24,14 @@ const hits = new Map<string, number>();
 
 type Probe = { readonly frames: Map<string, number>; readonly messages: { key: string; data: unknown }[]; readonly steps: { key: string; error: string | null }[] };
 
+/** Пауза до закрытия невостребованных вкладок прошлого сервиса в тесте, мс. */
+const GRACE_MS = 1500;
+
 function service(tabsFile: string | undefined, probe: Probe): StreamService {
   return new StreamService({
     launch: launchStreamBrowser,
     tabsFile,
+    orphanGraceMs: GRACE_MS,
     onFrame: (key) => probe.frames.set(key, (probe.frames.get(key) ?? 0) + 1),
     onPageMessage: (key, data) => probe.messages.push({ key, data }),
     onSteps: (key, error) => probe.steps.push({ key, error }),
@@ -102,6 +106,13 @@ describe('StreamService: постоянный браузер', () => {
     // Мост страницы → карта работает и на подхваченной вкладке
     await b.post('x1', { lam: 'ping' });
     await until(() => pong(pb, 'x1'));
+    // Первый набор карты бывает неполным: y1 ждёт паузу и подхватывается вторым набором без перехода
+    expect(await openUrls()).toContain(screen('y1').url);
+    await b.sync([screen('x1'), screen('y1')]);
+    await until(() => (pb.frames.get('y1') ?? 0) > 0);
+    expect(hits.get('/y1')).toBe(1);
+    await b.sync([screen('x1')]);
+    // Свою вкладку, которой нет в наборе, сервис закрывает сразу
     const urls = await openUrls();
     expect(urls.includes(screen('y1').url)).toBe(false);
     expect(urls.includes(screen('z1').url)).toBe(true);
@@ -111,6 +122,26 @@ describe('StreamService: постоянный браузер', () => {
     await b.close();
     await other.sync([]);
     await other.close();
+  }, 60_000);
+
+  test('вкладку прошлого сервиса, которую карта не запросила за паузу, сервис закрывает', async () => {
+    const mine = path.join(dir, 'grace.json');
+    const pa = probe();
+    const a = service(mine, pa);
+    await a.sync([screen('g1'), screen('g2')]);
+    await until(() => (pa.frames.get('g1') ?? 0) > 0 && (pa.frames.get('g2') ?? 0) > 0);
+    await a.close();
+    const pb = probe();
+    const b = service(mine, pb);
+    await b.sync([screen('g1')]);
+    await until(() => (pb.frames.get('g1') ?? 0) > 0);
+    expect(await openUrls()).toContain(screen('g2').url);
+    await Bun.sleep(GRACE_MS + 1000);
+    const urls = await openUrls();
+    expect(urls).not.toContain(screen('g2').url);
+    expect(urls).toContain(screen('g1').url);
+    await b.sync([]);
+    await b.close();
   }, 60_000);
 
   test('экран-состояние: подхват без перехода, итог шагов прошлого сервиса приходит снова', async () => {
