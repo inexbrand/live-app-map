@@ -12,6 +12,7 @@ import { useStreamSync } from '../lib/stream/stream-sync';
 import { startFakeStream } from '../test/fake-stream';
 import { openMap, resetStores } from '../test/fixtures';
 import { AppMapCanvas, applyZoomStyle, canvasView, OVERVIEW_ZOOM } from './AppMapCanvas';
+import { API_DOMAIN_PREFIX, withApiDomains } from './api-domain-graph';
 import { VISIBILITY_SETTLE_MS } from './page-node/use-node-visibility';
 import { focusCamera, MAX_ZOOM } from './RevealSelected';
 
@@ -65,10 +66,12 @@ describe('холст карты', () => {
     const { doc, r } = await canvas();
     const pages = doc.nodes.filter((n) => n.kind === 'page');
     expect(r.container.querySelectorAll('.page-node').length).toBe(pages.length);
-    expect(r.container.querySelectorAll('.service-node').length).toBe(doc.nodes.filter((n) => n.kind === 'service').length);
+    // Сервисы на холсте заменены доменами API
+    expect(r.container.querySelectorAll('.service-node').length).toBe(withApiDomains(doc).nodes.filter((n) => n.kind === 'service').length);
+    expect(r.container.querySelectorAll('.service-node').length).toBeGreaterThan(1);
     const counts = [...r.container.querySelectorAll('.group-frame__count')].map((el) => Number(el.textContent));
     expect(counts.reduce((a, b) => a + b, 0)).toBe(r.container.querySelectorAll('.page-node, .service-node').length);
-    expect(r.container.querySelector('.service-node__stats')?.textContent).toMatch(/роуты \d+таблицы \d+функции \d+/);
+    expect(r.container.querySelector('.service-node__stats')?.textContent).toMatch(/роуты \d+экраны \d+/);
   });
 
   test('фильтр без совпадений — «Ничего не найдено» и сброс', async () => {
@@ -232,6 +235,25 @@ describe('холст карты', () => {
     applyZoomStyle(host, 1);
     expect(host?.classList.contains('flow-host--overview')).toBe(false);
     expect(host?.style.getPropertyValue('--lam-zoom')).toBe('1');
+  });
+
+  test('API по доменам: в покое линий к API нет, выбран домен — видны все его экраны', () => {
+    const doc = openMap('korbor-miniapp');
+    const sizing: Parameters<typeof canvasView>[2] = { iframeScale: useAppStore.getState().iframeScale, nodeViewports: new Map(), contentHeights: new Map() };
+    const graphOf = (selected: string | null) => {
+      const view = canvasView(doc, '', sizing, selected);
+      return view.kind === 'graph' ? view.graph : null;
+    };
+    const idle = graphOf(null);
+    const domains = (idle?.nodes ?? []).filter((n) => n.id.startsWith(API_DOMAIN_PREFIX));
+    expect(domains.length).toBeGreaterThan(1);
+    const toApi = (e: { readonly target: string }) => e.target.startsWith(API_DOMAIN_PREFIX);
+    expect((idle?.edges ?? []).filter((e) => toApi(e) && e.hidden !== true)).toEqual([]);
+    const busiest = withApiDomains(doc).nodes.reduce((a, b) => (Number(b.metadata?.['screens']) > Number(a.metadata?.['screens'] ?? -1) ? b : a));
+    const shown = (graphOf(busiest.id)?.edges ?? []).filter((e) => toApi(e) && e.hidden !== true);
+    expect(shown.length).toBe(Number(busiest.metadata?.['screens']));
+    expect(shown.length).toBeGreaterThan(1);
+    expect(shown.every((e) => e.target === busiest.id && e.label !== undefined)).toBe(true);
   });
 
   test('подписи рёбер — только у выбранного экрана', () => {

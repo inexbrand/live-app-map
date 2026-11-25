@@ -14,6 +14,7 @@ import { useMemo, useRef, type RefObject } from 'react';
 import type { AppMapDocument, AppMapNode } from '@live-app-map/schema';
 import type { CanvasSizing } from './canvas-layout';
 import { filterCanvasGraph } from './canvas-graph';
+import { withApiDomains } from './api-domain-graph';
 import { useAppStore } from '../store/app-store';
 import { GroupFrameNode, type GroupFrameData } from './GroupFrameNode';
 import { startViewport, type LayoutBox, type PackedLayout } from './pack-layout';
@@ -82,17 +83,20 @@ function flowNode(doc: AppMapDocument, n: AppMapNode, pos: { readonly x: number;
 /**
  * Ребро навигации; вызовы API экрана — пунктиром, чтобы не путать с навигацией.
  * Подпись — только у рёбер выбранного экрана: иначе подписи налезают на карточки.
+ * Вызовы API видны только у выбранного экрана или домена: в покое их сотни.
  */
 function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number], selectedPageId: string | null): Edge {
   const target = e.to;
   if (target === null) {
     throw new Error(`Ожидалось ребро с target: ${e.id}`);
   }
+  const touched = selectedPageId !== null && (e.from === selectedPageId || target === selectedPageId);
   return {
     id: e.id,
     source: e.from,
     target,
-    label: selectedPageId !== null && (e.from === selectedPageId || target === selectedPageId) ? e.label : undefined,
+    hidden: e.kind === 'api' && !touched,
+    label: touched ? e.label : undefined,
     animated: e.kind === 'redirect',
     style: e.kind === 'api' ? { stroke: 'var(--edge-api)', strokeDasharray: '4 4' } : { stroke: 'var(--edge)' },
   };
@@ -107,7 +111,7 @@ function flowEdge(e: ReturnType<typeof filterCanvasGraph>['navEdges'][number], s
  * @param selectedPageId - выбранный экран (у него шире рамка)
  */
 export function canvasView(doc: AppMapDocument, searchQuery: string, sizing: CanvasSizing, selectedPageId: string | null): CanvasView {
-  const { filtered, navEdges, normalizedQuery } = filterCanvasGraph(doc, searchQuery);
+  const { filtered, navEdges, normalizedQuery } = filterCanvasGraph({ ...doc, ...withApiDomains(doc) }, searchQuery);
   if (normalizedQuery.length > 0 && filtered.length === 0) {
     return { kind: 'miss', query: searchQuery.trim() };
   }

@@ -1,10 +1,10 @@
 /**
- * Нода сервиса бэкенда на холсте: имя, каталог, число роутов, таблиц и функций.
- * Без iframe — код сервиса открывается в правой панели.
+ * Нода бэкенда на холсте: домен API (имя, общий путь, роуты и экраны-вызывающие)
+ * или сервис (каталог, роуты, таблицы, функции), если роутов в карте нет.
  */
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import type { AppMapNode } from '@live-app-map/schema';
-import { Server } from 'lucide-react';
+import { Route, Server } from 'lucide-react';
 import { useAppStore } from '../store/app-store';
 import { Badge } from '@/components/ui/badge';
 
@@ -27,6 +27,8 @@ export function ServiceNode(props: NodeProps) {
   const data = props.data as ServiceNodeData;
   const node = data.node;
   const selected = useAppStore((s) => s.selectedPageId === node.id);
+  const domain = typeof node.metadata?.['apiDomain'] === 'string';
+  const Icon = domain ? Route : Server;
   return (
     <div
       className={`service-node${selected ? ' service-node--selected' : ''}`}
@@ -35,14 +37,20 @@ export function ServiceNode(props: NodeProps) {
     >
       <Handle type="target" position={Position.Left} />
       <div className="service-node__header">
-        <Server size={16} strokeWidth={1.75} aria-hidden={true} />
+        <Icon size={16} strokeWidth={1.75} aria-hidden={true} />
         <span className="service-node__title">{node.title}</span>
       </div>
       <div className="service-node__path font-mono">{node.pathPattern}</div>
       <div className="service-node__stats">
         <Badge variant="secondary">роуты {count(node, 'routes')}</Badge>
-        <Badge variant="secondary">таблицы {count(node, 'tables')}</Badge>
-        <Badge variant="secondary">функции {count(node, 'symbols')}</Badge>
+        {domain ? (
+          <Badge variant="secondary">экраны {count(node, 'screens')}</Badge>
+        ) : (
+          <>
+            <Badge variant="secondary">таблицы {count(node, 'tables')}</Badge>
+            <Badge variant="secondary">функции {count(node, 'symbols')}</Badge>
+          </>
+        )}
       </div>
       <Handle type="source" position={Position.Right} />
     </div>

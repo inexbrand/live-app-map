@@ -9,7 +9,7 @@ import { packLayout, type LayoutBox, type PackedLayout } from './pack-layout';
 import { SERVICE_NODE_SIZE } from './service-node-size';
 import { stateNodeInfo } from '../lib/state-nodes';
 
-/** Группа нод сервисов бэкенда. */
+/** Группа нод бэкенда: домены API или сервисы, если роутов в карте нет. */
 export const SERVICES_GROUP = 'services';
 /** Группа экранов без группы в карте. */
 export const OTHER_GROUP = 'other';
@@ -64,7 +64,7 @@ export function layoutCanvas(
     const anchor = stateNodeInfo(n)?.screenId;
     return { id: n.id, width: s.outerWidth, height: s.outerHeight, group: n.kind === 'service' ? SERVICES_GROUP : n.groupIds?.[0] ?? OTHER_GROUP, ...(anchor === undefined ? {} : { anchor }) };
   });
-  const groupTitles = new Map<string, string>([[OTHER_GROUP, 'Экраны'], ...(doc.groups ?? []).map((g): [string, string] => [g.id, g.title]), [SERVICES_GROUP, 'Сервисы бэкенда']]);
+  const groupTitles = new Map<string, string>([[OTHER_GROUP, 'Экраны'], ...(doc.groups ?? []).map((g): [string, string] => [g.id, g.title]), [SERVICES_GROUP, 'API']]);
   // Экраны раньше сервисов: группы карты по order, затем экраны без группы, сервисы — последними.
   const groupOrder = [...[...(doc.groups ?? [])].sort((a, b) => (a.order ?? 0) - (b.order ?? 0)).map((g) => g.id), OTHER_GROUP, SERVICES_GROUP];
   const packed = packLayout(
