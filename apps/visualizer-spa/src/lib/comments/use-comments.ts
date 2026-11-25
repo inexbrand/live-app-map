@@ -8,6 +8,7 @@ import { useCommentsStore } from '../../store/comments-store';
 import { useViewStore } from '../../store/view-store';
 import { SCREEN_ATTR } from '../../flow/page-node/ScreenView';
 import { streamClient } from '../stream/stream-client';
+import { isLamPageMessage } from '../gateway/inject-script';
 import { isLamPickCancelMessage, isLamPickedMessage, type LamPickedMessage } from '../gateway/pick-script';
 import { buildAnchor, type AnchorPage } from './build-anchor';
 import { canvasShot } from './place';
@@ -96,12 +97,21 @@ function cancelPick(): void {
  * Ответ страницы, которая сейчас в режиме выбора; после ответа выбор включается
  * снова — следующий компонент того же экрана одним кликом.
  *
+ * Отчёт загрузки страницы (lam:'page') — тоже повод включить выбор: страница
+ * перезагрузилась (вход, редирект) и забыла режим, а повтор раз в 2 с давал окно,
+ * в котором клик уходил приложению вместо выбора компонента.
+ *
  * @param pickPage - экран в режиме выбора
  * @param pageId - кто прислал
  * @param data - сообщение
+ * @param repick - включить выбор в странице снова
  */
-export function onPickerMessage(pickPage: string | null, pageId: string, data: unknown): void {
+export function onPickerMessage(pickPage: string | null, pageId: string, data: unknown, repick: () => void): void {
   if (pickPage === null || pageId !== pickPage) {
+    return;
+  }
+  if (isLamPageMessage(data)) {
+    repick();
     return;
   }
   if (isLamPickCancelMessage(data)) {
@@ -114,7 +124,7 @@ export function onPickerMessage(pickPage: string | null, pageId: string, data: u
   } else {
     return;
   }
-  streamClient.post(pageId, { lam: 'pick', on: true });
+  repick();
 }
 
 /** Выбор компонента в выбранном экране: включает пикер страницы и принимает выбор. */
@@ -131,7 +141,7 @@ export function useCommentPicker(): void {
     // Сообщение до подключения сокета теряется, а после переподключения страница открыта заново —
     // повтор держит режим выбора (дёшево: одна строка JSON)
     const again = window.setInterval(on, REPICK_MS);
-    const off = streamClient.onPageMessage((pageId, data) => onPickerMessage(pickPage, pageId, data));
+    const off = streamClient.onPageMessage((pageId, data) => onPickerMessage(pickPage, pageId, data, on));
     return () => {
       window.clearInterval(again);
       off();
