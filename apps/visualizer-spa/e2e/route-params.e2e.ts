@@ -16,7 +16,8 @@ test('vacancies/:id — реальная вакансия вместо «Не н
   await page.keyboard.press('Control+k');
   await page.getByTestId('palette-input').fill('vacancies / id');
   await page.locator('[data-testid=palette-row][data-kind=screen]', { hasText: /^vacancies \/ id/ }).first().click();
-  const node = page.locator('[data-lam-node="route:/vacancies/[id]"]');
+  // Id экрана в карте проекта — с приложением впереди (скан по config.apps).
+  const node = page.locator('[data-lam-node="miniapp:route:/vacancies/[id]"]');
   await expect(node).toHaveClass(/page-node--selected/);
   const canvas = node.locator('canvas[data-lam-screen]');
   await expect.poll(async () => (await canvas.getAttribute('data-lam-url')) ?? '', { timeout: 30_000 }).toMatch(/#\/vacancies\/[0-9a-f-]{36}$/);
