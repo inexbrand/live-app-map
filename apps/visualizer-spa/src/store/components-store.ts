@@ -14,6 +14,10 @@ type ComponentsState = {
   readonly gallery: Gallery;
   /** Узлы, попавшие в окно холста. */
   readonly visible: ReadonlySet<string>;
+  /** Открыт ли проект на dev-сервере; null — ещё не спрашивали. */
+  readonly projectOpen: boolean | null;
+  /** Спросить dev-сервер, открыт ли проект (GET /__lam_project/config отвечает JSON 200). */
+  readonly probeProject: (fetchImpl: (url: string) => Promise<Response>) => Promise<void>;
   /** Загрузить галерею: states.ts и приложения проекта. */
   readonly load: (fetchJson: (url: string) => Promise<unknown>) => Promise<void>;
   readonly setVisible: (id: string, on: boolean) => void;
@@ -51,6 +55,16 @@ export const useComponentsStore = create<ComponentsState>((set, get) => ({
   error: null,
   gallery: EMPTY,
   visible: new Set<string>(),
+  projectOpen: null,
+  probeProject: async (fetchImpl) => {
+    try {
+      const res = await fetchImpl(PROJECT_CONFIG_URL);
+      // Без проекта — 404; без эндпоинта vite отдаёт index.html
+      set({ projectOpen: res.ok && (res.headers.get('content-type') ?? '').includes('application/json') });
+    } catch {
+      set({ projectOpen: false });
+    }
+  },
   load: async (fetchJson) => {
     if (get().status === 'loading') {
       return;

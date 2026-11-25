@@ -19,6 +19,7 @@ const server = Bun.serve({
     if (p === '/ok/__lam_project/states' || p === '/no-apps/__lam_project/states') return Response.json({ screens: {}, components });
     if (p === '/ok/__lam_project/config') return Response.json({ name: 'p', apps });
     if (p === '/no-apps/__lam_project/config') return Response.json({ name: 'p' });
+    if (p === '/spa/__lam_project/config') return new Response('<!doctype html>', { headers: { 'content-type': 'text/html' } });
     return new Response('проект не открыт: запустите bun run dev -- --project <каталог>', { status: 404 });
   },
 });
@@ -50,3 +51,16 @@ describe('стор галереи', () => {
   });
 });
 
+describe('открыт ли проект', () => {
+  const probe = (prefix: string) => (url: string) => fetch('http://127.0.0.1:' + server.port + prefix + url);
+  test('config JSON 200 — открыт; 404 и index.html — нет; сеть упала — нет', async () => {
+    await useComponentsStore.getState().probeProject(probe('/ok'));
+    expect(useComponentsStore.getState().projectOpen).toBe(true);
+    await useComponentsStore.getState().probeProject(probe('/nope'));
+    expect(useComponentsStore.getState().projectOpen).toBe(false);
+    await useComponentsStore.getState().probeProject(probe('/spa'));
+    expect(useComponentsStore.getState().projectOpen).toBe(false);
+    await useComponentsStore.getState().probeProject(() => Promise.reject(new Error('нет сети')));
+    expect(useComponentsStore.getState().projectOpen).toBe(false);
+  });
+});
