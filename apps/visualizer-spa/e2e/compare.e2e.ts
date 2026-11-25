@@ -53,6 +53,7 @@ test.describe('сравнение карт', () => {
     writeFileSync(file, JSON.stringify({ ...map, code: { ...map.code, routes: map.code.routes.slice(1) } }));
     await openCompare(page);
     await pickFile(page, 'compare-left', file);
+    await expect(page.getByTestId('compare-left')).toHaveAttribute('data-value', 'file-chosen');
     await pickOption(page, page.getByTestId('compare-right'), 'Свежий скан');
     await expect(page.getByTestId('compare-loading').filter({ hasText: 'Стало' })).toContainText('сканирую проект');
     await expect(page.getByTestId('compare-total')).toContainText('Изменений', { timeout: 150_000 });
