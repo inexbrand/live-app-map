@@ -18,7 +18,7 @@ import { closeDbPool } from './db-ops';
 
 const DB_URL = process.env['LAM_TEST_DATABASE_URL'] ?? '';
 const tag = `lam_test_${Math.random().toString(36).slice(2, 10)}`;
-const T = { items: `${tag}_items`, nopk: `${tag}_nopk`, pair: `${tag}_pair` };
+const T = { items: `${tag}_items`, nopk: `${tag}_nopk`, pair: `${tag}_pair`, defs: `${tag}_defs` };
 const tmp = mkdtempSync(path.join(tmpdir(), 'lam-db-live-'));
 
 /** Проект с config.ts: database из переменной urlEnv, адрес — в env middleware. */
@@ -44,6 +44,7 @@ describe.skipIf(DB_URL === '')('живая БД (LAM_TEST_DATABASE_URL)', () => 
       CREATE TYPE ${tag}.kind AS ENUM ('a', 'b');
       CREATE TABLE ${tag}.${T.items} (id serial PRIMARY KEY, name text NOT NULL, qty int4 NOT NULL DEFAULT 0, kind ${tag}.kind, data jsonb, code varchar(3) UNIQUE, flag bool, at timestamptz);
       CREATE TABLE ${tag}.${T.nopk} (a text);
+      CREATE TABLE ${tag}.${T.defs} (id int4 GENERATED ALWAYS AS IDENTITY PRIMARY KEY, at timestamptz NOT NULL DEFAULT now());
       CREATE TABLE ${tag}.${T.pair} (a int4, b text, note text, PRIMARY KEY (a, b));
       INSERT INTO ${tag}.${T.items} (name, qty, kind, data, code) SELECT 'n' || g, g % 3, (CASE WHEN g % 2 = 0 THEN 'a' ELSE 'b' END)::${tag}.kind, jsonb_build_object('g', g), 'c' || g FROM generate_series(1, 12) g;
       INSERT INTO ${tag}.${T.nopk} VALUES ('x');
@@ -106,7 +107,7 @@ describe.skipIf(DB_URL === '')('живая БД (LAM_TEST_DATABASE_URL)', () => 
     expect((await rows(`table=${T.items}&page=-1&size=5`)).status).toBe(400);
   });
 
-  test('пакет: удаление, правка (текст → int/enum/jsonb), вставка и вставка из одних DEFAULT — одной транзакцией', async () => {
+  test('пакет: удаление, правка (текст → int/enum/jsonb/bool/timestamptz), вставка — одной транзакцией', async () => {
     const res = await post(local, changes(T.items, {
       deletes: [{ id: '1' }, { id: '2' }],
       updates: [{ key: { id: '3' }, set: { qty: '42', kind: 'a', data: '{"x": [1]}', flag: 'true', at: '2026-11-25 10:00:00+03' } }, { key: { id: '4' }, set: { data: null } }],
@@ -120,6 +121,13 @@ describe.skipIf(DB_URL === '')('живая БД (LAM_TEST_DATABASE_URL)', () => 
       [4, 1, 'a', null, 'c4', null, null],
       [13, 0, null, null, 'new', null, null],
     ]);
+  });
+
+  test('вставка строк из одних DEFAULT (identity) — одним запросом', async () => {
+    const res = await post(local, changes(T.defs, { inserts: [{}, {}, {}] }));
+    expect(res).toEqual({ status: 200, body: { inserted: 3, updated: 0, deleted: 0 } });
+    const page = rowsPageSchema.parse((await rows(`table=${T.defs}&page=0&size=50`)).body);
+    expect([page.rows.map((r) => r['id']), page.columns.map((c) => c.hasDefault)]).toEqual([['1', '2', '3'], [true, true]]);
   });
 
   test('ошибка в середине пакета — откат всего: удаление и правка до неё не применились', async () => {

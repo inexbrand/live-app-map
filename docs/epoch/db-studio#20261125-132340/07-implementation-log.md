@@ -37,3 +37,29 @@
 
 ### Не сделано
 - Живая проверка на korbor — ждёт готовности сервера db-api.
+
+## Зона db-api (сервер /__lam_db)
+
+### Изменения
+- `packages/sdk/src/project.ts` — тип `LamDatabase`, поле `LamProjectConfig.database`.
+- `packages/cli/src/project/config.ts` — `databaseErrors`, `toDatabase`; тест `config-database.test.ts`.
+- `apps/visualizer-spa/src/lib/db-data/db-target.ts` — разбор env, `resolveDbTarget`, `isLocalDbHost`, `dbTargetOf`.
+- `db-sql.ts` — `quoteIdent`, `buildPageQueries`, `buildChangeStatements`, `DbHttpError`.
+- `db-introspect.ts` — `INTROSPECT_SQL`, `tableMetaFromRows`, `introspectTable`.
+- `db-ops.ts` — `dbPool`, `closeDbPool`, `pingDb`, `readRowsPage`, `applyChanges`, `dbErrorResponse`.
+- `db-middleware.ts` — `createDbDataMiddleware`, `dbDataMiddleware`; строка в `vite.config.ts` (mountApi).
+- Зависимость `postgres@4.1.1` в apps/visualizer-spa.
+- korbor: `.live-app-map/config.ts` — `database: { urlEnv: 'DATABASE_URL', envFile: 'dev.local.env' }`.
+- Большая часть файлов попала в автокоммиты хука (9abb48f, d2bab3d); остаток — коммитом зоны.
+
+### Команды проверки
+- `bun test src/project/config-database.test.ts` (packages/cli) → 3 pass.
+- `bun test src/lib/db-data/db-target.test.ts src/lib/db-data/db-sql.test.ts` → 13 pass.
+- `LAM_TEST_DATABASE_URL=<DATABASE_URL из korbor/dev.local.env> bun test src/lib/db-data/db-live.test.ts` → 11 pass (Postgres korbor :16432, песочница lam_test_<rand>, после прогона схем lam_test_% — 0).
+- `bun run typecheck` (visualizer-spa) → мои файлы без ошибок; единственная ошибка — чужой `database-layout.test.tsx(22,19)`. `tsc --noEmit` packages/cli → 0 ошибок.
+- Живой dev: `LAM_PROJECT=C:/work/korbor LAM_GATEWAY_PORT=4396 LAM_STREAM_PORT=4397 bun --bun vite --port 4395 --strictPort`:
+  `/__lam_db/status` → `{"state":"ready","host":"localhost","database":"korbor","writable":true}`;
+  `/__lam_db/rows?table=users&page=0&size=5` → 18 колонок, PK [id], total 2, 2 строки; sort=created_at&dir=desc → 200; sort=nope → 400 «нет колонки nope в таблице users»; table=nope → 404; POST без полей → 400 «inserts: Required»; пустой пакет → 200 нули. Сервер остановлен, порты 4395–4397 свободны.
+
+### Не сделано
+- Правка данных korbor через живой dev не делалась намеренно (данные korbor не трогаю) — запись проверена живым тестом в песочнице на той же БД.
