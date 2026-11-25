@@ -9,8 +9,11 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import type { BrowserContext, CDPSession, Page } from '@playwright/test';
 
-/** Вкладка экрана: ключ и адрес последнего перехода карты. */
-export type TabRecord = { readonly key: string; readonly url: string };
+/**
+ * Вкладка экрана: ключ, адрес последнего перехода карты и итог шагов состояния
+ * (null — выполнены, строка — ошибка; нет поля — шагов не было или итог не известен).
+ */
+export type TabRecord = { readonly key: string; readonly url: string; readonly steps?: string | null };
 
 /**
  * Прочитать список; нет файла или он битый — пустой.
@@ -31,8 +34,9 @@ export async function readTabs(file: string): Promise<Map<string, TabRecord>> {
   for (const [id, v] of Object.entries(data)) {
     const key: unknown = typeof v === 'object' && v !== null ? Reflect.get(v, 'key') : undefined;
     const url: unknown = typeof v === 'object' && v !== null ? Reflect.get(v, 'url') : undefined;
+    const steps: unknown = typeof v === 'object' && v !== null ? Reflect.get(v, 'steps') : undefined;
     if (typeof key === 'string' && typeof url === 'string') {
-      out.set(id, { key, url });
+      out.set(id, steps === null || typeof steps === 'string' ? { key, url, steps } : { key, url });
     }
   }
   return out;
@@ -60,7 +64,7 @@ export async function targetIdOf(cdp: CDPSession): Promise<string | null> {
 }
 
 /** Своя вкладка прошлого сервиса: ждёт, подхватят ли её. */
-export type OwnTab = { readonly page: Page; readonly url: string };
+export type OwnTab = { readonly page: Page; readonly url: string; readonly steps?: string | null };
 
 /**
  * Свои вкладки прошлого сервиса в браузере — по списку на диске и targetId.
@@ -87,7 +91,7 @@ export async function findOwnTabs(ctx: BrowserContext, file: string): Promise<Ma
     if (out.has(tab.key)) {
       await page.close().catch(() => undefined);
     } else {
-      out.set(tab.key, { page, url: tab.url });
+      out.set(tab.key, { ...tab, page });
     }
   }
   return out;

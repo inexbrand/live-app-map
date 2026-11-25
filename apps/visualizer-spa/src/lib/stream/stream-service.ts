@@ -36,7 +36,17 @@ export type StreamServiceOptions = {
  * доходят с опозданием. Пока страница грузится — Infinity. load — номер
  * документа: готовность старого документа новый не отмечает.
  */
-type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readonly targetId: string | null; readyAt: number; load: number; stepsPending: boolean };
+type Entry = {
+  screen: StreamScreen;
+  readonly page: Page;
+  readonly cdp: CDPSession;
+  readonly targetId: string | null;
+  readyAt: number;
+  load: number;
+  stepsPending: boolean;
+  /** Итог шагов текущего документа: null — выполнены; undefined — шагов не было или ещё идут. */
+  steps: string | null | undefined;
+};
 
 
 
@@ -171,7 +181,15 @@ export class StreamService {
     await Promise.all([...rest.values()].map((o) => o.page.close().catch(() => undefined)));
   }
 
-  private async saveTabs(): Promise<void> {
+  /** Запись списка вкладок — по очереди: её зовут и сверка, и итог шагов. */
+  private saving: Promise<void> = Promise.resolve();
+
+  private saveTabs(): Promise<void> {
+    this.saving = this.saving.then(() => this.writeTabsNow());
+    return this.saving;
+  }
+
+  private async writeTabsNow(): Promise<void> {
     const file = this.opts.tabsFile;
     if (file === undefined || this.ctx === null) {
       return;
@@ -179,7 +197,7 @@ export class StreamService {
     const tabs = new Map<string, TabRecord>();
     for (const e of this.entries.values()) {
       if (e.targetId !== null) {
-        tabs.set(e.targetId, { key: e.screen.key, url: e.screen.url });
+        tabs.set(e.targetId, e.steps === undefined ? { key: e.screen.key, url: e.screen.url } : { key: e.screen.key, url: e.screen.url, steps: e.steps });
       }
     }
     await writeTabs(file, tabs).catch(() => undefined);
@@ -222,14 +240,15 @@ export class StreamService {
     this.orphans?.delete(screen.key);
     const page = orphan?.page ?? (await ctx.newPage());
     // Подхваченная вкладка на том же адресе — без перехода. Шаги состояния
-    // повторяются переходом: их итог карта ждёт, а прошлый сервис его унёс.
-    const same = orphan !== undefined && orphan.url === screen.url && (screen.steps?.length ?? 0) === 0 && !page.isClosed();
+    // не повторяются, если их итог записан (карта ждёт его), иначе — переход.
+    const stepsKnown = (screen.steps?.length ?? 0) === 0 || orphan?.steps !== undefined;
+    const same = orphan !== undefined && orphan.url === screen.url && stepsKnown && !page.isClosed();
     await page.setViewportSize({ width: screen.width, height: screen.height });
     await page.exposeBinding(HOST_BINDING, (_src, json: unknown) => this.fromPage(screen.key, json));
     await page.addInitScript(BRIDGE);
     await page.addInitScript(`window.${SCREEN_KEY_GLOBAL}=${JSON.stringify(screen.key)};`);
     const cdp = await ctx.newCDPSession(page);
-    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, targetId: await targetIdOf(cdp), readyAt: Infinity, load: 0, stepsPending: false };
+    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, targetId: await targetIdOf(cdp), readyAt: Infinity, load: 0, stepsPending: false, steps: undefined };
     cdp.on('Page.screencastFrame', (f) => {
       void cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => undefined);
       if ((f.metadata.timestamp ?? 0) >= entry.readyAt) {
@@ -251,6 +270,10 @@ export class StreamService {
       await this.setLive(screen, true);
     }
     if (same) {
+      if (orphan.steps !== undefined && (screen.steps?.length ?? 0) > 0) {
+        entry.steps = orphan.steps;
+        this.opts.onSteps?.(screen.key, orphan.steps);
+      }
       void this.markReady(entry, entry.load);
       return;
     }
@@ -266,6 +289,7 @@ export class StreamService {
   private async go(e: Entry, url: string, retries: number): Promise<void> {
     // Шаги — один раз на переход карты: документ, на который увёл сам шаг, их не повторяет
     e.stepsPending = (e.screen.steps?.length ?? 0) > 0;
+    e.steps = undefined;
     const failed = await e.page.goto(url, { waitUntil: 'commit' }).then(() => false, () => true);
     if (failed && retries > 0 && this.entries.get(e.screen.key) === e && e.page.url() === 'about:blank') {
       await sleep(NAV_RETRY_MS);
@@ -293,7 +317,9 @@ export class StreamService {
       if (this.entries.get(e.screen.key) !== e) {
         return;
       }
+      e.steps = error;
       this.opts.onSteps?.(e.screen.key, error);
+      void this.saveTabs();
       // Шаг увёл на другой документ — готовность отметит его загрузка
       if (e.load !== load) {
         return;

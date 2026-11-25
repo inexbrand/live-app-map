@@ -13,7 +13,7 @@ import { launchStreamBrowser, streamCdpPort } from './stream-browser';
 import type { StreamScreen } from './stream-protocol';
 import { StreamService } from './stream-service';
 
-const PAGE = `<!doctype html><html><body style="margin:0;background:#0a0">
+const PAGE = `<!doctype html><html><body style="margin:0;background:#0a0"><div id="d">готово</div>
 <script>parent.postMessage({ lam: 'page', href: location.href }, '*');
 addEventListener('message', function (e) { if (e.data && e.data.lam === 'ping') parent.postMessage({ lam: 'page', pong: true }, '*'); });</script></body></html>`;
 
@@ -22,7 +22,7 @@ let dir: string;
 /** Сколько раз сервер отдал каждый путь: подхват без перехода страницу не запрашивает. */
 const hits = new Map<string, number>();
 
-type Probe = { readonly frames: Map<string, number>; readonly messages: { key: string; data: unknown }[] };
+type Probe = { readonly frames: Map<string, number>; readonly messages: { key: string; data: unknown }[]; readonly steps: { key: string; error: string | null }[] };
 
 function service(tabsFile: string | undefined, probe: Probe): StreamService {
   return new StreamService({
@@ -30,10 +30,11 @@ function service(tabsFile: string | undefined, probe: Probe): StreamService {
     tabsFile,
     onFrame: (key) => probe.frames.set(key, (probe.frames.get(key) ?? 0) + 1),
     onPageMessage: (key, data) => probe.messages.push({ key, data }),
+    onSteps: (key, error) => probe.steps.push({ key, error }),
   });
 }
 
-const probe = (): Probe => ({ frames: new Map(), messages: [] });
+const probe = (): Probe => ({ frames: new Map(), messages: [], steps: [] });
 const screen = (key: string): StreamScreen => ({ key, url: `http://127.0.0.1:${app.port}/${key}`, width: 320, height: 200, live: true });
 const pong = (p: Probe, key: string): boolean => p.messages.some((m) => m.key === key && JSON.stringify(m.data).includes('"pong":true'));
 
@@ -110,6 +111,26 @@ describe('StreamService: постоянный браузер', () => {
     await b.close();
     await other.sync([]);
     await other.close();
+  }, 60_000);
+
+  test('экран-состояние: подхват без перехода, итог шагов прошлого сервиса приходит снова', async () => {
+    const mine = path.join(dir, 'steps.json');
+    const st: StreamScreen = { ...screen('s1'), steps: [{ waitFor: '#d' }] };
+    const pa = probe();
+    const a = service(mine, pa);
+    await a.sync([st]);
+    await until(() => pa.steps.length > 0 && (pa.frames.get('s1') ?? 0) > 0);
+    expect(pa.steps).toEqual([{ key: 's1', error: null }]);
+    await a.close();
+    const hitsBefore = hits.get('/s1') ?? 0;
+    const pb = probe();
+    const b = service(mine, pb);
+    await b.sync([st]);
+    await until(() => pb.steps.length > 0 && (pb.frames.get('s1') ?? 0) > 0);
+    expect(pb.steps).toEqual([{ key: 's1', error: null }]);
+    expect(hits.get('/s1') ?? 0).toBe(hitsBefore);
+    await b.sync([]);
+    await b.close();
   }, 60_000);
 
   test('close() отключается, а браузер живёт', async () => {
