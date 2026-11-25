@@ -12,8 +12,13 @@ import type { CommentThread } from '@live-app-map/mcp-server/comments-schema';
 export function commentPrompt(thread: CommentThread): string {
   const a = thread.anchor;
   const el = a.element;
-  const lines = [`## Замечание к экрану «${a.pageTitle}»`, '', thread.text, ''];
-  lines.push(`- Экран: ${a.pageId}${a.pageUrl === null ? '' : ` (${a.pageUrl})`}`);
+  const code = a.code;
+  const lines = [code === undefined ? `## Замечание к экрану «${a.pageTitle}»` : `## Замечание к таблице «${a.pageTitle}»`, '', thread.text, ''];
+  if (code === undefined) {
+    lines.push(`- Экран: ${a.pageId}${a.pageUrl === null ? '' : ` (${a.pageUrl})`}`);
+  } else {
+    lines.push(`- Объявление: ${code.name} — ${code.file}:${code.line}–${code.endLine}`);
+  }
   if (a.role !== null) {
     lines.push(`- Роль: ${a.role}`);
   }

@@ -42,6 +42,19 @@ export type LamProjectConfig = {
   readonly backend?: readonly string[];
   /** Связи экранов, которых нет в коде (табы, перекрёстные ссылки приложений). */
   readonly links?: readonly LamLink[];
+  /** Живая БД для вида «База данных» (Postgres); без поля вид показывает только схему из кода. */
+  readonly database?: LamDatabase;
+};
+
+/**
+ * Где взять адрес Postgres: переменная окружения dev-сервера, а если её нет — файл env проекта.
+ * Сам адрес в config.ts не пишется (там пароль). Запись разрешена только для localhost.
+ */
+export type LamDatabase = {
+  /** Имя переменной с адресом postgres://…: 'DATABASE_URL'. */
+  readonly urlEnv: string;
+  /** Файл env от корня проекта (строки KEY=VALUE): 'dev.local.env'. */
+  readonly envFile?: string;
 };
 
 /** Связь экранов: `<id приложения>:<путь маршрута>` → то же; `miniapp:/feed` → `miniapp:/applications`. */

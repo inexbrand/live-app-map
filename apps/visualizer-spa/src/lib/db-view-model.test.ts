@@ -7,7 +7,8 @@ import path from 'node:path';
 import { tableDetail } from '@live-app-map/graph';
 import { liveAppMapToAppMap, parseLiveAppMapDocument } from '@live-app-map/schema';
 import { mapText } from '../test/fixtures';
-import { dbIndexOf, tableRows, tableView } from './db-view-model';
+import { dbIndexOf, tableDocs, tableRows, tableView } from './db-view-model';
+import type { DocGraph } from './doc-graph';
 
 const raw: unknown = JSON.parse(mapText('korbor-all'));
 const parsed = parseLiveAppMapDocument(raw);
@@ -52,5 +53,28 @@ describe('db-view-model на korbor-all', () => {
   test('карта без таблиц — вида нет', () => {
     expect(dbIndexOf({ ...doc, code: undefined })).toBeNull();
     expect(dbIndexOf(null)).toBeNull();
+  });
+});
+describe('tableDocs', () => {
+  const graph: DocGraph = {
+    nodes: [
+      { id: 'doc:b', kind: 'epoch-file', label: 'Б 02-research', detail: '', docPath: 'docs/epoch/b/02-research.md' },
+      { id: 'doc:a', kind: 'note', label: 'А заметка', detail: '', docPath: 'docs/a.md' },
+      { id: 'doc:c', kind: 'note', label: 'В про другое', detail: '', docPath: 'docs/c.md' },
+      { id: 'table:users', kind: 'table', label: 'users', detail: '' },
+      { id: 'route:x', kind: 'route', label: 'GET /x', detail: '' },
+    ],
+    edges: [
+      { source: 'doc:b', target: 'table:users', kind: 'links' },
+      { source: 'doc:a', target: 'table:users', kind: 'links' },
+      { source: 'doc:a', target: 'table:users', kind: 'links' },
+      { source: 'doc:c', target: 'table:posts', kind: 'links' },
+      { source: 'route:x', target: 'table:users', kind: 'belongs' },
+    ],
+  };
+
+  test('документы со ссылкой на таблицу, по подписи, без повторов и не-документов', () => {
+    expect(tableDocs(graph, 'users').map((n) => n.id)).toEqual(['doc:a', 'doc:b']);
+    expect(tableDocs(graph, 'nobody')).toEqual([]);
   });
 });

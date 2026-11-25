@@ -40,7 +40,18 @@ export const commentElementSchema = z.object({
   component: componentSchema.nullable(),
 });
 
-/** Схема привязки: экран и (если выбран) элемент. */
+/** Объявление в коде, к которому замечание (таблица из вида «База данных»). */
+export const commentCodeSchema = z.object({
+  kind: z.literal('table'),
+  /** Имя в коде (exportName таблицы). */
+  name: z.string().min(1),
+  /** Файл от корня проекта. */
+  file: z.string().min(1),
+  line: z.number().int().positive(),
+  endLine: z.number().int().positive(),
+});
+
+/** Схема привязки: экран и (если выбран) элемент; у замечания к коду — ещё объявление. */
 export const commentAnchorSchema = z.object({
   mapName: z.string().nullable(),
   pageId: z.string().min(1),
@@ -48,6 +59,8 @@ export const commentAnchorSchema = z.object({
   pageUrl: z.string().nullable(),
   role: z.string().nullable(),
   element: commentElementSchema.nullable(),
+  /** Есть у замечания к объявлению в коде; pageId тогда — `db:<имя таблицы>`. */
+  code: commentCodeSchema.optional(),
 });
 
 /** Привязка замечания. */

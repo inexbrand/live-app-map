@@ -5,7 +5,7 @@
  */
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import type { LamApp, LamProjectConfig, LamViewport } from '@live-app-map/sdk';
+import type { LamApp, LamDatabase, LamProjectConfig, LamViewport } from '@live-app-map/sdk';
 
 /** Папка проекта внутри приложения. */
 export const PROJECT_DIR_NAME = '.live-app-map';
@@ -124,6 +124,35 @@ function backendErrors(raw: unknown, root: string): string[] {
   return raw.filter((d) => !existsSync(path.join(root, d))).map((d) => `backend: каталога ${path.join(root, d)} нет — проверьте путь от корня проекта`);
 }
 
+/** Ошибки поля database: имя переменной обязательно, файл env — непустая строка или без поля. */
+function databaseErrors(raw: unknown): string[] {
+  if (raw === undefined) {
+    return [];
+  }
+  if (!isRecord(raw)) {
+    return ["database: ожидается объект, например database: { urlEnv: 'DATABASE_URL', envFile: 'dev.local.env' }"];
+  }
+  const errors: string[] = [];
+  if (!filled(raw['urlEnv'])) {
+    errors.push("database.urlEnv: впишите имя переменной с адресом Postgres, например urlEnv: 'DATABASE_URL'");
+  }
+  const envFile = raw['envFile'];
+  if (envFile !== undefined && !filled(envFile)) {
+    errors.push("database.envFile: файл env от корня проекта, например envFile: 'dev.local.env', или без поля");
+  }
+  // Наличие файла не проверяется: env часто вне git, без него скан работает, а вид БД сам скажет, чего нет.
+  return errors;
+}
+
+/** Проверенное поле database как LamDatabase; нет поля — null. */
+function toDatabase(raw: unknown): LamDatabase | null {
+  if (!isRecord(raw)) {
+    return null;
+  }
+  const envFile = raw['envFile'];
+  return { urlEnv: String(raw['urlEnv']), ...(typeof envFile === 'string' ? { envFile } : {}) };
+}
+
 /**
  * Проверяет экспорт `config`: все обязательные поля заполнены, каталоги есть.
  *
@@ -153,6 +182,7 @@ export function checkProjectConfig(raw: unknown, root: string): { readonly ok: t
   errors.push(...backendErrors(raw['backend'], root));
   const appIds = new Set(Array.isArray(apps) ? apps.flatMap((a) => (isRecord(a) && filled(a['id']) ? [a['id']] : [])) : []);
   errors.push(...linksErrors(raw['links'], appIds));
+  errors.push(...databaseErrors(raw['database']));
   return errors.length > 0 ? { ok: false, errors } : { ok: true, config: toConfig(raw, apps) };
 }
 
@@ -161,6 +191,7 @@ function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamPro
   const list = Array.isArray(apps) ? apps.filter(isRecord) : [];
   const backend = raw['backend'];
   const links = Array.isArray(raw['links']) ? raw['links'].filter(isRecord) : null;
+  const database = toDatabase(raw['database']);
   return {
     name: String(raw['name']),
     apps: list.map((a): LamApp => ({
@@ -176,6 +207,7 @@ function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamPro
     ...(links === null
       ? {}
       : { links: links.map((l) => ({ from: String(l['from']), to: String(l['to']), ...(typeof l['label'] === 'string' ? { label: l['label'] } : {}) })) }),
+    ...(database === null ? {} : { database }),
   };
 }
 

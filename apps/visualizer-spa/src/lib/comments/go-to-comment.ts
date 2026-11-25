@@ -51,5 +51,11 @@ export function goToComment(t: CommentThread): void {
   const comments = useCommentsStore.getState();
   comments.closeSheet();
   comments.focus(t.id);
+  const code = t.anchor.code;
+  if (code !== undefined) {
+    // Замечание к таблице: вид «База данных», таблица выбрана, справа её код
+    useViewStore.getState().openTable(code.name);
+    return;
+  }
   openAnchor(t.anchor, frameOf(t.anchor));
 }

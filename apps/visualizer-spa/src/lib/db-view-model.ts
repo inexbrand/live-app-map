@@ -4,6 +4,7 @@
  */
 import { buildCodeIndex, tableDetail, type CodeIndex, type RouteCaller, type TableDetail } from '@live-app-map/graph';
 import type { ApiRoute, AppMapDocument, DbTable } from '@live-app-map/schema';
+import type { DocGraph, GraphNode } from './doc-graph';
 
 /** Строка списка таблиц. */
 export type TableRow = {
@@ -92,4 +93,16 @@ export function tableView(index: CodeIndex, exportName: string): TableView | nul
   }
   const use = (r: ApiRoute): RouteUse => ({ route: r, screens: index.callersByRoute.get(r.id) ?? [] });
   return { ...d, readRoutes: d.readBy.map(use), writeRoutes: d.writtenBy.map(use) };
+}
+/**
+ * Документы, которые ссылаются на таблицу: эпохи, их файлы, заметки (рёбра `links` графа документации).
+ *
+ * @param graph - граф документации карты
+ * @param exportName - таблица
+ * @returns узлы-документы по подписи, без повторов
+ */
+export function tableDocs(graph: DocGraph, exportName: string): GraphNode[] {
+  const target = `table:${exportName}`;
+  const ids = new Set(graph.edges.filter((e) => e.kind === 'links' && e.target === target).map((e) => e.source));
+  return graph.nodes.filter((n) => ids.has(n.id) && n.docPath !== undefined).sort((a, b) => a.label.localeCompare(b.label));
 }
