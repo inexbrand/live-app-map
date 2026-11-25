@@ -46,7 +46,9 @@ export function mergeScreenSets(sets: Iterable<readonly StreamScreen[]>): Stream
  * @param opts - порт, запуск браузера, пауза закрытия
  */
 export function startStreamServer(opts: StreamServerOptions): StreamServer {
-  const clients = new Set<ServerWebSocket<undefined>>();
+  /** Карты и их наборы экранов. */
+  const clients = new Map<ServerWebSocket<undefined>, readonly StreamScreen[]>();
+  const syncAll = (): void => void service.sync(mergeScreenSets(clients.values())).catch(() => undefined);
   let idle: ReturnType<typeof setTimeout> | null = null;
   /** Итог шагов каждого экрана: новая карта получает его сразу. */
   const steps = new Map<string, string>();
@@ -54,14 +56,14 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
     launch: opts.launch,
     onFrame: (key, jpeg) => {
       const msg = encodeFrame(key, jpeg);
-      for (const c of clients) {
+      for (const c of clients.keys()) {
         c.send(msg);
       }
     },
     onPageMessage: (key, data) => {
       const msg: ServerMessage = { t: 'page', key, data };
       const text = JSON.stringify(msg);
-      for (const c of clients) {
+      for (const c of clients.keys()) {
         c.send(text);
       }
     },
@@ -69,7 +71,7 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
       const msg: ServerMessage = { t: 'steps', key, error };
       const text = JSON.stringify(msg);
       steps.set(key, text);
-      for (const c of clients) {
+      for (const c of clients.keys()) {
         c.send(text);
       }
     },
@@ -82,7 +84,7 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
     },
     websocket: {
       open(ws) {
-        clients.add(ws);
+        clients.set(ws, []);
         if (idle !== null) {
           clearTimeout(idle);
           idle = null;
@@ -94,10 +96,11 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
           ws.send(text);
         }
       },
-      message(_ws, raw) {
+      message(ws, raw) {
         const m = parseClientMessage(String(raw));
         if (m?.t === 'sync') {
-          void service.sync(m.screens).catch(() => undefined);
+          clients.set(ws, m.screens);
+          syncAll();
         }
         if (m?.t === 'post') {
           void service.post(m.key, m.data);
@@ -109,7 +112,10 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
       close(ws) {
         clients.delete(ws);
         if (clients.size === 0) {
-          idle = setTimeout(() => void service.sync([]).catch(() => undefined), opts.idleCloseMs ?? DEFAULT_IDLE_CLOSE_MS);
+          // Последняя карта ушла: страницы живут паузу — перезагрузка карты их подхватит
+          idle = setTimeout(syncAll, opts.idleCloseMs ?? DEFAULT_IDLE_CLOSE_MS);
+        } else {
+          syncAll();
         }
       },
     },
