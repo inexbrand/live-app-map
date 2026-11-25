@@ -7,7 +7,7 @@
  */
 import { createHash } from 'node:crypto';
 import type { AppMapStateStep } from '@live-app-map/schema';
-import { LOAD_TIMEOUT_MS, settleLoaded, type SettlingPage } from './page-settle';
+import { gotoLoaded, settleLoaded, type LoadingPage, type SettlingPage } from './page-settle';
 import { runStateSteps, type StepsPage } from '../stream/state-steps';
 import { existsSync, mkdirSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
@@ -23,8 +23,9 @@ export type SnapshotContext = {
   close(): Promise<void>;
 };
 /** Страница. */
-export type SnapshotPage = SettlingPage & StepsPage & {
-  goto(url: string, opts: { waitUntil: 'load'; timeout: number }): Promise<unknown>;
+export type SnapshotPage = SettlingPage & StepsPage & LoadingPage & {
+  setViewportSize(size: { width: number; height: number }): Promise<void>;
+  close(): Promise<void>;
   screenshot(opts: { type: 'jpeg'; quality: number }): Promise<Uint8Array>;
 };
 
@@ -51,7 +52,8 @@ export type SnapshotServiceOptions = {
 
 const DEFAULT_FRESH_MS = 10 * 60_000;
 const DEFAULT_IDLE_CLOSE_MS = 60_000;
-const DEFAULT_CONCURRENCY = 2;
+/** 4: каждый снимок ~1 с на тёплом кэше модулей; браузер карты держит под картинки столько же соединений из 6. */
+const DEFAULT_CONCURRENCY = 4;
 /** Предел размеров окна снимка. */
 const MAX_SIDE = 4000;
 
@@ -68,6 +70,11 @@ export function isValidSnapshotSize(w: number, h: number): boolean {
 /** Сервис снимков. */
 export class SnapshotService {
   private browser: Promise<SnapshotBrowser> | null = null;
+  /**
+   * Один контекст на все снимки: модули dev-сервера (сотни файлов на экран)
+   * остаются в кэше браузера — новый контекст качал их заново, 4–7 с на снимок.
+   */
+  private context: Promise<SnapshotContext> | null = null;
   private readonly inflight = new Map<string, Promise<string>>();
   private readonly queue: Array<() => void> = [];
   private active = 0;
@@ -118,6 +125,7 @@ export class SnapshotService {
     }
     const b = this.browser;
     this.browser = null;
+    this.context = null;
     if (b !== null) {
       await b.then((browser) => browser.close(), () => undefined);
     }
@@ -167,12 +175,26 @@ export class SnapshotService {
     return this.browser;
   }
 
+  /** Общий контекст; неудачный не запоминается. */
+  private openContext(): Promise<SnapshotContext> {
+    if (this.context === null) {
+      const opening = this.openBrowser().then((b) => b.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 }));
+      this.context = opening;
+      opening.catch(() => {
+        if (this.context === opening) {
+          this.context = null;
+        }
+      });
+    }
+    return this.context;
+  }
+
   private async shoot(req: SnapshotRequest, file: string): Promise<string> {
-    const browser = await this.openBrowser();
-    const ctx = await browser.newContext({ viewport: { width: req.width, height: req.height }, deviceScaleFactor: 1 });
+    const ctx = await this.openContext();
+    const page = await ctx.newPage();
     try {
-      const page = await ctx.newPage();
-      await page.goto(req.url, { waitUntil: 'load', timeout: LOAD_TIMEOUT_MS });
+      await page.setViewportSize({ width: req.width, height: req.height });
+      await gotoLoaded(page, req.url);
       await settleLoaded(page);
       // Сбой шага снимок не отменяет: подпись об ошибке шага даёт трансляция
       await runStateSteps(page, req.steps ?? []);
@@ -181,7 +203,7 @@ export class SnapshotService {
       writeFileSync(file, jpeg);
       return file;
     } finally {
-      await ctx.close();
+      await page.close().catch(() => undefined);
     }
   }
 }

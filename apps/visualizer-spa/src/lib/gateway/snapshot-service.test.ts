@@ -15,6 +15,7 @@ import { SnapshotService } from './snapshot-service';
 
 let app: Server<undefined>;
 let hits = 0;
+let libHits = 0;
 let service: SnapshotService;
 
 beforeAll(() => {
@@ -23,7 +24,16 @@ beforeAll(() => {
     hostname: '127.0.0.1',
     fetch(req) {
       // Полный Chromium (Helium) сам просит /favicon.ico — это не загрузка экрана.
-      if (new URL(req.url).pathname !== '/favicon.ico') {
+      const pathname = new URL(req.url).pathname;
+      // Модуль приложения: dev-сервер отдаёт сотни таких — снимок не должен качать их заново
+      if (pathname === '/lib.js') {
+        libHits++;
+        return new Response('document.body.dataset.lib = "1";', { headers: { 'content-type': 'text/javascript', 'cache-control': 'max-age=3600' } });
+      }
+      if (pathname.startsWith('/app')) {
+        return new Response('<html><body style="margin:0;background:#0a0"><script src="/lib.js"></script></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
+      }
+      if (pathname !== '/favicon.ico') {
         hits++;
       }
       return new Response('<html><body style="margin:0;background:#c00"><h1>снимок</h1></body></html>', { headers: { 'content-type': 'text/html; charset=utf-8' } });
@@ -49,9 +59,29 @@ describe('SnapshotService', () => {
     const old = (Date.now() - 120_000) / 1000;
     utimesSync(file, old, old);
     expect(await service.get(req)).toBe(file);
-    await Bun.sleep(3000);
+    // Фоновая съёмка: браузер мог закрыться по простою — ждём файл, а не фиксированные 3 с
+    for (let i = 0; i < 100 && statSync(file).mtimeMs <= old * 1000; i++) {
+      await Bun.sleep(100);
+    }
     expect(hits).toBe(2);
     expect(statSync(file).mtimeMs).toBeGreaterThan(old * 1000);
+  }, 30_000);
+
+  test('снимки экранов одного приложения берут модули из кэша браузера, размер окна у каждого свой', async () => {
+    const a = await service.get({ url: `http://127.0.0.1:${app.port}/app/a`, width: 1440, height: 900 });
+    const b = await service.get({ url: `http://127.0.0.1:${app.port}/app/b`, width: 390, height: 300 });
+    expect(libHits).toBe(1);
+    const size = (f: string): string => {
+      const j = readFileSync(f);
+      // SOF0/SOF2: высота и ширина JPEG
+      for (let i = 2; i < j.length - 9; i++) {
+        if (j[i] === 0xff && (j[i + 1] === 0xc0 || j[i + 1] === 0xc2)) {
+          return `${(j[i + 7] ?? 0) * 256 + (j[i + 8] ?? 0)}x${(j[i + 5] ?? 0) * 256 + (j[i + 6] ?? 0)}`;
+        }
+      }
+      return 'нет';
+    };
+    expect([size(a), size(b)]).toEqual(['1440x900', '390x300']);
   }, 30_000);
 
   test('одновременные запросы одного экрана — одна съёмка', async () => {
