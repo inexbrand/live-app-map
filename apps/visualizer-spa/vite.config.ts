@@ -27,6 +27,7 @@ import { tlsCheckMiddleware } from './src/lib/tls-check-middleware';
 import { lamGatewayPlugin } from './src/lib/gateway/vite-plugin';
 import { lamStreamPlugin } from './src/lib/stream/stream-plugin';
 import { openProject, projectCatalogExtra, projectMiddleware, type OpenProject } from './src/lib/project/project-server';
+import { sourceMiddleware } from './src/lib/project/source-middleware';
 
 const spaRoot = path.dirname(fileURLToPath(import.meta.url));
 const publicMapsDir = path.join(spaRoot, 'public', 'maps');
@@ -42,6 +43,7 @@ const projectMapFiles = new Map(project === null ? [] : [[project.name, project.
 /** REST визуализатора: одинаково у dev-сервера и у прод-сборки (vite preview). */
 function mountApi(server: Pick<PreviewServer, 'middlewares'>): void {
   server.middlewares.use(projectMiddleware(project));
+  server.middlewares.use(sourceMiddleware(project === null ? null : project.root));
   server.middlewares.use(httpsPathProxyMiddleware);
   server.middlewares.use(errorReportsMiddleware);
   server.middlewares.use(agentStateMiddleware);

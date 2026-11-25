@@ -2,7 +2,7 @@
  * Сборка SQL для живых данных БД: чистые функции, без подключения.
  *
  * Имена таблиц и колонок берутся только из интроспекции и экранируются; значения —
- * параметрами `$n` с приведением к базовому типу колонки (`$1::int4`), так Postgres сам
+ * параметрами `$n` с приведением к базовому типу колонки (`$1::text::int4`), так Postgres сам
  * разбирает текст ячейки. Базовый тип без модификатора: `varchar(5)` не обрезает молча.
  */
 import type { DbChanges, DbLiveColumn, DbRow, RowsQuery } from './contract';
@@ -81,7 +81,9 @@ class Params {
       throw new DbHttpError(400, `слишком большой пакет: больше ${MAX_PARAMS} значений — сохраните частями`);
     }
     const ref = `$${this.list.length}`;
-    return castType === undefined ? ref : `${ref}::${castType}`;
+    // Сначала ::text: тогда драйвер шлёт параметр текстом как есть (иначе jsonb он обернёт в JSON-строку,
+    // а bool из 'true' сделает 'f'), а Postgres разбирает текст входной функцией типа колонки.
+    return castType === undefined ? ref : `${ref}::text::${castType}`;
   }
 }
 
@@ -97,13 +99,14 @@ export function buildPageQueries(meta: TableMeta, q: RowsQuery): { readonly rows
   if ((q.filterColumn === undefined) !== (q.filterValue === undefined)) {
     throw new DbHttpError(400, 'фильтр задаётся парой filterColumn и filterValue');
   }
-  const where = q.filterColumn === undefined ? '' : ` WHERE ${quoteIdent(columnOf(meta, q.filterColumn).name)}::text = ${params.add(q.filterValue ?? null)}`;
+  const where = q.filterColumn === undefined ? '' : ` WHERE t.${quoteIdent(columnOf(meta, q.filterColumn).name)}::text = ${params.add(q.filterValue ?? null)}`;
   const sortCol = q.sort === undefined ? null : columnOf(meta, q.sort).name;
   const dir = q.dir === 'desc' ? 'DESC' : 'ASC';
   // Ключ добивает порядок: без него строки с равным значением сортировки скачут между страницами.
-  const order = [...(sortCol === null ? [] : [`${quoteIdent(sortCol)} ${dir}`]), ...meta.primaryKey.filter((k) => k !== sortCol).map((k) => `${quoteIdent(k)} ASC`)];
-  const select = meta.columns.map((c) => `${quoteIdent(c.name)}::text AS ${quoteIdent(c.name)}`).join(', ');
-  const from = `FROM ${qualifiedName(meta)}${where}`;
+  // Колонки с приставкой t.: голое имя ORDER BY берёт колонку вывода (текст), и 11 встаёт раньше 2.
+  const order = [...(sortCol === null ? [] : [`t.${quoteIdent(sortCol)} ${dir}`]), ...meta.primaryKey.filter((k) => k !== sortCol).map((k) => `t.${quoteIdent(k)} ASC`)];
+  const select = meta.columns.map((c) => `t.${quoteIdent(c.name)}::text AS ${quoteIdent(c.name)}`).join(', ');
+  const from = `FROM ${qualifiedName(meta)} AS t${where}`;
   return {
     rows: {
       text: `SELECT ${select} ${from}${order.length === 0 ? '' : ` ORDER BY ${order.join(', ')}`} LIMIT ${q.size} OFFSET ${q.page * q.size}`,

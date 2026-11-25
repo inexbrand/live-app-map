@@ -64,7 +64,7 @@ function envValue(v: string): string {
  * @param host - hostname из адреса (IPv6 в скобках или без)
  */
 export function isLocalDbHost(host: string): boolean {
-  const hosts = host.split(',').map((h) => h.trim().toLowerCase().replace(/^\[(.*)\]$/, '$1').replace(/:\d+$/, ''));
+  const hosts = host.split(',').map((h) => h.trim().toLowerCase().replace(/^\[(.*)\]$/, '$1'));
   return hosts.length > 0 && hosts.every((h) => LOCAL_DB_HOSTS.has(h));
 }
 
