@@ -16,6 +16,7 @@ curl -fsSL https://raw.githubusercontent.com/inexbrand/live-app-map/master/insta
 (`LAM_SDK_TARBALL` — свой tarball), создаёт `.live-app-map/config.ts` и `states.ts`, прячет `map.json` в .gitignore,
 кладёт скилл агента в `.claude/skills/live-app-map/`. Повтор ничего не затирает. Логика — команда `init` (`packages/cli/src/init.ts`).
 Дальше из `~/.live-app-map`: `bun run scan -- --project <путь>` и `bun run dev -- --project <путь>` (`--` обязателен).
+Windows: длинный путь к проекту или `LAM_HOME` (≈ 100+ символов) — `bun` падает «File name too long / failed to symlink»; держите проект и `LAM_HOME` в коротком пути (`C:/work/...`).
 Релиз sdk: версия в `packages/sdk/package.json`, тег `sdk-v<версия>` → workflow `release-sdk` собирает tarball (`bun run --cwd packages/sdk pack:tarball`).
 
 ## Packages
