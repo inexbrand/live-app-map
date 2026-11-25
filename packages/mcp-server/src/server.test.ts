@@ -5,6 +5,7 @@ import { describe, expect, test } from 'bun:test';
 import { mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { mapWithUndocumentedRoutes } from './undocumented-map.test-helpers';
 
 const serverPath = path.join(import.meta.dir, 'server.ts');
 const miniappMap = path.resolve(import.meta.dir, '../../../test-fixtures/maps/korbor-miniapp.liveappmap.json');
@@ -161,11 +162,12 @@ describe('mcp: архитектура API и документация', () => {
 
   test('описание из кода рядом с авторским, экраны роута и причина «без экранов»', async () => {
     const lamDir = mkdtempSync(path.join(tmpdir(), 'lam-mcp-auto-'));
+    const bare = mapWithUndocumentedRoutes(allMap, lamDir);
     const out = await rpc(
       [
         call(1, 'get_route', { mapPath: allMap, route: 'GET /api/v1/admin/vacancies' }),
         call(2, 'describe_api', { mapPath: allMap, noScreens: true }),
-        call(3, 'describe_api', { mapPath: allMap, undocumented: true }),
+        call(3, 'describe_api', { mapPath: bare.file, undocumented: true }),
       ],
       lamDir,
     );
@@ -192,7 +194,7 @@ describe('mcp: архитектура API и документация', () => {
     expect(gaps.coverage.gaps.unreached + gaps.coverage.gaps.otherClient + gaps.coverage.gaps.noCaller).toBe(gaps.coverage.routes);
     expect(lines(gaps).every((l) => l.includes(' · без экранов: '))).toBe(true);
     const undocumented = lines(toolText(out[2]) as Api);
-    expect(undocumented.length).toBeGreaterThan(0);
+    expect(undocumented).toHaveLength(bare.undocumented);
     expect(undocumented.every((l) => l.includes(' · из кода: '))).toBe(true);
   });
 

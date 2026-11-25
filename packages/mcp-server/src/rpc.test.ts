@@ -9,6 +9,7 @@ import { liveAppMapToAppMap, parseLiveAppMapJson } from '@live-app-map/schema';
 import { handleRpcText, type RpcResponse } from './rpc';
 import { saveFeedback } from './feedback-store';
 import { serveLines, splitLines } from './stdio';
+import { mapWithUndocumentedRoutes } from './undocumented-map.test-helpers';
 
 const MAPS = path.resolve(import.meta.dir, '../../../maps');
 const TEST_MAPS = path.resolve(import.meta.dir, '../../../test-fixtures/maps');
@@ -97,7 +98,9 @@ describe('база знаний по коду', () => {
   });
 
   test('describe_api: фильтр метода без учёта регистра, неизвестный метод — ошибка', () => {
-    const post = data('describe_api', { mapPath: ALL, method: 'post', noScreens: true, undocumented: true });
+    const bare = mapWithUndocumentedRoutes(ALL, ctx.lamDir);
+    expect(bare.undocumented).toBeGreaterThan(0);
+    const post = data('describe_api', { mapPath: bare.file, method: 'post', noScreens: true, undocumented: true });
     const lines = (post['services'] as { sections: { modules: { routes: string[] }[] }[] }[]).flatMap((s) => s.sections.flatMap((x) => x.modules.flatMap((m) => m.routes)));
     expect(lines.length).toBeGreaterThan(0);
     expect(lines.every((l) => l.startsWith('POST ') && l.includes(' · без экранов: '))).toBe(true);
