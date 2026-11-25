@@ -37,4 +37,5 @@
 - [Вид «База данных» как Drizzle Studio](visualizer-db-studio.md) — схема dagre BT (LR — узкая колонна), /__lam_project/source, anchor.code, autoFocus
 - [postgres.js в /__lam_db: параметры текстом](postgres-js-params-text.md) — $n::text::тип, ORDER BY t.col, живой тест в lam_test_
 - [Рантайм SDK — текстом функций](sdk-runtime-text-embed.md) — toString без замыканий, fiber общий с пикером, happy-dom ломает fetch
+- [WebAssembly не ускорит загрузку](wasm-not-a-fix.md) — JS ~5 % потока, тяжесть в vite/браузере
 - [Живая проверка UI скриптом](live-ui-check-playwright-core.md) — playwright-core из .bun, кнопка korbor, вид кнопкой в шапке
