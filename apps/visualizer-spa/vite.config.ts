@@ -121,9 +121,12 @@ export default defineConfig({
     lamGatewayPlugin(),
     lamStreamPlugin(),
   ],
-  server: { port: 4310, host: true, proxy: surfaceProxies() },
+  // strictPort: занятый порт — сразу ошибка. Без него vite под Bun уходит на соседний порт,
+  // его listen() не завершается, а повторный listen() того же сервера держит и старый порт:
+  // процесс копит порты до конца жизни (dev-server-port.test.ts).
+  server: { port: 4310, strictPort: true, host: true, proxy: surfaceProxies() },
   // Прод-сборка (bun run start): тот же порт и прокси, что у dev
-  preview: { port: 4310, host: true, proxy: surfaceProxies() },
+  preview: { port: 4310, strictPort: true, host: true, proxy: surfaceProxies() },
   optimizeDeps: {
     // transformers импортирует только воркер голоса: без include Vite находит его при первой
     // записи голоса и перезагружает страницу посреди работы (и e2e)
