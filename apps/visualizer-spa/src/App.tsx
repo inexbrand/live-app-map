@@ -77,7 +77,6 @@ async function runDogfoodAfterMapLoad(): Promise<void> {
     dogfoodMiniappInitData: s.dogfoodMiniappInitData,
     setDogfoodAdminAccessToken: s.setDogfoodAdminAccessToken,
     setDogfoodMiniappInitData: s.setDogfoodMiniappInitData,
-    setGlobalRole: s.setGlobalRole,
     onToast: s.setToast,
   });
 }

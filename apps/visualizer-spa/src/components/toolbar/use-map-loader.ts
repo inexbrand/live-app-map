@@ -85,7 +85,6 @@ async function mintMissingDogfood(dogfood: DogfoodActorsState): Promise<void> {
     dogfoodMiniappInitData: app.dogfoodMiniappInitData,
     setDogfoodAdminAccessToken: app.setDogfoodAdminAccessToken,
     setDogfoodMiniappInitData: app.setDogfoodMiniappInitData,
-    setGlobalRole: app.setGlobalRole,
     onActors: (actors) => {
       dogfood.setActors(actors);
       dogfood.setError(null);

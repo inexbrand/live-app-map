@@ -11,7 +11,7 @@ const ADMIN: DogfoodActor = { id: 'a1', kind: 'admin', label: 'ops@korbor', role
 const NO_TG: DogfoodActor = { id: 'u0', kind: 'user', label: 'Без телеграма', role: 'recruiter', telegramId: '  ' };
 const RECRUITER: DogfoodActor = { id: 'u1', kind: 'user', label: 'Анна', role: 'recruiter', telegramId: '42' };
 
-type Seen = { admin: string; init: string; role: string; toasts: string[]; errors: string[]; actors: number };
+type Seen = { admin: string; init: string; toasts: string[]; errors: string[]; actors: number };
 
 function input(seen: Seen, admin = '', init = ''): EnsureDogfoodInput {
   return {
@@ -19,7 +19,6 @@ function input(seen: Seen, admin = '', init = ''): EnsureDogfoodInput {
     dogfoodMiniappInitData: init,
     setDogfoodAdminAccessToken: (t) => { seen.admin = t; },
     setDogfoodMiniappInitData: (r) => { seen.init = r; },
-    setGlobalRole: (r) => { seen.role = r; },
     onActors: (a) => { seen.actors = a.length; },
     onError: (m) => { seen.errors.push(m); },
     onToast: (m) => { seen.toasts.push(m); },
@@ -27,7 +26,7 @@ function input(seen: Seen, admin = '', init = ''): EnsureDogfoodInput {
 }
 
 function fresh(): Seen {
-  return { admin: '', init: '', role: '', toasts: [], errors: [], actors: -1 };
+  return { admin: '', init: '', toasts: [], errors: [], actors: -1 };
 }
 
 type Mint = Record<string, Response>;
@@ -64,14 +63,16 @@ describe('ensureDogfoodSessions', () => {
     expect(net.calls).toHaveLength(0);
   });
 
-  test('вход админом и пользователем с telegramId; роль из сессии', async () => {
+  // Роль просмотра авто-вход не трогает: порядок пользователей в базе случаен, а экран
+  // открывается ролью своего стейта («Смотреть как» — только явный выбор в настройках).
+  test('вход админом и пользователем с telegramId; роль просмотра не меняется', async () => {
     net = korbor([NO_TG, ADMIN, RECRUITER], {
       a1: jsonResponse({ data: { kind: 'admin', actorId: 'a1', label: 'ops', role: 'admin', accessToken: ' T1 ' } }),
       u1: jsonResponse({ data: { kind: 'user', actorId: 'u1', label: 'Анна', role: 'recruiter', initData: 'tg=1' } }),
     });
     const seen = fresh();
     expect(await ensureDogfoodSessions(input(seen), {})).toEqual({ ok: true, mintedAdmin: true, mintedMiniapp: true });
-    expect(seen).toEqual({ admin: 'T1', init: 'tg=1', role: 'recruiter', toasts: [], errors: [], actors: 3 });
+    expect(seen).toEqual({ admin: 'T1', init: 'tg=1', toasts: [], errors: [], actors: 3 });
     expect(net.calls.map((c) => c.body)).toEqual([null, '{"kind":"admin","actorId":"a1"}', '{"kind":"user","actorId":"u1"}']);
   });
 
@@ -117,7 +118,6 @@ describe('ensureDogfoodSessions', () => {
     });
     const seen = fresh();
     expect(await ensureDogfoodSessions(input(seen), {})).toEqual({ ok: true, mintedAdmin: false, mintedMiniapp: false });
-    expect(seen.role).toBe('employer');
     expect(seen.init).toBe('');
   });
 });

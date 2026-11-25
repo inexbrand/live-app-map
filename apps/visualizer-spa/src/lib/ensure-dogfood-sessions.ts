@@ -15,7 +15,6 @@ export type EnsureDogfoodInput = {
   readonly dogfoodMiniappInitData: string;
   readonly setDogfoodAdminAccessToken: (token: string) => void;
   readonly setDogfoodMiniappInitData: (raw: string) => void;
-  readonly setGlobalRole?: (role: string) => void;
   readonly onActors?: (actors: readonly DogfoodActor[]) => void;
   readonly onError?: (message: string) => void;
   readonly onToast?: (message: string) => void;
@@ -59,10 +58,9 @@ async function mintMiniapp(user: DogfoodActor, input: EnsureDogfoodInput): Promi
     input.onToast?.(`Miniapp dogfood: ${minted.error}`);
     return false;
   }
+  // Роль просмотра не ставим: пользователь — первый с telegramId в случайном порядке базы,
+  // а экран открывается ролью своего стейта (шлюз выбирает профиль по ней).
   const inj = mapSessionToInject(minted.data);
-  if (inj.globalRole && input.setGlobalRole) {
-    input.setGlobalRole(inj.globalRole);
-  }
   if (!inj.miniappInitData) {
     return false;
   }
