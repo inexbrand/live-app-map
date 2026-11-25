@@ -31,5 +31,6 @@
 - [Тиммейты параллельно](parallel-teammates-speed.md) — дробить большие задачи по агентам, контракт до старта
 - [install.sh и tarball sdk](install-sh-and-sdk-tarball.md) — загрузчик + init, pack из exports, проверка в %TEMP%, sdk/package.json затирают
 - [Узлы-состояния экранов](visualizer-state-nodes.md) — только в index.document, шаги state-steps, перезагрузки vite в общем checkout
+- [vite под Bun: перебор портов копит их](vite-bun-port-fallback.md) — strictPort, плагины не виноваты, createServer+restart для замера
 - [Карта проекта в .live-app-map](project-folder-map.md) — korbor/.live-app-map/map.json, срезы test-fixtures/maps, импорт states.ts с ?v=
 - [Рантайм SDK — текстом функций](sdk-runtime-text-embed.md) — toString без замыканий, fiber общий с пикером, happy-dom ломает fetch
