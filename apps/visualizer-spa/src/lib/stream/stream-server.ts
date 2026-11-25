@@ -14,6 +14,8 @@ import { StreamService, type StreamServiceOptions } from './stream-service';
 export type StreamServerOptions = {
   readonly port: number;
   readonly launch: StreamServiceOptions['launch'];
+  /** Список вкладок владельца: вкладки прошлого сервера подхватываются. */
+  readonly tabsFile?: string;
   /** Через сколько после ухода последней карты закрыть страницы, мс. */
   readonly idleCloseMs?: number;
 };
@@ -54,6 +56,7 @@ export function startStreamServer(opts: StreamServerOptions): StreamServer {
   const steps = new Map<string, string>();
   const service = new StreamService({
     launch: opts.launch,
+    tabsFile: opts.tabsFile,
     onFrame: (key, jpeg) => {
       const msg = encodeFrame(key, jpeg);
       for (const c of clients.keys()) {

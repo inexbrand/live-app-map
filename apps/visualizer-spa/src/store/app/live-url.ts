@@ -3,7 +3,7 @@
  */
 import { applyStateToUrl, resolveNodeUrl } from '@live-app-map/graph';
 import { applyDogfoodToUrl, ensureMiniappHashRoute } from '../../lib/dogfood-url';
-import { cellOf, toGatewayUrl } from '../../lib/gateway/gateway-host';
+import { toGatewayUrl } from '../../lib/gateway/gateway-host';
 import { pickNodeProfile } from '../../lib/gateway/profile-pick';
 import { sampledPath, withPathname } from '../../lib/route-samples';
 import { stateNodeInfo } from '../../lib/state-nodes';
@@ -39,8 +39,14 @@ function urlWithState(base: string, pageState: PageState | undefined, globalRole
   });
 }
 
-/** Шлюз: сессия профиля вместо query-токенов и TLS-прокси. */
-function gatewayUrl(withState: string, node: MapNode, doc: NonNullable<LiveUrlInput['document']>, ctx: { readonly id: string; readonly stateName: string | undefined; readonly globalRole: string; readonly port: number }): string {
+/**
+ * Шлюз: сессия профиля вместо query-токенов и TLS-прокси. Origin — общий у всех
+ * экранов одного профиля и приложения (без ячейки ноды): у каждого экрана своя
+ * вкладка браузера трансляции, общий sessionStorage iframe больше не мешает,
+ * а общий origin даёт общий HTTP-кэш и кэш кода (8 страниц админки: 28–34 МБ
+ * против 270–419 МБ с ячейками).
+ */
+function gatewayUrl(withState: string, node: MapNode, doc: NonNullable<LiveUrlInput['document']>, ctx: { readonly stateName: string | undefined; readonly globalRole: string; readonly port: number }): string {
   const gateway = useGatewayStore.getState();
   const hashed = ensureMiniappHashRoute(withState);
   let appOrigin = '';
@@ -53,7 +59,7 @@ function gatewayUrl(withState: string, node: MapNode, doc: NonNullable<LiveUrlIn
   // Параметры маршрута — реальные id из API под этим профилем, если уже прочитаны.
   const real = sampledPath(doc, node, gateway.samples.get(profile));
   const target = real === null ? hashed : ensureMiniappHashRoute(withPathname(withState, real));
-  return toGatewayUrl(target, profile, ctx.port, cellOf(ctx.id)) ?? target;
+  return toGatewayUrl(target, profile, ctx.port) ?? target;
 }
 
 /** Origin визуализатора для TLS-прокси. */
@@ -155,5 +161,5 @@ function computeLiveUrl(store: LiveUrlInput, id: string): string | null {
   const active = activeState(node, store, id);
   const withState = urlWithState(base, active.state, store.globalRole);
   const port = useGatewayStore.getState().port;
-  return port === null ? directUrl(withState, store) : gatewayUrl(withState, node, doc, { id, stateName: active.name, globalRole: store.globalRole, port });
+  return port === null ? directUrl(withState, store) : gatewayUrl(withState, node, doc, { stateName: active.name, globalRole: store.globalRole, port });
 }

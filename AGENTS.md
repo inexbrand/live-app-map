@@ -19,6 +19,7 @@ bun install
 bun test packages apps/visualizer-spa
 bun run scan -- --project ../korbor
 bun run dev -- --project ../korbor
+bun run browser:stop   # погасить постоянный браузер трансляции (живёт после остановки dev)
 ```
 
 ## Korbor dogfood

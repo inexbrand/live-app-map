@@ -3,7 +3,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { Server } from 'bun';
-import { launchStreamBrowser } from '../gateway/snapshot-browser';
+import { launchStreamBrowser } from './stream-browser';
 import { StreamClient } from './stream-client';
 import { startStreamServer, type StreamServer } from './stream-server';
 
@@ -30,12 +30,14 @@ beforeAll(() => {
         headers: { 'content-type': 'text/html' },
       }),
   });
-  stream = startStreamServer({ port: 0, launch: launchStreamBrowser });
+  stream = startStreamServer({ port: 0, launch: launchStreamBrowser, idleCloseMs: 50 });
   client = new StreamClient(() => Promise.resolve(`ws://127.0.0.1:${stream.port}/`));
 });
 
 afterAll(async () => {
+  // Браузер постоянный: карта ушла — сервер закрывает её вкладки после паузы, затем отключается
   client.close();
+  await Bun.sleep(500);
   await stream.stop();
   void app.stop(true);
 });

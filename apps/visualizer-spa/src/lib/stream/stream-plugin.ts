@@ -4,7 +4,7 @@
  */
 import type { Plugin } from 'vite';
 import type { HostServer } from '../gateway/vite-plugin';
-import { launchStreamBrowser } from '../gateway/snapshot-browser';
+import { launchStreamBrowser, streamTabsFile } from './stream-browser';
 import { startStreamServer, type StreamServer } from './stream-server';
 
 /** Путь, по которому карта узнаёт порт трансляции. */
@@ -27,12 +27,13 @@ async function stopPrevious(): Promise<void> {
   }
 }
 
-function startOnFreePort(wanted: number): StreamServer | undefined {
+function startOnFreePort(wanted: number, owner: string): StreamServer | undefined {
   for (let i = 0; i < PORT_TRIES; i++) {
     try {
       return startStreamServer({
         port: wanted + i,
         launch: launchStreamBrowser,
+        tabsFile: streamTabsFile(process.env, owner),
       });
     } catch {
       // порт занят — следующий
@@ -45,16 +46,20 @@ function startOnFreePort(wanted: number): StreamServer | undefined {
 export function lamStreamPlugin(): Plugin {
   return {
     name: 'lam-stream',
-    configureServer: startStreamOn,
-    configurePreviewServer: startStreamOn,
+    configureServer: (server) => startStreamOn(server, `vite-${String(server.config.server.port)}`),
+    configurePreviewServer: (server) => startStreamOn(server, `preview-${String(server.config.preview.port)}`),
   };
 }
 
-/** Сервер трансляции рядом с сервером визуализатора (dev или прод-сборка). */
-async function startStreamOn(server: HostServer): Promise<void> {
+/**
+ * Сервер трансляции рядом с сервером визуализатора (dev или прод-сборка).
+ * Владелец вкладок в постоянном браузере — порт визуализатора (strictPort):
+ * перезапуск того же vite подхватывает свои вкладки, другой vite (e2e) их не трогает.
+ */
+async function startStreamOn(server: HostServer, owner: string): Promise<void> {
   await stopPrevious();
   const wanted = Number(process.env['LAM_STREAM_PORT'] ?? DEFAULT_STREAM_PORT);
-  const stream = startOnFreePort(wanted);
+  const stream = startOnFreePort(wanted, owner);
   if (stream === undefined) {
     server.config.logger.error(`[lam-stream] порты ${wanted}–${wanted + PORT_TRIES - 1} заняты: экраны не покажутся`);
     return;

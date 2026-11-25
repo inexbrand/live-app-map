@@ -3,7 +3,7 @@
  */
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { Server } from 'bun';
-import { launchStreamBrowser } from '../gateway/snapshot-browser';
+import { launchStreamBrowser } from './stream-browser';
 import { decodeFrame, type ClientMessage } from './stream-protocol';
 import { startStreamServer, type StreamServer } from './stream-server';
 

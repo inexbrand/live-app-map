@@ -199,3 +199,4 @@ bun run dev -- --project ../korbor
 | `bun run build` | build всех workspaces |
 | `bun run scan -- --project <каталог>` | скан проекта по `.live-app-map/config.ts` → `.live-app-map/map.json` |
 | `bun run dev -- --project <каталог> [--port N]` | dev SPA (порт **4310** по умолчанию) с картой и состояниями проекта |
+| `bun run browser:stop` | погасить постоянный headless Helium трансляции экранов (CDP :9341 или `LAM_STREAM_CDP_PORT`; живёт после остановки dev, профиль в `%LOCALAPPDATA%/live-app-map/stream-browser/<порт>`) |

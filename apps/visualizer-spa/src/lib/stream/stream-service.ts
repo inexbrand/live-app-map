@@ -8,11 +8,19 @@
 import type { Browser, BrowserContext, CDPSession, Page } from '@playwright/test';
 import { settleLoaded } from '../gateway/page-settle';
 import { runStateSteps } from './state-steps';
+import { dispatchInput } from './stream-input';
+import { findOwnTabs, targetIdOf, writeTabs, type OwnTab, type TabRecord } from './stream-tabs';
 import { PAGE_TO_HOST_TYPES, isPageToHost, planSync, type PageInput, type StreamScreen } from './stream-protocol';
 
 /** Опции сервиса. */
 export type StreamServiceOptions = {
+  /** Подключение к браузеру; close() у него не должен гасить постоянный браузер. */
   readonly launch: () => Promise<Browser>;
+  /**
+   * Список вкладок владельца (stream-tabs): новый сервис с тем же списком
+   * подхватывает вкладки прошлого — без него вкладки только свои.
+   */
+  readonly tabsFile?: string;
   readonly onFrame: (key: string, jpeg: Uint8Array) => void;
   readonly onPageMessage: (key: string, data: unknown) => void;
   /** Итог шагов состояния экрана: null — выполнены, иначе «шаг N не выполнен: …». */
@@ -28,7 +36,9 @@ export type StreamServiceOptions = {
  * доходят с опозданием. Пока страница грузится — Infinity. load — номер
  * документа: готовность старого документа новый не отмечает.
  */
-type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readyAt: number; load: number; stepsPending: boolean };
+type Entry = { screen: StreamScreen; readonly page: Page; readonly cdp: CDPSession; readonly targetId: string | null; readyAt: number; load: number; stepsPending: boolean };
+
+
 
 const DEFAULT_QUALITY = 70;
 /** Сколько раз повторить оборванный переход и через сколько, мс. */
@@ -54,6 +64,8 @@ export class StreamService {
   private ctx: Promise<BrowserContext> | null = null;
   private readonly entries = new Map<string, Entry>();
   private readonly last = new Map<string, Uint8Array>();
+  /** Вкладки прошлого сервиса по ключу экрана; null — уже разобраны (или списка нет). */
+  private orphans: Map<string, OwnTab> | null = null;
   private queue: Promise<void> = Promise.resolve();
   private readonly quality: number;
 
@@ -108,10 +120,14 @@ export class StreamService {
     return [...this.entries.keys()];
   }
 
-  /** Закрыть браузер. */
+  /**
+   * Отключиться от браузера. Браузер и вкладки живут дальше: их подхватит
+   * следующий сервис с тем же списком вкладок. Закрыть свои вкладки — sync([]).
+   */
   async close(): Promise<void> {
     await this.queue;
     this.entries.clear();
+    this.orphans = null;
     const b = this.browser;
     this.browser = null;
     this.ctx = null;
@@ -141,13 +157,46 @@ export class StreamService {
     for (const s of plan.open) {
       await this.open(s);
     }
+    await this.dropOrphans();
+    await this.saveTabs();
+  }
+
+  /** Вкладки прошлого сервиса, которых нет в первом наборе, — закрыть. */
+  private async dropOrphans(): Promise<void> {
+    const rest = this.orphans;
+    if (rest === null || this.ctx === null) {
+      return;
+    }
+    this.orphans = null;
+    await Promise.all([...rest.values()].map((o) => o.page.close().catch(() => undefined)));
+  }
+
+  private async saveTabs(): Promise<void> {
+    const file = this.opts.tabsFile;
+    if (file === undefined || this.ctx === null) {
+      return;
+    }
+    const tabs = new Map<string, TabRecord>();
+    for (const e of this.entries.values()) {
+      if (e.targetId !== null) {
+        tabs.set(e.targetId, { key: e.screen.key, url: e.screen.url });
+      }
+    }
+    await writeTabs(file, tabs).catch(() => undefined);
   }
 
   private context(): Promise<BrowserContext> {
     if (this.ctx === null) {
       const launching = this.opts.launch();
       this.browser = launching;
-      this.ctx = launching.then((b) => b.newContext({ ignoreHTTPSErrors: true }));
+      // Контекст по умолчанию — профиль на диске: newContext поверх CDP дал бы
+      // инкогнито с кэшем в памяти
+      this.ctx = launching.then(async (b) => {
+        b.on('disconnected', () => this.lost(launching));
+        const ctx = b.contexts()[0] ?? (await b.newContext({ ignoreHTTPSErrors: true }));
+        this.orphans = this.opts.tabsFile === undefined ? new Map() : await findOwnTabs(ctx, this.opts.tabsFile);
+        return ctx;
+      });
       this.ctx.catch(() => {
         this.browser = null;
         this.ctx = null;
@@ -156,15 +205,31 @@ export class StreamService {
     return this.ctx;
   }
 
+  /** Браузер пропал (погашен browser:stop): следующий sync подключится заново. */
+  private lost(which: Promise<Browser>): void {
+    if (this.browser !== which) {
+      return;
+    }
+    this.browser = null;
+    this.ctx = null;
+    this.orphans = null;
+    this.entries.clear();
+  }
+
   private async open(screen: StreamScreen): Promise<void> {
     const ctx = await this.context();
-    const page = await ctx.newPage();
+    const orphan = this.orphans?.get(screen.key);
+    this.orphans?.delete(screen.key);
+    const page = orphan?.page ?? (await ctx.newPage());
+    // Подхваченная вкладка на том же адресе — без перехода. Шаги состояния
+    // повторяются переходом: их итог карта ждёт, а прошлый сервис его унёс.
+    const same = orphan !== undefined && orphan.url === screen.url && (screen.steps?.length ?? 0) === 0 && !page.isClosed();
     await page.setViewportSize({ width: screen.width, height: screen.height });
     await page.exposeBinding(HOST_BINDING, (_src, json: unknown) => this.fromPage(screen.key, json));
     await page.addInitScript(BRIDGE);
     await page.addInitScript(`window.${SCREEN_KEY_GLOBAL}=${JSON.stringify(screen.key)};`);
     const cdp = await ctx.newCDPSession(page);
-    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, readyAt: Infinity, load: 0, stepsPending: false };
+    const entry: Entry = { screen: { ...screen, live: false }, page, cdp, targetId: await targetIdOf(cdp), readyAt: Infinity, load: 0, stepsPending: false };
     cdp.on('Page.screencastFrame', (f) => {
       void cdp.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => undefined);
       if ((f.metadata.timestamp ?? 0) >= entry.readyAt) {
@@ -184,6 +249,10 @@ export class StreamService {
     this.entries.set(screen.key, entry);
     if (screen.live) {
       await this.setLive(screen, true);
+    }
+    if (same) {
+      void this.markReady(entry, entry.load);
+      return;
     }
     // Не ждём загрузку: следующий экран открывается сразу, кадр придёт после неё.
     void this.go(entry, screen.url, NAV_RETRIES);
@@ -230,6 +299,11 @@ export class StreamService {
         return;
       }
     }
+    await this.markReady(e, load);
+  }
+
+  /** Страница готова: кадры открыты и сразу кадр готовой страницы. */
+  private async markReady(e: Entry, load: number): Promise<void> {
     e.readyAt = Date.now() / 1000;
     const shot = await e.cdp.send('Page.captureScreenshot', { format: 'jpeg', quality: this.quality }).catch(() => null);
     if (shot !== null && e.load === load) {
@@ -297,33 +371,4 @@ export class StreamService {
     this.entries.delete(key);
     await e?.page.close().catch(() => undefined);
   }
-}
-
-/**
- * Ввод через Playwright: мышь, колесо, клавиши. Печатный символ — type (вне
- * раскладки Playwright вставляет текст), служебная клавиша — down/up.
- */
-async function dispatchInput(page: Page, input: PageInput): Promise<void> {
-  if (input.kind === 'mouse') {
-    await page.mouse.move(input.x, input.y);
-    if (input.type === 'down') {
-      await page.mouse.down({ button: input.button, clickCount: input.clickCount });
-    }
-    if (input.type === 'up') {
-      await page.mouse.up({ button: input.button, clickCount: input.clickCount });
-    }
-    return;
-  }
-  if (input.kind === 'wheel') {
-    await page.mouse.move(input.x, input.y);
-    await page.mouse.wheel(input.dx, input.dy);
-    return;
-  }
-  if ([...input.key].length === 1) {
-    if (input.type === 'down') {
-      await page.keyboard.type(input.key);
-    }
-    return;
-  }
-  await (input.type === 'down' ? page.keyboard.down(input.key) : page.keyboard.up(input.key));
 }

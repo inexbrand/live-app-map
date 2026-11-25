@@ -1,9 +1,9 @@
 /**
- * Live URL экрана через шлюз профилей: адрес шлюза с профилем, меткой приложения и
- * ячейкой ноды; реальные параметры маршрута из прочитанных образцов API.
+ * Live URL экрана через шлюз профилей: адрес шлюза с профилем и меткой приложения,
+ * общий origin у экранов одного профиля и приложения; реальные параметры маршрута
+ * из прочитанных образцов API.
  */
 import { beforeEach, describe, expect, test } from 'bun:test';
-import { cellOf } from '../../lib/gateway/gateway-host';
 import { useAppStore } from '../app-store';
 import { useGatewayStore } from '../gateway-store';
 import { openMap, resetStores } from '../../test/fixtures';
@@ -20,7 +20,7 @@ function screen(pattern: RegExp): string {
 }
 
 describe('live URL через шлюз', () => {
-  test('экран открывается на шлюзе: профиль, метка приложения, ячейка ноды', () => {
+  test('экран открывается на шлюзе: профиль и метка приложения, без ячейки ноды', () => {
     openMap('korbor-miniapp');
     const id = screen(/^\/$/);
     const direct = useAppStore.getState().resolveLiveUrl(id);
@@ -28,8 +28,14 @@ describe('live URL через шлюз', () => {
     const url = useAppStore.getState().resolveLiveUrl(id);
     expect(direct).not.toBeNull();
     // Без сессий — анонимный профиль; метка — dev-сервер мини-аппа из карты.
-    expect(url).toBe(`http://anon--s5175-vite--${cellOf(id)}.localhost:4320/#/`);
+    expect(url).toBe('http://anon--s5175-vite.localhost:4320/#/');
     expect(new URL(url ?? '').hash).toBe(new URL(direct ?? '').hash);
+    // Другой экран того же приложения и профиля — тот же origin: общий кэш браузера
+    const other = useAppStore.getState().document?.nodes.find((x) => x.kind === 'page' && x.id !== id && x.url === undefined) ?? useAppStore.getState().document?.nodes.find((x) => x.kind === 'page' && x.id !== id);
+    const otherUrl = useAppStore.getState().resolveLiveUrl(other?.id ?? '');
+    expect(otherUrl).not.toBeNull();
+    expect(otherUrl).not.toBe(url);
+    expect(new URL(otherUrl ?? '').origin).toBe(new URL(url ?? '').origin);
   });
 
   test('адрес пересобирается при смене роли, стейта, входа и образцов шлюза', () => {

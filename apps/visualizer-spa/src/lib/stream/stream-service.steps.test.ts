@@ -5,7 +5,7 @@
 import { afterAll, beforeAll, describe, expect, test } from 'bun:test';
 import type { Server } from 'bun';
 import { decode } from 'jpeg-js';
-import { launchStreamBrowser } from '../gateway/snapshot-browser';
+import { launchStreamBrowser } from './stream-browser';
 import type { StreamScreen } from './stream-protocol';
 import { StreamService } from './stream-service';
 
@@ -67,6 +67,8 @@ beforeAll(() => {
 });
 
 afterAll(async () => {
+  // Браузер постоянный: свои вкладки закрыть, затем отключиться
+  await service.sync([]);
   await service.close();
   void app.stop(true);
 });
