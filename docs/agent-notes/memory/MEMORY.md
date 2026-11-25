@@ -36,3 +36,4 @@
 - [Карта проекта в .live-app-map](project-folder-map.md) — korbor/.live-app-map/map.json, срезы test-fixtures/maps, импорт states.ts с ?v=
 - [postgres.js в /__lam_db: параметры текстом](postgres-js-params-text.md) — $n::text::тип, ORDER BY t.col, живой тест в lam_test_
 - [Рантайм SDK — текстом функций](sdk-runtime-text-embed.md) — toString без замыканий, fiber общий с пикером, happy-dom ломает fetch
+- [Живая проверка UI скриптом](live-ui-check-playwright-core.md) — playwright-core из .bun, кнопка korbor, вид кнопкой в шапке
