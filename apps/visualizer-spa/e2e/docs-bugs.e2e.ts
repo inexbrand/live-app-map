@@ -34,7 +34,7 @@ test('закрыть и открыть пункт 09-bugs: файл на дис�
   await page.goto('/');
   await page.locator('#lam-file-input').setInputFiles(mapFile);
   // Селект карт показывает импортированный файл, а не «Выберите карту…».
-  await expect(page.getByTestId('map-select').locator('option:checked')).toHaveText('Файл: demo.liveappmap.json');
+  await expect(page.getByTestId('map-select')).toHaveText('Файл: demo.liveappmap.json');
 
   await page.getByTestId('view-docs').click();
   await page.getByTestId('docs-epoch-row').filter({ hasText: 'demo-task' }).click();

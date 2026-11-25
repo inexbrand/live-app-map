@@ -4,9 +4,16 @@
  * ссылки из документа на роут, скриншоты эпохи через dev-эндпоинт.
  * Скриншоты пишутся в папку эпохи (LAM_SHOTS_DIR), если она задана.
  */
+import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
 import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
-import { collectPageErrors, openMap, shot, PROJECT_MAP, SELF_MAP } from './helpers';
+import { collectPageErrors, openMap, projectMapFile, shot, PROJECT_MAP, SELF_MAP } from './helpers';
+
+/** Число роутов в карте проекта на диске: список вида «API» показывает все. */
+function projectRouteCount(): number {
+  const doc = JSON.parse(readFileSync(projectMapFile(), 'utf8')) as { readonly code?: { readonly routes?: readonly unknown[] } };
+  return doc.code?.routes?.length ?? 0;
+}
 
 
 test.describe('вид «API» на korbor', () => {
@@ -14,16 +21,21 @@ test.describe('вид «API» на korbor', () => {
     const errors = collectPageErrors(page);
     await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-api').click();
+    const total = projectRouteCount();
+    expect(total).toBeGreaterThan(100);
     const rows = page.getByTestId('api-route-row');
-    await expect(rows).toHaveCount(314);
-    await expect(page.getByTestId('api-coverage')).toContainText('из 314');
+    await expect(rows).toHaveCount(total);
+    await expect(page.getByTestId('api-coverage-box')).toContainText(`из ${total}`);
 
-    // Раздел admin в дереве сужает список.
-    await page.getByTestId('api-section').filter({ hasText: 'admin' }).first().click();
-    const adminCount = await rows.count();
-    expect(adminCount).toBeGreaterThan(50);
-    expect(adminCount).toBeLessThan(314);
+    // Домен слева сужает список до своих роутов; «Все роуты» возвращает всё.
+    const domain = page.getByTestId('api-domain').first();
+    const domainCount = Number(await domain.locator('span').last().textContent());
+    expect(domainCount).toBeGreaterThan(0);
+    expect(domainCount).toBeLessThan(total);
+    await domain.click();
+    await expect(rows).toHaveCount(domainCount);
     await page.getByRole('button', { name: /^Все роуты/ }).click();
+    await expect(rows).toHaveCount(total);
 
     // Метод + таблица.
     await page.getByTestId('api-method-PATCH').click();
@@ -35,7 +47,7 @@ test.describe('вид «API» на korbor', () => {
     }
     await rows.first().click();
     const card = page.getByTestId('api-route-card');
-    await expect(card).toContainText('Таблицы');
+    await expect(card.getByTestId('api-db')).toBeVisible();
     await shot(page, 'api-korbor-filter.png');
 
     // Роут → таблица в «Базе данных» → роут обратно.
@@ -45,7 +57,7 @@ test.describe('вид «API» на korbor', () => {
     // Возврат к роуту: фильтры вида «API» сохранились.
     await page.getByTestId('db-route-link').first().click();
     await expect(page.getByTestId('api-route-card')).toBeVisible();
-    await expect(page.getByTestId('api-method-PATCH')).toHaveClass(/ui-chip--active/);
+    await expect(page.getByTestId('api-method-PATCH')).toHaveAttribute('aria-pressed', 'true');
     await expect(page.locator('#api-table')).toHaveValue('vacancies');
 
     // Сброс, поиск роута с экраном, вход и доступ в карточке, переход к экрану.
@@ -66,11 +78,13 @@ test.describe('вид «API» на korbor', () => {
     const rows = page.getByTestId('api-route-row');
     await expect(rows).not.toHaveCount(0);
     // Сколько роутов без авторского описания — зависит от кода korbor; фильтр оставляет ровно их.
-    const undocumented = await page.locator('.api-row__doc--auto').count();
+    const autoDocs = page.locator('[data-testid=api-row-doc][data-auto=true]');
+    const undocumented = await autoDocs.count();
+    expect(undocumented).toBeGreaterThan(0);
     await page.getByTestId('api-undocumented').click();
     await expect(rows).toHaveCount(undocumented);
-    await expect(page.locator('.api-row__doc:not(.api-row__doc--auto)')).toHaveCount(0);
-    await expect(page.locator('.api-row__doc--auto')).toHaveCount(await rows.count());
+    await expect(page.locator('[data-testid=api-row-doc]:not([data-auto])')).toHaveCount(0);
+    await expect(autoDocs).toHaveCount(await rows.count());
     await shot(page, 'api-korbor-undocumented.png');
   });
 
@@ -91,7 +105,7 @@ test.describe('вид «API» на korbor', () => {
     await page.getByTestId('api-no-screens').click();
     const left = await rows.count();
     expect(left).toBeGreaterThan(0);
-    expect(left).toBeLessThan(314);
+    expect(left).toBeLessThan(projectRouteCount());
     await rows.first().click();
     await expect(card.getByTestId('api-screen-gap')).toContainText('Экраны карты не вызывают');
     await shot(page, 'api-after-no-screens.png');

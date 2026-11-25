@@ -9,7 +9,7 @@ import { collectPageErrors, openAndSelectNode, shot, PROJECT_MAP } from './helpe
 
 /** Шапка не шире окна: ничего не вылезает и не обрезается прокруткой. */
 async function headerFits(page: Page): Promise<{ readonly scroll: number; readonly client: number }> {
-  return page.locator('header.toolbar').evaluate((h) => ({ scroll: h.scrollWidth, client: h.clientWidth }));
+  return page.getByTestId('toolbar').evaluate((h) => ({ scroll: h.scrollWidth, client: h.clientWidth }));
 }
 
 test.describe('экраны', () => {
@@ -91,20 +91,23 @@ test.describe('API', () => {
     await page.goto(`/?map=${PROJECT_MAP}&view=api`);
     await expect(page.getByTestId('api-view')).toBeVisible({ timeout: 30_000 });
     await page.keyboard.press('Escape');
-    const box = page.getByTestId('api-coverage-box');
-    await expect(box.locator('summary')).toContainText('Покрытие: описано');
+    const coverage = page.getByTestId('api-coverage-box').getByRole('button', { name: /^Покрытие: описано/ });
+    await expect(coverage).toHaveAttribute('aria-expanded', 'false');
     await expect(page.getByTestId('api-coverage')).toBeHidden();
     const rows = page.getByTestId('api-route-row');
     const total = await rows.count();
-    const marked = await page.locator('[data-testid=api-route-row]:has(.api-mark svg)').count();
+    expect(total).toBeGreaterThan(0);
+    const marked = await page.locator('[data-testid=api-route-row]:has([data-testid=api-mark] svg)').count();
     expect(marked).toBeLessThan(total / 2);
-    await expect(page.locator('.api-module__prefix')).toHaveCount(0);
-    const auto = page.locator('.api-row__doc--auto').first();
-    if ((await auto.count()) > 0) {
-      expect(await auto.evaluate((el) => getComputedStyle(el).fontStyle)).toBe('normal');
+    // Заголовок группы — имя домена и число, без пути группы (он и так в каждой строке).
+    for (const heading of await page.getByTestId('api-domain-group').locator('h3').allInnerTexts()) {
+      expect(heading).not.toContain('/');
     }
+    const auto = page.locator('[data-testid=api-row-doc][data-auto=true]').first();
+    await expect(auto).toBeVisible();
+    expect(await auto.evaluate((el) => getComputedStyle(el).fontStyle)).toBe('normal');
     await shot(page, 'after-api.png');
-    await box.locator('summary').click();
+    await coverage.click();
     await expect(page.getByTestId('api-coverage')).toBeVisible();
   });
 });
@@ -177,7 +180,7 @@ test.describe('шапка', () => {
     await page.keyboard.press('Escape');
     await expect(page.getByRole('button', { name: 'Источники' })).toHaveCount(0);
     await expect(page.getByTestId('breadcrumbs')).toHaveCount(0);
-    for (const view of ['Экраны', 'API', 'База данных', 'Документация', 'Сравнение']) {
+    for (const view of ['Экраны', 'Компоненты', 'API', 'База данных', 'Документация', 'Сравнение']) {
       await page.locator('[role=group][aria-label="Вид"]').getByRole('button', { name: view }).click();
       const { scroll, client } = await headerFits(page);
       expect(scroll, `шапка вида «${view}»`).toBeLessThanOrEqual(client);
