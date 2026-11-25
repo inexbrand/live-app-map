@@ -4,6 +4,7 @@
  * Скриншоты — в LAM_SHOTS_DIR, если задана.
  */
 import { expect, test, type Page } from '@playwright/test';
+import { pinUndocumentedRoutes } from './api-fixture';
 import { pinKorborDocs } from './docs-fixture';
 import { collectPageErrors, openAndSelectNode, shot, PROJECT_MAP } from './helpers';
 
@@ -87,6 +88,7 @@ test.describe('ошибки загрузки', () => {
 
 test.describe('API', () => {
   test('покрытие свёрнуто, значков у обычных роутов нет, описание из кода без курсива', async ({ page }) => {
+    await pinUndocumentedRoutes(page);
     await page.setViewportSize({ width: 1600, height: 1000 });
     await page.goto(`/?map=${PROJECT_MAP}&view=api`);
     await expect(page.getByTestId('api-view')).toBeVisible({ timeout: 30_000 });
