@@ -4,3 +4,10 @@
 
 ## Closed
 
+## Зона db-grid
+
+### Open
+- (нет)
+
+### Closed
+- (нет)
