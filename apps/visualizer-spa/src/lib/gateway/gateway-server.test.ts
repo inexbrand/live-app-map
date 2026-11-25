@@ -83,7 +83,11 @@ describe('шлюз', () => {
     expect(res.headers['location']).toBe(`http://recruiter--h${app.port}.localhost:${gateway.port}/home`);
     expect(res.headers['set-cookie']).toEqual(['sid=abc; Path=/; HttpOnly; SameSite=Lax']);
     expect(store.get('recruiter')?.cookies[`http://localhost:${app.port}`]?.map((c) => c.name)).toEqual(['sid']);
-    expect(statSync(path.join(dir, 'profiles.json')).mode & 0o777).toBe(0o600);
+    // Права 600 — только POSIX. На Windows chmod в Node меняет лишь флаг «только чтение»,
+    // доступ задают ACL папки (stat отдаёт 0o666), так что проверять там нечего.
+    if (process.platform !== 'win32') {
+      expect(statSync(path.join(dir, 'profiles.json')).mode & 0o777).toBe(0o600);
+    }
     // Перезагрузка хранилища с диска видит ту же куку.
     expect(new SessionStore(dir).get('recruiter')?.cookies[`http://localhost:${app.port}`]?.[0]?.value).toBe('abc');
   });
