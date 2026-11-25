@@ -2,7 +2,7 @@
  * Канал агент ↔ визуализатор через файлы: состояние, просьба снимка, снимок.
  */
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
-import { existsSync, mkdtempSync, readFileSync, rmSync } from 'node:fs';
+import { existsSync, mkdtempSync, readFileSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import {
@@ -51,7 +51,8 @@ describe('visualizer state', () => {
   test('повреждённый файл → null, а не исключение', () => {
     writeVisualizerState(dir, state);
     const file = path.join(dir, 'agent', 'visualizer-state.json');
-    Bun.write(file, '{broken');
+    // Синхронно: Bun.write без await дописывал файл уже после чтения — тест читал прежнее состояние.
+    writeFileSync(file, '{broken');
     expect(readVisualizerState(dir)).toBeNull();
   });
 });
