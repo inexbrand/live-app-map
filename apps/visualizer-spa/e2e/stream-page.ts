@@ -26,23 +26,28 @@ async function streamBrowser(): Promise<Browser> {
 }
 
 /**
- * Страница экрана ноды: холст смонтирован, адрес — data-lam-url.
+ * Страница экрана ноды: холст смонтирован, вкладка трансляции помечена ключом экрана
+ * (window.__lamScreenKey = data-lam-screen холста). По адресу не ищем: приложение уходит
+ * редиректом (мини-апп / → #/feed), и адрес у разных экранов бывает одинаковым.
  *
  * @param node - нода карты
  */
 export async function screenPage(node: Locator): Promise<Page> {
   const canvas = node.locator('canvas[data-lam-screen]');
   await expect(canvas).toBeAttached({ timeout: 30_000 });
-  const url = (await canvas.getAttribute('data-lam-url')) ?? '';
+  const key = (await canvas.getAttribute('data-lam-screen')) ?? '';
   const b = await streamBrowser();
   let found: Page | undefined;
   await expect(async () => {
-    const pages = b.contexts().flatMap((c) => c.pages());
-    // У мини-аппа с hash-роутером (/#/feed) адрес до # общий у всех экранов приложения: по префиксу
-    // находилась чужая страница, которую трансляция потом закрывала. Такой адрес — только точно;
-    // префикс — для адресов без #, где страница могла дописать путь после редиректа.
-    found = pages.find((p) => p.url() === url) ?? (url.includes('#') ? undefined : pages.find((p) => p.url().startsWith(url)));
-    expect(found, `страница ${url} не открыта в браузере трансляции`).toBeDefined();
+    found = undefined;
+    for (const p of b.contexts().flatMap((c) => c.pages())) {
+      const k = await p.evaluate(() => (window as unknown as { __lamScreenKey?: string }).__lamScreenKey ?? null).catch(() => null);
+      if (k === key) {
+        found = p;
+        break;
+      }
+    }
+    expect(found, `вкладка экрана ${key} не открыта в браузере трансляции`).toBeDefined();
   }).toPass({ timeout: 30_000 });
   if (found === undefined) {
     throw new Error('страница экрана не найдена');

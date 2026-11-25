@@ -38,6 +38,13 @@ const NAV_RETRY_MS = 300;
 const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms));
 const HOST_BINDING = '__lamHost';
 
+/**
+ * Глобал вкладки с ключом экрана. По адресу вкладку не узнать: приложение уходит
+ * редиректом (мини-апп / → #/feed), у разных экранов адрес бывает одинаковым —
+ * e2e находят вкладку экрана по этому ключу через CDP.
+ */
+export const SCREEN_KEY_GLOBAL = '__lamScreenKey';
+
 /** Мост в странице: сообщения страницы «родителю» (себе) уходят карте. */
 const BRIDGE = `(function(){var T=${JSON.stringify(PAGE_TO_HOST_TYPES)};addEventListener('message',function(e){var d=e.data;if(e.source!==window||!d||T.indexOf(d.lam)<0)return;try{window.${HOST_BINDING}(JSON.stringify(d));}catch(_){}});})();`;
 
@@ -155,6 +162,7 @@ export class StreamService {
     await page.setViewportSize({ width: screen.width, height: screen.height });
     await page.exposeBinding(HOST_BINDING, (_src, json: unknown) => this.fromPage(screen.key, json));
     await page.addInitScript(BRIDGE);
+    await page.addInitScript(`window.${SCREEN_KEY_GLOBAL}=${JSON.stringify(screen.key)};`);
     const cdp = await ctx.newCDPSession(page);
     const entry: Entry = { screen: { ...screen, live: false }, page, cdp, readyAt: Infinity, load: 0, stepsPending: false };
     cdp.on('Page.screencastFrame', (f) => {

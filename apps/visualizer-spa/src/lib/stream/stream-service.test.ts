@@ -12,7 +12,7 @@ const PAGE = `<!doctype html><html><body style="margin:0;background:#fff">
 <button id="b" style="position:absolute;left:10px;top:10px;width:200px;height:60px">жми</button>
 <input id="i" style="position:absolute;left:10px;top:100px;width:200px;height:30px">
 <script>
-parent.postMessage({ lam: 'page', href: location.href }, '*');
+parent.postMessage({ lam: 'page', href: location.href, screenKey: window.__lamScreenKey }, '*');
 document.getElementById('b').addEventListener('click', function () { document.body.style.background = '#0a0'; parent.postMessage({ lam: 'page', clicked: true }, '*'); });
 document.getElementById('i').addEventListener('input', function (e) { parent.postMessage({ lam: 'page', value: e.target.value }, '*'); });
 addEventListener('message', function (e) { if (e.data && e.data.lam === 'ping') parent.postMessage({ lam: 'page', pong: true }, '*'); });
@@ -84,6 +84,16 @@ describe('StreamService', () => {
     await until(() => got('a', (d) => d['pong'] === true));
     // команды карты страница не отражает обратно
     expect(got('a', (d) => d['lam'] === 'ping')).toBe(false);
+  }, 30_000);
+
+  test('вкладка помечена ключом экрана (window.__lamScreenKey) — и после перехода на другой адрес', async () => {
+    await service.sync([screen('a', true), screen('k', true)]);
+    await until(() => got('k', (d) => d['screenKey'] === 'k'));
+    // Вкладка уходит на другой адрес сама (редирект приложения) — пометка остаётся
+    await service.post('k', { lam: 'ping' });
+    await service.sync([screen('a', true), { ...screen('k', true), url: `http://127.0.0.1:${app.port}/k2` }]);
+    await until(() => got('k', (d) => typeof d['href'] === 'string' && String(d['href']).endsWith('/k2') && d['screenKey'] === 'k'));
+    await service.sync([screen('a', true)]);
   }, 30_000);
 
   test('клик и ввод текста доходят: страница меняется и присылает новый кадр', async () => {
