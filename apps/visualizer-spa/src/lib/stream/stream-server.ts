@@ -2,10 +2,12 @@
  * Сервер трансляции: WebSocket рядом с dev-сервером визуализатора. Карта
  * присылает набор экранов, ввод и команды страницам; сервер шлёт кадры
  * (двоичные) и сообщения страниц (JSON). Новая карта сразу получает
- * последние кадры. Без карт страницы закрываются через паузу.
+ * последние кадры. Без карт страницы закрываются через паузу. Карт может быть
+ * несколько (вкладки, e2e в параллель): открыто объединение их наборов, набор
+ * одной карты не закрывает экраны другой.
  */
 import type { Server, ServerWebSocket } from 'bun';
-import { encodeFrame, parseClientMessage, type ServerMessage } from './stream-protocol';
+import { encodeFrame, parseClientMessage, type ServerMessage, type StreamScreen } from './stream-protocol';
 import { StreamService, type StreamServiceOptions } from './stream-service';
 
 /** Опции сервера. */
@@ -20,6 +22,23 @@ export type StreamServerOptions = {
 export type StreamServer = { readonly port: number; stop(): Promise<void> };
 
 const DEFAULT_IDLE_CLOSE_MS = 30_000;
+
+/**
+ * Объединение наборов карт: экран с одним ключом — один, живой, если живой хоть у одной карты.
+ *
+ * @param sets - наборы экранов каждой карты
+ * @returns набор для сервиса
+ */
+export function mergeScreenSets(sets: Iterable<readonly StreamScreen[]>): StreamScreen[] {
+  const byKey = new Map<string, StreamScreen>();
+  for (const set of sets) {
+    for (const s of set) {
+      const prev = byKey.get(s.key);
+      byKey.set(s.key, prev === undefined ? s : { ...prev, live: prev.live || s.live });
+    }
+  }
+  return [...byKey.values()];
+}
 
 /**
  * Запускает сервер трансляции.
