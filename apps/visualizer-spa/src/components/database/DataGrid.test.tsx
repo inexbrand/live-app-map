@@ -12,6 +12,7 @@ import { createDbDataClient, type DbDataClient } from '@/lib/db-data/client';
 import type { DbChanges, DbLiveColumn, DbRow, DbStatus, RowsPage } from '@/lib/db-data/contract';
 import { pickOption } from '../../test/select';
 import { DataGrid } from './DataGrid';
+import { rowsLabel } from './DataGridToolbar';
 
 useDom();
 
@@ -104,6 +105,7 @@ describe('сетка данных', () => {
     const { ui, container, user } = await grid();
     expect(ui.getByText('users')).toBeTruthy();
     expect(ui.getByText('120 строк')).toBeTruthy();
+    expect([1, 2, 5, 11, 22, 112].map(rowsLabel)).toEqual(['1 строка', '2 строки', '5 строк', '11 строк', '22 строки', '112 строк']);
     expect(container.querySelector('th .dg-head__type')?.textContent).toBe('int4');
     expect(cell(container, '["2"]', 'active').querySelector('.dg-null')?.textContent).toBe('NULL');
     expect(cell(container, '["3"]', 'name').querySelector('.dg-value')?.getAttribute('title')).toBe('x'.repeat(200));

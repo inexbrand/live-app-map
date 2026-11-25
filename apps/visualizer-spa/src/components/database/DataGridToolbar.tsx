@@ -8,6 +8,23 @@ import { Spinner } from '@/components/ui/spinner';
 import { OptionSelect } from '@/components/option-select';
 import type { DbLiveColumn } from '@/lib/db-data/contract';
 
+/**
+ * «1 строка», «2 строки», «5 строк».
+ *
+ * @param n - число строк
+ */
+export function rowsLabel(n: number): string {
+  const mod10 = n % 10;
+  const mod100 = n % 100;
+  if (mod10 === 1 && mod100 !== 11) {
+    return `${n} строка`;
+  }
+  if (mod10 >= 2 && mod10 <= 4 && (mod100 < 12 || mod100 > 14)) {
+    return `${n} строки`;
+  }
+  return `${n} строк`;
+}
+
 /** Применённый фильтр. */
 export type GridFilter = {
   readonly column: string;
@@ -55,7 +72,7 @@ export function DataGridToolbar(props: DataGridToolbarProps) {
     <div className="dg-toolbar">
       <div className="dg-toolbar__title">
         <strong>{props.table}</strong>
-        <span className="dg-muted">{props.total === null ? '…' : `${props.total} строк`}</span>
+        <span className="dg-muted">{props.total === null ? '…' : rowsLabel(props.total)}</span>
         {props.busy ? <Spinner /> : null}
       </div>
       <form

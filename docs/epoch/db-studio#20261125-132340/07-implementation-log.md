@@ -35,8 +35,11 @@
 - `bun test --conditions=require ./src/components/database/DataGrid.perf-test.tsx` → 1 pass; 50×30 с правкой ячейки: 11 рендеров, среднее 37,1 мс, redundantUpdates пусто.
 - `bun run typecheck` → мои файлы без ошибок; единственная ошибка — `src/components/database/database-layout.test.tsx(22,19)` (не моя зона, FetchRoute).
 
+- Живая проверка на korbor — см. 08 (правка ячейки и возврат через UI, Helium).
+- После живой проверки: «2 строк» → `rowsLabel` (1 строка / 2 строки / 5 строк), тест в DataGrid.test.tsx.
+
 ### Не сделано
-- Живая проверка на korbor — ждёт готовности сервера db-api.
+- Живые вставка/удаление в korbor (данные korbor трогаю только на одной строке) — покрыто живым тестом db-api.
 
 ## Зона db-api (сервер /__lam_db)
 
