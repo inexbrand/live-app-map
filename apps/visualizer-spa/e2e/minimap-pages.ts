@@ -5,10 +5,10 @@
 import type { Page } from '@playwright/test';
 
 /**
- * Экраны карты на мини-карте (рамки групп и сервисы не считаются).
+ * Экраны карты на мини-карте (рамки групп, сервисы и узлы-состояния экранов не считаются).
  *
  * @param page - страница визуализатора с загруженной картой
  */
 export function minimapPages(page: Page): Promise<number> {
-  return page.locator('.react-flow__minimap-node.lam-minimap-page').count();
+  return page.locator('.react-flow__minimap-node.lam-minimap-page:not(.lam-minimap-state)').count();
 }

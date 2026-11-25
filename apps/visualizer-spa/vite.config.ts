@@ -11,6 +11,7 @@ import { defineConfig } from 'vite';
 import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
 import { docsAssetMiddleware } from './src/lib/docs-asset-middleware';
+import { selfMapMiddleware } from './src/lib/self-map-middleware';
 import { monorepoScanRecipes } from './src/lib/map-scan-recipes';
 import { mapVersionsMiddleware } from './src/lib/map-versions-middleware';
 import { docsWriteMiddleware } from './src/lib/docs-write-middleware';
@@ -47,6 +48,7 @@ function mountApi(server: Pick<PreviewServer, 'middlewares'>): void {
   server.middlewares.use(modelsMiddleware);
   server.middlewares.use(mcpAgentMiddleware);
   server.middlewares.use(docsAssetMiddleware);
+  server.middlewares.use(selfMapMiddleware(publicMapsDir, monorepoRoot));
   server.middlewares.use(mapVersionsMiddleware(publicMapsDir, monorepoScanRecipes(monorepoRoot, project), projectMapFiles));
   server.middlewares.use(docsWriteMiddleware);
   server.middlewares.use(tlsCheckMiddleware);
@@ -109,6 +111,9 @@ function surfaceProxies(): Record<string, ProxyOptions> {
   };
 }
 
+/** Файлы вне приложения: их правка не должна перезагружать страницу визуализатора. */
+const DEV_WATCH_IGNORED = ['**/e2e/**', '**/test-results/**', '**/playwright-report/**', '**/*.test.ts', '**/*.test.tsx', '**/.lam-*'];
+
 export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(spaRoot, 'src') },
@@ -124,7 +129,9 @@ export default defineConfig({
   // strictPort: занятый порт — сразу ошибка. Без него vite под Bun уходит на соседний порт,
   // его listen() не завершается, а повторный listen() того же сервера держит и старый порт:
   // процесс копит порты до конца жизни (dev-server-port.test.ts).
-  server: { port: 4310, strictPort: true, host: true, proxy: surfaceProxies() },
+  // watch.ignored: e2e, тесты и временные файлы не входят в приложение, но их правка (другие агенты в общем
+  // checkout) давала «page reload» — Tailwind видит в них классы. Перезагрузка посреди e2e роняет тест.
+  server: { port: 4310, strictPort: true, host: true, proxy: surfaceProxies(), watch: { ignored: DEV_WATCH_IGNORED } },
   // Прод-сборка (bun run start): тот же порт и прокси, что у dev
   preview: { port: 4310, strictPort: true, host: true, proxy: surfaceProxies() },
   optimizeDeps: {

@@ -8,6 +8,7 @@ import { buildGallery } from '../../lib/components-gallery/gallery';
 import { useComponentsStore } from '../../store/components-store';
 import { useGatewayStore } from '../../store/gateway-store';
 import { MAX_LIVE_COMPONENTS } from '../../lib/components-gallery/stream-screens';
+import { SNAPSHOT_SLOTS } from '../../lib/gateway/snapshot-slots';
 import { ComponentsView } from './ComponentsView';
 
 useDom();
@@ -35,22 +36,21 @@ describe('вид', () => {
     expect(ui.getByTestId('components-problems').textContent).toContain('packages/x/Y.tsx#Y');
     ui.unmount();
   });
-  test('варианты вне живых — снимок /__lam_snapshot через шлюз, живые — холст трансляции', async () => {
+  test('варианты вне живых — снимок /__lam_snapshot через шлюз, по очереди загрузки', async () => {
     useGatewayStore.setState({ port: 4322 });
     const many = { 'apps/miniapp/src/ui/B.tsx#B': Array.from({ length: MAX_LIVE_COMPONENTS + 2 }, (_, i) => ({ id: 'v' + i, label: 'В' + i })) };
-    useComponentsStore.setState({ status: 'ready', gallery: buildGallery(many, apps), visible: new Set(buildGallery(many, apps).groups[0]?.items.map((i) => i.id)) });
+    // Ни один не видим — ни один не транслируется: все узлы замороженные
+    useComponentsStore.setState({ status: 'ready', gallery: buildGallery(many, apps), visible: new Set() });
     const ui = render(<div style={{ width: 1200, height: 800 }}><ComponentsView /></div>);
     await act(async () => {
       await Bun.sleep(30);
     });
     const nodes = ui.getAllByTestId('component-node');
-    const live = nodes.filter((n) => n.querySelector('canvas') !== null).length;
-    // Не живые — только снимок (у живых он лежит под холстом до первого кадра)
-    const shots = nodes.filter((n) => n.querySelector('canvas') === null).map((n) => n.querySelector('img[data-lam-snapshot]')?.getAttribute('src') ?? null);
-    expect(live).toBe(MAX_LIVE_COMPONENTS);
-    expect(shots.length).toBe(2);
-    expect(shots.every((s) => s !== null)).toBe(true);
-    expect(shots[0]).toStartWith('/__lam_snapshot?url=http%3A%2F%2Fanon--s5175-vite--');
+    expect(nodes.filter((n) => n.querySelector('canvas') !== null)).toHaveLength(0);
+    const shots = nodes.flatMap((n) => [...n.querySelectorAll('img[data-lam-snapshot]')].map((i) => i.getAttribute('src') ?? ''));
+    // Картинки не грузятся в happy-dom: места заняты первыми SNAPSHOT_SLOTS, остальные ждут
+    expect(shots).toHaveLength(SNAPSHOT_SLOTS);
+    expect(shots.every((s) => s.startsWith('/__lam_snapshot?url=http%3A%2F%2Fanon--s5175-vite--'))).toBe(true);
     ui.unmount();
     useGatewayStore.setState({ port: null });
   });

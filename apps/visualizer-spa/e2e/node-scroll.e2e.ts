@@ -11,7 +11,8 @@ import { scrollTopOf } from './probes';
 import { WIDE_VIEWPORT, PROJECT_MAP } from './helpers';
 import { screenPage } from './stream-page';
 
-const NODE = 'route:/feed';
+/** id экрана в карте проекта: с префиксом приложения (карта собирает все приложения korbor). */
+const NODE = 'miniapp:route:/feed';
 const SCROLLER = '.tab-canvas__scroll';
 
 function transform(page: Page): Promise<string> {

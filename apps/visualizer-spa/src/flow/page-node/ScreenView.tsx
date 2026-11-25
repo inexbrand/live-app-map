@@ -7,6 +7,7 @@
 import type { DeviceViewport } from '@live-app-map/schema';
 import { useEffect, useRef, useState, type CSSProperties, type KeyboardEvent, type PointerEvent } from 'react';
 import type { NodeLayoutMetrics } from '../../lib/node-layout';
+import { useSnapshotSlot } from '../../lib/gateway/snapshot-slots';
 import { streamClient } from '../../lib/stream/stream-client';
 import { toPagePoint, type MouseInput } from '../../lib/stream/stream-protocol';
 
@@ -115,9 +116,28 @@ function inputHandlers(nodeId: string, viewport: DeviceViewport) {
   };
 }
 
-/** Картинка последнего кадра или снимка. */
+/** Картинка последнего кадра или снимка; снимок шлюза ждёт места в очереди загрузки. */
 function Picture({ src, title, style, onError }: { readonly src: string; readonly title: string; readonly style: CSSProperties; readonly onError?: () => void }) {
-  return <img data-lam-snapshot className="page-node__snapshot" src={src} alt={`Экран: ${title}`} decoding="async" draggable={false} onError={onError} style={style} />;
+  const slot = useSnapshotSlot(src);
+  if (slot.src === null) {
+    return null;
+  }
+  return (
+    <img
+      data-lam-snapshot
+      className="page-node__snapshot"
+      src={slot.src}
+      alt={`Экран: ${title}`}
+      decoding="async"
+      draggable={false}
+      onLoad={slot.onDone}
+      onError={() => {
+        slot.onDone();
+        onError?.();
+      }}
+      style={style}
+    />
+  );
 }
 
 /**

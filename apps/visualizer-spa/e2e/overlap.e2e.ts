@@ -1,13 +1,15 @@
 /**
- * Панели не наезжают друг на друга и не уходят под холст: шапка, панели
- * экрана, кнопка журнала, мини-карта, зум — на трёх размерах окна.
- * Открытая шторка (модальное окно с подложкой) — поверх всего.
+ * Панели не наезжают друг на друга и не уходят под холст: шапка, плашка
+ * выбранного экрана, мини-карта, зум — на трёх размерах окна.
+ * Открытый лист замечаний — поверх всего.
  */
 import { expect, test, type Page } from '@playwright/test';
 import { layoutItems, probeOf, type Probe } from './probes';
 import { PROJECT_MAP } from './helpers';
 
-const OVERLAYS = ['.toolbar', '.drawer', '.diag-fab', '.react-flow__minimap', '.react-flow__controls'];
+/** Шапка — по data-testid: после перевода на shadcn у неё нет класса .toolbar. */
+const TOOLBAR = '[data-testid=toolbar]';
+const OVERLAYS = [TOOLBAR, '.focus-bar', '.react-flow__minimap', '.react-flow__controls'];
 
 async function probe(page: Page, selectors: readonly string[]): Promise<Probe> {
   return probeOf(await page.evaluate(layoutItems, selectors));
@@ -23,7 +25,7 @@ for (const { width, height } of [
     await page.goto(`/?map=${PROJECT_MAP}`);
     await expect(page.locator('.page-node__title').first()).toBeVisible({ timeout: 30_000 });
     await page.locator('.page-node__title').first().click();
-    await expect(page.locator('.drawer').first()).toBeVisible();
+    await expect(page.getByTestId('focus-bar')).toBeVisible();
 
     // Выбранная нода — не под панелями (холст сдвигается к ней).
     await expect
@@ -41,7 +43,7 @@ for (const { width, height } of [
     expect(inside).toBe(true);
 
     // Шапка в одну строку: высокая шапка опускает панели на мини-карту и зум.
-    const toolbarHeight = await page.locator('.toolbar').evaluate((t) => t.getBoundingClientRect().height);
+    const toolbarHeight = await page.locator(TOOLBAR).evaluate((t) => t.getBoundingClientRect().height);
     expect(toolbarHeight).toBeLessThan(70);
 
     // Панель экрана растёт, пока грузится содержимое: наложений нет в устоявшемся виде,
@@ -53,12 +55,14 @@ for (const { width, height } of [
       }, { timeout: 5_000 })
       .toEqual({ overlaps: [], covered: [] });
     const p = await probe(page, OVERLAYS);
-    expect(p.shown).toEqual(expect.arrayContaining(['.toolbar[0]', '.drawer[0]', '.diag-fab[0]', '.react-flow__minimap[0]']));
+    expect(p.shown).toEqual(expect.arrayContaining([`${TOOLBAR}[0]`, '.focus-bar[0]', '.react-flow__minimap[0]']));
 
-    // Шторка журнала — модальная: она сверху, подложка закрывает остальное.
-    await page.locator('.diag-fab').click();
-    const sheet = await probe(page, ['.edge-sheet']);
-    expect(sheet.shown.length).toBe(1);
+    // Лист замечаний из шапки — сверху: его ничто не перекрывает, на шапку он не наезжает.
+    await page.getByTestId('open-comments').click();
+    await expect(page.getByTestId('comments-sheet')).toBeVisible();
+    const sheet = await probe(page, [TOOLBAR, '.comments-sheet']);
+    expect(sheet.shown).toEqual(expect.arrayContaining(['.comments-sheet[0]']));
     expect(sheet.covered).toEqual([]);
+    expect(sheet.overlaps).toEqual([]);
   });
 }

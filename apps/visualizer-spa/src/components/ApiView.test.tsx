@@ -274,6 +274,18 @@ describe('вид «API» без шума (аудит)', () => {
     }
   });
 
+  test('описание из кода — приглушённым цветом, без курсива; авторское — без пометки', () => {
+    const id = openMapWithUndocumentedRoute('korbor-miniapp');
+    const { ui } = view();
+    const doc = (routeId: string): HTMLElement | null => ui.getAllByTestId('api-route-row').find((b) => b.getAttribute('data-route-id') === routeId)?.querySelector<HTMLElement>('[data-testid="api-row-doc"]') ?? null;
+    const auto = doc(id);
+    expect(auto?.getAttribute('data-auto')).toBe('true');
+    expect(auto?.className).not.toContain('italic');
+    expect(auto?.className).toContain('text-muted-foreground');
+    const authored = ui.getAllByTestId('api-row-doc').find((el) => el.getAttribute('data-auto') === null);
+    expect(authored).toBeDefined();
+  });
+
   test('группы списка — те же домены, что слева, без имён сервисов', () => {
     const doc = openMap('korbor-miniapp');
     const { ui } = view();

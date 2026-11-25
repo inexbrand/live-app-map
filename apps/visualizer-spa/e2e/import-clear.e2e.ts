@@ -1,12 +1,13 @@
 /**
  * Import/clear e2e: пусто → импорт файла карты → очистка → снова пусто.
  * Импорт через скрытый input «Открыть JSON / .appmap», очистка — пункт
- * «Очистить карту» в селекте карт.
+ * «Очистить карту» в списке карт (shadcn Select).
  */
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test } from '@playwright/test';
+import { pickOption } from './helpers';
 import { minimapPages } from './minimap-pages';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
@@ -32,7 +33,7 @@ test.describe('import and clear', () => {
     await expect(page.locator('.empty-state')).toHaveCount(0);
     await expect(page.locator('.react-flow')).toBeVisible();
 
-    await page.getByTestId('map-select').selectOption('__clear__');
+    await pickOption(page, page.getByTestId('map-select'), 'Очистить карту');
 
     await expect(emptyHeading).toBeVisible();
     await expect(page.locator('.react-flow__node')).toHaveCount(0);

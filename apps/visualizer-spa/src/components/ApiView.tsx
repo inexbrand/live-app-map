@@ -204,7 +204,8 @@ function RouteRow(props: { readonly index: CodeIndex; readonly route: Domain['ro
           <span className="min-w-0 flex-1 truncate font-mono text-xs">{r.path}</span>
           <Marks route={r} usual={props.usual} />
         </span>
-        <span className={cn('line-clamp-1 pl-14 text-xs text-muted-foreground', line.auto && 'italic')} title={line.auto ? AUTO_DOC_NOTE : undefined}>
+        {/* Описание из кода отличается подсказкой, не курсивом (аудит ui-audit, пункт 8). */}
+        <span className="line-clamp-1 pl-14 text-xs text-muted-foreground" data-testid="api-row-doc" data-auto={line.auto ? 'true' : undefined} title={line.auto ? AUTO_DOC_NOTE : undefined}>
           {line.text}
         </span>
       </button>

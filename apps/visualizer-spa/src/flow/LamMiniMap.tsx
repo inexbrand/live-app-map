@@ -4,6 +4,7 @@
  */
 import { MiniMap, useReactFlow, type Node } from '@xyflow/react';
 import type { AppMapNode } from '@live-app-map/schema';
+import { stateNodeInfo } from '../lib/state-nodes';
 import { minimapFill, type MinimapNodeKind, type MinimapSize } from './minimap';
 
 /** Свойства мини-карты. */
@@ -30,6 +31,15 @@ function kindOf(n: Node, selectedPageId: string | null): MinimapNodeKind {
 }
 
 /**
+ * Класс ноды мини-карты: вид ноды; у узла-состояния ещё `lam-minimap-state` —
+ * так экраны отличаются от их состояний (в каталоге карт состояния не считаются экранами).
+ */
+function minimapClass(n: Node, selectedPageId: string | null): string {
+  const base = `lam-minimap-${kindOf(n, selectedPageId).kind}`;
+  return hasMapNode(n.data) && stateNodeInfo(n.data.node) !== null ? `${base} lam-minimap-state` : base;
+}
+
+/**
  * Мини-карта внутри ReactFlow.
  */
 export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps) {
@@ -44,7 +54,7 @@ export function LamMiniMap({ size, groupOrder, selectedPageId }: LamMiniMapProps
       nodeColor={(n) => minimapFill(kindOf(n, selectedPageId), groupOrder)}
       nodeStrokeColor={(n) => (n.type === 'groupFrame' ? 'var(--edge)' : 'transparent')}
       nodeStrokeWidth={2}
-      nodeClassName={(n) => `lam-minimap-${kindOf(n, selectedPageId).kind}`}
+      nodeClassName={(n) => minimapClass(n, selectedPageId)}
       nodeBorderRadius={2}
       maskStrokeColor="var(--foreground)"
       maskStrokeWidth={1}

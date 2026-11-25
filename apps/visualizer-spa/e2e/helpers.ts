@@ -2,7 +2,7 @@
  * Общие шаги e2e: открыть карту, выбрать экран, снять скриншот, собрать ошибки страницы, вызвать MCP.
  */
 import path from 'node:path';
-import { expect, type Page } from '@playwright/test';
+import { expect, type Locator, type Page } from '@playwright/test';
 import { firstNodeInView, mcpResult } from './probes';
 
 /** Карта открытого проекта (dev-сервер с LAM_PROJECT, см. playwright.config). */
@@ -75,6 +75,18 @@ export async function openMap(
   await page.goto(`/?map=${map}${query}`);
   await ready(page);
   await page.keyboard.press('Escape');
+}
+
+/**
+ * Выбирает пункт списка (shadcn Select): нажать кнопку списка, затем пункт по подписи.
+ *
+ * @param page - страница
+ * @param trigger - кнопка списка
+ * @param name - подпись пункта (строка — вхождение, RegExp — шаблон)
+ */
+export async function pickOption(page: Page, trigger: Locator, name: string | RegExp): Promise<void> {
+  await trigger.click();
+  await page.getByRole('option', { name }).click();
 }
 
 /** Карта открыта: виден переключатель вида. */

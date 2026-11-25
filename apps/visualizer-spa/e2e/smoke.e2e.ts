@@ -6,6 +6,7 @@
  * экранов карты считаем по мини-карте — она рисует все.
  */
 import { expect, test, type Locator, type Page } from '@playwright/test';
+import { pickOption, PROJECT_MAP_ID } from './helpers';
 import { minimapPages } from './minimap-pages';
 
 /**
@@ -21,17 +22,8 @@ async function catalogLabels(page: Page, trigger: Locator): Promise<string[]> {
   return texts.map((t) => t.trim()).filter((t) => /экр\./.test(t));
 }
 
-/**
- * Выбрать карту по началу подписи.
- *
- * @param page - вкладка визуализатора
- * @param trigger - кнопка списка
- * @param label - начало подписи пункта
- */
-async function chooseMap(page: Page, trigger: Locator, label: string): Promise<void> {
-  await trigger.click();
-  await page.getByRole('option', { name: new RegExp(`^${label}`) }).click();
-}
+/** Пункт карты проекта в каталоге: подпись начинается с имени проекта из config.ts. */
+const PROJECT_OPTION = new RegExp(`^${PROJECT_MAP_ID} · `);
 
 test.describe('visualizer smoke', () => {
   test('toolbar: no brand/live, map select works, FHD viewport', async ({
@@ -62,7 +54,7 @@ test.describe('visualizer smoke', () => {
 
     // Ждём каталог: в списке есть карты с числом экранов
     await expect.poll(async () => (await catalogLabels(page, mapSelect)).length, { timeout: 15_000 }).toBeGreaterThan(0);
-    await chooseMap(page, mapSelect, 'Мини-приложение');
+    await pickOption(page, mapSelect, PROJECT_OPTION);
 
     // Холст React Flow + ноды
     await expect(page.locator('.react-flow')).toBeVisible({ timeout: 30_000 });
@@ -99,20 +91,20 @@ test.describe('visualizer smoke', () => {
     expect(fatal, fatal.join('\n')).toEqual([]);
   });
 
-  test('load site map has many pages (>10)', async ({ page }) => {
+  test('карта проекта: экранов в подписи каталога больше 10, все на мини-карте', async ({ page }) => {
     await page.goto('/');
     const mapSelect = page.getByTestId('map-select');
-    let site: string | undefined;
+    let label: string | undefined;
     await expect
       .poll(async () => {
-        site = (await catalogLabels(page, mapSelect)).find((t) => t.startsWith('Сайт'));
-        return site ?? '';
+        label = (await catalogLabels(page, mapSelect)).find((t) => PROJECT_OPTION.test(t));
+        return label ?? '';
       }, { timeout: 15_000 })
       .not.toBe('');
-    // Каталог пишет число экранов в подписи: «Сайт · 13 экр.»
-    const catalogPages = Number(/(\d+)\s*экр/.exec(site ?? '')?.[1]);
-    expect(catalogPages, `подпись: ${site}`).toBeGreaterThan(10);
-    await chooseMap(page, mapSelect, 'Сайт');
+    // Каталог пишет число экранов в подписи: «korbor · 91 экр.»
+    const catalogPages = Number(/(\d+)\s*экр/.exec(label ?? '')?.[1]);
+    expect(catalogPages, `подпись: ${label}`).toBeGreaterThan(10);
+    await pickOption(page, mapSelect, PROJECT_OPTION);
     await expect
       .poll(async () => minimapPages(page), { timeout: 45_000 })
       .toBe(catalogPages);

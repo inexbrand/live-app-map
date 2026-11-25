@@ -8,15 +8,28 @@ import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { expect, test, type Page } from '@playwright/test';
-import { openMap, shot, PROJECT_MAP, PROJECT_MAP_ID, projectMapFile } from './helpers';
+import { openMap, pickOption, shot, PROJECT_MAP, PROJECT_MAP_ID, projectMapFile } from './helpers';
 
 const dir = path.dirname(fileURLToPath(import.meta.url));
 async function openCompare(page: Page): Promise<void> {
   await openMap(page, PROJECT_MAP, {
-    ready: (p) => expect(p.getByTestId('map-select')).toHaveValue(PROJECT_MAP_ID, { timeout: 30_000 }),
+    ready: (p) => expect(p.getByTestId('map-select')).toHaveAttribute('data-value', PROJECT_MAP_ID, { timeout: 30_000 }),
   });
   await page.getByTestId('view-compare').click();
   await expect(page.getByTestId('compare-view')).toBeVisible();
+}
+
+/**
+ * «Файл с компьютера…» в списке стороны: пункт открывает выбор файла, отдаём ему файл.
+ *
+ * @param page - страница
+ * @param side - testid списка: compare-left или compare-right
+ * @param file - путь к файлу карты
+ */
+async function pickFile(page: Page, side: string, file: string): Promise<void> {
+  const chooser = page.waitForEvent('filechooser');
+  await pickOption(page, page.getByTestId(side), 'Файл с компьютера…');
+  await (await chooser).setFiles(file);
 }
 
 type LiveMap = { pages: Array<{ id: string; title: string; type?: string }>; code: { routes: Array<{ id: string; method: string; path: string }> } };
@@ -34,9 +47,8 @@ test.describe('сравнение карт', () => {
     const file = path.join(info.outputDir, 'project-no-route.liveappmap.json');
     writeFileSync(file, JSON.stringify({ ...map, code: { ...map.code, routes: map.code.routes.slice(1) } }));
     await openCompare(page);
-    await page.getByTestId('compare-left').selectOption('file');
-    await page.getByTestId('compare-left-file').setInputFiles(file);
-    await page.getByTestId('compare-right').selectOption('scan');
+    await pickFile(page, 'compare-left', file);
+    await pickOption(page, page.getByTestId('compare-right'), 'Свежий скан');
     await expect(page.getByTestId('compare-loading').filter({ hasText: 'Стало' })).toContainText('сканирую проект');
     await expect(page.getByTestId('compare-total')).toContainText('Изменений', { timeout: 150_000 });
     const routes = page.getByTestId('compare-routes').getByTestId('compare-item');
@@ -63,9 +75,8 @@ test.describe('сравнение карт', () => {
     writeFileSync(file, JSON.stringify(old));
 
     await openCompare(page);
-    await page.getByTestId('compare-left').selectOption('file');
-    await page.getByTestId('compare-left-file').setInputFiles(file);
-    await expect(page.getByTestId('compare-left')).toHaveValue('file-chosen');
+    await pickFile(page, 'compare-left', file);
+    await expect(page.getByTestId('compare-left')).toHaveAttribute('data-value', 'file-chosen');
     await expect(page.getByTestId('compare-total')).toHaveText('Изменений: 2');
     await expect(page.getByTestId('compare-screens').getByTestId('compare-item')).toHaveText([new RegExp(`~${screen.title}.*название`)]);
     const added = page.getByTestId('compare-routes').getByTestId('compare-item');
