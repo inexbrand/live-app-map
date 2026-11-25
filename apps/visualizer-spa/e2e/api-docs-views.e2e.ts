@@ -6,6 +6,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { expect, test } from '@playwright/test';
+import { pinUndocumentedRoutes } from './api-fixture';
 import { OPEN_EPOCH, pinKorborDocs } from './docs-fixture';
 import { collectPageErrors, openMap, projectMapFile, shot, PROJECT_MAP, SELF_MAP } from './helpers';
 
@@ -73,14 +74,16 @@ test.describe('вид «API» на korbor', () => {
   });
 
   test('«без описания» оставляет роуты без авторского описания, у каждого — описание из кода', async ({ page }) => {
+    const undocumentedInMap = await pinUndocumentedRoutes(page);
     await openMap(page, PROJECT_MAP);
     await page.getByTestId('view-api').click();
     const rows = page.getByTestId('api-route-row');
     await expect(rows).not.toHaveCount(0);
-    // Сколько роутов без авторского описания — зависит от кода korbor; фильтр оставляет ровно их.
+    // Фильтр оставляет ровно роуты без авторского описания (их задаёт фикстура).
     const autoDocs = page.locator('[data-testid=api-row-doc][data-auto=true]');
-    const undocumented = await autoDocs.count();
+    const undocumented = undocumentedInMap();
     expect(undocumented).toBeGreaterThan(0);
+    await expect(autoDocs).toHaveCount(undocumented);
     await page.getByTestId('api-undocumented').click();
     await expect(rows).toHaveCount(undocumented);
     await expect(page.locator('[data-testid=api-row-doc]:not([data-auto])')).toHaveCount(0);
