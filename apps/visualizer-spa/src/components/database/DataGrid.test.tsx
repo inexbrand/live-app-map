@@ -142,7 +142,7 @@ describe('сетка данных', () => {
       deletes: [],
     });
     await ui.findByText('Сохранено: добавлено 0, изменено 2, удалено 0');
-    expect(rowQueries.length).toBe(before + 1);
+    await waitFor(() => expect(rowQueries.length).toBe(before + 1));
     expect(ui.queryByText(/Сохранить изменения/)).toBeNull();
   });
 
