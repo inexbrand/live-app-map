@@ -12,6 +12,7 @@ import { writeMapCatalogIndex } from './src/lib/build-map-catalog-fs';
 import { errorReportsMiddleware } from './src/lib/error-reports-middleware';
 import { docsAssetMiddleware } from './src/lib/docs-asset-middleware';
 import { selfMapMiddleware } from './src/lib/self-map-middleware';
+import { serialRestartPlugin } from './src/lib/serial-restart-plugin';
 import { monorepoScanRecipes } from './src/lib/map-scan-recipes';
 import { mapVersionsMiddleware } from './src/lib/map-versions-middleware';
 import { docsWriteMiddleware } from './src/lib/docs-write-middleware';
@@ -125,6 +126,7 @@ export default defineConfig({
     errorReportsPlugin(),
     lamGatewayPlugin(),
     lamStreamPlugin(),
+    serialRestartPlugin(),
   ],
   // strictPort: занятый порт — сразу ошибка. Без него vite под Bun уходит на соседний порт,
   // его listen() не завершается, а повторный listen() того же сервера держит и старый порт:
