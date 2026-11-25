@@ -50,6 +50,17 @@ test.describe('замечания к компонентам', () => {
     // Клик, который выбрал экран, окна не открывает
     await expect(page.getByTestId('comment-popover')).toHaveCount(0);
     const p = await componentPoint(page, nodeId);
+    // Как у пользователя: курсор над компонентом — рамка выбора в странице, потом клик
+    const screen = await screenPage(page.locator(`.react-flow__node[data-id="${nodeId}"]`));
+    await expect(async () => {
+      await page.mouse.move(p.x, p.y - 1);
+      await page.mouse.move(p.x, p.y);
+      const shown = await screen.evaluate(() => {
+        const box = document.querySelector<HTMLElement>('[data-lam-pick-box]');
+        return box !== null && box.style.display !== 'none';
+      });
+      expect(shown, 'рамка выбора компонента не появилась').toBe(true);
+    }).toPass({ timeout: 15_000 });
     await page.mouse.click(p.x, p.y);
 
     const pop = page.getByTestId('comment-popover');
