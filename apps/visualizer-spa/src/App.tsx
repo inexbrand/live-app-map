@@ -109,9 +109,12 @@ function useLoadPreset(): { readonly loadingId: string | null; readonly load: (p
   return { loadingId, load };
 }
 
-/** Карта по ссылке: JSON по адресу, режим live, dogfood. */
-async function loadLinkedMap(map: string, onError: LoadError): Promise<void> {
+/** Карта по ссылке: JSON по адресу, режим live, dogfood; отменённая (эффект снят) — не загружается. */
+async function loadLinkedMap(map: string, onError: LoadError, cancelled: () => boolean): Promise<void> {
   const r = await fetchJsonFile('Карта', map);
+  if (cancelled()) {
+    return;
+  }
   if (!r.ok) {
     onError(r.error);
     return;
@@ -123,8 +126,14 @@ async function loadLinkedMap(map: string, onError: LoadError): Promise<void> {
   await runDogfoodAfterMapLoad();
 }
 
-/** Параметры адреса ?baseUrl=&role=&map= применяются один раз при открытии. */
-function applyLocationParams(search: string): void {
+/**
+ * Параметры адреса ?baseUrl=&role=&map= применяются один раз при открытии.
+ * StrictMode в dev зовёт эффект дважды: первая загрузка карты отменяется, иначе
+ * вторая loadDocument сбрасывала экран, выбранный между ними.
+ *
+ * @returns отмена загрузки карты
+ */
+function applyLocationParams(search: string): () => void {
   const params = new URLSearchParams(search);
   const baseUrl = params.get('baseUrl');
   const map = params.get('map');
@@ -135,9 +144,13 @@ function applyLocationParams(search: string): void {
   if (role) {
     useAppStore.getState().setGlobalRole(role);
   }
+  let cancelled = false;
   if (map) {
-    loadLinkedMap(map, reportLoadError).catch((err: unknown) => reportLoadError(err instanceof Error ? err.message : String(err)));
+    loadLinkedMap(map, reportLoadError, () => cancelled).catch((err: unknown) => reportLoadError(err instanceof Error ? err.message : String(err)));
   }
+  return () => {
+    cancelled = true;
+  };
 }
 
 /** Toast гаснет через 4 с; Esc закрывает toast и ошибку загрузки. */

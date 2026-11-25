@@ -5,6 +5,7 @@
  */
 import { useDom } from './test/dom';
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test';
+import { StrictMode } from 'react';
 import { act, fireEvent, render, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { App } from './App';
@@ -87,6 +88,20 @@ describe('shell', () => {
     expect(useAppStore.getState().baseUrlOverride).toBe('http://localhost:5999');
     expect(useAppStore.getState().globalRole).toBe('admin');
     expect(useAppStore.getState().mode).toBe('live');
+  });
+
+  test('ссылка ?map= под StrictMode: карта грузится один раз — выбранный экран не сбрасывается повторной загрузкой', async () => {
+    window.history.replaceState(null, '', '/?map=/maps/korbor-miniapp.liveappmap.json');
+    render(
+      <StrictMode>
+        <App />
+      </StrictMode>,
+    );
+    await waitFor(() => expect(useAppStore.getState().document).not.toBeNull());
+    await act(async () => {
+      await Bun.sleep(50);
+    });
+    expect(useAppStore.getState().logs.filter((l) => l.message.startsWith('Карта загружена'))).toHaveLength(1);
   });
 
   test('ссылка ?map= без сети — текст ошибки в баннере', async () => {
