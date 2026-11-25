@@ -21,7 +21,12 @@ export type LamApp = {
   readonly baseUrl: string;
   /** Роли входа (id ролей протокола dev-входа), под которыми показывать экраны. */
   readonly roles?: readonly string[];
+  /** Размер окна экранов на карте; без поля — телефон 390×844. Кабинет в браузере: { width: 1440, height: 900 }. */
+  readonly viewport?: LamViewport;
 };
+
+/** Размер окна экрана в пикселях. */
+export type LamViewport = { readonly width: number; readonly height: number };
 
 /** Проект: приложения и бэкенд. */
 export type LamProjectConfig = {

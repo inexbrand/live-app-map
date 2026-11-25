@@ -4,13 +4,15 @@
  * одна общая нода на всех.
  */
 import type { CodeModel, DocsModel, LiveAppMapDocument, LiveAppMapEdge, LiveAppMapPage } from '@live-app-map/schema';
-import type { LamLink, LamProjectConfig } from '@live-app-map/sdk';
+import type { LamLink, LamProjectConfig, LamViewport } from '@live-app-map/sdk';
 
 /** Приложение в общей карте: id (приставка нод), подпись группы, адрес dev-сервера, карта. */
 export type SurfaceMap = {
   readonly id: string;
   readonly title: string;
   readonly baseUrl: string;
+  /** Размер окна экранов приложения; свой размер экрана в карте главнее. */
+  readonly viewport?: LamViewport;
   readonly doc: LiveAppMapDocument;
 };
 
@@ -39,6 +41,7 @@ function surfacePage(s: SurfaceMap, p: LiveAppMapPage): LiveAppMapPage {
     id: `${s.id}:${p.id}`,
     group: s.id,
     url: surfaceUrl(p, s.baseUrl),
+    ...(p.viewport === undefined && s.viewport !== undefined ? { viewport: s.viewport } : {}),
     metadata: { ...p.metadata, surface: s.id, originalId: p.id, baseUrl: s.doc.baseUrl },
   };
 }

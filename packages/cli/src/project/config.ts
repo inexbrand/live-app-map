@@ -5,7 +5,7 @@
  */
 import { existsSync, statSync } from 'node:fs';
 import path from 'node:path';
-import type { LamApp, LamProjectConfig } from '@live-app-map/sdk';
+import type { LamApp, LamProjectConfig, LamViewport } from '@live-app-map/sdk';
 
 /** Папка проекта внутри приложения. */
 export const PROJECT_DIR_NAME = '.live-app-map';
@@ -35,6 +35,16 @@ function filled(v: unknown): v is string {
   return typeof v === 'string' && v.trim() !== '';
 }
 
+/** Размер окна: целые пиксели в пределах, которые умеет визуализатор. */
+function isViewport(v: unknown): v is LamViewport {
+  if (!isRecord(v)) {
+    return false;
+  }
+  const w = v['width'];
+  const h = v['height'];
+  return Number.isInteger(w) && Number.isInteger(h) && Number(w) >= 200 && Number(w) <= 2560 && Number(h) >= 120;
+}
+
 /** Ошибки одного приложения; where — «apps[0]». */
 function appErrors(raw: unknown, where: string, root: string): string[] {
   if (!isRecord(raw)) {
@@ -58,6 +68,10 @@ function appErrors(raw: unknown, where: string, root: string): string[] {
   const roles = raw['roles'];
   if (roles !== undefined && (!Array.isArray(roles) || !roles.every(filled))) {
     errors.push(`${where}.roles: список непустых id ролей, например roles: ['admin']`);
+  }
+  const vp = raw['viewport'];
+  if (vp !== undefined && !isViewport(vp)) {
+    errors.push(`${where}.viewport: размер окна экранов в пикселях, например viewport: { width: 1440, height: 900 } (ширина 200–2560, высота от 120)`);
   }
   return errors;
 }
@@ -146,6 +160,7 @@ function toConfig(raw: Readonly<Record<string, unknown>>, apps: unknown): LamPro
       dir: String(a['dir']),
       baseUrl: String(a['baseUrl']),
       ...(Array.isArray(a['roles']) ? { roles: a['roles'].map(String) } : {}),
+      ...(isViewport(a['viewport']) ? { viewport: { width: a['viewport'].width, height: a['viewport'].height } } : {}),
     })),
     ...(Array.isArray(backend) ? { backend: backend.map(String) } : {}),
     ...(links === null

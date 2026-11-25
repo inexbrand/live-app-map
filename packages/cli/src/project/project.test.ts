@@ -94,6 +94,14 @@ describe('checkProjectConfig', () => {
     ]);
   });
 
+  test('viewport приложения: ширина и высота окна экранов; неверные числа — подсказка', () => {
+    const app = { id: 'web', label: 'Веб', dir: 'apps/web', baseUrl: 'http://localhost:1' };
+    const ok = checkProjectConfig({ name: 'p', apps: [{ ...app, viewport: { width: 1440, height: 900 } }] }, root);
+    expect(ok.ok ? ok.config.apps[0]?.viewport : null).toEqual({ width: 1440, height: 900 });
+    const bad = checkProjectConfig({ name: 'p', apps: [{ ...app, viewport: { width: 0, height: 'x' } }] }, root);
+    expect(bad.ok ? [] : bad.errors).toEqual(['apps[0].viewport: размер окна экранов в пикселях, например viewport: { width: 1440, height: 900 } (ширина 200–2560, высота от 120)']);
+  });
+
   test('нет config, нет приложений, приложение не объект', () => {
     expect(checkProjectConfig(undefined, root)).toEqual({ ok: false, errors: ['нет export const config: LamProjectConfig — добавьте его в config.ts'] });
     const empty = checkProjectConfig({ name: 'p', apps: [] }, root);
@@ -351,4 +359,23 @@ ${extraLink}] };\n`;
     expect(readFileSync(path.join(tmp, 'out/map.json'), 'utf8')).toContain('"name": "demo"');
     expect(root).toBe(path.join(tmp, 'cli'));
   }, 120_000);
+});
+
+
+describe('viewport приложения в карте', () => {
+  test('экраны приложения получают размер окна из конфига, свой размер экрана главнее, сервис — без размера', () => {
+    const doc: LiveAppMapDocument = {
+      version: '1.0',
+      baseUrl: 'http://localhost:1',
+      app: { name: 'x' },
+      pages: [
+        { id: 'a', title: 'a', path: '/a', url: 'http://localhost:1/a' },
+        { id: 'b', title: 'b', path: '/b', url: 'http://localhost:1/b', viewport: { width: 390, height: 844 } },
+        { id: 'service:api', title: 'api', metadata: { kind: 'service' } },
+      ],
+      edges: [],
+    };
+    const merged = mergeSurfaces([{ id: 'web', title: 'Веб', baseUrl: 'http://localhost:1', viewport: { width: 1440, height: 900 }, doc }]);
+    expect(merged.pages.map((p) => `${p.id} ${p.viewport === undefined ? '-' : `${p.viewport.width}x${p.viewport.height ?? '?'}`}`)).toEqual(['web:a 1440x900', 'web:b 390x844', 'service:api -']);
+  });
 });

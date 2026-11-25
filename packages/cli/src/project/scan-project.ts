@@ -82,7 +82,7 @@ export async function scanProject(opts: ProjectScanOptions): Promise<ProjectScan
       if (doc === undefined) {
         throw new Error(`скан кода потерял приложение ${app.id}`);
       }
-      return { id: app.id, title: app.label, baseUrl: app.baseUrl, doc: appMapToLiveAppMap(doc) };
+      return { id: app.id, title: app.label, baseUrl: app.baseUrl, ...(app.viewport === undefined ? {} : { viewport: app.viewport }), doc: appMapToLiveAppMap(doc) };
     }),
   );
   warnings.push(...applyLinks(merged, config.links ?? []));
