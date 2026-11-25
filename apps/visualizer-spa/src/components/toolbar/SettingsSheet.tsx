@@ -83,8 +83,9 @@ export type SettingsSheetProps = {
 function MapAdaptiveField() {
   const hasDocument = useAppStore((s) => s.document !== null);
   const layout = useAppStore((s) => s.document?.layout);
+  const nodes = useAppStore((s) => s.document?.nodes);
   const setPreset = useAppStore((s) => s.setMapViewportPreset);
-  const { w, h, mode, presetId } = mapAdaptive(layout);
+  const { w, h, mode, presetId } = mapAdaptive(layout, nodes ?? []);
   const presets = resolveViewportPresets(layout);
   return (
     <Field>

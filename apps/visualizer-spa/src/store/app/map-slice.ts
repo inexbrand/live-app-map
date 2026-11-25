@@ -17,7 +17,7 @@ export const LS_SHOW_STATES = 'lam.view.showStates';
  * Индекс холста: карта со слитыми состояниями проекта и, если вид включён, узлами-состояниями.
  * `document` store остаётся картой как есть — её читают экспорт, сравнение и виды API.
  */
-function indexFor(doc: AppMapDocument, project: ProjectScreenStates | null, show: boolean): ReturnType<typeof indexDocument> {
+export function indexFor(doc: AppMapDocument, project: ProjectScreenStates | null, show: boolean): ReturnType<typeof indexDocument> {
   return indexDocument(expandStateNodes(mergeProjectStates(doc, project), show));
 }
 

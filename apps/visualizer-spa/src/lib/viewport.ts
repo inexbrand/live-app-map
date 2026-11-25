@@ -30,6 +30,7 @@ export const BUILTIN_VIEWPORT_PRESETS: readonly ViewportPreset[] = [
   { id: 'w768', label: '768', width: 768, height: 1024, heightMode: 'fixed' },
   { id: 'w1024', label: '1024', width: 1024, height: 900, heightMode: 'fixed' },
   { id: 'w1280', label: '1280', width: 1280, height: 800, heightMode: 'fixed' },
+  { id: 'w1440', label: '1440', width: 1440, height: 900, heightMode: 'fixed' },
   { id: 'w1920', label: '1920', width: 1920, height: 1080, heightMode: 'fixed' },
 ];
 

@@ -250,7 +250,7 @@ describe('лист настроек', () => {
     expect(adaptive.hasAttribute('data-disabled')).toBe(false);
     const tablet = (await listOptions(adaptive)).find((o) => o.label.includes('планшет'))?.label ?? '';
     await pickOption(adaptive, tablet);
-    expect(mapAdaptive(useAppStore.getState().document?.layout).presetId).toBe('w768');
+    expect(mapAdaptive(useAppStore.getState().document?.layout, useAppStore.getState().document?.nodes ?? []).presetId).toBe('w768');
   });
 
   test('без лимита в store — без «из N»; размер экранов без карты недоступен', () => {

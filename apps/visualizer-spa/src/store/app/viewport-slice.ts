@@ -3,6 +3,7 @@
  */
 import { applyMapDeviceViewport, clampViewport } from '../../lib/viewport';
 import { viewportFromPresetId } from '../../lib/viewport-presets';
+import { indexFor } from './map-slice';
 import type { AppSlice, ViewportSlice } from './types';
 
 type Viewport = ReturnType<typeof clampViewport>;
@@ -72,8 +73,12 @@ export const createViewportSlice: AppSlice<ViewportSlice> = (set, get) => ({
     }
     const clamped = clampViewport(viewport);
     const layout = applyMapDeviceViewport(doc.layout, clamped);
+    // «Размер всех экранов» — для всех: размер экрана из карты (скан пишет размер приложения) снимается
+    const nodes = doc.nodes.map(({ viewport: _own, ...n }) => n);
+    const next = { ...doc, layout, nodes };
     set({
-      document: { ...doc, layout },
+      document: next,
+      index: indexFor(next, get().projectStates, get().showStates),
       // fixed map adaptive — сбросить runtime measure/overrides
       nodeViewports: new Map(),
       contentHeights: new Map(),

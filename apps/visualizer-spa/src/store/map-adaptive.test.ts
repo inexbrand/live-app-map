@@ -4,6 +4,7 @@
 import { beforeEach, describe, expect, test } from 'bun:test';
 import { FORMAT_VERSION, type AppMapDocument } from '@live-app-map/schema';
 import { resolveNodeViewport } from '../lib/viewport';
+import { mapAdaptive } from '../components/toolbar/map-adaptive';
 import { useAppStore } from './app-store';
 
 const doc: AppMapDocument = {
@@ -97,7 +98,7 @@ describe('map global adaptive', () => {
     expect(a.heightMode).toBe('fixed');
   });
 
-  test('per-page viewport still wins over map adaptive', () => {
+  test('размер всех экранов перекрывает и размер экрана из карты (выбор пользователя — для всех)', () => {
     useAppStore.getState().loadDocument(doc);
     useAppStore.getState().setMapViewportPreset('w1920');
     const c = resolveNodeViewport({
@@ -105,8 +106,26 @@ describe('map global adaptive', () => {
         ?.viewport,
       layout: useAppStore.getState().document?.layout,
     });
-    expect(c.width).toBe(320);
-    expect(c.height).toBe(568);
+    expect(c.width).toBe(1920);
+    expect(c.height).toBe(1080);
+  });
+
+  test('до выбора экран со своим размером из карты держит его', () => {
+    useAppStore.getState().loadDocument(doc);
+    const c = useAppStore.getState().index?.nodesById.get('route:/c')?.viewport;
+    expect(c?.width).toBe(320);
+  });
+
+  test('поле «Размер всех экранов» показывает размер экранов карты, а не 390 по умолчанию', () => {
+    const desktop: AppMapDocument = {
+      ...doc,
+      layout: { algorithm: 'row' },
+      nodes: doc.nodes.map((n) => ({ ...n, viewport: { width: 1440, height: 900, heightMode: 'fixed' } })),
+    };
+    useAppStore.getState().loadDocument(desktop);
+    const s = useAppStore.getState();
+    const a = mapAdaptive(s.document?.layout, s.document?.nodes ?? []);
+    expect(`${a.w}×${a.h} ${a.presetId}`).toBe('1440×900 w1440');
   });
 
   test('setMapViewportPreset writes layout from builtin', () => {
